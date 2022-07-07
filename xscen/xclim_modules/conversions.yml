@@ -1,0 +1,86 @@
+doc: |
+  ===========
+  Conversions
+  ===========
+
+  This module provides indicators generating base variables
+  from other base variables. All indicators are non-resampling.
+realm: atmos
+base: Indicator
+indicators:
+  wind_speed_from_vector:
+    base: wind_speed_from_vector
+  wind_vector_from_speed:
+    base: wind_vector_from_speed
+  tas_midpoint:
+    base: tg
+    cf_attrs:
+      - var_name: tas
+  relative_humidity_from_dewpoint:
+    base: hurs_fromdewpoint
+    parameters:
+      method: tetens30
+      ice_thresh: 0 degC
+  relative_humidity:
+    base: hurs
+    parameters:
+      method: tetens30
+      ice_thresh: 0 degC
+  specific_humidity:
+    base: huss
+    parameters:
+      method: tetens30
+      ice_thresh: 0 degC
+  snowfall_approximation:
+    base: prsn
+    parameters:
+      method: binary
+      thresh: 0 degC
+  rain_approximation:
+    base: prlp
+    parameters:
+      method: binary
+      thresh: 0 degC
+  precipitation:
+    compute: precipitation
+    cf_attrs:
+      standard_name: precipitation_flux
+      var_name: pr
+      description: Precipitation of all phases as the sum of solid and liquid precipitation.
+      cell_methods: "time: mean"
+      units: kg m-2 s-1
+  potential_evapotranspiration:
+    base: potential_evapotranspiration
+    parameters:
+      method: BR65
+      tas: null
+      tasmin:
+        kind: 0
+      tasmax:
+        kind: 0
+  dtr:
+    src_freq: D
+    compute: dtr
+    cf_attrs:
+      units: K
+      description: Daily temperature range.
+      cell_methods: "time: range within days"
+      var_name: dtr
+  tasmin_from_dtr:
+    src_freq: D
+    compute: tasmin_from_dtr
+    cf_attrs:
+      units: K
+      standard_name: air_temperature
+      description: Daily minimal temperature as computed from tasmax and dtr
+      cell_methods: "time: minimum within days"
+      var_name: tasmin
+  tasmax_from_dtr:
+    src_freq: D
+    compute: tasmax_from_dtr
+    cf_attrs:
+      units: K
+      standard_name: air_temperature
+      description: Daily maximal temperature as computed from tasmin and dtr
+      cell_methods: "time: maximum within days"
+      var_name: tasmax

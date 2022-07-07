@@ -1,0 +1,14 @@
+{
+  "is_regex": true,
+  "H": "1hr",
+  "3H": "3hr",
+  "6H": "6hr",
+  "D": "day",
+  "W": "sem",
+  "M.*": "mon",
+  "Q.*": "qtr",
+  "2Q.*": "6mon",
+  "A.*": "yr",
+  "YS": "yr",
+  "fx": "fx"
+}

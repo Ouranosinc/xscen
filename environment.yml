@@ -1,0 +1,35 @@
+name: xscen
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  # FIXME: These entries require versions
+  # Don't forget to sync the changes here with environment-dev.yml!
+  # Main packages
+  - xarray
+  - xclim>=0.37
+  - xesmf>=0.6.2
+  - dask
+  - pandas
+  - clisops
+  - rechunker
+  - cftime
+  - yaml
+  # Plotting
+  - matplotlib
+  - cartopy
+  - nc-time-axis>=1.3.1
+  # IO
+  - h5py
+  - zarr
+  - netCDF4
+  # For intake-esm (so that conda installs the dependencies and not pip)
+  - fastprogress
+  - fsspec
+  - intake
+  - pydantic
+  - xcollection
+  - requests
+  - pip
+  - pip:
+    - git+https://github.com/intake/intake-esm.git#egg=intake-esm
