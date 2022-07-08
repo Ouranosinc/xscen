@@ -42,6 +42,11 @@ xscen could always use more documentation, whether as part of the
 official xscen docs, in docstrings, or even on the web in blog posts,
 articles, and such.
 
+Currently, the documentation includes notebooks and sample catalogs which use private
+internal data from Ouranos. As such, they are not included in this public repo. Rather,
+a git submodule allows people with access to the Ouranos VPN to recursively fetch them
+from an internal Gitlab server.
+
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
@@ -59,17 +64,20 @@ Get Started!
 
 Ready to contribute? Here's how to set up `xscen` for local development.
 
-1. Clone the repo locally::
+1. Clone the repo locally, including the notebooks::
 
-    $ git clone git@github.com:Ouranosinc/xscen.git
+    $ git clone --recurse-submodules git@github.com:Ouranosinc/xscen.git
 
-3. Install your local copy into an isolated environment. We usually use `conda` for this::
+If this command is not executed from within the Ouranos VPN, it will show error messages about
+the `docs/notebooks` submodule not being fetched, but this doesn't affect the usage of xscen in general.
+
+2. Install your local copy into an isolated environment. We usually use `conda` for this::
 
     $ cd xscen/
     $ conda env create -f environment-dev.yml
     $ pip install -e .
 
-4. To ensure a consistent style, please install the pre-commit hooks to your repo::
+3. To ensure a consistent style, please install the pre-commit hooks to your repo::
 
     $ pre-commit install
 
@@ -78,33 +86,48 @@ Ready to contribute? Here's how to set up `xscen` for local development.
 
     $ pre-commit run -a
 
-5. Create a branch for local development::
+4. Create a branch for local development::
 
     $ git checkout -b name-of-your-bugfix-or-feature
 
    Now you can make your changes locally.
 
-6. When you're done making changes, check that your changes pass flake8, black, and the
+5. When you're done making changes, check that your changes pass flake8, black, and the
    tests, including testing other Python versions with tox::
 
     $ tox
 
    To get flake8, black, and tox, just pip install them into your virtualenv.
 
-7. Commit your changes and push your branch to GitHub::
+6. Commit your changes and push your branch to GitHub::
 
     $ git add .
     $ git commit -m "Your detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 
-8. If you are editing the docs, compile and open them with::
+7. If you are editing the docs (but not the notebooks, nor the sample catalogs),
+   compile and open them with::
 
     $ make docs
     # or to simply generate the html
     $ cd docs/
     $ make html
 
-9. Submit a pull request through the GitHub website.
+8. If you are editing the notebooks or the sample catalogs, building the docs is done
+   the same way, but you have to commit your changes to the internal `xscen-notebooks`
+   repository instead of the public one. This assumes you are in the Ouranos VPN and
+   have a Gitlan account on the internal server.
+
+   $ cd docs/notebooks
+   # Now git commands are made to the notebook repo.
+   $ git checkout -b new-branch
+   $ git commit -m "detailed description of your changes"
+   $ git push origin new-branch
+   $ cd ../..
+   $ git commit -am 'updated the notebooks'  # This updates the commit to which the submodule points
+
+9. Submit a pull request through the GitHub website, or the gitlab one for changes to the notebooks
+   and sample catalogs.
 
 Pull Request Guidelines
 -----------------------
