@@ -1,3 +1,4 @@
+
 [submodule "docs/notebooks"]
-	path = docs/notebooks
-	url = ssh://git@gitlab.ouranos.ca:2224/scenario/xscen-notebooks.git
+  path = docs/notebooks
+  url = https://gitlab.ouranos.ca/scenario/xscen-notebooks.git
