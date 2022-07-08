@@ -22,6 +22,9 @@ Features
     readme
     installation
     usage
+    notebooks/catalog
+    notebooks/getting_started
+    notebooks/config_usage
     columns
     api
     contributing
