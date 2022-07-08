@@ -1,0 +1,9 @@
+{
+  "latitude": "lat",
+  "longitude": "lon",
+  "t2m": "tas",
+  "d2m": "tdps",
+  "tp": "pr",
+  "u10": "uas",
+  "v10": "vas"
+}

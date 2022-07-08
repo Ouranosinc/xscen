@@ -1,0 +1,28 @@
+{
+  "template": "/home/tjs/git/cookiecutter-pypackage",
+  "commit": "c69260d94c8b072f5afead1f66eba36df8ac1961",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "full_name": "Gabriel Rondeau-Genesse",
+      "email": "rondeau-genesse.gabriel@ouranos.ca",
+      "github_username": "Ouranosinc",
+      "project_name": "xscen",
+      "project_slug": "xscen",
+      "project_short_description": "A climate change scenario-building analysis framework, built with xclim/xarray.",
+      "pypi_username": "RondeauG",
+      "version": "0.1.0",
+      "use_pytest": "y",
+      "use_black": "y",
+      "use_pypi_deployment_with_travis": "n",
+      "add_pyup_badge": "n",
+      "make_docs": "y",
+      "command_line_interface": "Click",
+      "create_author_file": "y",
+      "open_source_license": "Not open source",
+      "generated_with_cruft": "y",
+      "_template": "/home/tjs/git/cookiecutter-pypackage"
+    }
+  },
+  "directory": null
+}

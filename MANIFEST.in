@@ -1,0 +1,23 @@
+include AUTHORS.rst
+include CONTRIBUTING.rst
+include HISTORY.rst
+include LICENSE
+include README.rst
+include requirements_dev.txt
+include requirements_docs.txt
+recursive-include tests *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+
+recursive-exclude docs *.rst conf.py Makefile make.bat *.jpg *.png *.gif *.ipynb *.csv *.json *.yml
+recursive-exclude templates *.csv *.json *.py *.yml
+recursive-include xscen *.json *.yml *.py
+
+exclude .cruft.json
+exclude .editorconfig
+exclude .pre-commit-config.yaml
+exclude .yamllint.yaml
+exclude Makefile
+exclude environment.yml
+exclude environment-dev.yml
+exclude tox.ini

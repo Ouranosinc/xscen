@@ -1,0 +1,12 @@
+{
+  "1hr": "H",
+  "3hr": "3H",
+  "6hr": "6H",
+  "day": "D",
+  "sem": "W",
+  "mon": "MS",
+  "qtr": "QS-DEC",
+  "6mon": "2QS-DEC",
+  "yr": "YS",
+  "fx": "fx"
+}
