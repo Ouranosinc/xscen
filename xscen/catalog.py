@@ -574,7 +574,9 @@ def get_asset_list(root_paths, extension="*.nc"):
     return sorted(filelist)
 
 
-def name_parser(path, patterns, read_from_file=None):
+def name_parser(
+    path, patterns, read_from_file=None, xr_open_kwargs: Mapping[str, Any] = None
+):
     """Extract metadata information from the file path.
 
     Parameters
@@ -585,8 +587,11 @@ def name_parser(path, patterns, read_from_file=None):
       List of patterns to try in `reverse_format`
     read_from_file : list of string, optional
       A list of columns to parse from the file's metadata itself.
+    xr_open_kwargs: dict
+        If required, arguments to send xr.open_dataset() when opening the file to read the attributes.
     """
     path = Path(path)
+    xr_open_kwargs = xr_open_kwargs or {}
 
     d = {}
     for pattern in patterns:
@@ -615,7 +620,7 @@ def name_parser(path, patterns, read_from_file=None):
         missing = set(read_from_file) - d.keys()
         if missing:
             try:
-                fromfile = parse_from_ds(path, names=missing)
+                fromfile = parse_from_ds(path, names=missing, **xr_open_kwargs)
             except Exception as err:
                 logger.error(f"Unable to parse file {path}, got : {err}")
             finally:
@@ -715,6 +720,7 @@ def parse_directory(
             x,
             patterns,
             read_from_file=read_from_file if first_file_only is None else [],
+            xr_open_kwargs=xr_open_kwargs if first_file_only is None else {},
         )
         for x in filelist
     ]
