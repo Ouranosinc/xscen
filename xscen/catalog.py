@@ -7,6 +7,7 @@ import subprocess
 import warnings
 from copy import deepcopy
 from datetime import datetime
+from glob import glob
 from pathlib import Path, PosixPath
 from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
 
@@ -544,6 +545,18 @@ def get_asset_list(root_paths, extension="*.nc"):
     """
     if isinstance(root_paths, str):
         root_paths = [root_paths]
+
+    # Support for wildcards in root_paths
+    root_star = deepcopy(root_paths)
+    for r in root_star:
+        if "*" in r:
+            new_roots = [
+                x
+                for x in glob(str(r))
+                if Path(x).is_dir() and Path(x).suffix != ".zarr"
+            ]
+            root_paths.remove(r)
+            root_paths.extend(new_roots)
 
     @dask.delayed
     def _file_dir_files(directory, extension):
