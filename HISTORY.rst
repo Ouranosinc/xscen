@@ -12,7 +12,7 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* `parse_directory`: Fixes to `xr_open_kwargs` and support for wildcards (*) in the directories (:pull:`19`).
+* `parse_directory`: Fixes to `xr_open_kwargs` and support for wildcards (*) in the directories (:pull:19).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
