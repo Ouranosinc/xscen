@@ -664,7 +664,7 @@ def parse_directory(
     Parameters
     ----------
     directories : list
-        List of directories to parse. The parse is recursive.
+        List of directories to parse. The parse is recursive and accepts wildcards (*).
     extension: str
         A glob pattern for file name matching, usually only a suffix like ".nc".
     patterns : list
