@@ -538,7 +538,7 @@ def concat_data_catalogs(*dcs):
 
 
 @parse_config
-def get_asset_list(root_paths, extension="*.nc"):
+def get_asset_list(root_paths, extension="*.nc", parallel_depth=1):
     """List files with a given extension from a list of paths.
 
     Search is done with GNU's `find` and parallized through `dask`.
@@ -571,9 +571,14 @@ def get_asset_list(root_paths, extension="*.nc"):
     filelist = list()
     for r in root_paths:
         root = Path(r)
-        pattern = "*/"
-
-        dirs = [x for x in root.glob(pattern) if x.is_dir() and x.suffix != ".zarr"]
+        dirs = []
+        for d in range(1, parallel_depth + 1):
+            pattern = "*/" * d
+            for x in root.glob(pattern):
+                if x.is_dir() and x.suffix != ".zarr" and x.parent.suffix != ".zarr":
+                    if x.parent in dirs:
+                        dirs.remove(x.parent)
+                    dirs.append(x)
 
         filelistroot = [_file_dir_files(directory, extension) for directory in dirs]
         # watch progress
@@ -658,6 +663,7 @@ def parse_directory(
     homogenous_info: dict = None,
     cvs_dir: Union[str, PosixPath] = None,
     xr_open_kwargs: Mapping[str, Any] = None,
+    parallel_depth: int = 1,
 ) -> pd.DataFrame:
     r"""Parse files in a directory and return them as a pd.DataFrame.
 
@@ -717,7 +723,9 @@ def parse_directory(
     elif read_from_file is False:
         read_from_file = set()
 
-    filelist = get_asset_list(directories, extension=extension)
+    filelist = get_asset_list(
+        directories, extension=extension, parallel_depth=parallel_depth
+    )
     logger.info(f"Found {len(filelist)} files to parse.")
 
     def _update_dict(entry):
