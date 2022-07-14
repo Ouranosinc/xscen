@@ -2,7 +2,7 @@
 History
 =======
 
-v0.2.1
+v0.3.0 (unreleased)
 ------------------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
@@ -12,7 +12,7 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* `parse_directory`: Fixes to `xr_open_kwargs` and support for wildcards (*) in the directories (:pull:`19`).
+* `parse_directory`: Support for wildcards (*) in the directories (:pull:`19`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -20,7 +20,8 @@ Breaking changes
 
 Internal changes
 ^^^^^^^^^^^^^^^^
-* N/A
+* `parse_directory`: Fixes to `xr_open_kwargs` (:pull:`19`).
+* Fix for indicators removing the 'time' dimension (:pull:`22`).
 
 
 v0.2.0 (first official release)
