@@ -21,7 +21,7 @@ Breaking changes
 Internal changes
 ^^^^^^^^^^^^^^^^
 * `parse_directory`: Fixes to `xr_open_kwargs` (:pull:`19`).
-* Fix for indicators removing the 'time' dimension (:pull:`22`).
+* Fix for indicators removing the 'time' dimension (:pull:`23`).
 
 
 v0.2.0 (first official release)
