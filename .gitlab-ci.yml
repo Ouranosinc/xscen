@@ -1,5 +1,8 @@
 image: continuumio/miniconda3:latest
 
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
 before_script:
   - conda config --add channels conda-forge
   - conda install -y mamba -c conda-forge

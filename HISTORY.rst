@@ -12,7 +12,7 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* `parse_directory`: Support for wildcards (*) in the directories (:pull:`19`).
+* `parse_directory`: Support for wildcards (*) in the directories (`:pull:19`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
