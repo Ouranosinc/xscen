@@ -58,20 +58,20 @@ def clean_up(ds: xr.Dataset,
              maybe_unstack_dict: Optional[dict] = None,
              add_feb_29: bool =False,
              attrs_to_remove: Optional[dict]= None,
-             only_attrs_to_keep: Optional[dict]= None,
+             remove_all_attrs_except: Optional[dict]= None,
              add_attrs: Optional[dict] = None,
              change_attr_prefix: Optional[str] = None,
              ):
     """
     Clean up of the dataset. It can:
      - convert to the right units using xscen.finalize.change_units
-     - call the xscen.common.maybe_unstack fonction
+     - call the xscen.common.maybe_unstack function
      - add a february 29th by linear interpolation
      - remove a list of attributes
      - remove everything but a list of attributes
      - add attributes
      - change the prefix of the catalog attrs
-     in that order
+     in that order.
     Parameters
     ----------
     ds: xr.Dataset
@@ -80,25 +80,32 @@ def clean_up(ds: xr.Dataset,
         Dictionary of variable to convert. eg. {'tasmax': 'degC', 'pr': 'mm d-1'}
     maybe_unstack_dict: dict
         Dictionnary to pass to xscen.common.maybe_unstack fonction.
-        The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True)}.
+        The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
     add_feb_29: bool
-        wheter to add back a february 29th (that was removed in a noleap calendar) by linear interpolation
+        Wheter to add back a february 29th (that was removed in a noleap calendar) by linear interpolation
     attrs_to_remove: dict
         Dictionary where the keys are the variables and the values are a list of the attrs that should be removed.
-        The element of the list can be regular expression ( eg.'cat/*' to get rid of all the attrs that start by 'cat/')
         For global attrs, use the key 'global'.
-        eg. {'global': ['unnecessary note', 'cat/*'], 'tasmax': 'old_name'}
-    only_attrs_to_keep: dict
-        Dictionary where the keys are the variables and the values are a list of the attrs that should NOT be removed.
-        The element of the list can be regular expression ( eg.'cat/*' to only keep the attrs that start by 'cat/')
+        The element of the list can be exact matches for the attributes name
+        or use the same substring matching rules as intake_esm:
+        - ending with a '*' means checks if the substring is contained in the string
+        - starting with a '^' means check if the string starts with the substring.
+        eg. {'global': ['unnecessary note', 'cell*'], 'tasmax': 'old_name'}
+    remove_all_attrs_except: dict
+        Dictionary where the keys are the variables and the values are a list of the attrs that should NOT be removed,
+        all other attributes will be deleted. If None (default), nothing will be deleted.
         For global attrs, use the key 'global'.
-        eg. {'global': ['necessary note', 'cat/*'], 'tasmax': 'new_name'}
+        The element of the list can be exact matches for the attributes name
+        or use the same substring matching rules as intake_esm:
+        - ending with a '*' means checks if the substring is contained in the string
+        - starting with a '^' means check if the string starts with the substring.
+        eg. {'global': ['necessary note', '^cat/'], 'tasmax': 'new_name'}
     add_attrs: dict
         Dictionary where the keys are the variables and the values are a another dictionary of attributes.
         For global attrs, use the key 'global'.
         eg. {'global': {'title': 'amazing new dataset'}, 'tasmax': {'note': 'important info about tasmax'}}
     change_attr_prefix: str
-     Replace "cat/" in the catalogue attrs by this new string
+     Replace "cat/" in the catalogue global attrs by this new string
 
     Returns
     -------
@@ -117,33 +124,46 @@ def clean_up(ds: xr.Dataset,
         with_missing = convert_calendar(ds, 'standard', missing=np.NaN)
         ds = with_missing.interpolate_na('time', method='linear')
 
+    def _search(a,b):
+        if  a[-1]== '*': #check if a is contained in b
+            return a[:-1] in b
+        elif a[0]=='^':
+            return b.startswith(a[1:])
+        else:
+            return a == b
+
     # remove attrs
     if attrs_to_remove:
-        for var, list_of_attrs in attrs_to_remove:
+        for var, list_of_attrs in attrs_to_remove.items():
             obj = ds if var == 'global' else ds[var]
-            for ds_attr in list(ds.attrs.keys()): #iter over attrs in ds
+            for ds_attr in list(obj.attrs.keys()): #iter over attrs in ds
                 for list_attr in list_of_attrs: # check if ds_attrs is in the list we want to remove
-                    if re.search(list_attr, ds_attr):
-                        del obj.attrs[list_attr]
+                    if _search(list_attr, ds_attr):
+                        del obj.attrs[ds_attr]
 
     # delete all attrs, but the ones in the list
-    if only_attrs_to_keep:
-        for var, list_of_attrs in only_attrs_to_keep:
+    if remove_all_attrs_except:
+        for var, list_of_attrs in remove_all_attrs_except.items():
             obj = ds if var == 'global' else ds[var]
-            for ds_attr in list(ds.attrs.keys()):  # iter over attrs in ds
-                for list_attr in list_of_attrs:  # check if ds_attrs is in the list we want to remove
-                    if not re.search(list_attr, ds_attr):
-                        del obj.attrs[list_attr]
+            for ds_attr in list(obj.attrs.keys()):  # iter over attrs in ds
+                delete= True # assume we should delete it
+                for list_attr in list_of_attrs:
+                    if _search(list_attr, ds_attr):
+                        delete= False # if attr is on the list to not delete, don't delete
+                if delete:
+                    del obj.attrs[ds_attr]
 
     if add_attrs:
-        for var, attrs in add_attrs:
+        for var, attrs in add_attrs.items():
             obj = ds if var == 'global' else ds[var]
             for attrname, attrtmpl in attrs.items():
                 obj.attrs[attrname] = attrtmpl
 
     if change_attr_prefix:
         for ds_attr in list(ds.attrs.keys()):
-                ds[ds_attr]= ds_attr.replace('cat/',change_attr_prefix)
+            new_name= ds_attr.replace('cat/',change_attr_prefix)
+            if new_name:
+                ds.attrs[new_name]=ds.attrs.pop(ds_attr)
 
     return ds
 
