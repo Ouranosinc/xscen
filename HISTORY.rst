@@ -3,8 +3,8 @@ History
 =======
 
 v0.2.1
-------------------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -12,7 +12,7 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* `parse_directory`: Fixes to `xr_open_kwargs` and support for wildcards (*) in the directories (`:pull:19`).
+* `parse_directory`: Fixes to `xr_open_kwargs` and support for wildcards (*) in the directories (:pull:`19`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -20,7 +20,8 @@ Breaking changes
 
 Internal changes
 ^^^^^^^^^^^^^^^^
-* N/A
+* Security scanning using CodeQL and GitHub Actions is now configured for the repository (:pull:`21`).
+* Bumpversion action now configured to automatically augment the version number on each merged pull request (:pull:`21`).
 
 
 v0.2.0 (first official release)
