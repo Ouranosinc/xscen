@@ -139,11 +139,7 @@ def clean_up(
         for var, list_of_attrs in attrs_to_remove.items():
             obj = ds if var == "global" else ds[var]
             for ds_attr in list(obj.attrs.keys()):  # iter over attrs in ds
-                for (
-                    list_attr
-                ) in (
-                    list_of_attrs
-                ):  # check if ds_attrs is in the list we want to remove
+                for list_attr in list_of_attrs:  # check if we want to remove attrs
                     if _search(list_attr, ds_attr):
                         del obj.attrs[ds_attr]
 
