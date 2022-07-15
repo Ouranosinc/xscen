@@ -60,7 +60,6 @@ def clean_up(ds: xr.Dataset,
              attrs_to_remove: Optional[dict]= None,
              only_attrs_to_keep: Optional[dict]= None,
              add_attrs: Optional[dict] = None,
-             fmtkws: Optional[dict] = None,
              change_attr_prefix: Optional[str] = None,
              ):
     """
@@ -94,13 +93,17 @@ def clean_up(ds: xr.Dataset,
         The element of the list can be regular expression ( eg.'cat/*' to only keep the attrs that start by 'cat/')
         For global attrs, use the key 'global'.
         eg. {'global': ['necessary note', 'cat/*'], 'tasmax': 'new_name'}
-    add_attrs #TODO: continue here!
-    fmtkws
-    change_attr_prefix
+    add_attrs: dict
+        Dictionary where the keys are the variables and the values are a another dictionary of attributes.
+        For global attrs, use the key 'global'.
+        eg. {'global': {'title': 'amazing new dataset'}, 'tasmax': {'note': 'important info about tasmax'}}
+    change_attr_prefix: str
+     Replace "cat/" in the catalogue attrs by this new string
 
     Returns
     -------
-
+    ds: xr.Dataset
+        Cleaned up dataset
     """
     if var_and_convert_units:
         ds = change_units(ds = ds , variables_and_units= var_and_convert_units)
@@ -136,7 +139,7 @@ def clean_up(ds: xr.Dataset,
         for var, attrs in add_attrs:
             obj = ds if var == 'global' else ds[var]
             for attrname, attrtmpl in attrs.items():
-                obj.attrs[attrname] = attrtmpl.format(**fmtkws)
+                obj.attrs[attrname] = attrtmpl
 
     if change_attr_prefix:
         for ds_attr in list(ds.attrs.keys()):
