@@ -55,6 +55,6 @@ setup(
     test_suite="tests",
     tests_require=["pytest"],
     url="https://github.com/Ouranosinc/xscen",
-    version="0.1.0",
+    version="0.2.1",
     zip_safe=False,
 )
