@@ -115,6 +115,7 @@ def clean_up(
         Cleaned up dataset
     """
     if var_and_convert_units:
+        logger.info(f"Converting units: {var_and_convert_units}")
         ds = change_units(ds=ds, variables_and_units=var_and_convert_units)
 
     # unstack nans
@@ -123,6 +124,7 @@ def clean_up(
 
     # put back feb 29th
     if add_feb_29:
+        logging.info("Adding back february 29th by linear interpolation")
         with_missing = convert_calendar(ds, "standard", missing=np.NaN)
         ds = with_missing.interpolate_na("time", method="linear")
 
