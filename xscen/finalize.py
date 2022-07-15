@@ -1,15 +1,14 @@
 import logging
-from typing import Optional
-import xarray as xr
-import numpy as np
 import re
+from typing import Optional
 
+import numpy as np
+import xarray as xr
 from xclim.core import units
 from xclim.core.calendar import convert_calendar
 
-
+from .common import maybe_unstack, unstack_fill_nan
 from .config import parse_config
-from .common import unstack_fill_nan, maybe_unstack
 
 logger = logging.getLogger(__name__)
 
@@ -53,15 +52,16 @@ def change_units(ds: xr.Dataset, variables_and_units: dict):
     return ds
 
 
-def clean_up(ds: xr.Dataset,
-             var_and_convert_units: Optional[dict] = None,
-             maybe_unstack_dict: Optional[dict] = None,
-             add_feb_29: bool =False,
-             attrs_to_remove: Optional[dict]= None,
-             remove_all_attrs_except: Optional[dict]= None,
-             add_attrs: Optional[dict] = None,
-             change_attr_prefix: Optional[str] = None,
-             ):
+def clean_up(
+    ds: xr.Dataset,
+    var_and_convert_units: Optional[dict] = None,
+    maybe_unstack_dict: Optional[dict] = None,
+    add_feb_29: bool = False,
+    attrs_to_remove: Optional[dict] = None,
+    remove_all_attrs_except: Optional[dict] = None,
+    add_attrs: Optional[dict] = None,
+    change_attr_prefix: Optional[str] = None,
+):
     """
     Clean up of the dataset. It can:
      - convert to the right units using xscen.finalize.change_units
@@ -71,7 +71,9 @@ def clean_up(ds: xr.Dataset,
      - remove everything but a list of attributes
      - add attributes
      - change the prefix of the catalog attrs
+
      in that order.
+
     Parameters
     ----------
     ds: xr.Dataset
@@ -105,7 +107,7 @@ def clean_up(ds: xr.Dataset,
         For global attrs, use the key 'global'.
         eg. {'global': {'title': 'amazing new dataset'}, 'tasmax': {'note': 'important info about tasmax'}}
     change_attr_prefix: str
-     Replace "cat/" in the catalogue global attrs by this new string
+        Replace "cat/" in the catalogue global attrs by this new string
 
     Returns
     -------
@@ -113,7 +115,7 @@ def clean_up(ds: xr.Dataset,
         Cleaned up dataset
     """
     if var_and_convert_units:
-        ds = change_units(ds = ds , variables_and_units= var_and_convert_units)
+        ds = change_units(ds=ds, variables_and_units=var_and_convert_units)
 
     # unstack nans
     if maybe_unstack_dict:
@@ -121,13 +123,13 @@ def clean_up(ds: xr.Dataset,
 
     # put back feb 29th
     if add_feb_29:
-        with_missing = convert_calendar(ds, 'standard', missing=np.NaN)
-        ds = with_missing.interpolate_na('time', method='linear')
+        with_missing = convert_calendar(ds, "standard", missing=np.NaN)
+        ds = with_missing.interpolate_na("time", method="linear")
 
-    def _search(a,b):
-        if  a[-1]== '*': #check if a is contained in b
+    def _search(a, b):
+        if a[-1] == "*":  # check if a is contained in b
             return a[:-1] in b
-        elif a[0]=='^':
+        elif a[0] == "^":
             return b.startswith(a[1:])
         else:
             return a == b
@@ -135,37 +137,40 @@ def clean_up(ds: xr.Dataset,
     # remove attrs
     if attrs_to_remove:
         for var, list_of_attrs in attrs_to_remove.items():
-            obj = ds if var == 'global' else ds[var]
-            for ds_attr in list(obj.attrs.keys()): #iter over attrs in ds
-                for list_attr in list_of_attrs: # check if ds_attrs is in the list we want to remove
+            obj = ds if var == "global" else ds[var]
+            for ds_attr in list(obj.attrs.keys()):  # iter over attrs in ds
+                for (
+                    list_attr
+                ) in (
+                    list_of_attrs
+                ):  # check if ds_attrs is in the list we want to remove
                     if _search(list_attr, ds_attr):
                         del obj.attrs[ds_attr]
 
     # delete all attrs, but the ones in the list
     if remove_all_attrs_except:
         for var, list_of_attrs in remove_all_attrs_except.items():
-            obj = ds if var == 'global' else ds[var]
+            obj = ds if var == "global" else ds[var]
             for ds_attr in list(obj.attrs.keys()):  # iter over attrs in ds
-                delete= True # assume we should delete it
+                delete = True  # assume we should delete it
                 for list_attr in list_of_attrs:
                     if _search(list_attr, ds_attr):
-                        delete= False # if attr is on the list to not delete, don't delete
+                        delete = (
+                            False  # if attr is on the list to not delete, don't delete
+                        )
                 if delete:
                     del obj.attrs[ds_attr]
 
     if add_attrs:
         for var, attrs in add_attrs.items():
-            obj = ds if var == 'global' else ds[var]
+            obj = ds if var == "global" else ds[var]
             for attrname, attrtmpl in attrs.items():
                 obj.attrs[attrname] = attrtmpl
 
     if change_attr_prefix:
         for ds_attr in list(ds.attrs.keys()):
-            new_name= ds_attr.replace('cat/',change_attr_prefix)
+            new_name = ds_attr.replace("cat/", change_attr_prefix)
             if new_name:
-                ds.attrs[new_name]=ds.attrs.pop(ds_attr)
+                ds.attrs[new_name] = ds.attrs.pop(ds_attr)
 
     return ds
-
-
-
