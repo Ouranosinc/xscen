@@ -86,7 +86,8 @@ def clean_up(
         The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
     new_calendars: dict
         Dictionary where the keys are the variables and the values are arguments to pass to xclim.core.calendar.convert_calendar.
-        Eg. {'tasmax':{target': default, 'missing': np.nan}, 'pr':{target': default, 'missing': 0}}
+        The target need to be the same for all variables.
+        Eg. {'tasmax':{target': default, 'missing': np.nan}, 'pr':{target': default, 'missing': [0]}}
     interpolate_over_missing: list
         List of variables where we want the NaNs to be filled in by linear interpolation over the time dimension.
         This can be used to replace the np.nan added by new_calendars to previously missing dates (eg. February 29th).
@@ -119,6 +120,7 @@ def clean_up(
     ds: xr.Dataset
         Cleaned up dataset
     """
+
     if variables_and_units:
         logger.info(f"Converting units: {variables_and_units}")
         ds = change_units(ds=ds, variables_and_units=variables_and_units)
@@ -129,9 +131,14 @@ def clean_up(
 
     # convert calendar
     if new_calendars:
+        ds_copy = ds.copy()
+        # get the right time axis for full dataset
+        ds = convert_calendar(ds, **new_calendars[list(new_calendars.keys())[0]])
+        # convert each variable individually
         for var, calendar_attrs in new_calendars.items():
             logging.info(f"Converting {var} calendar with {calendar_attrs}")
-            ds[var] = convert_calendar(ds[var], **calendar_attrs)
+            converted_var = convert_calendar(ds_copy[var], **calendar_attrs)
+            ds[var] = converted_var
 
     if interpolate_over_missing:
         for var in interpolate_over_missing:
