@@ -54,9 +54,10 @@ def change_units(ds: xr.Dataset, variables_and_units: dict):
 
 def clean_up(
     ds: xr.Dataset,
-    var_and_convert_units: Optional[dict] = None,
+    variables_and_units: Optional[dict] = None,
     maybe_unstack_dict: Optional[dict] = None,
-    add_feb_29: bool = False,
+    new_calendars: Optional[dict] = None,
+    interpolate_over_missing: Optional[list] = None,
     attrs_to_remove: Optional[dict] = None,
     remove_all_attrs_except: Optional[dict] = None,
     add_attrs: Optional[dict] = None,
@@ -66,7 +67,7 @@ def clean_up(
     Clean up of the dataset. It can:
      - convert to the right units using xscen.finalize.change_units
      - call the xscen.common.maybe_unstack function
-     - add a february 29th by linear interpolation
+     - convert the calendar and interpolate over missing dates
      - remove a list of attributes
      - remove everything but a list of attributes
      - add attributes
@@ -78,13 +79,17 @@ def clean_up(
     ----------
     ds: xr.Dataset
         Input dataset to clean up
-    var_and_convert_units: dict
+    variables_and_units: dict
         Dictionary of variable to convert. eg. {'tasmax': 'degC', 'pr': 'mm d-1'}
     maybe_unstack_dict: dict
-        Dictionnary to pass to xscen.common.maybe_unstack fonction.
+        Dictionary to pass to xscen.common.maybe_unstack fonction.
         The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
-    add_feb_29: bool
-        Wheter to add back a february 29th (that was removed in a noleap calendar) by linear interpolation
+    new_calendars: dict
+        Dictionary where the keys are the variables and the values are arguments to pass to xclim.core.calendar.convert_calendar.
+        Eg. {'tasmax':{target': default, 'missing': np.nan}, 'pr':{target': default, 'missing': 0}}
+    interpolate_over_missing: list
+        List of variables where we want the NaNs to be filled in by linear interpolation over the time dimension.
+        This can be used to replace the np.nan added by new_calendars to previously missing dates (eg. February 29th).
     attrs_to_remove: dict
         Dictionary where the keys are the variables and the values are a list of the attrs that should be removed.
         For global attrs, use the key 'global'.
@@ -114,19 +119,30 @@ def clean_up(
     ds: xr.Dataset
         Cleaned up dataset
     """
-    if var_and_convert_units:
-        logger.info(f"Converting units: {var_and_convert_units}")
-        ds = change_units(ds=ds, variables_and_units=var_and_convert_units)
+    if variables_and_units:
+        logger.info(f"Converting units: {variables_and_units}")
+        ds = change_units(ds=ds, variables_and_units=variables_and_units)
 
     # unstack nans
     if maybe_unstack_dict:
         ds = maybe_unstack(ds, **maybe_unstack_dict)
 
-    # put back feb 29th
-    if add_feb_29:
-        logging.info("Adding back february 29th by linear interpolation")
-        with_missing = convert_calendar(ds, "standard", missing=np.NaN)
-        ds = with_missing.interpolate_na("time", method="linear")
+    # convert calendar
+    if new_calendars:
+        for var, calendar_attrs in new_calendars.items():
+            logging.info(f"Converting {var} calendar with {calendar_attrs}")
+            ds[var] = convert_calendar(ds[var], **calendar_attrs)
+
+    if interpolate_over_missing:
+        for var in interpolate_over_missing:
+            if "missing" not in new_calendars[var] or ~np.isnan(
+                new_calendars[var]["missing"]
+            ):
+                logger.warning(
+                    "You need to add a Nan on missing days before interpolating."
+                    " Use new_calendar= {'missing': np.nan}. "
+                )
+            ds[var] = ds[var].interpolate_na("time", method="linear")
 
     def _search(a, b):
         if a[-1] == "*":  # check if a is contained in b
