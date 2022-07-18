@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 from xclim import ensembles
 
@@ -8,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def ensemble_stats(
-    files: list,
+    datasets: list,
     create_args: dict = {},
     statistics: str = "ensemble_percentiles",
     stats_args: dict = {},
@@ -18,8 +19,9 @@ def ensemble_stats(
 
     Parameters
     ----------
-    files: list
-        List of files to include in the ensemble
+    datasets: list
+        List of file paths or xarray Dataset/DataArray objects to include in the ensemble
+        Tip: With a project catalog, you can do: `datasets = list(pcat.search(**search_dict).df.path)`.
     create_args: dict
         Dictionary of arguments for xclim.ensembles.create_ensemble
     statistics: str
@@ -31,9 +33,18 @@ def ensemble_stats(
     Returns
     -------
     ens_stats: xr.Dataset
-        Dataset with ensemble statitics
+        Dataset with ensemble statistics
     """
-    logger.info(f"Creating ensemble with {len(files)} and calculating {statistics}.")
-    ens = ensembles.create_ensemble(files, **create_args)
+    logger.info(f"Creating ensemble with {len(datasets)} and calculating {statistics}.")
+
+    # if input files are .zarr, change the engine automatically
+    if isinstance(datasets[0], (str, Path)):
+        path = Path(datasets[0])
+        if path.suffix == ".zarr":
+            if "xr_kwargs" not in create_args:
+                create_args["xr_kwargs"] = {}
+            create_args["xr_kwargs"]["engine"] = "zarr"
+
+    ens = ensembles.create_ensemble(datasets, **create_args)
     ens_stats = getattr(ensembles, statistics)(ens, **stats_args)
     return ens_stats
