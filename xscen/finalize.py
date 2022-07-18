@@ -57,11 +57,12 @@ def clean_up(
     variables_and_units: Optional[dict] = None,
     maybe_unstack_dict: Optional[dict] = None,
     new_calendars: Optional[dict] = None,
-    interpolate_over_missing: Optional[list] = None,
+    interpolate_over_nans: Optional[list] = None,
     attrs_to_remove: Optional[dict] = None,
     remove_all_attrs_except: Optional[dict] = None,
     add_attrs: Optional[dict] = None,
     change_attr_prefix: Optional[str] = None,
+    to_level: Optional[str] = "cleanedup",
 ):
     """
     Clean up of the dataset. It can:
@@ -88,7 +89,7 @@ def clean_up(
         Dictionary where the keys are the variables and the values are arguments to pass to xclim.core.calendar.convert_calendar.
         The target need to be the same for all variables.
         Eg. {'tasmax':{target': default, 'missing': np.nan}, 'pr':{target': default, 'missing': [0]}}
-    interpolate_over_missing: list
+    interpolate_over_nans: list
         List of variables where we want the NaNs to be filled in by linear interpolation over the time dimension.
         This can be used to replace the np.nan added by new_calendars to previously missing dates (eg. February 29th).
     attrs_to_remove: dict
@@ -114,6 +115,8 @@ def clean_up(
         eg. {'global': {'title': 'amazing new dataset'}, 'tasmax': {'note': 'important info about tasmax'}}
     change_attr_prefix: str
         Replace "cat/" in the catalogue global attrs by this new string
+    to_level: str
+        The processing level to assign to the output.
 
     Returns
     -------
@@ -140,8 +143,8 @@ def clean_up(
             converted_var = convert_calendar(ds_copy[var], **calendar_attrs)
             ds[var] = converted_var
 
-    if interpolate_over_missing:
-        for var in interpolate_over_missing:
+    if interpolate_over_nans:
+        for var in interpolate_over_nans:
             if "missing" not in new_calendars[var] or ~np.isnan(
                 new_calendars[var]["missing"]
             ):
@@ -158,6 +161,8 @@ def clean_up(
             return b.startswith(a[1:])
         else:
             return a == b
+
+    ds.attrs["cat/processing_level"] = to_level
 
     # remove attrs
     if attrs_to_remove:
