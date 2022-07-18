@@ -116,7 +116,7 @@ the `docs/notebooks` submodule not being fetched, but this doesn't affect the us
 8. If you are editing the notebooks or the sample catalogs, building the docs is done
    the same way, but you have to commit your changes to the internal `xscen-notebooks`
    repository instead of the public one. This assumes you are in the Ouranos VPN and
-   have a Gitlan account on the internal server.
+   have a Gitlab account on the internal server.::
 
    $ cd docs/notebooks
    # Now git commands are made to the notebook repo.
