@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 import xarray as xr
 from xclim.core import units
-from xclim.core.calendar import convert_calendar
+from xclim.core.calendar import convert_calendar, get_calendar
 
 from .common import maybe_unstack, unstack_fill_nan
 from .config import parse_config
@@ -92,7 +92,7 @@ def clean_up(
     missing_by_var: list
         Dictionary where the keys are the variables and the values are the argument to feed the `missing`
         parameters of the xclim.core.calendar.convert_calendar for the given variable.
-        If missing_by_var == 'interpolate', the missing will be filled with NaNs, then linearly interpolated.
+        If missing_by_var == 'interpolate', the missing will be filled with NaNs, then linearly interpolated over time.
     attrs_to_remove: dict
         Dictionary where the keys are the variables and the values are a list of the attrs that should be removed.
         For global attrs, use the key 'global'.
@@ -140,6 +140,11 @@ def clean_up(
         # if missing_by_var exist make sure missing data are added to time axis
         if missing_by_var:
             convert_calendar_kwargs["missing"] = np.nan
+
+        # make default `align_on`='`random` when the initial calendar is 360day
+        if get_calendar(ds) == "360_day" and "align_on" not in convert_calendar_kwargs:
+            convert_calendar_kwargs["align_on"] = "random"
+        logger.info(f"Converting calendar with {convert_calendar_kwargs} ")
         ds = convert_calendar(ds, **convert_calendar_kwargs)
 
         # convert each variable individually
@@ -147,7 +152,7 @@ def clean_up(
             # remove 'missing' argument to be replace by `missing_by_var`
             del convert_calendar_kwargs["missing"]
             for var, missing in missing_by_var.items():
-                logging.info(f"Filling missing {var}  with {missing}")
+                logging.info(f"Filling missing {var} with {missing}")
                 converted_var = convert_calendar(
                     ds_copy[var], **convert_calendar_kwargs, missing=missing
                 )
