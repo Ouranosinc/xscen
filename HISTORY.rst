@@ -2,9 +2,9 @@
 History
 =======
 
-v0.2.1
+v0.3.0 (unreleased)
 ------------------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`) .
 
 Announcements
 ^^^^^^^^^^^^^
@@ -13,6 +13,7 @@ Announcements
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * `parse_directory`: Fixes to `xr_open_kwargs` and support for wildcards (*) in the directories (`:pull:19`).
+* New function `clean_up` (`:issue:22`, `:pull:24`)
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
