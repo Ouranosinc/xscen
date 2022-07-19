@@ -5,7 +5,7 @@ from typing import Optional
 import numpy as np
 import xarray as xr
 from xclim.core import units
-from xclim.core.calendar import convert_calendar
+from xclim.core.calendar import convert_calendar, get_calendar
 
 from .common import maybe_unstack, unstack_fill_nan
 from .config import parse_config
@@ -56,8 +56,8 @@ def clean_up(
     ds: xr.Dataset,
     variables_and_units: Optional[dict] = None,
     maybe_unstack_dict: Optional[dict] = None,
-    new_calendars: Optional[dict] = None,
-    interpolate_over_nans: Optional[list] = None,
+    convert_calendar_kwargs: Optional[dict] = None,
+    missing_by_var: Optional[dict] = None,
     attrs_to_remove: Optional[dict] = None,
     remove_all_attrs_except: Optional[dict] = None,
     add_attrs: Optional[dict] = None,
@@ -85,13 +85,14 @@ def clean_up(
     maybe_unstack_dict: dict
         Dictionary to pass to xscen.common.maybe_unstack fonction.
         The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
-    new_calendars: dict
-        Dictionary where the keys are the variables and the values are arguments to pass to xclim.core.calendar.convert_calendar.
-        The target need to be the same for all variables.
-        Eg. {'tasmax':{target': default, 'missing': np.nan}, 'pr':{target': default, 'missing': [0]}}
-    interpolate_over_nans: list
-        List of variables where we want the NaNs to be filled in by linear interpolation over the time dimension.
-        This can be used to replace the np.nan added by new_calendars to previously missing dates (eg. February 29th).
+    convert_calendar_kwargs: dict
+        Dictionary of arguments to feed to xclim.core.calendar.convert_calendar. This will be the same for all variables.
+        If missing_by_vars is given, it will override the 'missing' argument given here.
+        Eg. {target': default, 'align_on': 'random'}
+    missing_by_var: list
+        Dictionary where the keys are the variables and the values are the argument to feed the `missing`
+        parameters of the xclim.core.calendar.convert_calendar for the given variable.
+        If missing_by_var == 'interpolate', the missing will be filled with NaNs, then linearly interpolated over time.
     attrs_to_remove: dict
         Dictionary where the keys are the variables and the values are a list of the attrs that should be removed.
         For global attrs, use the key 'global'.
@@ -133,26 +134,38 @@ def clean_up(
         ds = maybe_unstack(ds, **maybe_unstack_dict)
 
     # convert calendar
-    if new_calendars:
+    if convert_calendar_kwargs:
         ds_copy = ds.copy()
-        # get the right time axis for full dataset
-        ds = convert_calendar(ds, **new_calendars[list(new_calendars.keys())[0]])
-        # convert each variable individually
-        for var, calendar_attrs in new_calendars.items():
-            logging.info(f"Converting {var} calendar with {calendar_attrs}")
-            converted_var = convert_calendar(ds_copy[var], **calendar_attrs)
-            ds[var] = converted_var
 
-    if interpolate_over_nans:
-        for var in interpolate_over_nans:
-            if "missing" not in new_calendars[var] or ~np.isnan(
-                new_calendars[var]["missing"]
-            ):
-                logger.warning(
-                    "You need to add a Nan on missing days before interpolating."
-                    " Use new_calendar= {'missing': np.nan}. "
-                )
-            ds[var] = ds[var].interpolate_na("time", method="linear")
+        # if missing_by_var exist make sure missing data are added to time axis
+        if missing_by_var:
+            convert_calendar_kwargs.setdefault("missing", np.nan)
+
+        # make default `align_on`='`random` when the initial calendar is 360day
+        if get_calendar(ds) == "360_day" and "align_on" not in convert_calendar_kwargs:
+            convert_calendar_kwargs["align_on"] = "random"
+
+        logger.info(f"Converting calendar with {convert_calendar_kwargs} ")
+        ds = convert_calendar(ds, **convert_calendar_kwargs)
+
+        # convert each variable individually
+        if missing_by_var:
+            # remove 'missing' argument to be replace by `missing_by_var`
+            del convert_calendar_kwargs["missing"]
+            for var, missing in missing_by_var.items():
+                logging.info(f"Filling missing {var} with {missing}")
+                if missing == "interpolate":
+                    converted_var = convert_calendar(
+                        ds_copy[var], **convert_calendar_kwargs, missing=np.nan
+                    )
+                    converted_var = converted_var.interpolate_na(
+                        "time", method="linear"
+                    )
+                else:
+                    converted_var = convert_calendar(
+                        ds_copy[var], **convert_calendar_kwargs, missing=missing
+                    )
+                ds[var] = converted_var
 
     def _search(a, b):
         if a[-1] == "*":  # check if a is contained in b
