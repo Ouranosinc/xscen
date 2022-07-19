@@ -127,7 +127,8 @@ the `docs/notebooks` submodule not being fetched, but this doesn't affect the us
    $ git commit -am 'updated the notebooks'  # This updates the commit to which the submodule points
 
 9. Submit a pull request through the GitHub website, or the gitlab one for changes to the notebooks
-   and sample catalogs.
+   and sample catalogs. If your changes necessitate both a github PR and a gitlab MR, please make sure
+   that the notebooks changes have been merged and the submodules updated before merging the main PR.
 
 Pull Request Guidelines
 -----------------------
