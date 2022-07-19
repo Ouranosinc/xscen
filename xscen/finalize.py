@@ -56,10 +56,8 @@ def clean_up(
     ds: xr.Dataset,
     variables_and_units: Optional[dict] = None,
     maybe_unstack_dict: Optional[dict] = None,
-    # new_calendars: Optional[dict] = None,
-    new_calendar: Optional[dict] = None,
+    convert_calendar_kwargs: Optional[dict] = None,
     missing_by_var: Optional[dict] = None,
-    interpolate_over_nans: Optional[list] = None,
     attrs_to_remove: Optional[dict] = None,
     remove_all_attrs_except: Optional[dict] = None,
     add_attrs: Optional[dict] = None,
@@ -87,7 +85,7 @@ def clean_up(
     maybe_unstack_dict: dict
         Dictionary to pass to xscen.common.maybe_unstack fonction.
         The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
-    new_calendar: dict
+    convert_calendar_kwargs: dict
         Dictionary of argument to feed to xclim.core.calendar.convert_calendar. This will be the same for all variables.
         If missing_by_vars is given, it will override the 'missing' argument given here.
         Eg. {target': default, 'align_on': 'random'}
@@ -136,27 +134,27 @@ def clean_up(
         ds = maybe_unstack(ds, **maybe_unstack_dict)
 
     # convert calendar
-    if new_calendar:
+    if convert_calendar_kwargs:
         ds_copy = ds.copy()
         # get the right time axis for full dataset
         # if missing_by_var exist make sure missing data are added to time axis
         if missing_by_var:
-            new_calendar["missing"] = np.nan
-        ds = convert_calendar(ds, **new_calendar)
+            convert_calendar_kwargs["missing"] = np.nan
+        ds = convert_calendar(ds, **convert_calendar_kwargs)
 
         # convert each variable individually
         if missing_by_var:
             # remove 'missing' argument to be replace by `missing_by_var`
-            del new_calendar["missing"]
+            del convert_calendar_kwargs["missing"]
             for var, missing in missing_by_var.items():
                 logging.info(f"Filling missing {var}  with {missing}")
                 converted_var = convert_calendar(
-                    ds_copy[var], **new_calendar, missing=missing
+                    ds_copy[var], **convert_calendar_kwargs, missing=missing
                 )
 
                 if missing == "interpolate":
                     converted_var = convert_calendar(
-                        ds_copy[var], **new_calendar, missing=np.nan
+                        ds_copy[var], **convert_calendar_kwargs, missing=np.nan
                     )
                     converted_var = converted_var.interpolate_na(
                         "time", method="linear"
