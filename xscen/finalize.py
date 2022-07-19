@@ -94,7 +94,7 @@ def clean_up(
     missing_by_var: list
         Dictionary where the keys are the variables and the values are the argument to feed the `missing`
         parameters of the xclim.core.calendar.convert_calendar for the given variable.
-        Except if missing_by_var 'interpolate', the missing will be filled with NaNs, then linearly interpolated.
+        If missing_by_var == 'interpolate', the missing will be filled with NaNs, then linearly interpolated.
     attrs_to_remove: dict
         Dictionary where the keys are the variables and the values are a list of the attrs that should be removed.
         For global attrs, use the key 'global'.
@@ -143,22 +143,25 @@ def clean_up(
         if missing_by_var:
             new_calendar["missing"] = np.nan
         ds = convert_calendar(ds, **new_calendar)
-        del new_calendar[
-            "missing"
-        ]  # remove 'missing' argument to be replace `missing_by_var`
-        # convert each variable individually
-        for var, missing in missing_by_var.items():
-            logging.info(f"Filling missing {var}  with {missing}")
-            converted_var = convert_calendar(
-                ds_copy[var], **new_calendar, missing=missing
-            )
 
-            if missing == "interpolate":
+        # convert each variable individually
+        if missing_by_var:
+            # remove 'missing' argument to be replace by `missing_by_var`
+            del new_calendar["missing"]
+            for var, missing in missing_by_var.items():
+                logging.info(f"Filling missing {var}  with {missing}")
                 converted_var = convert_calendar(
-                    ds_copy[var], **new_calendar, missing=np.nan
+                    ds_copy[var], **new_calendar, missing=missing
                 )
-                converted_var = converted_var.interpolate_na("time", method="linear")
-            ds[var] = converted_var
+
+                if missing == "interpolate":
+                    converted_var = convert_calendar(
+                        ds_copy[var], **new_calendar, missing=np.nan
+                    )
+                    converted_var = converted_var.interpolate_na(
+                        "time", method="linear"
+                    )
+                ds[var] = converted_var
 
     def _search(a, b):
         if a[-1] == "*":  # check if a is contained in b
