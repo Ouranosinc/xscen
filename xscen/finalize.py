@@ -139,7 +139,7 @@ def clean_up(
 
         # if missing_by_var exist make sure missing data are added to time axis
         if missing_by_var:
-            convert_calendar_kwargs["missing"] = np.nan
+            convert_calendar_kwargs.setdefault("missing", np.nan)
 
         # make default `align_on`='`random` when the initial calendar is 360day
         if get_calendar(ds) == "360_day" and "align_on" not in convert_calendar_kwargs:
@@ -154,16 +154,16 @@ def clean_up(
             del convert_calendar_kwargs["missing"]
             for var, missing in missing_by_var.items():
                 logging.info(f"Filling missing {var} with {missing}")
-                converted_var = convert_calendar(
-                    ds_copy[var], **convert_calendar_kwargs, missing=missing
-                )
-
                 if missing == "interpolate":
                     converted_var = convert_calendar(
                         ds_copy[var], **convert_calendar_kwargs, missing=np.nan
                     )
                     converted_var = converted_var.interpolate_na(
                         "time", method="linear"
+                    )
+                else:
+                    converted_var = convert_calendar(
+                        ds_copy[var], **convert_calendar_kwargs, missing=missing
                     )
                 ds[var] = converted_var
 
