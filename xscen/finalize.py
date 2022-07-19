@@ -136,7 +136,7 @@ def clean_up(
     # convert calendar
     if convert_calendar_kwargs:
         ds_copy = ds.copy()
-        # get the right time axis for full dataset
+
         # if missing_by_var exist make sure missing data are added to time axis
         if missing_by_var:
             convert_calendar_kwargs["missing"] = np.nan
@@ -144,6 +144,7 @@ def clean_up(
         # make default `align_on`='`random` when the initial calendar is 360day
         if get_calendar(ds) == "360_day" and "align_on" not in convert_calendar_kwargs:
             convert_calendar_kwargs["align_on"] = "random"
+
         logger.info(f"Converting calendar with {convert_calendar_kwargs} ")
         ds = convert_calendar(ds, **convert_calendar_kwargs)
 
