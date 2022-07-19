@@ -86,7 +86,7 @@ def clean_up(
         Dictionary to pass to xscen.common.maybe_unstack fonction.
         The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
     convert_calendar_kwargs: dict
-        Dictionary of argument to feed to xclim.core.calendar.convert_calendar. This will be the same for all variables.
+        Dictionary of arguments to feed to xclim.core.calendar.convert_calendar. This will be the same for all variables.
         If missing_by_vars is given, it will override the 'missing' argument given here.
         Eg. {target': default, 'align_on': 'random'}
     missing_by_var: list
