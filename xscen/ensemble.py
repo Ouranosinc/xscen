@@ -59,7 +59,7 @@ def ensemble_stats(
     # delete attrs that are not common to all dataset
     if common_attrs_only:
         for i in range(len(datasets)):
-            if isinstance(datasets[0], (str, Path)):
+            if isinstance(datasets[i], (str, Path)):
                 ds = xr.open_dataset(datasets[i], **create_kwargs)
             else:
                 ds = datasets[i]
