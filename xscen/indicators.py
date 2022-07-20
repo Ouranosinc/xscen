@@ -113,7 +113,7 @@ def compute_indicators(
         out = ind(ds=ds)
 
         # Infer the indicator's frequency
-        freq = xr.infer_freq(out.time)
+        freq = xr.infer_freq(out.time) if "time" in out.dims else "fx"
 
         # Create the dictionary key
         key = freq
