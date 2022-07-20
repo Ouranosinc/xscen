@@ -12,8 +12,8 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* `parse_directory`: Fixes to `xr_open_kwargs` and support for wildcards (*) in the directories (`:pull:19`).
 * New function `clean_up` (`:issue:22`, `:pull:24`)
+* `parse_directory`: Support for wildcards (*) in the directories (`:pull:19`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -21,7 +21,8 @@ Breaking changes
 
 Internal changes
 ^^^^^^^^^^^^^^^^
-* N/A
+* `parse_directory`: Fixes to `xr_open_kwargs` (:pull:`19`).
+* Fix for indicators removing the 'time' dimension (:pull:`23`).
 
 
 v0.2.0 (first official release)
