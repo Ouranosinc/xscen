@@ -50,7 +50,7 @@ def ensemble_stats(
     # if input files are .zarr, change the engine automatically
     if isinstance(datasets[0], (str, Path)):
         if len(datasets) > 1:
-            create_kwargs.setdefault({"mf_flag": True})
+            create_kwargs.setdefault("mf_flag", True)
         path = Path(datasets[0])
         if path.suffix == ".zarr" and "engine" not in create_kwargs:
             create_kwargs["engine"] = "zarr"
