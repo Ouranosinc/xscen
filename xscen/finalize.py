@@ -55,9 +55,9 @@ def change_units(ds: xr.Dataset, variables_and_units: dict):
 def clean_up(
     ds: xr.Dataset,
     variables_and_units: Optional[dict] = None,
-    maybe_unstack_dict: Optional[dict] = None,
     convert_calendar_kwargs: Optional[dict] = None,
     missing_by_var: Optional[dict] = None,
+    maybe_unstack_dict: Optional[dict] = None,
     attrs_to_remove: Optional[dict] = None,
     remove_all_attrs_except: Optional[dict] = None,
     add_attrs: Optional[dict] = None,
@@ -67,8 +67,8 @@ def clean_up(
     """
     Clean up of the dataset. It can:
      - convert to the right units using xscen.finalize.change_units
-     - call the xscen.common.maybe_unstack function
      - convert the calendar and interpolate over missing dates
+     - call the xscen.common.maybe_unstack function
      - remove a list of attributes
      - remove everything but a list of attributes
      - add attributes
@@ -82,9 +82,6 @@ def clean_up(
         Input dataset to clean up
     variables_and_units: dict
         Dictionary of variable to convert. eg. {'tasmax': 'degC', 'pr': 'mm d-1'}
-    maybe_unstack_dict: dict
-        Dictionary to pass to xscen.common.maybe_unstack fonction.
-        The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
     convert_calendar_kwargs: dict
         Dictionary of arguments to feed to xclim.core.calendar.convert_calendar. This will be the same for all variables.
         If missing_by_vars is given, it will override the 'missing' argument given here.
@@ -93,6 +90,9 @@ def clean_up(
         Dictionary where the keys are the variables and the values are the argument to feed the `missing`
         parameters of the xclim.core.calendar.convert_calendar for the given variable.
         If missing_by_var == 'interpolate', the missing will be filled with NaNs, then linearly interpolated over time.
+    maybe_unstack_dict: dict
+        Dictionary to pass to xscen.common.maybe_unstack fonction.
+        The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
     attrs_to_remove: dict
         Dictionary where the keys are the variables and the values are a list of the attrs that should be removed.
         For global attrs, use the key 'global'.
@@ -129,10 +129,6 @@ def clean_up(
         logger.info(f"Converting units: {variables_and_units}")
         ds = change_units(ds=ds, variables_and_units=variables_and_units)
 
-    # unstack nans
-    if maybe_unstack_dict:
-        ds = maybe_unstack(ds, **maybe_unstack_dict)
-
     # convert calendar
     if convert_calendar_kwargs:
         ds_copy = ds.copy()
@@ -166,6 +162,10 @@ def clean_up(
                         ds_copy[var], **convert_calendar_kwargs, missing=missing
                     )
                 ds[var] = converted_var
+
+    # unstack nans
+    if maybe_unstack_dict:
+        ds = maybe_unstack(ds, **maybe_unstack_dict)
 
     def _search(a, b):
         if a[-1] == "*":  # check if a is contained in b
