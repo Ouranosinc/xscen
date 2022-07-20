@@ -49,6 +49,8 @@ def ensemble_stats(
 
     # if input files are .zarr, change the engine automatically
     if isinstance(datasets[0], (str, Path)):
+        if len(datasets) > 1:
+            create_kwargs.setdefault({"mf_flag": True})
         path = Path(datasets[0])
         if path.suffix == ".zarr" and "engine" not in create_kwargs:
             create_kwargs["engine"] = "zarr"
@@ -60,6 +62,10 @@ def ensemble_stats(
     if common_attrs_only:
         for i in range(len(datasets)):
             if isinstance(datasets[0], (str, Path)):
+                # if they exsit remove attrs specififc to create_ensemble
+                create_kwargs.pop("mf_flag", None)
+                create_kwargs.pop("resample_freq", None)
+                create_kwargs.pop("calendar", None)
                 ds = xr.open_dataset(datasets[i], **create_kwargs)
             else:
                 ds = datasets[i]
