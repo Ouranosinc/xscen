@@ -146,7 +146,9 @@ def regrid(
 
     # Attrs
     out.attrs["cat/processing_level"] = to_level
-    out.attrs["cat/domain"] = ds_grid.attrs["cat/domain"]
+    out.attrs["cat/domain"] = (
+        ds_grid.attrs["cat/domain"] if "cat/domain" in ds_grid.attrs else None
+    )
 
     return out
 

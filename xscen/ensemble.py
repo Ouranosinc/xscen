@@ -13,10 +13,10 @@ logger = logging.getLogger(__name__)
 
 def ensemble_stats(
     datasets: list,
-    create_args: dict = {},
+    create_kwargs: dict = {},
     statistics: str = "ensemble_percentiles",
-    stats_args: dict = {},
-    attrs_to_keep: Optional[Union[list, str]] = None,
+    stats_kwargs: dict = {},
+    common_attrs_only: bool = True,
     to_level: str = "ensemble",
 ):
     """
@@ -27,19 +27,16 @@ def ensemble_stats(
     datasets: list
         List of file paths or xarray Dataset/DataArray objects to include in the ensemble
         Tip: With a project catalog, you can do: `datasets = list(pcat.search(**search_dict).df.path)`.
-    create_args: dict
+    create_kwargs: dict
         Dictionary of arguments for xclim.ensembles.create_ensemble
     statistics: str
         Name of the xclim.ensemble function to call on the ensemble
         (eg. "ensemble_percentiles","ensemble_mean_std_max_min").
-    stats_args: dict
+    stats_kwargs: dict
         Dictionary of arguments for the statictics function
-    attrs_to_keep: list, str
-        List of global attributes that fit all members of the ensemble and that will be kept in the output
-        If none is given the default is:
-        ["cat/type","cat/bias_adjust_institution", "cat/bias_adjust_project","cat/xrfreq", "cat/frequency",
-        "cat/experiment","cat/domain","cat/date_start", "cat/date_end"].
-        If 'all', all attributes will be kept.
+    common_attrs_only:
+        If True, keeps only the global attributes that are the same for all datasets and generate new id.
+        If False, keeps global attrs of the first dataset (same behaviour as xclim.ensembles.create_ensemble)
     to_level: str
         The processing level to assign to the output.
 
@@ -53,44 +50,37 @@ def ensemble_stats(
     # if input files are .zarr, change the engine automatically
     if isinstance(datasets[0], (str, Path)):
         path = Path(datasets[0])
-        if path.suffix == ".zarr" and "engine" not in create_args:
-            create_args["engine"] = "zarr"
+        if path.suffix == ".zarr" and "engine" not in create_kwargs:
+            create_kwargs["engine"] = "zarr"
 
-    ens = ensembles.create_ensemble(datasets, **create_args)
-    ens_stats = getattr(ensembles, statistics)(ens, **stats_args)
+    ens = ensembles.create_ensemble(datasets, **create_kwargs)
+    ens_stats = getattr(ensembles, statistics)(ens, **stats_kwargs)
 
-    # delete attrs that were copied from the first dataset and only put back the ones that apply to the whole ensemble
-    if attrs_to_keep != "all":
-        ens_stats.attrs = {}
-        if isinstance(datasets[0], (str, Path)):
-            ds = xr.open_dataset(datasets[0], **create_args)
-        else:
-            ds = datasets[0]
-
-        ATTRIBUTES = [
-            "cat/type",
-            "cat/bias_adjust_institution",
-            "cat/bias_adjust_project",
-            "cat/xrfreq",
-            "cat/frequency",
-            "cat/experiment",
-            "cat/domain",
-            "cat/date_start",
-            "cat/date_end",
-        ]
-
-        attrs_to_keep = attrs_to_keep or ATTRIBUTES
-
-        df = pd.DataFrame()
-        for a in attrs_to_keep:
-            a_nocat = a.replace("cat/", "")
-            ens_stats.attrs[a] = ds.attrs[a] if a in ds.attrs else None
-            df[a_nocat] = [ds.attrs[a] if a in ds.attrs else None]
-
-        ens_stats.attrs["cat/processing_level"] = to_level
+    # delete attrs that are not common to all dataset
+    if common_attrs_only:
+        for i in range(len(datasets)):
+            if isinstance(datasets[0], (str, Path)):
+                ds = xr.open_dataset(datasets[i], **create_kwargs)
+            else:
+                ds = datasets[i]
+            attributes = ens_stats.attrs.copy()
+            for a_key, a_val in attributes.items():
+                if (
+                    (a_key not in ds.attrs)
+                    or (a_key in ["cat/date_start", "cat/date_end"])
+                    or (a_val != ds.attrs[a_key])
+                ):
+                    del ens_stats.attrs[a_key]
+        # create dataframe of catalogue attrs to generate new id
+        df = pd.DataFrame.from_dict(
+            {
+                key[4:]: [value]
+                for key, value in ens_stats.attrs.items()
+                if key[:4] == "cat/"
+            }
+        )
         ens_stats.attrs["cat/id"] = generate_id(df)[0]
 
-    else:
-        ens_stats.attrs["cat/processing_level"] = to_level
+    ens_stats.attrs["cat/processing_level"] = to_level
 
     return ens_stats
