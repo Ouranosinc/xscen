@@ -14,7 +14,7 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New function `clean_up` (`:issue:22`, `:pull:24`)
 * `parse_directory`: Support for wildcards (*) in the directories (`:pull:19`).
-* New function `xscen.ensemble.ensemble stats` (':issue:3`, `:pull:28`)
+* New function `xscen.ensemble.ensemble_stats` (':issue:3`, `:pull:28`)
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
