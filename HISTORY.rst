@@ -4,7 +4,7 @@ History
 
 v0.3.0 (unreleased)
 ------------------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`) .
 
 Announcements
 ^^^^^^^^^^^^^
@@ -12,6 +12,7 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* New function `clean_up` (`:issue:22`, `:pull:24`)
 * `parse_directory`: Support for wildcards (*) in the directories (`:pull:19`).
 
 Breaking changes

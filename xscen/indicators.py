@@ -61,7 +61,7 @@ def compute_indicators(
         str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
     ],
     *,
-    to_level: str = None,
+    to_level: str = "indicators",
 ) -> Union[dict, xr.Dataset]:
     """
     Calculates variables and indicators based on a YAML call to xclim.
