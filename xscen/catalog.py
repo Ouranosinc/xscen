@@ -18,6 +18,7 @@ import intake_esm
 import pandas as pd
 import xarray
 import xarray as xr
+import yaml
 from dask.diagnostics import ProgressBar
 from intake.source.utils import reverse_format
 from intake_esm.cat import ESMCatalogModel
@@ -568,7 +569,7 @@ def get_asset_list(root_paths, extension="*.nc", parallel_depth=1):
             output = []
         return output
 
-    filelist = list()
+    filecoll = dict()
     for r in root_paths:
         root = Path(r)
         dirs = []
@@ -580,20 +581,21 @@ def get_asset_list(root_paths, extension="*.nc", parallel_depth=1):
                         dirs.remove(x.parent)
                     dirs.append(x)
 
-        filelistroot = [_file_dir_files(directory, extension) for directory in dirs]
+        filelist = [_file_dir_files(directory, extension) for directory in dirs]
         # watch progress
         with ProgressBar():
-            filelistroot = dask.compute(*filelistroot)
-        filelist.extend(list(itertools.chain(*filelistroot)))
+            filelist = dask.compute(*filelist)
+        filecoll[root] = list(itertools.chain(*filelist))
 
         # add files in the first directory
-        filelist.extend([str(x) for x in root.glob(f"{extension}")])
+        filecoll[root].extend([str(x.name) for x in root.glob(f"{extension}")])
+        filecoll[root].sort()
 
-    return sorted(filelist)
+    return filecoll
 
 
 def name_parser(
-    path, patterns, read_from_file=None, xr_open_kwargs: Mapping[str, Any] = None
+    path, root, patterns, read_from_file=None, attrs_map=None, xr_open_kwargs=None
 ):
     """Extract metadata information from the file path.
 
@@ -603,51 +605,61 @@ def name_parser(
       Full file path.
     patterns : list or str
       List of patterns to try in `reverse_format`
-    read_from_file : list of string, optional
-      A list of columns to parse from the file's metadata itself.
+    read_from_file : list of string or dict, optional
+      If not None, passed directly to :py:func:`parse_from_ds` as `names`.
+    attrs_map:
+      If `read_from_file` is not None, passed directly to :py:func:`parse_from_ds`.
     xr_open_kwargs: dict
-        If required, arguments to send xr.open_dataset() when opening the file to read the attributes.
+      If required, arguments to send to xr.open_dataset() when opening the file to read the attributes.
     """
-    path = Path(path)
+    abs_path = Path(path)
+    path = abs_path.relative_to(root)
     xr_open_kwargs = xr_open_kwargs or {}
 
     d = {}
     for pattern in patterns:
-        folder_depth = len(Path(pattern).parts) - 1
-        # stem is a path with the same number of parts as the pattern
-        stem = str(Path(*path.parts[-1 - folder_depth :]))
+        if len(Path(pattern).parts) != len(path.parts):
+            continue
         try:
-            d = reverse_format(pattern, stem)
-            if d:
+            d = reverse_format(pattern, str(path))
+            fields_with_illegal = {
+                k: v
+                for k, v in d.items()
+                if ("_" in v and not k.startswith("*")) or "/" in v
+            }
+            if d and not fields_with_illegal:
                 break
+            else:
+                d = {}
         except ValueError:
             continue
     if not d:
-        logger.warn(f"No pattern matched with path {path}..")
+        logger.warn(f"No pattern matched with path {path}")
     else:
         logger.debug(f"Parsed file path {path} and got {len(d)} fields.")
 
     # files with a single year/month
-    if ("date_end" not in d.keys()) and ("date_start" in d.keys()):
+    if "date_end" not in d and "date_start" in d:
         d["date_end"] = d["date_start"]
 
-    d["path"] = path
+    d["path"] = abs_path
     d["format"] = path.suffix[1:]
 
     if read_from_file:
-        missing = set(read_from_file) - d.keys()
-        if missing:
-            try:
-                fromfile = parse_from_ds(path, names=missing, **xr_open_kwargs)
-            except Exception as err:
-                logger.error(f"Unable to parse file {path}, got : {err}")
-            finally:
-                d.update(fromfile)
-                logger.debug(
-                    f"Parsed file data and got {len(missing.intersection(d.keys()))} more fields."
-                )
+        try:
+            fromfile = parse_from_ds(
+                path, names=read_from_file, attrs_map=attrs_map, **xr_open_kwargs
+            )
+        except Exception as err:
+            logger.error(f"Unable to parse file {path}, got : {err}")
+        finally:
+            d.update(fromfile)
     # strip to clean off lost spaces and line jumps
-    return {k: v.strip() if isinstance(v, str) else v for k, v in d.items()}
+    return {
+        k: v.strip() if isinstance(v, str) else v
+        for k, v in d.items()
+        if not k.startswith("*") and not k.startswith("?")  # Wildcards
+    }
 
 
 @parse_config
@@ -658,10 +670,13 @@ def parse_directory(
     *,
     id_columns: list = None,
     read_from_file: Union[
-        bool, Sequence[str], Tuple[Sequence[str], Sequence[str]]
+        bool,
+        Sequence[str],
+        Tuple[Sequence[str], Sequence[str]],
+        Sequence[Tuple[Sequence[str], Sequence[str]]],
     ] = False,
     homogenous_info: dict = None,
-    cvs_dir: Union[str, PosixPath] = None,
+    cvs: Union[str, PosixPath, dict] = None,
     xr_open_kwargs: Mapping[str, Any] = None,
     parallel_depth: int = 1,
 ) -> pd.DataFrame:
@@ -685,10 +700,13 @@ def parse_directory(
         If a tuple of 2 lists of strings, only the first file of groups defined by the
         first list of columns is read and the second list of columns is parsed from the
         file and applied to the whole group.
+        It can also be a list of those tuples.
     homogenous_info : dict, optional
         Using the {column_name: description} format, information to apply to all files.
-    cvs_dir: Union[str, PosixPath], optional
-        Directory where JSON controlled vocabulary files are located. See Notes below.
+    cvs: str or PosixPath or dict, optional
+        Dictionary with mapping from parsed name to controlled names for each column.
+        May have an additionnal "attributes" entry which maps from attribute names in the files to
+        official column names. The attribute translation is done before the rest.
     xr_open_kwargs: dict
         If required, arguments to send xr.open_dataset() when opening the file to read the attributes.
 
@@ -697,37 +715,50 @@ def parse_directory(
     - Columns names are: ["id", "type", "processing_level", "mip_era", "activity", "driving_institution", "driving_model", "institution",
                           "source", "bias_adjust_institution", "bias_adjust_project","experiment", "member",
                           "xrfreq", "frequency", "variable", "domain", "date_start", "date_end", "version"]
-    - Not all column names have to be present, but "xrfreq", "variable", "date_start", "date_end" & "processing_level" are necessary.
+    - Not all column names have to be present, but "xrfreq" (obtainable through "frequency"), "variable",
+        "date_start" and "processing_level" are necessary.
     - 'patterns' should highlight the columns with braces.
-        - A wildcard can be used for irrelevant parts of a filename.
-        - Example: "{*}_{*}_{domain}_{*}_{variable}_{date_start}_{activity}_{experiment}_{processing_level}_{*}.nc"
-    - JSON files for the controlled vocabulary must have the same name as the column. One file per column.
+        Wildcards can be used for irrelevant parts of a path. "*" means anything including the "_" character,
+        while "?" fits any string without "_". Any character following the wildcard is ignored, in order to have human readable placeholders.
+        Example: `"{?ignored project name}_{?}_{domain}_{?}_{variable}_{date_start}_{activity}_{experiment}_{processing_level}_{*gibberish}.nc"`
 
     Returns
     -------
     pd.DataFrame
-      Parsed directory files
-
+        Parsed directory files
     """
     homogenous_info = homogenous_info or {}
     columns = set(COLUMNS) - homogenous_info.keys()
-    first_file_only = (
-        None  # The set of columns defining groups for which read the first file.
-    )
+    xr_open_kwargs = xr_open_kwargs or {}
+
+    read_file_groups = False  # Whether to read file per groupe or not.
     if not isinstance(read_from_file, bool) and not isinstance(read_from_file[0], str):
         # A tuple of 2 lists
-        first_file_only, read_from_file = read_from_file
-    if read_from_file is True:
+        read_file_groups = True
+        if isinstance(read_from_file[0][0], str):
+            # only one grouping
+            read_from_file = [read_from_file]
+    elif read_from_file is True:
         # True but not a list of strings
         read_from_file = columns
-    elif read_from_file is False:
-        read_from_file = set()
 
-    filelist = get_asset_list(
+    if cvs is not None:
+        if not isinstance(cvs, dict):
+            with open(cvs) as f:
+                cvs = yaml.safe_load(f)
+        attrs_map = cvs.pop("attributes", {})
+    else:
+        attrs_map = {}
+
+    # Find files
+    filecoll = get_asset_list(
         directories, extension=extension, parallel_depth=parallel_depth
     )
-    logger.info(f"Found {len(filelist)} files to parse.")
+    logger.info(
+        f"Found {sum(len(filelist) for filelist in filecoll.values())} files to parse."
+    )
 
+    # Parse the file names
     def _update_dict(entry):
         z = {k: entry.get(k) for k in columns}
         return z
@@ -739,18 +770,22 @@ def parse_directory(
     parsed = [
         delayed_parser(
             x,
+            root,
             patterns,
-            read_from_file=read_from_file if first_file_only is None else [],
-            xr_open_kwargs=xr_open_kwargs if first_file_only is None else {},
+            read_from_file=read_from_file if not read_file_groups else None,
+            attrs_map=attrs_map,
+            xr_open_kwargs=xr_open_kwargs,
         )
+        for root, filelist in filecoll.items()
         for x in filelist
     ]
     with ProgressBar():
         parsed = dask.compute(*parsed)
     df = pd.DataFrame(parsed)
 
-    def read_first_file(grp, cols, xrkwargs):
-        fromfile = parse_from_ds(grp.path.iloc[0], cols, **xrkwargs)
+    # Parse attributes from one file per group
+    def read_first_file(grp, cols):
+        fromfile = parse_from_ds(grp.path.iloc[0], cols, attrs_map, **xr_open_kwargs)
         logger.info(f"Got {len(fromfile)} fields, applying to {len(grp)} entries.")
         out = grp.copy()
         for col, val in fromfile.items():
@@ -758,35 +793,25 @@ def parse_directory(
                 out.at[i, col] = val
         return out
 
-    if first_file_only is not None:
-        df = (
-            df.groupby(first_file_only)
-            .apply(
-                read_first_file, cols=read_from_file, xrkwargs=(xr_open_kwargs or {})
+    if read_file_groups:
+        for group_cols, parse_cols in read_from_file:
+            df = (
+                df.groupby(group_cols)
+                .apply(read_first_file, cols=parse_cols)
+                .reset_index(drop=True)
             )
-            .reset_index(drop=True)
-        )
 
     if df.shape[0] == 0:
         raise FileNotFoundError("No files found while parsing.")
 
-    # add homogeous info
+    # Add homogeous info
     for key, val in homogenous_info.items():
         df[key] = val
 
-    # Replace DataFrame entries by definitions found in CV
-    if cvs_dir is not None:
+    # Replace entries by definitions found in CV
+    if cvs:
         # Read all CVs and replace values in catalog accordingly
-        cvs = {}
-        for cvpath in Path(cvs_dir).glob("*.json"):
-            if cvpath.stem in df.columns:
-                with cvpath.open("r") as f:
-                    cvs[cvpath.stem] = json.load(f)
         df = df.replace(cvs)
-
-    # Parse dates
-    df["date_start"] = df["date_start"].apply(date_parser)
-    df["date_end"] = df["date_end"].apply(date_parser, end_of_period=True)
 
     # translate xrfreq into frequencies and vice-versa
     df["xrfreq"].fillna(
@@ -795,6 +820,17 @@ def parse_directory(
     df["frequency"].fillna(
         df["xrfreq"].apply(CV.xrfreq_to_frequency, default=pd.NA), inplace=True
     )
+
+    # Parse dates
+    df["date_start"] = df["date_start"].apply(date_parser)
+    df["date_end"] = df["date_end"].apply(date_parser, end_of_period=True)
+
+    # Checks
+    # todo
+    # 1. Toutes les colonnes (et seulement celles-ci) existent
+    # 2. Les dates NaT correspondent à une fréquence fx
+    # 3. Toutes les xrfreq sont correctes (pandas + fx)
+    # 4. Format est zarr ou nc
 
     # Create id from user specifications
     df["id"] = generate_id(df, id_columns)
@@ -807,23 +843,39 @@ def parse_directory(
 
 
 def parse_from_ds(
-    obj: Union[os.PathLike, xr.Dataset], names: Sequence[str], **xrkwargs
+    obj: Union[os.PathLike, xr.Dataset],
+    names: Sequence[str],
+    attrs_map: Optional[Mapping[str, str]] = None,
+    **xrkwargs,
 ):
     """Parse a list of catalog fields from the file/dataset itself.
 
     If passed a path, this opens the file.
 
     Infers the variable from the variables.
-    Infers frequency, date_start and date_end from the time coordinate if present.
-    Infers other attributes from the coordinates or the global attributes.
+    Infers xrfreq, frequency, date_start and date_end from the time coordinate if present.
+    Infers other attributes from the coordinates or the global attributes. Attributes names
+    can be translated using the `attrs_map` mapping (from file attribute name to name in `names`).
+
+    If the obj is the path to a Zarr dataset and none of "frequency", "xrfreq", "date_start" or "date_end"
+    are requested, :py:func:`parse_from_zarr` is used instead of opening the file.
     """
-    attrs = {}
     if not isinstance(obj, xr.Dataset):
-        ds = xr.open_dataset(obj, engine=get_engine(obj), **xrkwargs)
         logger.info(f"Parsing attributes from file {obj}.")
+        obj = Path(obj)
+        if (
+            obj.suffix == "zarr"
+            and obj.is_dir()
+            and not {"frequency", "xrfreq", "date_start", "date_end"}.issubset(names)
+        ):
+            return parse_from_zarr(obj, names, attrs_map)
+        ds = xr.open_dataset(obj, engine=get_engine(obj), **xrkwargs)
     else:
         ds = obj
         logger.info("Parsing attributes from dataset.")
+
+    rev_attrs_map = {v: k for k, v in (attrs_map or {}).items()}
+    attrs = {}
 
     for name in names:
         if name == "variable":
@@ -859,8 +911,51 @@ def parse_from_ds(
             attrs[name] = tuple(ds.coords[name].values)
         elif name in ds.attrs:
             attrs[name] = ds.attrs[name].strip()
+        elif name in rev_attrs_map and rev_attrs_map[name] in ds.attrs:
+            attrs[name] = ds.attrs[rev_attrs_map[name]].strip()
 
     logger.debug(f"Got fields {attrs.keys()} from file.")
+    return attrs
+
+
+def parse_from_zarr(
+    path: os.PathLike,
+    names: Sequence[str],
+    attrs_map: Optional[Mapping[str, str]] = None,
+):
+    """Parse a list of catalog fields from a zarr dataset WITHOUT opening it with xarray.
+
+    Infers the variable from the variables (variables where .zattrs/_ARRAY_DIMENSIONS does not contain the variable name)
+    Infers other attributes from the coordinates or the global attributes. Attributes names
+    can be translated using the `attrs_map` mapping (from file attribute name to name in `names`).
+    This function can't infer xrfreq, frequency, date_start or date_end.
+
+    This should be around 10 times faster than :py:func:`parse_from_ds`.
+    """
+    rev_attrs_map = {v: k for k, v in (attrs_map or {}).items()}
+    attrs = {}
+    path = Path(path)
+
+    if (path / ".zattrs").is_file():
+        with (path / ".zattrs").open() as f:
+            ds_attrs = json.load(f)
+    else:
+        ds_attrs = {}
+
+    for name in names:
+        if name == "variable":
+            attrs["variable"] = []
+            for varpath in path.iterdir():
+                if varpath.is_dir() and (varpath / ".zattrs").is_file():
+                    with (varpath / ".zattrs").open() as f:
+                        var_attrs = json.load(f)
+                    if varpath.name not in var_attrs["_ARRAY_DIMENSIONS"]:
+                        attrs["variable"].append(varpath.name)
+        elif name in ds_attrs:
+            attrs[name] = ds_attrs[name].strip()
+        elif name in rev_attrs_map and rev_attrs_map[name] in ds_attrs:
+            attrs[name] = ds_attrs[rev_attrs_map[name]].strip()
+    logger.debug(f"Got fields {attrs.keys()} from zarr folder.")
     return attrs
 
 
@@ -921,7 +1016,10 @@ def date_parser(
 
     fmt = None
     if isinstance(date, str):
-        date, fmt = _parse_date(date, fmts[len(date)])
+        try:
+            date, fmt = _parse_date(date, fmts[len(date)])
+        except (KeyError, ValueError):
+            date = pd.NaT
     elif isinstance(date, cftime.datetime):
         for n in range(3):
             try:
