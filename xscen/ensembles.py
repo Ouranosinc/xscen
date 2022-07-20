@@ -61,8 +61,8 @@ def ensemble_stats(
     # delete attrs that are not common to all dataset
     if common_attrs_only:
         for i in range(len(datasets)):
-            if isinstance(datasets[0], (str, Path)):
-                # if they exsit remove attrs specififc to create_ensemble
+            if isinstance(datasets[i], (str, Path)):
+                # if they exist remove attrs specific to create_ensemble
                 create_kwargs.pop("mf_flag", None)
                 create_kwargs.pop("resample_freq", None)
                 create_kwargs.pop("calendar", None)
