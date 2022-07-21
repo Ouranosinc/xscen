@@ -15,6 +15,7 @@ import cftime
 import dask
 import fsspec as fs
 import intake_esm
+import netCDF4
 import pandas as pd
 import xarray
 import xarray as xr
@@ -611,6 +612,12 @@ def name_parser(
       If `read_from_file` is not None, passed directly to :py:func:`parse_from_ds`.
     xr_open_kwargs: dict
       If required, arguments to send to xr.open_dataset() when opening the file to read the attributes.
+
+    Returns
+    -------
+    dict
+        The metadata fields parsed from the path using the first fitting pattern.
+        If no pattern matched, {'path': None} is returned.
     """
     abs_path = Path(path)
     path = abs_path.relative_to(root)
@@ -635,8 +642,9 @@ def name_parser(
             continue
     if not d:
         logger.warn(f"No pattern matched with path {path}")
-    else:
-        logger.debug(f"Parsed file path {path} and got {len(d)} fields.")
+        return {"path": None}
+
+    logger.debug(f"Parsed file path {path} and got {len(d)} fields.")
 
     # files with a single year/month
     if "date_end" not in d and "date_start" in d:
@@ -648,11 +656,11 @@ def name_parser(
     if read_from_file:
         try:
             fromfile = parse_from_ds(
-                path, names=read_from_file, attrs_map=attrs_map, **xr_open_kwargs
+                abs_path, names=read_from_file, attrs_map=attrs_map, **xr_open_kwargs
             )
         except Exception as err:
             logger.error(f"Unable to parse file {path}, got : {err}")
-        finally:
+        else:
             d.update(fromfile)
     # strip to clean off lost spaces and line jumps
     return {
@@ -779,9 +787,13 @@ def parse_directory(
         for root, filelist in filecoll.items()
         for x in filelist
     ]
+    if len(parsed) == 0:
+        raise FileNotFoundError("No files found while parsing.")
+
     with ProgressBar():
         parsed = dask.compute(*parsed)
-    df = pd.DataFrame(parsed)
+    # Path has become NaN when some paths didn't fit any passed pattern
+    df = pd.DataFrame(parsed).dropna(axis=0, subset=["path"])
 
     # Parse attributes from one file per group
     def read_first_file(grp, cols):
@@ -800,9 +812,6 @@ def parse_directory(
                 .apply(read_first_file, cols=parse_cols)
                 .reset_index(drop=True)
             )
-
-    if df.shape[0] == 0:
-        raise FileNotFoundError("No files found while parsing.")
 
     # Add homogeous info
     for key, val in homogenous_info.items():
@@ -860,38 +869,40 @@ def parse_from_ds(
     If the obj is the path to a Zarr dataset and none of "frequency", "xrfreq", "date_start" or "date_end"
     are requested, :py:func:`parse_from_zarr` is used instead of opening the file.
     """
+    get_time = bool(
+        {"frequency", "xrfreq", "date_start", "date_end"}.intersection(names)
+    )
     if not isinstance(obj, xr.Dataset):
-        logger.info(f"Parsing attributes from file {obj}.")
         obj = Path(obj)
-        if (
-            obj.suffix == "zarr"
-            and obj.is_dir()
-            and not {"frequency", "xrfreq", "date_start", "date_end"}.issubset(names)
-        ):
-            return parse_from_zarr(obj, names, attrs_map)
-        ds = xr.open_dataset(obj, engine=get_engine(obj), **xrkwargs)
+
+    if isinstance(obj, Path) and obj.suffixes[-1] == ".zarr" and not get_time:
+        logger.info(f"Parsing attributes from Zarr {obj}.")
+        ds_attrs, variables = _parse_from_zarr(obj, get_vars="variables" in names)
+        time = None
+    elif isinstance(obj, Path) and obj.suffixes[-1] == ".nc":
+        logger.info(f"Parsing attributes with netCDF4 from {obj}.")
+        ds_attrs, variables, time = _parse_from_nc(
+            obj, get_vars="variables" in names, get_time=get_time
+        )
     else:
-        ds = obj
-        logger.info("Parsing attributes from dataset.")
+        if isinstance(obj, Path):
+            logger.info(f"Parsing attributes with xarray from {obj}.")
+            obj = xr.open_dataset(obj, engine=get_engine(obj), **xrkwargs)
+        ds_attrs = obj.attrs
+        time = obj.indexes["time"] if "time" in obj else None
+        variables = set(obj.data_vars.keys()).difference(
+            [v for v in obj.data_vars if len(obj[v].dims) == 0]
+        )
 
     rev_attrs_map = {v: k for k, v in (attrs_map or {}).items()}
     attrs = {}
 
     for name in names:
         if name == "variable":
-            attrs["variable"] = tuple(
-                set(ds.data_vars.keys()).difference(
-                    [v for v in ds.data_vars if len(ds[v].dims) == 0]
-                )
-            )
-        elif (
-            name in ("frequency", "xrfreq")
-            and name not in attrs
-            and "time" in ds.coords
-            and ds.time.size > 3
-        ):
+            attrs["variable"] = tuple(variables)
+        elif name in ("frequency", "xrfreq") and time is not None and time.size > 3:
             # round to the minute to catch floating point imprecision
-            freq = xr.infer_freq(ds.time.dt.round("T"))
+            freq = xr.infer_freq(time.round("T"))
             if freq:
                 if "xrfreq" in names:
                     attrs["xrfreq"] = freq
@@ -901,39 +912,29 @@ def parse_from_ds(
                 warnings.warn(
                     f"Couldn't infer frequency of dataset {obj if not isinstance(obj, xr.Dataset) else ''}"
                 )
-        elif name == "xrfreq" and "time" not in ds.coords:
-            attrs["xrfreq"] = "fx"
-        elif name == "date_start" and "time" in ds.coords:
-            attrs["date_start"] = ds.indexes["time"][0]
-        elif name == "date_end" and "time" in ds.coords:
-            attrs["date_end"] = ds.indexes["time"][-1]
-        elif name in ds.coords:
-            attrs[name] = tuple(ds.coords[name].values)
-        elif name in ds.attrs:
-            attrs[name] = ds.attrs[name].strip()
-        elif name in rev_attrs_map and rev_attrs_map[name] in ds.attrs:
-            attrs[name] = ds.attrs[rev_attrs_map[name]].strip()
+        elif name in ("frequency", "xrfreq") and time is None:
+            attrs[name] = "fx"
+        elif name == "date_start" and time is not None:
+            attrs["date_start"] = time[0]
+        elif name == "date_end" and time is not None:
+            attrs["date_end"] = time[-1]
+        elif name in ds_attrs:
+            attrs[name] = ds_attrs[name].strip()
+        elif name in rev_attrs_map and rev_attrs_map[name] in ds_attrs:
+            attrs[name] = ds_attrs[rev_attrs_map[name]].strip()
 
     logger.debug(f"Got fields {attrs.keys()} from file.")
     return attrs
 
 
-def parse_from_zarr(
-    path: os.PathLike,
-    names: Sequence[str],
-    attrs_map: Optional[Mapping[str, str]] = None,
-):
-    """Parse a list of catalog fields from a zarr dataset WITHOUT opening it with xarray.
+def _parse_from_zarr(path: os.PathLike, get_vars=True):
+    """Obtains the list of variables and the list of global attributes from a zarr dataset, reading the json files directly.
 
-    Infers the variable from the variables (variables where .zattrs/_ARRAY_DIMENSIONS does not contain the variable name)
-    Infers other attributes from the coordinates or the global attributes. Attributes names
-    can be translated using the `attrs_map` mapping (from file attribute name to name in `names`).
-    This function can't infer xrfreq, frequency, date_start or date_end.
-
-    This should be around 10 times faster than :py:func:`parse_from_ds`.
+    Variables are those
+    - where .zattrs/_ARRAY_DIMENSIONS is not empty
+    - where .zattrs/_ARRAY_DIMENSIONS does not contain the variable name
+    - who do not appear in any "coordinates" attribute.
     """
-    rev_attrs_map = {v: k for k, v in (attrs_map or {}).items()}
-    attrs = {}
     path = Path(path)
 
     if (path / ".zattrs").is_file():
@@ -942,21 +943,57 @@ def parse_from_zarr(
     else:
         ds_attrs = {}
 
-    for name in names:
-        if name == "variable":
-            attrs["variable"] = []
-            for varpath in path.iterdir():
-                if varpath.is_dir() and (varpath / ".zattrs").is_file():
-                    with (varpath / ".zattrs").open() as f:
-                        var_attrs = json.load(f)
-                    if varpath.name not in var_attrs["_ARRAY_DIMENSIONS"]:
-                        attrs["variable"].append(varpath.name)
-        elif name in ds_attrs:
-            attrs[name] = ds_attrs[name].strip()
-        elif name in rev_attrs_map and rev_attrs_map[name] in ds_attrs:
-            attrs[name] = ds_attrs[rev_attrs_map[name]].strip()
-    logger.debug(f"Got fields {attrs.keys()} from zarr folder.")
-    return attrs
+    variables = []
+    if get_vars:
+        coords = []
+        for varpath in path.iterdir():
+            if varpath.is_dir() and (varpath / ".zattrs").is_file():
+                with (varpath / ".zattrs").open() as f:
+                    var_attrs = json.load(f)
+                if (
+                    varpath.name in var_attrs["_ARRAY_DIMENSIONS"]
+                    or len(var_attrs["_ARRAY_DIMENSIONS"]) == 0
+                ):
+                    coords.append(varpath.name)
+                if "coordinates" in var_attrs:
+                    coords.extend(
+                        list(map(str.strip, var_attrs["coordinates"].split(" ")))
+                    )
+        variables = [
+            varpath.name for varpath in path.iterdir() if varpath.name not in coords
+        ]
+    return ds_attrs, variables
+
+
+def _parse_from_nc(path: os.PathLike, get_vars=True, get_time=True):
+    """Obtains the list of variables, the time coordinate and the list of global attributes from a netCDF dataset, using netCDF4.
+
+    Variabl
+    """
+    ds = netCDF4.Dataset(str(path))
+    ds_attrs = {k: ds.getncattr(k) for k in ds.ncattrs()}
+
+    variables = []
+    if get_vars:
+        coords = []
+        for name, var in ds.variables.items():
+            if "coordinates" in var.ncattrs():
+                coords.extend(
+                    list(map(str.strip, var.getncattr("coordinates").split(" ")))
+                )
+            if len(var.dimensions) == 0 or name in var.dimensions:
+                coords.append(name)
+        variables = [var for var in ds.variables.keys() if var not in coords]
+
+    time = None
+    if get_time and "time" in ds.variables:
+        time = xr.CFTimeIndex(
+            cftime.num2date(
+                ds["time"][:], calendar=ds["time"].calendar, units=ds["time"].units
+            ).data
+        )
+    ds.close()
+    return ds_attrs, variables, time
 
 
 def date_parser(
