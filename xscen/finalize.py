@@ -88,7 +88,7 @@ def clean_up(
         Eg. {target': default, 'align_on': 'random'}
     missing_by_var: list
         Dictionary where the keys are the variables and the values are the argument to feed the `missing`
-        parameters of the xclim.core.calendar.convert_calendar for the given variable.
+        parameters of the xclim.core.calendar.convert_calendar for the given variable with the `convert_calendar_kwargs`.
         If missing_by_var == 'interpolate', the missing will be filled with NaNs, then linearly interpolated over time.
     maybe_unstack_dict: dict
         Dictionary to pass to xscen.common.maybe_unstack fonction.
@@ -131,7 +131,10 @@ def clean_up(
 
     # convert calendar
     if convert_calendar_kwargs:
+
         ds_copy = ds.copy()
+        # create mask of grid point that should always be nan
+        ocean = ds_copy.isnull().all("time")
 
         # if missing_by_var exist make sure missing data are added to time axis
         if missing_by_var:
@@ -142,7 +145,7 @@ def clean_up(
             convert_calendar_kwargs["align_on"] = "random"
 
         logger.info(f"Converting calendar with {convert_calendar_kwargs} ")
-        ds = convert_calendar(ds, **convert_calendar_kwargs)
+        ds = convert_calendar(ds, **convert_calendar_kwargs).where(~ocean)
 
         # convert each variable individually
         if missing_by_var:
@@ -158,9 +161,10 @@ def clean_up(
                         "time", method="linear"
                     )
                 else:
+                    ocean_var = ds_copy[var].isnull().all("time")
                     converted_var = convert_calendar(
                         ds_copy[var], **convert_calendar_kwargs, missing=missing
-                    )
+                    ).where(~ocean_var)
                 ds[var] = converted_var
 
     # unstack nans
