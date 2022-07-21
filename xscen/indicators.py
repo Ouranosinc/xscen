@@ -61,7 +61,7 @@ def compute_indicators(
         str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
     ],
     *,
-    to_level: str = None,
+    to_level: str = "indicators",
 ) -> Union[dict, xr.Dataset]:
     """
     Calculates variables and indicators based on a YAML call to xclim.
@@ -113,7 +113,7 @@ def compute_indicators(
         out = ind(ds=ds)
 
         # Infer the indicator's frequency
-        freq = xr.infer_freq(out.time)
+        freq = xr.infer_freq(out.time) if "time" in out.dims else "fx"
 
         # Create the dictionary key
         key = freq

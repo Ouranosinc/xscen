@@ -2,9 +2,9 @@
 History
 =======
 
-v0.2.1
-------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
+v0.3.0 (unreleased)
+------------------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -12,6 +12,7 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* New function `clean_up` (`:issue:22`, `:pull:24`)
 * `parse_directory`: Fixes to `xr_open_kwargs` and support for wildcards (*) in the directories (:pull:`19`).
 
 Breaking changes
@@ -20,9 +21,10 @@ Breaking changes
 
 Internal changes
 ^^^^^^^^^^^^^^^^
+* `parse_directory`: Fixes to `xr_open_kwargs` (:pull:`19`).
+* Fix for indicators removing the 'time' dimension (:pull:`23`).
 * Security scanning using CodeQL and GitHub Actions is now configured for the repository (:pull:`21`).
 * Bumpversion action now configured to automatically augment the version number on each merged pull request (:pull:`21`).
-
 
 v0.2.0 (first official release)
 ------------------------------
