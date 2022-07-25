@@ -26,7 +26,7 @@ def ensemble_stats(
     ----------
     datasets: list
         List of file paths or xarray Dataset/DataArray objects to include in the ensemble
-        Tip: With a project catalog, you can do: `datasets = list(pcat.search(**search_dict).df.path)`.
+        Tip: With a project catalog, you can do: `datasets = list(pcat.search(**search_dict).df.path)` to get a list of paths.
     create_kwargs: dict
         Dictionary of arguments for xclim.ensembles.create_ensemble
     statistics: str
