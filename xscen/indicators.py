@@ -61,6 +61,7 @@ def compute_indicators(
         str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
     ],
     *,
+    periods: list = None,
     to_level: str = "indicators",
 ) -> Union[dict, xr.Dataset]:
     """
@@ -75,6 +76,9 @@ def compute_indicators(
       Can also be only the "stem", if translations and custom indices are implemented.
       Can be the indicator module directly, or a sequence of indicators or a sequence of
       tuples (indicator name, indicator) as returned by `iter_indicators()`.
+    periods : list
+      list of [start, end] of the contiguous periods to be evaluated, in the case of disjointed datasets.
+      If left at None, the dataset will be considered continuous.
     to_level : str, optional
       The processing level to assign to the output.
       If None, the processing level of the inputs is preserved.
@@ -82,9 +86,8 @@ def compute_indicators(
 
     Returns
     -------
-    dict, xr.Dataset
+    dict
       Dictionary (keys = timedeltas) with indicators separated by temporal resolution.
-      If there is a single timestep, a Dataset will be returned instead.
 
     """
     if isinstance(indicators, (str, Path)):
@@ -109,11 +112,30 @@ def compute_indicators(
             iden = ind.identifier
         logger.info(f"{i} - Computing {iden}.")
 
-        # Make the call to xclim
-        out = ind(ds=ds)
+        if periods is None:
+            # Make the call to xclim
+            out = ind(ds=ds)
 
-        # Infer the indicator's frequency
-        freq = xr.infer_freq(out.time) if "time" in out.dims else "fx"
+            # Infer the indicator's frequency
+            freq = xr.infer_freq(out.time) if "time" in out.dims else "fx"
+
+        else:
+            # Multiple time periods to concatenate
+            concats = []
+            for period in periods:
+                # Make the call to xclim
+                ds_subset = ds.sel(time=slice(str(period[0]), str(period[1])))
+                tmp = ind(ds=ds_subset)
+
+                # Infer the indicator's frequency
+                freq = xr.infer_freq(tmp.time) if "time" in tmp.dims else "fx"
+
+                # In order to concatenate time periods, the indicator still needs a time dimension
+                if freq == "fx":
+                    tmp = tmp.assign_coords({"time": ds_subset.time[0]})
+
+                concats.extend(tmp)
+            out = xr.concat(concats, dim="time")
 
         # Create the dictionary key
         key = freq
@@ -128,9 +150,6 @@ def compute_indicators(
             out_dict[key].attrs.pop("cat/variable")
             out_dict[key].attrs["cat/xrfreq"] = freq
             out_dict[key].attrs["cat/frequency"] = CV.xrfreq_to_frequency(freq, None)
-            out_dict[key].attrs["cat/timedelta"] = pd.to_timedelta(
-                CV.xrfreq_to_timedelta(freq, None)
-            )
             if to_level is not None:
                 out_dict[key].attrs["cat/processing_level"] = to_level
 

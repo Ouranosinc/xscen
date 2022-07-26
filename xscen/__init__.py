@@ -5,6 +5,22 @@ import warnings
 from pathlib import Path
 from types import ModuleType
 
+# Import the submodules
+from . import (
+    aggregate,
+    biasadjust,
+    catalog,
+    checkups,
+    common,
+    config,
+    extraction,
+    finalize,
+    indicators,
+    io,
+    regridding,
+    scr_utils,
+)
+
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
 __version__ = "__version__ = '0.2.2'"

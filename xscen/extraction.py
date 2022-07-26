@@ -849,7 +849,10 @@ def _subset_file_coverage(
 
     # Check for duplicated Intervals
     if any(file_intervals.duplicated()):
-        raise ValueError("Time periods are overlapping.")
+        logging.warning(
+            f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Time periods are overlapping."
+        )
+        return pd.DataFrame(columns=df.columns)
 
     # Create an array of True/False
     files_to_keep = np.zeros(len(file_intervals), dtype=bool)
@@ -880,6 +883,9 @@ def _subset_file_coverage(
 
         # 'coverage' adds some leeway, for example to take different calendars into account or missing 2100-12-31
         if guessed_nb_hrs / period_nb_hrs < coverage or len(df[files_in_range]) == 0:
+            logging.warning(
+                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage."
+            )
             return pd.DataFrame(columns=df.columns)
 
         files_to_keep = files_to_keep | files_in_range
