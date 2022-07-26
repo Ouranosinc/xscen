@@ -22,7 +22,7 @@ from dask.diagnostics import ProgressBar
 from intake.source.utils import reverse_format
 from intake_esm.cat import ESMCatalogModel
 
-from . import CV
+from .common import CV
 from .config import CONFIG, parse_config, recursive_update
 from .io import get_engine
 

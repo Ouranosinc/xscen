@@ -11,7 +11,7 @@ from intake_esm import DerivedVariableRegistry
 from xclim.core.indicator import Indicator
 from yaml import safe_load
 
-from . import CV
+from .common import CV
 from .config import parse_config
 
 logger = logging.getLogger(__name__)

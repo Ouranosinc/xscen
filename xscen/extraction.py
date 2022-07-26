@@ -12,7 +12,6 @@ import xarray as xr
 import xclim as xc
 from intake_esm.derived import DerivedVariableRegistry
 
-from . import CV
 from .catalog import (
     ID_COLUMNS,
     DataCatalog,
@@ -21,7 +20,7 @@ from .catalog import (
     generate_id,
     parse_from_ds,
 )
-from .common import natural_sort
+from .common import CV, natural_sort
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
 
