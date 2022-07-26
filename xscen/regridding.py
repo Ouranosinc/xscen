@@ -66,10 +66,11 @@ def regrid(
         # if weights_location does no exist, create it
         if not os.path.exists(weights_location):
             os.makedirs(weights_location)
+        id = ds.attrs["cat/id"] if "cat/id" in ds.attrs else "weights"
         # give unique name to weights file
         weights_filename = os.path.join(
             weights_location,
-            f"{ds.attrs['cat/id']}_"
+            f"{id}_"
             f"{'_'.join(kwargs[k] for k in kwargs if isinstance(kwargs[k], str))}.nc",
         )
 
@@ -146,7 +147,9 @@ def regrid(
 
     # Attrs
     out.attrs["cat/processing_level"] = to_level
-    out.attrs["cat/domain"] = ds_grid.attrs["cat/domain"]
+    out.attrs["cat/domain"] = (
+        ds_grid.attrs["cat/domain"] if "cat/domain" in ds_grid.attrs else None
+    )
 
     return out
 

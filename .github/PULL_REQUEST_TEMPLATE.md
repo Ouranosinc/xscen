@@ -8,7 +8,6 @@
 - [ ] If a merge request has been made in parallel to this PR in xscen-notebooks, it is merged and the submodules have been updated.
 - [ ] HISTORY.rst has been updated (with summary of main changes)
   - [ ] Link to issue (:issue:`number`) and pull request (:pull:`number`) has been added
-- [ ] `bumpversion patch` has been called on this branch
 
 ### What kind of change does this PR introduce?
 
