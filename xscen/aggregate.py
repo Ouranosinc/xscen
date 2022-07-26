@@ -140,7 +140,7 @@ def compute_deltas(
     to_level: str = None,
 ) -> xr.Dataset:
     """
-    Computes the mean over 'year' for given time periods, respecting the temporal resolution of ds.
+    Computes deltas in comparison to a reference time period, respecting the temporal resolution of ds.
 
     Parameters
     ----------
@@ -259,6 +259,51 @@ def spatial_mean(
     to_domain: str = None,
     to_level: str = None,
 ) -> xr.Dataset:
+    """
+    Computes the spatial mean, using a variety of available methods.
+
+    Parameters
+    ----------
+    ds: xr.Dataset
+      Dataset to use for the computation.
+    method: str
+      'mean' will perform a .mean() over the spatial dimensions of the Dataset.
+      'interp_coord' will (optionally) find the region's centroid, then perform a .interp() over the spatial dimensions of the Dataset.
+      'xesmf' will make use of xESMF's SpatialAverager. Note that this can be much slower than other methods.
+    call_clisops: bool
+      If True, xscen.extraction.clisops_subset will be called prior to the other operations. This requires the 'region' argument.
+    region: dict
+      Description of the region and the subsetting method (required fields listed in the Notes).
+      If method=='interp_coord', this is used to find the region's centroid.
+      If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
+    kwargs: dict
+      Arguments to send to either interp() or SpatialAverager().
+    simplify_tolerance: float
+      Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
+      The simpler the polygons, the faster the averaging, but it will lose some precision.
+    to_domain : str, optional
+      The domain to assign to the output.
+      If None, the domain of the inputs is preserved.
+    to_level : str, optional
+      The processing level to assign to the output.
+      If None, the processing level of the inputs is preserved.
+
+    Returns
+    -------
+    xr.Dataset
+      Returns a Dataset with the spatial dimensions averaged.
+
+
+    Notes
+    -----
+    'region' required fields:
+        method: str
+            ['gridpoint', 'bbox', shape']
+        <method>: dict
+            Arguments specific to the method used.
+        buffer: float, optional
+            Multiplier to apply to the model resolution. Only used if call_clisops==True.
+    """
 
     kwargs = kwargs or {}
 
