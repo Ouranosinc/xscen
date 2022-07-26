@@ -3,6 +3,7 @@ import itertools
 import json
 import logging
 import os
+import re
 import subprocess
 import warnings
 from copy import deepcopy
@@ -704,7 +705,17 @@ def parse_directory(
 
     """
     homogenous_info = homogenous_info or {}
-    columns = set(COLUMNS) - homogenous_info.keys()
+    columns = (
+        set(
+            COLUMNS
+            + list(
+                itertools.chain.from_iterable(
+                    [re.findall(r"\{(\w+)\}", p) for p in patterns]
+                )
+            )
+        )
+        - homogenous_info.keys()
+    )
     first_file_only = (
         None  # The set of columns defining groups for which read the first file.
     )
@@ -795,7 +806,19 @@ def parse_directory(
     df["path"] = df.path.apply(str)
 
     # Sort columns and return
-    return df.loc[:, COLUMNS]
+    return df.loc[
+        :,
+        COLUMNS
+        + sorted(
+            list(
+                set(
+                    itertools.chain.from_iterable(
+                        [re.findall(r"\{(\w+)\}", p) for p in patterns]
+                    )
+                ).difference(COLUMNS)
+            )
+        ),
+    ]
 
 
 def parse_from_ds(
