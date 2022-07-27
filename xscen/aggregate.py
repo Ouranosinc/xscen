@@ -260,7 +260,7 @@ def spatial_mean(
     to_level: str = None,
 ) -> xr.Dataset:
     """
-    Computes the spatial mean, using a variety of available methods.
+    Computes the spatial mean using a variety of available methods.
 
     Parameters
     ----------
