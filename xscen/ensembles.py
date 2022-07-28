@@ -1,12 +1,14 @@
 import logging
 from pathlib import Path
-# from typing import Optional, Union
 
 import pandas as pd
 import xarray as xr
 from xclim import ensembles
 
 from .catalog import generate_id  # ProjectCatalog
+
+# from typing import Optional, Union
+
 
 logger = logging.getLogger(__name__)
 

@@ -188,7 +188,9 @@ def derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
     return partial(func, ind=ind, nout=nout)
 
 
-def registry_from_module(module, registry=None, variable_column="variable") -> DerivedVariableRegistry:
+def registry_from_module(
+    module, registry=None, variable_column="variable"
+) -> DerivedVariableRegistry:
     """Converts a xclim virtual indicators module to an intake_esm Derived Variable Registry.
 
     Parameters

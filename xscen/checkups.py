@@ -13,7 +13,11 @@ from .io import save_to_zarr
 # TODO: Change all paths to PosixPath objects, including in the catalog?
 
 
-__all__ = ["fig_bias_compare_and_diff", "fig_compare_and_diff", "fix_unphysical_values", ]
+__all__ = [
+    "fig_bias_compare_and_diff",
+    "fig_compare_and_diff",
+    "fix_unphysical_values",
+]
 
 
 def fix_unphysical_values(

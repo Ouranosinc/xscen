@@ -2,7 +2,7 @@ import logging
 import os
 import shutil as sh
 from pathlib import Path
-from typing import Optional, Union, Sequence
+from typing import Optional, Sequence, Union
 
 import h5py
 import netCDF4
@@ -467,7 +467,7 @@ def rechunk(
     worker_mem: str,
     temp_store: Optional[Union[os.PathLike, str]] = None,
     overwrite: bool = False,
-)-> None:
+) -> None:
     """Rechunk a dataset into a new zarr.
 
     Parameters
