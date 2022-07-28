@@ -15,7 +15,7 @@ New features and enhancements
 * New function ``clean_up`` added. (:issue:`22`, :pull:`24`).
 * `parse_directory`: Fixes to `xr_open_kwargs` and support for wildcards (*) in the directories. (:pull:`19`).
 * New function ``xscen.ensemble.ensemble_stats`` added. (:issue:`3`, :pull:`28`).
-* Add argument ```intermediate_reg_grids`` to ``xscen.regridding.regrid` (:issue:`34`, :pull:`39`).
+* Add argument ``intermediate_reg_grids`` to ``xscen.regridding.regrid` (:issue:`34`, :pull:`39`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
