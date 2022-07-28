@@ -1,6 +1,7 @@
 import datetime
 import operator
 import os
+import warnings
 from copy import deepcopy
 from pathlib import PosixPath
 from typing import Optional, Union
@@ -8,6 +9,7 @@ from typing import Optional, Union
 import numpy as np
 import xarray
 import xarray as xr
+import xesmf
 import xesmf as xe
 
 from .config import parse_config
@@ -25,6 +27,7 @@ def regrid(
     ds_grid: xr.Dataset,
     *,
     regridder_kwargs: Optional[dict] = None,
+    intermediate_reg_grids: Optional[dict] = None,
     to_level: str = "regridded",
 ) -> xarray.Dataset:
     """
@@ -42,6 +45,22 @@ def regrid(
       Supports a 'mask' variable compatible with ESMF standards.
     regridder_kwargs : dict
       Arguments to send xe.Regridder().
+    intermediate_reg_grids: dict
+        This argument is used to do a regridding in many steps, regridding to regular
+        grids before regridding to the final ds_grid.
+        This is useful when there is a large jump in resolution between ds and ds grid.
+        For each intermediary grid, you must provide the argument to create the grid
+        with util.cf_grid_2d and the arguments for the regridding with xe.Regridder.
+        The format is a nested dictionary:
+
+        {'name_of_inter_grid_1': {
+            'cf_grid_2d': {arguments for util.cf_grid_2d },
+            'regridder_kwargs':{arguments for xe.Regridder}
+            },
+        'name_of_inter_grid_2': ....
+                                }
+
+        If None, no intermediary grid is used, there is only a regrid from ds to ds_grid.
     to_level: str
       The processing level to assign to the output.
       Defaults to 'regridded'
@@ -52,105 +71,131 @@ def regrid(
       Regridded dataset
 
     """
+
     regridder_kwargs = regridder_kwargs or {}
 
-    # Whether or not regridding is required
-    if ds["lon"].equals(ds_grid["lon"]) & ds["lat"].equals(ds_grid["lat"]):
-        out = ds
-        if "mask" in out:
-            out = out.where(out.mask == 1)
-            out = out.drop_vars(["mask"])
+    ds_grids = []  # list of target grids
+    reg_arguments = []  # list of accompanying arguments for xe.Regridder()
+    if intermediate_reg_grids:
+        for name_inter, dict_inter in intermediate_reg_grids.items():
+            reg_arguments.append(dict_inter["regridder_kwargs"])
+            ds_grids.append(xesmf.util.cf_grid_2d(**dict_inter["cf_grid_2d"]))
 
-    else:
-        kwargs = deepcopy(regridder_kwargs)
-        # if weights_location does no exist, create it
-        if not os.path.exists(weights_location):
-            os.makedirs(weights_location)
-        id = ds.attrs["cat/id"] if "cat/id" in ds.attrs else "weights"
-        # give unique name to weights file
-        weights_filename = os.path.join(
-            weights_location,
-            f"{id}_"
-            f"{'_'.join(kwargs[k] for k in kwargs if isinstance(kwargs[k], str))}.nc",
-        )
+    ds_grids.append(ds_grid)  # add final ds_grid
+    reg_arguments.append(regridder_kwargs)  # add final regridder_kwargs
 
-        # TODO: Support for conservative regridding (use xESMF to add corner information), Locstreams, etc.
+    out = None
+    for i, (ds_grid, regridder_kwargs) in enumerate(zip(ds_grids, reg_arguments)):
+        # if this is not the first iteration (out != None),
+        # get result from last iteration (out) as input
+        ds = out or ds
 
-        # Re-use existing weight file if possible
-        if os.path.isfile(weights_filename) and not (
-            ("reuse_weights" in kwargs) and (kwargs["reuse_weights"] is False)
-        ):
-            kwargs["weights"] = weights_filename
-            kwargs["reuse_weights"] = True
-        regridder = _regridder(
-            ds_in=ds, ds_grid=ds_grid, filename=weights_filename, **regridder_kwargs
-        )
+        # Whether or not regridding is required
+        if ds["lon"].equals(ds_grid["lon"]) & ds["lat"].equals(ds_grid["lat"]):
+            out = ds
+            if "mask" in out:
+                out = out.where(out.mask == 1)
+                out = out.drop_vars(["mask"])
 
-        # The regridder (when fed Datasets) doesn't like if 'mask' is present.
-        if "mask" in ds:
-            ds = ds.drop_vars(["mask"])
-        out = regridder(ds, keep_attrs=True)
-
-        # double-check that grid_mapping information is transferred
-        gridmap_out = any(
-            "grid_mapping" in ds_grid[da].attrs for da in ds_grid.data_vars
-        )
-        if gridmap_out:
-            gridmap = np.unique(
-                [
-                    ds_grid[da].attrs["grid_mapping"]
-                    for da in ds_grid.data_vars
-                    if "grid_mapping" in ds_grid[da].attrs
-                ]
-            )
-            if len(gridmap) != 1:
-                raise ValueError("Could not determine grid_mapping information.")
-            # Add the grid_mapping attribute
-            for v in out.data_vars:
-                out[v].attrs["grid_mapping"] = gridmap[0]
-            # Add the grid_mapping coordinate
-            if gridmap[0] not in out:
-                out = out.assign_coords({gridmap[0]: ds_grid[gridmap[0]]})
-            # Regridder seems to seriously mess up the rotated dimensions
-            for d in out.lon.dims:
-                out[d] = ds_grid[d]
-                if d not in out.coords:
-                    out = out.assign_coords({d: ds_grid[d]})
         else:
-            gridmap = np.unique(
-                [
-                    ds[da].attrs["grid_mapping"]
-                    for da in ds.data_vars
-                    if "grid_mapping" in ds[da].attrs
-                ]
+            kwargs = deepcopy(regridder_kwargs)
+            # if weights_location does no exist, create it
+            if not os.path.exists(weights_location):
+                os.makedirs(weights_location)
+            id = ds.attrs["cat/id"] if "cat/id" in ds.attrs else "weights"
+            # give unique name to weights file
+            weights_filename = os.path.join(
+                weights_location,
+                f"{id}_regrid{i}"
+                f"{'_'.join(kwargs[k] for k in kwargs if isinstance(kwargs[k], str))}.nc",
             )
-            # Remove the original grid_mapping attribute
-            for v in out.data_vars:
-                if "grid_mapping" in out[v].attrs:
-                    out[v].attrs.pop("grid_mapping")
-            # Remove the original grid_mapping coordinate if it is still in the output
-            out = out.drop_vars(set(gridmap).intersection(out.variables))
 
-        # History
-        kwargs_for_hist = deepcopy(regridder_kwargs)
-        kwargs_for_hist.setdefault("method", regridder.method)
-        new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"regridded with arguments {kwargs_for_hist} - xESMF v{xe.__version__}"
-        )
-        history = (
-            new_history + " \n " + out.attrs["history"]
-            if "history" in out.attrs
-            else new_history
-        )
-        out.attrs["history"] = history
+            # TODO: Support for conservative regridding (use xESMF to add corner information), Locstreams, etc.
 
+            # Re-use existing weight file if possible
+            if os.path.isfile(weights_filename) and not (
+                ("reuse_weights" in kwargs) and (kwargs["reuse_weights"] is False)
+            ):
+                kwargs["weights"] = weights_filename
+                kwargs["reuse_weights"] = True
+            regridder = _regridder(
+                ds_in=ds, ds_grid=ds_grid, filename=weights_filename, **regridder_kwargs
+            )
+
+            # The regridder (when fed Datasets) doesn't like if 'mask' is present.
+            if "mask" in ds:
+                ds = ds.drop_vars(["mask"])
+            out = regridder(ds, keep_attrs=True)
+
+            # double-check that grid_mapping information is transferred
+            gridmap_out = any(
+                "grid_mapping" in ds_grid[da].attrs for da in ds_grid.data_vars
+            )
+            if gridmap_out:
+                gridmap = np.unique(
+                    [
+                        ds_grid[da].attrs["grid_mapping"]
+                        for da in ds_grid.data_vars
+                        if "grid_mapping" in ds_grid[da].attrs
+                    ]
+                )
+                if len(gridmap) != 1:
+                    raise ValueError("Could not determine grid_mapping information.")
+                # Add the grid_mapping attribute
+                for v in out.data_vars:
+                    out[v].attrs["grid_mapping"] = gridmap[0]
+                # Add the grid_mapping coordinate
+                if gridmap[0] not in out:
+                    out = out.assign_coords({gridmap[0]: ds_grid[gridmap[0]]})
+                # Regridder seems to seriously mess up the rotated dimensions
+                for d in out.lon.dims:
+                    out[d] = ds_grid[d]
+                    if d not in out.coords:
+                        out = out.assign_coords({d: ds_grid[d]})
+            else:
+                gridmap = np.unique(
+                    [
+                        ds[da].attrs["grid_mapping"]
+                        for da in ds.data_vars
+                        if "grid_mapping" in ds[da].attrs
+                    ]
+                )
+                # Remove the original grid_mapping attribute
+                for v in out.data_vars:
+                    if "grid_mapping" in out[v].attrs:
+                        out[v].attrs.pop("grid_mapping")
+                # Remove the original grid_mapping coordinate if it is still in the output
+                out = out.drop_vars(set(gridmap).intersection(out.variables))
+
+            # History
+            kwargs_for_hist = deepcopy(regridder_kwargs)
+            kwargs_for_hist.setdefault("method", regridder.method)
+            if intermediate_reg_grids and i < len(intermediate_reg_grids):
+                name_inter = list(intermediate_reg_grids.keys())[i]
+                cf_grid_2d_args = intermediate_reg_grids[name_inter]["cf_grid_2d"]
+                new_history = (
+                    f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                    f"regridded with regridder arguments {kwargs_for_hist} to a xesmf"
+                    f" cf_grid_2d with arguments {cf_grid_2d_args}  - xESMF v{xe.__version__}"
+                )
+            else:
+                new_history = (
+                    f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                    f"regridded with arguments {kwargs_for_hist} - xESMF v{xe.__version__}"
+                )
+            history = (
+                new_history + " \n " + out.attrs["history"]
+                if "history" in out.attrs
+                else new_history
+            )
+            out.attrs["history"] = history
+
+    out = out.drop_vars("latitude_longitude", errors="ignore")
     # Attrs
     out.attrs["cat/processing_level"] = to_level
     out.attrs["cat/domain"] = (
         ds_grid.attrs["cat/domain"] if "cat/domain" in ds_grid.attrs else None
     )
-
     return out
 
 
