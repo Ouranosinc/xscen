@@ -27,6 +27,17 @@ from .indicators import load_xclim_module, registry_from_module
 logger = logging.getLogger(__name__)
 
 
+__all__ = [
+    "search_data_catalogs",
+    "dispatch_historical_to_future",
+    "resample",
+    "restrict_multimembers",
+    "restrict_by_resolution",
+    "extract_dataset",
+    "clisops_subset",
+]
+
+
 @parse_config
 def search_data_catalogs(
     data_catalogs: Union[list, DataCatalog],
@@ -253,7 +264,7 @@ def search_data_catalogs(
 def dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
     """Updates a DataCatalog by recopying each "historical" entry to its corresponding future experiments.
 
-    For examples, if an historical entry has corresonding "ssp245" and "ssp585" entries,
+    For examples, if an historical entry has corresponding "ssp245" and "ssp585" entries,
     then it is copied twice, with its "experiment" field modified accordingly.
     The original "historical" entry is removed. This way, a subsequent search of the catalog
     with "experiment='ssp245'" includes the _historical_ assets (with no apparent distinction).
@@ -380,7 +391,8 @@ def restrict_by_resolution(catalogs: dict, id_columns: list, restrictions: str):
                         "'restrict_resolution' should be 'finest' or 'coarsest'"
                     )
 
-            # For CORDEX, the order is dictated by both the grid label and the resolution itself (as well as the domain name)
+            # Note: For CORDEX, the order is dictated by both the grid label
+            # and the resolution itself as well as the domain name
             elif pd.unique(df_sim["activity"])[0] == "CORDEX":
                 # Unique CORDEX domains
                 cordex_doms = pd.unique([d.split("-")[0] for d in domains])
@@ -420,7 +432,8 @@ def restrict_by_resolution(catalogs: dict, id_columns: list, restrictions: str):
 
             else:
                 logger.warning(
-                    f"Dataset {i} seems to have multiple resolutions, but its activity is not recognized or supported yet."
+                    f"Dataset {i} seems to have multiple resolutions, "
+                    "but its activity is not yet recognized or supported."
                 )
                 chosen = list(domains)
                 pass

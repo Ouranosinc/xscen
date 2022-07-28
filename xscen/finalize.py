@@ -1,5 +1,5 @@
 import logging
-import re
+
 from typing import Optional
 
 import numpy as np
@@ -7,14 +7,17 @@ import xarray as xr
 from xclim.core import units
 from xclim.core.calendar import convert_calendar, get_calendar
 
-from .common import maybe_unstack, unstack_fill_nan
+from .common import maybe_unstack  # , unstack_fill_nan
 from .config import parse_config
 
 logger = logging.getLogger(__name__)
 
 
+__all__ = ["change_units", "clean_up"]
+
+
 @parse_config
-def change_units(ds: xr.Dataset, variables_and_units: dict):
+def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     """Changes units of Datasets to non-CF units.
 
     Parameters
@@ -24,6 +27,9 @@ def change_units(ds: xr.Dataset, variables_and_units: dict):
     variables_and_units : dict
       Description of the variables and units to output
 
+    Returns
+    -------
+    xr.Dataset
     """
 
     with xr.set_options(keep_attrs=True):
@@ -64,8 +70,9 @@ def clean_up(
     change_attr_prefix: Optional[str] = None,
     to_level: Optional[str] = "cleanedup",
 ):
-    """
-    Clean up of the dataset. It can:
+    """Clean up of the dataset.
+
+    It can:
      - convert to the right units using xscen.finalize.change_units
      - convert the calendar and interpolate over missing dates
      - call the xscen.common.maybe_unstack function
@@ -91,7 +98,7 @@ def clean_up(
         parameters of the xclim.core.calendar.convert_calendar for the given variable with the `convert_calendar_kwargs`.
         If missing_by_var == 'interpolate', the missing will be filled with NaNs, then linearly interpolated over time.
     maybe_unstack_dict: dict
-        Dictionary to pass to xscen.common.maybe_unstack fonction.
+        Dictionary to pass to xscen.common.maybe_unstack function.
         The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
     attrs_to_remove: dict
         Dictionary where the keys are the variables and the values are a list of the attrs that should be removed.
@@ -121,7 +128,7 @@ def clean_up(
 
     Returns
     -------
-    ds: xr.Dataset
+    xr.Dataset
         Cleaned up dataset
     """
 

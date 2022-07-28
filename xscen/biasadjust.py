@@ -16,6 +16,9 @@ from .config import parse_config
 logger = logging.getLogger(__name__)
 
 
+__all__ = ["train", "adjust"]
+
+
 def _add_preprocessing_attr(scen, train_kwargs):
     fake_ref = xr.DataArray(name="ref")
     fake_hist = xr.DataArray(name="hist")

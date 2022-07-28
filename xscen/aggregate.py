@@ -15,6 +15,8 @@ from .extraction import clisops_subset
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["climatological_mean", "compute_deltas", "spatial_mean"]
+
 
 @parse_config
 def climatological_mean(

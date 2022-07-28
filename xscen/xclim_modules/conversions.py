@@ -7,9 +7,16 @@ from __future__ import annotations  # for xclim 0.37
 import xarray as xr
 from xclim.core.units import convert_units_to, declare_units
 
+__all__ = [
+    "dtr",
+    "precipitation",
+    "tasmax_from_dtr",
+    "tasmin_from_dtr",
+]
+
 
 @declare_units(prsn="[precipitation]", prlp="[precipitation]")
-def precipitation(prsn: xr.DataArray, prlp: xr.DataArray):
+def precipitation(prsn: xr.DataArray, prlp: xr.DataArray) -> xr.DataArray:
     """Precipitation of all phases.
 
     Compute the precipitation flux from all phases by adding solid and liquid precipitation.
@@ -33,7 +40,7 @@ def precipitation(prsn: xr.DataArray, prlp: xr.DataArray):
 
 
 @declare_units(dtr="[temperature]", tasmax="[temperature]")
-def tasmin_from_dtr(dtr: xr.DataArray, tasmax: xr.DataArray):
+def tasmin_from_dtr(dtr: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
     """Tasmin computed from DTR and tasmax.
 
     Tasmin as dtr subtracted from tasmax.
@@ -57,7 +64,7 @@ def tasmin_from_dtr(dtr: xr.DataArray, tasmax: xr.DataArray):
 
 
 @declare_units(dtr="[temperature]", tasmin="[temperature]")
-def tasmax_from_dtr(dtr: xr.DataArray, tasmin: xr.DataArray):
+def tasmax_from_dtr(dtr: xr.DataArray, tasmin: xr.DataArray) -> xr.DataArray:
     """Tasmax computed from DTR and tasmin.
 
     Tasmax as dtr added to tasmin.
@@ -81,7 +88,7 @@ def tasmax_from_dtr(dtr: xr.DataArray, tasmin: xr.DataArray):
 
 
 @declare_units(tasmin="[temperature]", tasmax="[temperature]")
-def dtr(tasmin: xr.DataArray, tasmax: xr.DataArray):
+def dtr(tasmin: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
     """DTR computed from tasmin and tasmax.
 
     Dtr as tasmin subtracted from tasmax.

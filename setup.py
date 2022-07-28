@@ -15,20 +15,24 @@ with open("HISTORY.rst") as history_file:
 # this is only meant to make `pip check` work
 # xscen dependencies can only be installed through conda-forge.
 requirements = [
+    "cartopy",
+    "cftime",
+    "clisops",
+    "dask",
+    "fsspec",
+    "h5py",
+    "intake",
     "intake_esm>=2021.8.17",
-    "xesmf>=0.6.2",  # This is not available on pypi.
+    "matplotlib",
+    "netCDF4",
+    "numpy",
+    "pandas",
+    "pyyaml",
+    "rechunker",
     "xarray",
     "xclim>=0.37",
-    "dask",
-    "pandas",
-    "clisops",
-    "rechunker",
-    "pyyaml",
-    "matplotlib",
-    "cartopy",
-    "h5py",
+    "xesmf>=0.6.2",  # This is not available on pypi.
     "zarr",
-    "netCDF4",
 ]
 
 setup(

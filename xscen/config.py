@@ -33,9 +33,9 @@ extra actions when finding the following special sections:
 - ``logging``:
   The content of this section will be sent directly to :py:func:`logging.config.dictConfig`.
 - ``xarray``:
-  The content of this section will be sent directry to :py:func:`xarray.set_options`.
+  The content of this section will be sent directly to :py:func:`xarray.set_options`.
 - ``xclim``:
-  The content of this section will be sent directry to :py:func:`xclim.set_options`.
+  The content of this section will be sent directly to :py:func:`xclim.set_options`.
 - ``warnings``:
   The content of this section must be a simple mapping. The keys are understood as python
   warning categories (types) and the values as an action to add to the filter. The key "all"
@@ -57,6 +57,15 @@ import yaml
 
 logger = logging.getLogger(__name__)
 EXTERNAL_MODULES = ["logging", "xarray", "xclim", "warnings"]
+
+__all__ = [
+    "CONFIG",
+    "ConfigDict",
+    "load_config",
+    "parse_config",
+    "recursive_update",
+    "setup_external",
+]
 
 
 class ConfigDict(dict):

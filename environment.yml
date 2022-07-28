@@ -3,33 +3,34 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - python >=3.8
   # FIXME: These entries require versions
   # Don't forget to sync the changes here with environment-dev.yml!
   # Main packages
+  - cftime
+  - clisops
+  - dask
+  - pandas
+  - rechunker
   - xarray
   - xclim>=0.37
   - xesmf>=0.6.2
-  - dask
-  - pandas
-  - clisops
-  - rechunker
-  - cftime
   - yaml
   # Plotting
-  - matplotlib
   - cartopy
+  - matplotlib
   - nc-time-axis>=1.3.1
   # IO
   - h5py
-  - zarr
   - netCDF4
+  - zarr
   # For intake-esm (so that conda installs the dependencies and not pip)
   - fastprogress
   - fsspec
   - intake
   - pydantic
-  - xcollection
   - requests
+  - xcollection
   - pip
   - pip:
     - git+https://github.com/intake/intake-esm.git#egg=intake-esm

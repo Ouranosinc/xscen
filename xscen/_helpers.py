@@ -4,6 +4,8 @@ from io import StringIO
 from pathlib import Path
 from typing import Optional, TextIO, Union
 
+__all__ = ["publish_release_notes"]
+
 
 def publish_release_notes(
     style: str = "md", file: Optional[Union[os.PathLike, StringIO, TextIO]] = None

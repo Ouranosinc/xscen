@@ -6,31 +6,31 @@ dependencies:
   # Don't forget to sync the changes here with environment.yml!
   # Some pins here are meant to accelerate conda and might not be related to real needs
   # Main packages
+  - cftime
+  - clisops
+  - dask
+  - pandas
+  - rechunker
   - xarray
   - xclim>=0.37
   - xesmf>=0.6.2
-  - dask
-  - pandas
-  - clisops
-  - rechunker
-  - cftime
   - yaml
   # Plotting
-  - matplotlib
   - cartopy
+  - matplotlib
   - nc-time-axis>=1.3.1
   # IO
   - h5py
-  - zarr
   - netCDF4
   - pyarrow>=1.0.0  # For lighter in-memory catalogs
+  - zarr
   # For intake-esm (so that conda installs the dependencies and not pip)
   - fastprogress
   - fsspec
   - intake
   - pydantic
-  - xcollection
   - requests
+  - xcollection
   # Dev
   - ipykernel
   - ipython
@@ -39,6 +39,7 @@ dependencies:
   - pandoc
   - pooch
   - pre-commit
+  - pytest
   - sphinx
   - sphinx-autoapi
   - sphinx_rtd_theme

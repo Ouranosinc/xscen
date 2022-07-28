@@ -4,7 +4,6 @@ from pathlib import Path, PosixPath
 from types import ModuleType
 from typing import Sequence, Tuple, Union
 
-import pandas as pd
 import xarray as xr
 import xclim as xc
 from intake_esm import DerivedVariableRegistry
@@ -17,13 +16,22 @@ from .config import parse_config
 logger = logging.getLogger(__name__)
 
 
+__all__ = [
+    "ensure_list",
+    "load_xclim_module",
+    "compute_indicators",
+    "derived_func",
+    "registry_from_module",
+]
+
+
 def ensure_list(x):
     if not isinstance(x, (list, tuple)):
         return [x]
     return x
 
 
-def load_xclim_module(filename, reload=False):
+def load_xclim_module(filename, reload=False) -> ModuleType:
     """Return the xclim module described by the yaml file (or group of yaml, jsons and py).
 
     Parameters
@@ -32,6 +40,10 @@ def load_xclim_module(filename, reload=False):
       The filepath to the yaml file of the module or to the stem of yaml, jsons and py files.
     reload : bool
       If False (default) and the module already exists in `xclim.indicators`, it is not re-build.
+
+    Returns
+    -------
+    ModuleType
     """
     if not reload:
         # Same code as in xclim to get the module name.
@@ -164,7 +176,7 @@ def compute_indicators(
     return out_dict
 
 
-def derived_func(ind: xc.core.indicator.Indicator, nout: int):
+def derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
     def func(ds, *, ind, nout):
         out = ind(ds=ds)
         if isinstance(out, tuple):
@@ -176,7 +188,7 @@ def derived_func(ind: xc.core.indicator.Indicator, nout: int):
     return partial(func, ind=ind, nout=nout)
 
 
-def registry_from_module(module, registry=None, variable_column="variable"):
+def registry_from_module(module, registry=None, variable_column="variable") -> DerivedVariableRegistry:
     """Converts a xclim virtual indicators module to an intake_esm Derived Variable Registry.
 
     Parameters

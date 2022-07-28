@@ -30,6 +30,22 @@ logger = logging.getLogger(__name__)
 # Monkey patch for attribute names in the output of to_dataset_dict
 intake_esm.set_options(attrs_prefix="cat")
 
+__all__ = [
+    "DataCatalog",
+    "ESMCatalogModel",
+    "ID_COLUMNS",
+    "concat_data_catalogs",
+    "date_parser",
+    "generate_id",
+    "get_asset_list",
+    "name_parser",
+    "parse_config",
+    "parse_directory",
+    "parse_from_ds",
+    "parse_list_of_strings",
+]
+
+
 """Official column names."""
 # As much as possible, these catalog columns and entries should align with: https://github.com/WCRP-CMIP/CMIP6_CVs and https://github.com/ES-DOC/pyessv-archive
 # See docs/columns.rst for a description of each entry.

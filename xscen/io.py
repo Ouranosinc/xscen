@@ -2,7 +2,7 @@ import logging
 import os
 import shutil as sh
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, Sequence
 
 import h5py
 import netCDF4
@@ -16,6 +16,17 @@ from .common import translate_time_chunk
 from .config import parse_config
 
 logger = logging.getLogger(__name__)
+
+__all__ = [
+    "get_calendar",
+    "get_engine",
+    "estimate_chunks",
+    "subset_maxsize",
+    "save_to_zarr",
+    "save_to_netcdf",
+    "rechunk",
+    "clean_incomplete",
+]
 
 
 def get_engine(file: str) -> str:
@@ -241,9 +252,8 @@ def save_to_netcdf(
     *,
     rechunk: Optional[dict] = None,
     netcdf_kwargs: Optional[dict] = None,
-):
-    """
-    Saves a Dataset to NetCDF, rechunking if requested.
+) -> None:
+    """Saves a Dataset to NetCDF, rechunking if requested.
 
     Parameters
     ----------
@@ -257,6 +267,9 @@ def save_to_netcdf(
     netcdf_kwargs : dict, optional
       Additional arguments to send to_netcdf()
 
+    Returns
+    -------
+    None
     """
 
     if rechunk:
@@ -312,7 +325,7 @@ def save_to_zarr(
     encoding: dict = None,
     mode: str = "f",
     itervar: bool = False,
-):
+) -> None:
     """
     Saves a Dataset to Zarr, rechunking if requested.
     According to mode, removes variables that we dont want to re-compute in ds.
@@ -340,6 +353,9 @@ def save_to_zarr(
       If True, (data) variables are written one at a time, appending to the zarr.
       If False, this function computes, no matter what was passed to kwargs.
 
+    Returns
+    -------
+    None
     """
 
     if rechunk:
@@ -449,9 +465,9 @@ def rechunk(
     chunks_over_var: Optional[dict] = None,
     chunks_over_dim: Optional[dict] = None,
     worker_mem: str,
-    temp_store: Union[os.PathLike, str] = None,
+    temp_store: Optional[Union[os.PathLike, str]] = None,
     overwrite: bool = False,
-):
+)-> None:
     """Rechunk a dataset into a new zarr.
 
     Parameters
@@ -473,6 +489,10 @@ def rechunk(
       A path to a zarr where to store intermediate results.
     overwrite: bool
       If True, it will delete whatever is in path_out before doing the rechunking.
+
+    Returns
+    -------
+    None
     """
     if Path(path_out).is_dir() and overwrite:
         sh.rmtree(path_out)
@@ -508,7 +528,7 @@ def rechunk(
         sh.rmtree(temp_store)
 
 
-def clean_incomplete(path, complete):
+def clean_incomplete(path: Union[str, os.PathLike], complete: Sequence[str]) -> None:
     """Delete un-catalogued variables from a zarr folder.
 
     The goal of this function is to clean up an incomplete calculation.
@@ -521,6 +541,10 @@ def clean_incomplete(path, complete):
       A path to a zarr folder.
     complete : sequence of strings
       Name of variables that were completed.
+
+    Returns
+    -------
+    None
     """
     path = Path(path)
     with xr.open_zarr(path) as ds:
