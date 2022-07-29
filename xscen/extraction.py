@@ -20,9 +20,9 @@ from .catalog import (
     generate_id,
     parse_from_ds,
 )
-from .common import CV, natural_sort
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
+from .utils import CV, natural_sort
 
 logger = logging.getLogger(__name__)
 

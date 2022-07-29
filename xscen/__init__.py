@@ -4,17 +4,17 @@ import warnings
 # Import the submodules
 from . import (
     aggregate,
-    biasadjust,
+    biasadjustment,
     catalog,
     checkups,
-    common,
     config,
     extraction,
     finalize,
     indicators,
     io,
-    regridding,
-    scr_utils,
+    regrid,
+    scripting,
+    utils,
 )
 
 __author__ = """Gabriel Rondeau-Genesse"""
@@ -23,7 +23,9 @@ __version__ = "0.2.4-beta"
 
 
 # monkeypatch so that warnings.warn() doesn't mention itself
-def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
+def warning_on_one_line(
+    message: str, category: Warning, filename: str, lineno: int, file=None, line=None
+):
     return f"{filename}:{lineno}: {category.__name__}: {message}\n"
 
 

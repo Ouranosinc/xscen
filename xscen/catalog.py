@@ -22,9 +22,9 @@ from dask.diagnostics import ProgressBar
 from intake.source.utils import reverse_format
 from intake_esm.cat import ESMCatalogModel
 
-from .common import CV
 from .config import CONFIG, parse_config, recursive_update
 from .io import get_engine
+from .utils import CV
 
 logger = logging.getLogger(__name__)
 # Monkey patch for attribute names in the output of to_dataset_dict

@@ -12,8 +12,8 @@ import zarr
 from rechunker import rechunk as _rechunk
 from xclim.core.calendar import get_calendar
 
-from .common import translate_time_chunk
 from .config import parse_config
+from .utils import translate_time_chunk
 
 logger = logging.getLogger(__name__)
 
