@@ -160,6 +160,11 @@ def train(
         "jitter_over": jitter_over,
     }
 
+    # attrs that are needed to open with .to_dataset_dict()
+    for a in ["cat/xrfreq", "cat/domain", "cat/id"]:
+        ds.attrs[a] = dhist.attrs[a] if a in dhist.attrs else None
+    ds.attrs["cat/processing_level"] = f"training_{var[0]}"
+
     return ds
 
 

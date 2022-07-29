@@ -125,7 +125,7 @@ def compute_indicators(
 
             # TODO: Double-check History, units, attrs, add missing variables (grid_mapping), etc.
             out_dict[key].attrs = ds.attrs
-            out_dict[key].attrs.pop("cat/variable")
+            out_dict[key].attrs.pop("cat/variable", None)
             out_dict[key].attrs["cat/xrfreq"] = freq
             out_dict[key].attrs["cat/frequency"] = CV.xrfreq_to_frequency(freq, None)
             out_dict[key].attrs["cat/timedelta"] = pd.to_timedelta(

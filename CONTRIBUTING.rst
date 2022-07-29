@@ -118,10 +118,9 @@ the `docs/notebooks` submodule not being fetched, but this doesn't affect the us
    repository instead of the public one. This assumes you are in the Ouranos VPN and
    have a Gitlab account on the internal server.::
 
-   $ cd docs/notebooks
-   # Now git commands are made to the notebook repo.
+   $ cd docs/notebooks # Now git commands are made to the notebook repo.
    $ git checkout -b new-branch
-   $ git commit -m "detailed description of your changes"
+   $ git commit -am "detailed description of your changes"
    $ git push origin new-branch
    $ cd ../..
    $ git commit -am 'updated the notebooks'  # This updates the commit to which the submodule points
