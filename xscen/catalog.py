@@ -32,6 +32,7 @@ intake_esm.set_options(attrs_prefix="cat")
 
 __all__ = [
     "DataCatalog",
+    "ProjectCatalog",
     "ESMCatalogModel",
     "ID_COLUMNS",
     "concat_data_catalogs",
