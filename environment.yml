@@ -10,8 +10,10 @@ dependencies:
   - cftime
   - clisops
   - dask
+  - geopandas
   - pandas
   - rechunker
+  - shapely
   - xarray
   - xclim>=0.37
   - xesmf>=0.6.2

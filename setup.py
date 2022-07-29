@@ -20,6 +20,7 @@ requirements = [
     "clisops",
     "dask",
     "fsspec",
+    "geopandas",
     "h5py",
     "intake",
     "intake_esm>=2021.8.17",
@@ -29,6 +30,7 @@ requirements = [
     "pandas",
     "pyyaml",
     "rechunker",
+    "shapely",
     "xarray",
     "xclim>=0.37",
     "xesmf>=0.6.2",  # This is not available on pypi.

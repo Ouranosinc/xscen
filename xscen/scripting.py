@@ -23,12 +23,12 @@ from .config import parse_config
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "send_mail",
-    "send_mail_on_exit",
     "ExitWatcher",
+    "TimeoutException",
     "exit_watcher",
     "measure_time",
-    "TimeoutException",
+    "send_mail",
+    "send_mail_on_exit",
     "timeout",
 ]
 

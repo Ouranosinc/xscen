@@ -16,7 +16,10 @@ from .utils import minimum_calendar
 logger = logging.getLogger(__name__)
 
 
-__all__ = ["train", "adjust"]
+__all__ = [
+    "adjust",
+    "train",
+]
 
 
 def _add_preprocessing_attr(scen, train_kwargs):
