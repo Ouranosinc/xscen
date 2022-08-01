@@ -10,6 +10,7 @@ from ._ensembles import *
 from ._extract import *
 from ._ops import *
 from ._regrid import *
+from .utils import CV  # noqa
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
