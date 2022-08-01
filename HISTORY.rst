@@ -16,6 +16,7 @@ New features and enhancements
 * `parse_directory`: Fixes to `xr_open_kwargs` and support for wildcards (*) in the directories. (:pull:`19`).
 * New function ``xscen.ensemble.ensemble_stats`` added. (:issue:`3`, :pull:`28`).
 * Add argument ``intermediate_reg_grids`` to ``xscen.regridding.regrid` (:issue:`34`, :pull:`39`).
+* Add argument ``moving_yearly_window`` to ``xscen.biasadjust.adjust` (:pull:`39`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -27,6 +28,7 @@ Internal changes
 * Fix for indicators removing the 'time' dimension. (:pull:`23`).
 * Security scanning using CodeQL and GitHub Actions is now configured for the repository. (:pull:`21`).
 * Bumpversion action now configured to automatically augment the version number on each merged pull request. (:pull:`21`).
+* Add ``align_on = 'year'`` argument in bias adjustement converting of calendars (:pull:`39`).
 
 v0.2.0 (first official release)
 ------------------------------
