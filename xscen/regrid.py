@@ -17,11 +17,11 @@ from .config import parse_config
 # TODO: Implement support for an OBS2SIM kind of interpolation
 
 
-__all__ = ["regrid", "create_mask"]
+__all__ = ["regrid_dataset", "create_mask"]
 
 
 @parse_config
-def regrid(
+def regrid_dataset(
     ds: xr.Dataset,
     weights_location: Union[str, PosixPath],
     ds_grid: xr.Dataset,
@@ -65,7 +65,7 @@ def regrid(
 
     else:
         kwargs = deepcopy(regridder_kwargs)
-        # if weights_location does no exist, create it
+        # if weights_location does not exist, create it
         if not os.path.exists(weights_location):
             os.makedirs(weights_location)
         id = ds.attrs["cat/id"] if "cat/id" in ds.attrs else "weights"
@@ -141,7 +141,7 @@ def regrid(
             f"regridded with arguments {kwargs_for_hist} - xESMF v{xe.__version__}"
         )
         history = (
-            new_history + " \n " + out.attrs["history"]
+            f"{new_history}\n{out.attrs['history']}"
             if "history" in out.attrs
             else new_history
         )

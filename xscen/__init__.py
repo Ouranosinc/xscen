@@ -4,11 +4,11 @@ import warnings
 # Import the submodules
 from . import (
     aggregate,
-    biasadjustment,
+    biasadjust,
     catalog,
     checkups,
     config,
-    extraction,
+    extract,
     finalize,
     indicators,
     io,
