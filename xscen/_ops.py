@@ -18,6 +18,8 @@ from xscen.utils import CV, translate_time_chunk
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["compute_indicators", "rechunk", "save_to_netcdf", "save_to_zarr"]
+
 
 def save_to_netcdf(
     ds: xr.Dataset,
