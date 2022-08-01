@@ -10,8 +10,8 @@ import xarray as xr
 import xesmf as xe
 from shapely.geometry import Polygon
 
+from ._extract import clisops_subset
 from .config import parse_config
-from .extract import clisops_subset
 
 logger = logging.getLogger(__name__)
 

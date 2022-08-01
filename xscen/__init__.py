@@ -2,20 +2,14 @@
 import warnings
 
 # Import the submodules
-from . import (
-    aggregate,
-    biasadjust,
-    catalog,
-    checkups,
-    config,
-    ensembles,
-    extract,
-    indicators,
-    io,
-    regrid,
-    scripting,
-    utils,
-)
+from . import aggregate, catalog, checkups, config, indicators, io, scripting, utils
+
+# Import top-level functions
+from ._biasadjust import *
+from ._ensembles import *
+from ._extract import *
+from ._ops import *
+from ._regrid import *
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
