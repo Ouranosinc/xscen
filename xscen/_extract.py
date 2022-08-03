@@ -29,11 +29,8 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "clisops_subset",
-    "dispatch_historical_to_future",
     "extract_dataset",
     "resample",
-    "restrict_by_resolution",
-    "restrict_multimembers",
     "search_data_catalogs",
 ]
 

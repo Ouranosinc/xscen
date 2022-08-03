@@ -60,11 +60,7 @@ EXTERNAL_MODULES = ["logging", "xarray", "xclim", "warnings"]
 
 __all__ = [
     "CONFIG",
-    "ConfigDict",
     "load_config",
-    "parse_config",
-    "recursive_update",
-    "setup_external",
 ]
 
 

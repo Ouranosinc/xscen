@@ -12,10 +12,6 @@ logger = logging.getLogger(__name__)
 
 
 __all__ = [
-    "derived_func",
-    "ensure_list",
-    "load_xclim_module",
-    "registry_from_module",
 ]
 
 
