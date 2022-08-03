@@ -11,8 +11,7 @@ from yaml import safe_load
 logger = logging.getLogger(__name__)
 
 
-__all__ = [
-]
+__all__ = []
 
 
 def ensure_list(x):
