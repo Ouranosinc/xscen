@@ -59,8 +59,8 @@ logger = logging.getLogger(__name__)
 EXTERNAL_MODULES = ["logging", "xarray", "xclim", "warnings"]
 
 __all__ = [
-    "CONFIG",
     "load_config",
+    "parse_config",
 ]
 
 
@@ -138,7 +138,7 @@ def load_config(*files, reset=False, verbose=False):
 
     for module, old in zip(EXTERNAL_MODULES, old_external):
         if old != CONFIG.get(module, {}):
-            setup_external(module, CONFIG.get(module, {}))
+            _setup_external(module, CONFIG.get(module, {}))
 
 
 def parse_config(func_or_cls):
@@ -173,7 +173,7 @@ def parse_config(func_or_cls):
     return _wrapper
 
 
-def setup_external(module, config):
+def _setup_external(module, config):
     if module == "logging":
         config.update(version=1)
         logging.config.dictConfig(config)

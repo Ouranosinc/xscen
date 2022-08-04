@@ -2,22 +2,27 @@ import logging
 import os
 import shutil as sh
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Optional, Sequence, Union
 
 import h5py
 import netCDF4
 import numpy as np
 import xarray as xr
+import zarr
+from rechunker import rechunk as _rechunk
 from xclim.core.calendar import get_calendar
+
+from .config import parse_config
+from .utils import translate_time_chunk
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
     "clean_incomplete",
     "estimate_chunks",
-    "get_calendar",
     "get_engine",
     "subset_maxsize",
+    "rechunk",
 ]
 
 
@@ -264,3 +269,285 @@ def clean_incomplete(path: Union[str, os.PathLike], complete: Sequence[str]) -> 
         if fold.name not in complete:
             logger.warning(f"Removing {fold} from disk")
             sh.rmtree(fold)
+
+
+def save_to_netcdf(
+    ds: xr.Dataset,
+    filename: str,
+    *,
+    rechunk: Optional[dict] = None,
+    netcdf_kwargs: Optional[dict] = None,
+) -> None:
+    """Saves a Dataset to NetCDF, rechunking if requested.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+      Dataset to be saved.
+    filename : str
+      Name of the NetCDF file to be saved.
+    rechunk : dict, optional
+      This is a mapping from dimension name to new chunks (in any format understood by dask).
+      Rechunking is only done on *data* variables sharing dimensions with this argument.
+    netcdf_kwargs : dict, optional
+      Additional arguments to send to_netcdf()
+
+    Returns
+    -------
+    None
+    """
+
+    if rechunk:
+        for rechunk_var in ds.data_vars:
+            # Support for chunks varying per variable
+            if rechunk_var in rechunk:
+                rechunk_dims = rechunk[rechunk_var]
+            else:
+                rechunk_dims = rechunk
+
+            ds[rechunk_var] = ds[rechunk_var].chunk(
+                {
+                    d: chnks
+                    for d, chnks in rechunk_dims.items()
+                    if d in ds[rechunk_var].dims
+                }
+            )
+            ds[rechunk_var].encoding.pop("chunksizes", None)
+            ds[rechunk_var].encoding.pop("chunks", None)
+
+    path = Path(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Prepare to_netcdf kwargs
+    netcdf_kwargs = netcdf_kwargs or {}
+    netcdf_kwargs.setdefault("engine", "h5netcdf")
+    netcdf_kwargs.setdefault("format", "NETCDF4")
+
+    # Ensure no funky objects in attrs:
+    def coerce_attrs(attrs):
+        for k in attrs.keys():
+            if not (
+                isinstance(attrs[k], (str, float, int, np.ndarray))
+                or isinstance(attrs[k], (tuple, list))
+                and isinstance(attrs[k][0], (str, float, int))
+            ):
+                attrs[k] = str(attrs[k])
+
+    coerce_attrs(ds.attrs)
+    for var in ds.variables.values():
+        coerce_attrs(var.attrs)
+
+    ds.to_netcdf(filename, **netcdf_kwargs)
+
+
+def save_to_zarr(
+    ds: xr.Dataset,
+    filename: str,
+    *,
+    rechunk: Optional[dict] = None,
+    zarr_kwargs: Optional[dict] = None,
+    compute: bool = True,
+    encoding: dict = None,
+    mode: str = "f",
+    itervar: bool = False,
+) -> None:
+    """
+    Saves a Dataset to Zarr, rechunking if requested.
+    According to mode, removes variables that we don't want to re-compute in ds.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+      Dataset to be saved.
+    filename : str
+      Name of the Zarr file to be saved.
+    rechunk : dict, optional
+      This is a mapping from dimension name to new chunks (in any format understood by dask).
+      Rechunking is only done on *data* variables sharing dimensions with this argument.
+    zarr_kwargs : dict, optional
+      Additional arguments to send to_zarr()
+    compute : bool
+      Whether to start the computation or return a delayed object.
+    mode: {'f', 'o', 'a'}
+      If 'f', fails if any variable already exists.
+      if 'o', removes the existing variables.
+      if 'a', skip existing variables, writes the others.
+    encoding : dict, optional
+      If given, skipped variables are popped in place.
+    itervar : bool
+      If True, (data) variables are written one at a time, appending to the zarr.
+      If False, this function computes, no matter what was passed to kwargs.
+
+    Returns
+    -------
+    None
+    """
+
+    if rechunk:
+        for rechunk_var in ds.data_vars:
+            # Support for chunks varying per variable
+            if rechunk_var in rechunk:
+                rechunk_dims = rechunk[rechunk_var]
+            else:
+                rechunk_dims = rechunk
+
+            ds[rechunk_var] = ds[rechunk_var].chunk(
+                {
+                    d: chnks
+                    for d, chnks in rechunk_dims.items()
+                    if d in ds[rechunk_var].dims
+                }
+            )
+            ds[rechunk_var].encoding.pop("chunksizes", None)
+            ds[rechunk_var].encoding.pop("chunks", None)
+
+    path = Path(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.is_dir():
+        tgtds = zarr.open(str(path), mode="r")
+    else:
+        tgtds = {}
+
+    if encoding:
+        encoding = encoding.copy()
+
+    # Prepare to_zarr kwargs
+    if zarr_kwargs is None:
+        zarr_kwargs = {}
+
+    def _skip(var):
+        exists = var in tgtds
+
+        if mode == "f" and exists:
+            raise ValueError(f"Variable {var} exists in dataset {path}.")
+
+        if mode == "o":
+            if exists:
+                var_path = path / var
+                print(f"Removing {var_path} to overwrite.")
+                sh.rmtree(var_path)
+            return False
+
+        if mode == "a":
+            if "append_dim" not in zarr_kwargs:
+                return exists
+            return False
+
+    for var in ds.data_vars.keys():
+        if _skip(var):
+            logger.info(f"Skipping {var} in {path}.")
+            ds = ds.drop_vars(var)
+            if encoding:
+                encoding.pop(var)
+
+    if len(ds.data_vars) == 0:
+        return None
+
+    # Ensure no funky objects in attrs:
+    def coerce_attrs(attrs):
+        for k in list(attrs.keys()):
+            if not (
+                isinstance(attrs[k], (str, float, int, np.ndarray))
+                or isinstance(attrs[k], (tuple, list))
+                and isinstance(attrs[k][0], (str, float, int))
+            ):
+                attrs[k] = str(attrs[k])
+
+    coerce_attrs(ds.attrs)
+    for var in ds.variables.values():
+        coerce_attrs(var.attrs)
+
+    if itervar:
+        zarr_kwargs["compute"] = True
+        allvars = set(ds.data_vars.keys())
+        if mode == "f":
+            dsbase = ds.drop_vars(allvars)
+            dsbase.to_zarr(path, **zarr_kwargs)
+        if mode == "o":
+            dsbase = ds.drop_vars(allvars)
+            dsbase.to_zarr(path, **zarr_kwargs, mode="w")
+        for i, (name, var) in enumerate(ds.data_vars.items()):
+            logger.debug(f"Writing {name} ({i + 1} of {len(ds.data_vars)}) to {path}")
+            dsvar = ds.drop_vars(allvars - {name})
+            dsvar.to_zarr(
+                path,
+                mode="a",
+                encoding={k: v for k, v in (encoding or {}).items() if k in dsvar},
+                **zarr_kwargs,
+            )
+    else:
+        logger.debug(f"Writing {list(ds.data_vars.keys())} for {filename}.")
+        ds.to_zarr(
+            filename, compute=compute, mode="a", encoding=encoding, **zarr_kwargs
+        )
+
+
+@parse_config
+def rechunk(
+    path_in: Union[os.PathLike, str, xr.Dataset],
+    path_out: Union[os.PathLike, str],
+    *,
+    chunks_over_var: Optional[dict] = None,
+    chunks_over_dim: Optional[dict] = None,
+    worker_mem: str,
+    temp_store: Optional[Union[os.PathLike, str]] = None,
+    overwrite: bool = False,
+) -> None:
+    """Rechunk a dataset into a new zarr.
+
+    Parameters
+    ----------
+    path_in : path, str or xr.Dataset
+      Input to rechunk.
+    path_out : path or str
+      Path to the target zarr.
+    chunks_over_var: dict
+      Mapping from variables to mappings from dimension name to size. Give this argument or `chunks_over_dim`.
+    chunks_over_dim: dict
+      Mapping from dimension name to size that will be used for all variables in ds.
+      Give this argument or `chunks_over_var`.
+    worker_mem : str
+      The maximal memory usage of each task.
+      When using a distributed Client, this an approximate memory per thread.
+      Each worker of the client should have access to 10-20% more memory than this times the number of threads.
+    temp_store: path, str, optional
+      A path to a zarr where to store intermediate results.
+    overwrite: bool
+      If True, it will delete whatever is in path_out before doing the rechunking.
+
+    Returns
+    -------
+    None
+    """
+    if Path(path_out).is_dir() and overwrite:
+        sh.rmtree(path_out)
+
+    if isinstance(path_in, os.PathLike) or isinstance(path_in, str):
+        path_in = Path(path_in)
+        if path_in.suffix == ".zarr":
+            ds = xr.open_zarr(path_in)
+        else:
+            ds = xr.open_dataset(path_in)
+    else:
+        ds = path_in
+    variables = list(ds.data_vars)
+    if chunks_over_var:
+        chunks = chunks_over_var
+    elif chunks_over_dim:
+        chunks = {v: {d: chunks_over_dim[d] for d in ds[v].dims} for v in variables}
+        chunks.update(time=None, lat=None, lon=None)
+        cal = get_calendar(ds)
+        Nt = ds.time.size
+        chunks = translate_time_chunk(chunks, cal, Nt)
+    else:
+        raise ValueError(
+            "No chunks given. Need to give at `chunks_over_var` or `chunks_over_dim`."
+        )
+
+    plan = _rechunk(ds, chunks, worker_mem, str(path_out), temp_store=str(temp_store))
+
+    plan.execute()
+    zarr.consolidate_metadata(path_out)
+
+    if temp_store is not None:
+        sh.rmtree(temp_store)

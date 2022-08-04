@@ -31,9 +31,13 @@ logger = logging.getLogger(__name__)
 intake_esm.set_options(attrs_prefix="cat")
 
 __all__ = [
-    "DataCatalog",
-    "ProjectCatalog",
+    "COLUMNS",
+    "ESMCatalogModel",
+    "ID_COLUMNS",
+    "concat_data_catalogs",
+    "date_parser",
     "generate_id",
+    "parse_config",
     "parse_directory",
     "parse_from_ds",
 ]
@@ -101,8 +105,8 @@ _esm_col_data = {
 }
 
 
-def parse_list_of_strings(elem):
-    """Parse a element of a csv in case it is a list of strings."""
+def _parse_list_of_strings(elem):
+    """Parse an element of a csv in case it is a list of strings."""
     if elem.startswith("(") or elem.startswith("["):
         out = ast.literal_eval(elem)
         return out
@@ -117,7 +121,7 @@ csv_kwargs = {
         if key not in ["variable", "date_start", "date_end"]
     },
     "converters": {
-        "variable": parse_list_of_strings,
+        "variable": _parse_list_of_strings,
     },
     "parse_dates": ["date_start", "date_end"],
     "date_parser": lambda s: pd.Period(s, "H"),
@@ -208,8 +212,11 @@ class DataCatalog(intake_esm.esm_datastore):
             if sim:  # So we never yield empty catalogs
                 yield values, sim
 
-    def drop_duplicates(self, columns=["id", "path"]):
+    def drop_duplicates(self, columns: Optional[List[str]] = None):
         # In case variables are being added in an existing Zarr, append them
+        if columns is None:
+            columns = ["id", "path"]
+
         if len(self.df) > 0:
             # By default, duplicated will mark the later entries as True
             duplicated = self.df.duplicated(subset="path")
@@ -547,7 +554,7 @@ def concat_data_catalogs(*dcs):
 
 
 @parse_config
-def get_asset_list(root_paths, extension="*.nc"):
+def _get_asset_list(root_paths, extension="*.nc"):
     """List files with a given extension from a list of paths.
 
     Search is done with GNU's `find` and parallized through `dask`.
@@ -596,7 +603,7 @@ def get_asset_list(root_paths, extension="*.nc"):
     return sorted(filelist)
 
 
-def name_parser(
+def _name_parser(
     path, patterns, read_from_file=None, xr_open_kwargs: Mapping[str, Any] = None
 ):
     """Extract metadata information from the file path.
@@ -726,7 +733,7 @@ def parse_directory(
     elif read_from_file is False:
         read_from_file = set()
 
-    filelist = get_asset_list(directories, extension=extension)
+    filelist = _get_asset_list(directories, extension=extension)
     logger.info(f"Found {len(filelist)} files to parse.")
 
     def _update_dict(entry):
@@ -735,7 +742,7 @@ def parse_directory(
 
     @dask.delayed
     def delayed_parser(*args, **kwargs):
-        return _update_dict(name_parser(*args, **kwargs))
+        return _update_dict(_name_parser(*args, **kwargs))
 
     parsed = [
         delayed_parser(

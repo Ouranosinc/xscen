@@ -6,8 +6,8 @@ from cartopy import crs
 from matplotlib import pyplot as plt
 from xclim.sdba import measures
 
-from ._ops import save_to_zarr
 from .catalog import DataCatalog
+from .io import save_to_zarr
 
 # TODO: Implement logging, warnings, etc.
 # TODO: Change all paths to PosixPath objects, including in the catalog?

@@ -1,23 +1,23 @@
 import logging
 from functools import partial
-from pathlib import Path
+from pathlib import Path, PosixPath
 from types import ModuleType
+from typing import Sequence, Tuple, Union
 
+import xarray as xr
 import xclim as xc
 from intake_esm import DerivedVariableRegistry
 from xclim.core.indicator import Indicator
 from yaml import safe_load
 
+from xscen.config import parse_config
+
+from .utils import CV
+
 logger = logging.getLogger(__name__)
 
 
 __all__ = []
-
-
-def ensure_list(x):
-    if not isinstance(x, (list, tuple)):
-        return [x]
-    return x
 
 
 def load_xclim_module(filename, reload=False) -> ModuleType:
@@ -55,16 +55,114 @@ def load_xclim_module(filename, reload=False) -> ModuleType:
     return xc.build_indicator_module_from_yaml(filename)
 
 
-def derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
-    def func(ds, *, ind, nout):
-        out = ind(ds=ds)
-        if isinstance(out, tuple):
-            out = out[nout]
-        ds[out.name] = out
-        return ds
+@parse_config
+def compute_indicators(
+    ds: xr.Dataset,
+    indicators: Union[
+        str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
+    ],
+    *,
+    periods: list = None,
+    to_level: str = "indicators",
+) -> Union[dict, xr.Dataset]:
+    """
+    Calculates variables and indicators based on a YAML call to xclim.
 
-    func.__name__ = ind.identifier
-    return partial(func, ind=ind, nout=nout)
+    Parameters
+    ----------
+    ds : xr.Dataset
+      Dataset to use for the indicators.
+    indicators : Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+      Path to a YAML file that instructs on how to calculate missing variables.
+      Can also be only the "stem", if translations and custom indices are implemented.
+      Can be the indicator module directly, or a sequence of indicators or a sequence of
+      tuples (indicator name, indicator) as returned by `iter_indicators()`.
+    periods : list
+      list of [start, end] of the contiguous periods to be evaluated, in the case of disjointed datasets.
+      If left at None, the dataset will be considered continuous.
+    to_level : str, optional
+      The processing level to assign to the output.
+      If None, the processing level of the inputs is preserved.
+
+
+    Returns
+    -------
+    dict
+      Dictionary (keys = timedeltas) with indicators separated by temporal resolution.
+
+    """
+    if isinstance(indicators, (str, Path)):
+        logger.debug("Loading indicator module.")
+        module = load_xclim_module(indicators)
+        indicators = module.iter_indicators()
+    elif hasattr(indicators, "iter_indicators"):
+        indicators = indicators.iter_indicators()
+
+    try:
+        N = len(indicators)
+    except TypeError:
+        N = None
+    else:
+        logger.info(f"Computing {N} indicators.")
+
+    out_dict = dict()
+    for i, ind in enumerate(indicators, 1):
+        if isinstance(ind, tuple):
+            iden, ind = ind
+        else:
+            iden = ind.identifier
+        logger.info(f"{i} - Computing {iden}.")
+
+        if periods is None:
+            # Make the call to xclim
+            out = ind(ds=ds)
+
+            # Infer the indicator's frequency
+            freq = xr.infer_freq(out.time) if "time" in out.dims else "fx"
+
+        else:
+            # Multiple time periods to concatenate
+            concats = []
+            for period in periods:
+                # Make the call to xclim
+                ds_subset = ds.sel(time=slice(str(period[0]), str(period[1])))
+                tmp = ind(ds=ds_subset)
+
+                # Infer the indicator's frequency
+                freq = xr.infer_freq(tmp.time) if "time" in tmp.dims else "fx"
+
+                # In order to concatenate time periods, the indicator still needs a time dimension
+                if freq == "fx":
+                    tmp = tmp.assign_coords({"time": ds_subset.time[0]})
+
+                concats.extend(tmp)
+            out = xr.concat(concats, dim="time")
+
+        # Create the dictionary key
+        key = freq
+        if key not in out_dict:
+            if isinstance(out, tuple):  # In the case of multiple outputs
+                out_dict[key] = xr.merge(o for o in out if o.name in indicators)
+            else:
+                out_dict[key] = out.to_dataset()
+
+            # TODO: Double-check History, units, attrs, add missing variables (grid_mapping), etc.
+            out_dict[key].attrs = ds.attrs
+            out_dict[key].attrs.pop("cat/variable", None)
+            out_dict[key].attrs["cat/xrfreq"] = freq
+            out_dict[key].attrs["cat/frequency"] = CV.xrfreq_to_frequency(freq, None)
+            if to_level is not None:
+                out_dict[key].attrs["cat/processing_level"] = to_level
+
+        else:
+            if isinstance(out, tuple):  # In the case of multiple outputs
+                for o in out:
+                    if o.name in indicators:
+                        out_dict[key][o.name] = o
+            else:
+                out_dict[key][out.name] = out
+
+    return out_dict
 
 
 def registry_from_module(
@@ -97,5 +195,23 @@ def registry_from_module(
             variable_column: [p.default for p in ind.parameters.values() if p.kind == 0]
         }
         for i, attrs in enumerate(ind.cf_attrs):
-            dvr.register(variable=attrs["var_name"], query=query)(derived_func(ind, i))
+            dvr.register(variable=attrs["var_name"], query=query)(_derived_func(ind, i))
     return dvr
+
+
+def _ensure_list(x):
+    if not isinstance(x, (list, tuple)):
+        return [x]
+    return x
+
+
+def _derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
+    def func(ds, *, ind, nout):
+        out = ind(ds=ds)
+        if isinstance(out, tuple):
+            out = out[nout]
+        ds[out.name] = out
+        return ds
+
+    func.__name__ = ind.identifier
+    return partial(func, ind=ind, nout=nout)

@@ -20,6 +20,8 @@ from .config import parse_config
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "change_units",
+    "clean_up",
     "maybe_unstack",
     "minimum_calendar",
     "natural_sort",
