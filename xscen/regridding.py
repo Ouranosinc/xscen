@@ -90,17 +90,10 @@ def regrid(
 
     else:
 
-        # if there is a mask in ds, we want the mask to be transfer to ds at the
-        # beginning of each iteration
-        # mask = ds.get('mask', None)
-
         for i, (ds_grid, regridder_kwargs) in enumerate(zip(ds_grids, reg_arguments)):
             # if this is not the first iteration (out != None),
             # get result from last iteration (out) as input
             ds = out or ds
-            # put mask in the input for every iteration
-            # if mask is not None:
-            #     ds['mask'] = mask
 
             kwargs = deepcopy(regridder_kwargs)
             # if weights_location does no exist, create it
