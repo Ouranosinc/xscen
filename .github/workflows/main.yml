@@ -53,7 +53,7 @@ jobs:
       - name: Test with tox
         shell: bash -l {0}
         run: |
-          conda activate sbck-experimental
+          conda activate xscen
           tox -e py39
         env:
           CONDA_EXE: mamba
