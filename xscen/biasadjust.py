@@ -62,6 +62,7 @@ def train(
     adapt_freq: Optional[dict] = None,
     jitter_under: Optional[dict] = None,
     jitter_over: Optional[dict] = None,
+    align_on: Optional[str] = "year",
 ) -> xr.Dataset:
     """
     Train a bias-adjustment.
@@ -91,7 +92,8 @@ def train(
       If given, a dictionary of args to pass to `jitter_under_thresh`.
     jitter_over: dict, optional
       If given, a dictionary of args to pass to `jitter_over_thresh`.
-
+    align_on: str, optional
+      `align_on` argument for the fonction `xclim.core.calendar.convert_calendar`.
 
     Returns
     -------
@@ -121,9 +123,9 @@ def train(
     refcal = get_calendar(ref)
     mincal = minimum_calendar(simcal, maximal_calendar)
     if simcal != mincal:
-        hist = convert_calendar(hist, mincal, align_on="year")
+        hist = convert_calendar(hist, mincal, align_on=align_on)
     if refcal != mincal:
-        ref = convert_calendar(ref, mincal, align_on="year")
+        ref = convert_calendar(ref, mincal, align_on=align_on)
 
     if group:
         if isinstance(group, dict):
@@ -181,6 +183,7 @@ def adjust(
     bias_adjust_institution: str = None,
     bias_adjust_project: str = None,
     moving_yearly_window: Optional[dict] = None,
+    align_on: Optional[str] = "year",
 ):
     """
     Adjust a simulation.
@@ -207,6 +210,9 @@ def adjust(
       If not None, `construct_moving_yearly_window` will be called on dsim (and scen in
       xclim_adjust_args if it exists) before adjusting and `unpack_moving_yearly_window`
       will be called on the output after the adjustment.
+      `construct_moving_yearly_window` stacks windows of the dataArray in a new 'movingwin' dimension and `unpack_moving_yearly_window` unpack it to a normal time series.
+    align_on: str, optional
+      `align_on` argument for the fonction `xclim.core.calendar.convert_calendar`.
 
     Returns
     -------
@@ -241,7 +247,7 @@ def adjust(
     simcal = get_calendar(sim)
     mincal = minimum_calendar(simcal, dtrain.attrs["train_params"]["maximal_calendar"])
     if simcal != mincal:
-        sim = convert_calendar(sim, mincal, align_on="year")
+        sim = convert_calendar(sim, mincal, align_on=align_on)
 
     xclim_adjust_args = xclim_adjust_args or {}
     # do the adjustment for all the simulation_period lists

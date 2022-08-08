@@ -9,7 +9,6 @@ from typing import Optional, Union
 import numpy as np
 import xarray
 import xarray as xr
-import xesmf
 import xesmf as xe
 
 from .config import parse_config
@@ -27,7 +26,7 @@ def regrid(
     ds_grid: xr.Dataset,
     *,
     regridder_kwargs: Optional[dict] = None,
-    intermediate_reg_grids: Optional[dict] = None,
+    intermediate_grids: Optional[dict] = None,
     to_level: str = "regridded",
 ) -> xarray.Dataset:
     """
@@ -45,21 +44,11 @@ def regrid(
       Supports a 'mask' variable compatible with ESMF standards.
     regridder_kwargs : dict
       Arguments to send xe.Regridder().
-    intermediate_reg_grids: dict
+    intermediate_grids: dict
         This argument is used to do a regridding in many steps, regridding to regular
         grids before regridding to the final ds_grid.
         This is useful when there is a large jump in resolution between ds and ds grid.
-        For each intermediary grid, you must provide the argument to create the grid
-        with util.cf_grid_2d and the arguments for the regridding with xe.Regridder.
-        The format is a nested dictionary:
-
-        {'name_of_inter_grid_1': {
-            'cf_grid_2d': {arguments for util.cf_grid_2d },
-            'regridder_kwargs':{arguments for xe.Regridder}
-            },
-        'name_of_inter_grid_2': ....
-                                }
-
+        The format is a nested dictionary shown in Notes.
         If None, no intermediary grid is used, there is only a regrid from ds to ds_grid.
     to_level: str
       The processing level to assign to the output.
@@ -70,34 +59,49 @@ def regrid(
     out: xarray.Dataset
       Regridded dataset
 
+    Notes
+    _____
+    intermediate_grids =
+      {'name_of_inter_grid_1': {'cf_grid_2d': {arguments for util.cf_grid_2d },'regridder_kwargs':{arguments for xe.Regridder}},
+        'name_of_inter_grid_2': dictionary_as_above}
+
     """
 
     regridder_kwargs = regridder_kwargs or {}
 
     ds_grids = []  # list of target grids
     reg_arguments = []  # list of accompanying arguments for xe.Regridder()
-    if intermediate_reg_grids:
-        for name_inter, dict_inter in intermediate_reg_grids.items():
+    if intermediate_grids:
+        for name_inter, dict_inter in intermediate_grids.items():
             reg_arguments.append(dict_inter["regridder_kwargs"])
-            ds_grids.append(xesmf.util.cf_grid_2d(**dict_inter["cf_grid_2d"]))
+            ds_grids.append(xe.util.cf_grid_2d(**dict_inter["cf_grid_2d"]))
 
     ds_grids.append(ds_grid)  # add final ds_grid
     reg_arguments.append(regridder_kwargs)  # add final regridder_kwargs
 
     out = None
-    for i, (ds_grid, regridder_kwargs) in enumerate(zip(ds_grids, reg_arguments)):
-        # if this is not the first iteration (out != None),
-        # get result from last iteration (out) as input
-        ds = out or ds
 
-        # Whether or not regridding is required
-        if ds["lon"].equals(ds_grid["lon"]) & ds["lat"].equals(ds_grid["lat"]):
-            out = ds
-            if "mask" in out:
-                out = out.where(out.mask == 1)
-                out = out.drop_vars(["mask"])
+    # Whether or not regridding is required
+    if ds["lon"].equals(ds_grid["lon"]) & ds["lat"].equals(ds_grid["lat"]):
+        out = ds
+        if "mask" in out:
+            out = out.where(out.mask == 1)
+            out = out.drop_vars(["mask"])
 
-        else:
+    else:
+
+        # if there is a mask in ds, we want the mask to be transfer to ds at the
+        # beginning of each iteration
+        # mask = ds.get('mask', None)
+
+        for i, (ds_grid, regridder_kwargs) in enumerate(zip(ds_grids, reg_arguments)):
+            # if this is not the first iteration (out != None),
+            # get result from last iteration (out) as input
+            ds = out or ds
+            # put mask in the input for every iteration
+            # if mask is not None:
+            #     ds['mask'] = mask
+
             kwargs = deepcopy(regridder_kwargs)
             # if weights_location does no exist, create it
             if not os.path.exists(weights_location):
@@ -170,9 +174,9 @@ def regrid(
             # History
             kwargs_for_hist = deepcopy(regridder_kwargs)
             kwargs_for_hist.setdefault("method", regridder.method)
-            if intermediate_reg_grids and i < len(intermediate_reg_grids):
-                name_inter = list(intermediate_reg_grids.keys())[i]
-                cf_grid_2d_args = intermediate_reg_grids[name_inter]["cf_grid_2d"]
+            if intermediate_grids and i < len(intermediate_grids):
+                name_inter = list(intermediate_grids.keys())[i]
+                cf_grid_2d_args = intermediate_grids[name_inter]["cf_grid_2d"]
                 new_history = (
                     f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
                     f"regridded with regridder arguments {kwargs_for_hist} to a xesmf"
