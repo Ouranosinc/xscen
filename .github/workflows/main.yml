@@ -1,0 +1,60 @@
+name: "xscen Testing Suite"
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - HISTORY.rst
+      - setup.cfg
+      - setup.py
+      - xclim/__init__.py
+  pull_request:
+
+jobs:
+  black:
+    name: Code Style Compliance
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - name: Install tox
+        run: pip install tox
+      - name: Run linting suite
+        run: tox -e black
+
+  test:
+    name: Smoke Test
+    needs: black
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v2.1.1
+        with:
+          activate-environment: xscen
+          channels: conda-forge,defaults
+          mamba-version: "*"
+          python-version: "3.9"
+          environment-file: environment.yml
+      - name: Conda and mamba versions
+        shell: bash -l {0}
+        run: |
+          mamba --version
+      - name: Install tox
+        shell: bash -l {0}
+        run: mamba install -n xscen tox
+      - name: Test with tox
+        shell: bash -l {0}
+        run: |
+          conda activate sbck-experimental
+          tox -e py39
+        env:
+          CONDA_EXE: mamba
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -47,7 +47,8 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint/flake8: ## check style with flake8
-	flake8 xscen tests
+	flake8 --config=setup.cfg xscen tests
+
 lint/black: ## check style with black
 	black --check xscen tests
 
