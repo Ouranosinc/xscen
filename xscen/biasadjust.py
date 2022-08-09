@@ -1,10 +1,12 @@
 import logging
+from copy import deepcopy
 from typing import Optional, Union
 
 import xarray as xr
 import xclim as xc
 from xclim import sdba
 from xclim.core.calendar import convert_calendar, get_calendar
+from xclim.sdba import construct_moving_yearly_window, unpack_moving_yearly_window
 
 from .catalog import parse_from_ds
 from .common import minimum_calendar
@@ -60,6 +62,7 @@ def train(
     adapt_freq: Optional[dict] = None,
     jitter_under: Optional[dict] = None,
     jitter_over: Optional[dict] = None,
+    align_on: Optional[str] = "year",
 ) -> xr.Dataset:
     """
     Train a bias-adjustment.
@@ -89,7 +92,8 @@ def train(
       If given, a dictionary of args to pass to `jitter_under_thresh`.
     jitter_over: dict, optional
       If given, a dictionary of args to pass to `jitter_over_thresh`.
-
+    align_on: str, optional
+      `align_on` argument for the fonction `xclim.core.calendar.convert_calendar`.
 
     Returns
     -------
@@ -119,9 +123,9 @@ def train(
     refcal = get_calendar(ref)
     mincal = minimum_calendar(simcal, maximal_calendar)
     if simcal != mincal:
-        hist = convert_calendar(hist, mincal)
+        hist = convert_calendar(hist, mincal, align_on=align_on)
     if refcal != mincal:
-        ref = convert_calendar(ref, mincal)
+        ref = convert_calendar(ref, mincal, align_on=align_on)
 
     if group:
         if isinstance(group, dict):
@@ -178,6 +182,8 @@ def adjust(
     to_level: str = "biasadjusted",
     bias_adjust_institution: str = None,
     bias_adjust_project: str = None,
+    moving_yearly_window: Optional[dict] = None,
+    align_on: Optional[str] = "year",
 ):
     """
     Adjust a simulation.
@@ -199,6 +205,14 @@ def adjust(
       The institution to assign to the output.
     bias_adjust_project : str, optional
       The project to assign to the output.
+    moving_yearly_window: dict, optional
+      Arguments to pass to `xclim.sdba.construct_moving_yearly_window`.
+      If not None, `construct_moving_yearly_window` will be called on dsim (and scen in
+      xclim_adjust_args if it exists) before adjusting and `unpack_moving_yearly_window`
+      will be called on the output after the adjustment.
+      `construct_moving_yearly_window` stacks windows of the dataArray in a new 'movingwin' dimension and `unpack_moving_yearly_window` unpack it to a normal time series.
+    align_on: str, optional
+      `align_on` argument for the fonction `xclim.core.calendar.convert_calendar`.
 
     Returns
     -------
@@ -206,6 +220,15 @@ def adjust(
       dscen, the bias-adjusted timeseries.
     """
     # TODO: To be adequately fixed later
+
+    xclim_adjust_args = deepcopy(xclim_adjust_args)
+
+    if moving_yearly_window:
+        dsim = construct_moving_yearly_window(dsim, **moving_yearly_window)
+        if "scen" in xclim_adjust_args:
+            xclim_adjust_args["scen"] = construct_moving_yearly_window(
+                xclim_adjust_args["scen"], **moving_yearly_window
+            )
 
     # evaluate the dict that was stored as a string
     if not isinstance(dtrain.attrs["train_params"], dict):
@@ -224,7 +247,7 @@ def adjust(
     simcal = get_calendar(sim)
     mincal = minimum_calendar(simcal, dtrain.attrs["train_params"]["maximal_calendar"])
     if simcal != mincal:
-        sim = convert_calendar(sim, mincal)
+        sim = convert_calendar(sim, mincal, align_on=align_on)
 
     xclim_adjust_args = xclim_adjust_args or {}
     # do the adjustment for all the simulation_period lists
@@ -239,8 +262,8 @@ def adjust(
         # adjust
         ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)
 
-        if "detrend" in xclim_adjust_args and isinstance(
-            xclim_adjust_args["detrend"], dict
+        if ("detrend" in xclim_adjust_args) and (
+            isinstance(xclim_adjust_args["detrend"], dict)
         ):
             name, kwargs = list(xclim_adjust_args["detrend"].items())[0]
             kwargs = kwargs or {}
@@ -264,5 +287,8 @@ def adjust(
         dscen.attrs["cat/bias_adjust_institution"] = bias_adjust_institution
     if bias_adjust_project is not None:
         dscen.attrs["cat/bias_adjust_project"] = bias_adjust_project
+
+    if moving_yearly_window:
+        dscen = unpack_moving_yearly_window(dscen)
 
     return dscen
