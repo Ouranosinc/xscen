@@ -17,7 +17,7 @@ from .io import save_to_netcdf, save_to_zarr  # noqa
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.2.4-beta"
+__version__ = "0.2.5-beta"
 
 
 # monkeypatch so that warnings.warn() doesn't mention itself
