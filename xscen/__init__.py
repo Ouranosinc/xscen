@@ -2,18 +2,18 @@
 import warnings
 
 # Import the submodules
-from . import catalog, checkups, config, extract, helpers, io, utils
+from . import catalog, checkups, config, extract, io, utils
 
 # Import top-level functions
-from ._biasadjust import *
-from ._ensembles import *
-from ._regrid import *
 from .aggregate import *
+from .biasadjust import *
 from .catalog import DataCatalog, ProjectCatalog  # noqa
 from .config import CONFIG  # noqa
+from .ensembles import *
 from .extract import extract_dataset, search_data_catalogs  # noqa
 from .indicators import compute_indicators  # noqa
 from .io import save_to_netcdf, save_to_zarr  # noqa
+from .regrid import *
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"

@@ -18,11 +18,11 @@ from .config import parse_config
 # TODO: Implement support for an OBS2SIM kind of interpolation
 
 
-__all__ = ["regrid", "create_mask"]
+__all__ = ["regrid_dataset", "create_mask"]
 
 
 @parse_config
-def regrid(
+def regrid_dataset(
     ds: xr.Dataset,
     weights_location: Union[str, PosixPath],
     ds_grid: xr.Dataset,
