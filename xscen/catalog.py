@@ -32,12 +32,10 @@ intake_esm.set_options(attrs_prefix="cat")
 
 __all__ = [
     "COLUMNS",
-    "ESMCatalogModel",
     "ID_COLUMNS",
     "concat_data_catalogs",
     "date_parser",
     "generate_id",
-    "parse_config",
     "parse_directory",
     "parse_from_ds",
 ]
