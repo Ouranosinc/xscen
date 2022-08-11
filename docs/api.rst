@@ -50,6 +50,13 @@ Indicators
    :members:
    :noindex:
 
+Ensembles
+-------------------
+
+.. automodule:: xscen.ensembles
+   :members:
+   :noindex:
+
 Quality Checks
 --------------
 
