@@ -5,7 +5,7 @@ Installation
 From sources
 ------------
 
-Because of some packages being absent from pypi (`xESMF`), we highly recommand installing
+Because of some packages being absent from pypi (`xESMF`), we highly recommend installing
 xscen in a conda environment. An environment file is available on the `Github repo`_.
 
 .. Warning::
