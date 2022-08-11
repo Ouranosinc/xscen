@@ -182,7 +182,10 @@ def natural_sort(_list: list):
 
 
 def maybe_unstack(
-    ds: xr.Dataset, coords, rechunk: bool = None, stack_drop_nans: bool = False
+    ds: xr.Dataset,
+    coords: str = None,
+    rechunk: bool = None,
+    stack_drop_nans: bool = False,
 ):
     """If stack_drop_nans is True, unstack and rechunk."""
     if stack_drop_nans:
