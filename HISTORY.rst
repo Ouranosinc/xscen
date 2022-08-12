@@ -4,7 +4,7 @@ History
 
 v0.3.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -15,12 +15,13 @@ New features and enhancements
 * New function ``clean_up`` added. (:issue:`22`, :pull:`24`).
 * `parse_directory`: Fixes to `xr_open_kwargs` and support for wildcards (*) in the directories. (:pull:`19`).
 * New function ``xscen.ensemble.ensemble_stats`` added. (:issue:`3`, :pull:`28`).
-* Add argument ``intermediate_reg_grids`` to ``xscen.regridding.regrid`. (:issue:`34`, :pull:`39`).
-* Add argument ``moving_yearly_window`` to ``xscen.biasadjust.adjust.` (:pull:`39`).
+* Add argument ``intermediate_reg_grids`` to ``xscen.regridding.regrid``. (:issue:`34`, :pull:`39`).
+* Add argument ``moving_yearly_window`` to ``xscen.biasadjust.adjust``. (:pull:`39`).
+* Many adjustments to ``parse_directory``: better wildcards (:issue:`24`), allow custom columns, fastpaths for ``parse_from_ds``, and more (:pull:`30`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* N/A
+* Patterns in ``parse_directory`` start and the end of the paths in ``directories``. (:pull:`30`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
