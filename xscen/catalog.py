@@ -642,7 +642,7 @@ def name_parser(
         except ValueError:
             continue
     if not d:
-        logger.warn(f"No pattern matched with path {path}")
+        logger.debug(f"No pattern matched with path {path}")
         return {"path": None}
 
     logger.debug(f"Parsed file path {path} and got {len(d)} fields.")
