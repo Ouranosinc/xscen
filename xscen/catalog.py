@@ -3,6 +3,7 @@ import itertools
 import json
 import logging
 import os
+import re
 import subprocess
 import warnings
 from copy import deepcopy
@@ -687,6 +688,7 @@ def parse_directory(
     cvs: Union[str, PosixPath, dict] = None,
     xr_open_kwargs: Mapping[str, Any] = None,
     parallel_depth: int = 1,
+    only_official_columns: bool = True,
 ) -> pd.DataFrame:
     r"""Parse files in a directory and return them as a pd.DataFrame.
 
@@ -716,17 +718,24 @@ def parse_directory(
         May have an additionnal "attributes" entry which maps from attribute names in the files to
         official column names. The attribute translation is done before the rest.
     xr_open_kwargs: dict
-        If required, arguments to send xr.open_dataset() when opening the file to read the attributes.
+        If needed, arguments to send xr.open_dataset() when opening the file to read the attributes.
+    parallel_depth: int
+        The depth at which to parallelize the finding of files in the directories. A value of 1 (default and minimum),
+        means each subfolder of a given directory are searched in parallel.
+    only_official_columns: bool
+        If True (default), this ensure the final catalog has all official columns and only those. Other fields in the patterns will raise an error.
+        If False, the columns are those used in the patterns and the homogenous info. In that case, the column order is not determined.
+        Path, format and id are always present in the output.
 
     Notes
     -----
-    - Columns names are: ["id", "type", "processing_level", "mip_era", "activity", "driving_institution", "driving_model", "institution",
+    - Offical columns names are: ["id", "type", "processing_level", "mip_era", "activity", "driving_institution", "driving_model", "institution",
                           "source", "bias_adjust_institution", "bias_adjust_project","experiment", "member",
                           "xrfreq", "frequency", "variable", "domain", "date_start", "date_end", "version"]
     - Not all column names have to be present, but "xrfreq" (obtainable through "frequency"), "variable",
-        "date_start" and "processing_level" are necessary.
+        "date_start" and "processing_level" are necessary for a workable catalog.
     - 'patterns' should highlight the columns with braces.
-        Wildcards can be used for irrelevant parts of a path. "*" means anything including the "_" character,
+        Wildcards can be used for irrelevant parts of a path. "*" means anything including the "_" character (but not "/"),
         while "?" fits any string without "_". Any character following the wildcard is ignored, in order to have human readable placeholders.
         Example: `"{?ignored project name}_{?}_{domain}_{?}_{variable}_{date_start}_{activity}_{experiment}_{processing_level}_{*gibberish}.nc"`
 
@@ -736,8 +745,21 @@ def parse_directory(
         Parsed directory files
     """
     homogenous_info = homogenous_info or {}
-    columns = set(COLUMNS) - homogenous_info.keys()
     xr_open_kwargs = xr_open_kwargs or {}
+    pattern_fields = set.union(
+        *map(lambda p: set(re.findall(r"{([\w]*)}", p)), patterns)
+    )
+    if only_official_columns:
+        columns = set(COLUMNS) - homogenous_info.keys()
+        unrecognized = pattern_fields - set(COLUMNS)
+        if unrecognized:
+            raise ValueError(
+                f"Patterns include fields which are not recognized by xscen : {unrecognized}. "
+                "If this is wanted, pass only_official_columns=False to remove the check."
+            )
+    else:
+        # Get all columns defined in the patterns
+        columns = pattern_fields.union({"path", "format"})
 
     read_file_groups = False  # Whether to read file per groupe or not.
     if not isinstance(read_from_file, bool) and not isinstance(read_from_file[0], str):
@@ -823,23 +845,25 @@ def parse_directory(
         df = df.replace(cvs)
 
     # translate xrfreq into frequencies and vice-versa
-    df["xrfreq"].fillna(
-        df["frequency"].apply(CV.frequency_to_xrfreq, default=pd.NA), inplace=True
-    )
-    df["frequency"].fillna(
-        df["xrfreq"].apply(CV.xrfreq_to_frequency, default=pd.NA), inplace=True
-    )
+    if {"xrfreq", "frequency"}.issubset(df.columns):
+        df["xrfreq"].fillna(
+            df["frequency"].apply(CV.frequency_to_xrfreq, default=pd.NA), inplace=True
+        )
+        df["frequency"].fillna(
+            df["xrfreq"].apply(CV.xrfreq_to_frequency, default=pd.NA), inplace=True
+        )
 
     # Parse dates
-    df["date_start"] = df["date_start"].apply(date_parser)
-    df["date_end"] = df["date_end"].apply(date_parser, end_of_period=True)
+    if "date_start" in df.columns:
+        df["date_start"] = df["date_start"].apply(date_parser)
+    if "date_end" in df.columns:
+        df["date_end"] = df["date_end"].apply(date_parser, end_of_period=True)
 
     # Checks
     # todo
-    # 1. Toutes les colonnes (et seulement celles-ci) existent
-    # 2. Les dates NaT correspondent à une fréquence fx
-    # 3. Toutes les xrfreq sont correctes (pandas + fx)
-    # 4. Format est zarr ou nc
+    # 1. Les dates NaT correspondent à une fréquence fx
+    # 2. Toutes les xrfreq sont correctes (pandas + fx)
+    # 3. Format est zarr ou nc
 
     # Create id from user specifications
     df["id"] = generate_id(df, id_columns)
@@ -848,7 +872,9 @@ def parse_directory(
     df["path"] = df.path.apply(str)
 
     # Sort columns and return
-    return df.loc[:, COLUMNS]
+    if only_official_columns:
+        return df.loc[:, COLUMNS]
+    return df
 
 
 def parse_from_ds(
