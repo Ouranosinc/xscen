@@ -896,9 +896,10 @@ def parse_directory(
     if {"date_start", "date_end", "xrfreq", "frequency"}.issubset(df.columns):
         # All NaN dates correspond to a fx frequency.
         invalid = (
-            df.date_start.isnull() & df.date_end.isnull() & df.xrfreq
-            != "fx" & df.frequency
-            != "fx"
+            df.date_start.isnull()
+            & df.date_end.isnull()
+            & (df.xrfreq != "fx")
+            & (df.frequency != "fx")
         )
         n = invalid.sum()
         if n > 0:
