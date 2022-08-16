@@ -50,7 +50,7 @@ def climatological_mean(
     Returns
     -------
     xr.Dataset
-      Returns a Dataset with the requested operation applied over time.
+      Returns a Dataset of the climatological mean
 
     """
 
