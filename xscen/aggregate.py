@@ -170,16 +170,15 @@ def compute_deltas(
     )
     ref = ref.assign(time=ind).unstack("time")
 
-    other_hz = ds.where(ds.horizon != reference_horizon, drop=True)
     ind = pd.MultiIndex.from_arrays(
         [
-            other_hz.time.dt.year.values,
-            other_hz.time.dt.month.values,
-            other_hz.time.dt.day.values,
+            ds.time.dt.year.values,
+            ds.time.dt.month.values,
+            ds.time.dt.day.values,
         ],
         names=["year", "month", "day"],
     )
-    other_hz = other_hz.assign(time=ind).unstack("time")
+    other_hz = ds.assign(time=ind).unstack("time")
 
     deltas = xr.Dataset(coords=other_hz.coords, attrs=other_hz.attrs)
     # Calculate deltas
@@ -240,7 +239,8 @@ def compute_deltas(
         pd.to_datetime(f"{y}, {m}, {d}")
         for y, m, d in zip(deltas.year.values, deltas.month.values, deltas.day.values)
     ]
-    deltas = deltas.assign_coords(time=time_coord).transpose("time", "lat", "lon")
+    deltas = deltas.assign_coords(time=time_coord).transpose("time", ...)
+    deltas = deltas.reindex_like(ds)
 
     if to_level is not None:
         deltas.attrs["cat/processing_level"] = to_level
