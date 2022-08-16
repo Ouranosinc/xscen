@@ -908,7 +908,7 @@ def parse_directory(
             warnings.warn(
                 f"{n} invalid entries where the start and end dates are Null but the frequency is not 'fx'."
             )
-            logger.debug("Paths: {df.path[invalid].values}")
+            logger.debug(f"Paths: {df.path[invalid].values}")
             df = df[~invalid]
 
     # todo
