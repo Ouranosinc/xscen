@@ -59,6 +59,7 @@ logger = logging.getLogger(__name__)
 EXTERNAL_MODULES = ["logging", "xarray", "xclim", "warnings"]
 
 __all__ = [
+    "CONFIG",
     "load_config",
     "parse_config",
 ]

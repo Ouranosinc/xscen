@@ -17,7 +17,7 @@ from .utils import CV
 logger = logging.getLogger(__name__)
 
 
-__all__ = []
+__all__ = ["compute_indicators"]
 
 
 def load_xclim_module(filename, reload=False) -> ModuleType:

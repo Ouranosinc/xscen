@@ -27,10 +27,7 @@ from .utils import CV, natural_sort
 logger = logging.getLogger(__name__)
 
 
-__all__ = [
-    "clisops_subset",
-    "resample",
-]
+__all__ = ["clisops_subset", "extract_dataset", "resample", "search_data_catalogs"]
 
 
 def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:

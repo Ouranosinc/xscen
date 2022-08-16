@@ -36,7 +36,9 @@ intake_esm.set_options(attrs_prefix="cat")
 
 __all__ = [
     "COLUMNS",
+    "DataCatalog",
     "ID_COLUMNS",
+    "ProjectCatalog",
     "concat_data_catalogs",
     "date_parser",
     "generate_id",

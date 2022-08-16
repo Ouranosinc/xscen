@@ -7,13 +7,6 @@ from __future__ import annotations  # for xclim 0.37
 import xarray as xr
 from xclim.core.units import convert_units_to, declare_units
 
-__all__ = [
-    "dtr",
-    "precipitation",
-    "tasmax_from_dtr",
-    "tasmin_from_dtr",
-]
-
 
 @declare_units(prsn="[precipitation]", prlp="[precipitation]")
 def precipitation(prsn: xr.DataArray, prlp: xr.DataArray) -> xr.DataArray:

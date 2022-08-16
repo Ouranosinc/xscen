@@ -21,8 +21,10 @@ __all__ = [
     "clean_incomplete",
     "estimate_chunks",
     "get_engine",
-    "subset_maxsize",
     "rechunk",
+    "subset_maxsize",
+    "save_to_netcdf",
+    "save_to_zarr",
 ]
 
 

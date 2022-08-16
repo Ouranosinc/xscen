@@ -2,7 +2,19 @@
 import warnings
 
 # Import the submodules
-from . import catalog, checkups, config, extract, io, utils
+from . import (
+    biasadjust,
+    catalog,
+    checkups,
+    config,
+    ensembles,
+    extract,
+    indicators,
+    io,
+    regrid,
+    scripting,
+    utils,
+)
 
 # Import top-level functions
 from .aggregate import *
@@ -14,6 +26,13 @@ from .extract import extract_dataset, search_data_catalogs  # noqa
 from .indicators import compute_indicators  # noqa
 from .io import save_to_netcdf, save_to_zarr  # noqa
 from .regrid import *
+from .scripting import (
+    TimeoutException,
+    measure_time,
+    send_mail,
+    send_mail_on_exit,
+    timeout,
+)
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"

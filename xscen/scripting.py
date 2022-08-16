@@ -22,7 +22,13 @@ from .config import parse_config
 
 logger = logging.getLogger(__name__)
 
-__all__ = []
+__all__ = [
+    "send_mail",
+    "send_mail_on_exit",
+    "measure_time",
+    "timeout",
+    "TimeoutException",
+]
 
 
 @parse_config
