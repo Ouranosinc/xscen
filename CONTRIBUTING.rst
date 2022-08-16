@@ -99,6 +99,12 @@ the `docs/notebooks` submodule not being fetched, but this doesn't affect the us
 
    To get flake8, black, and tox, just pip install them into your virtualenv.
 
+.. warning::
+
+   Due to some dependencies only being available via Anaconda/conda-forge, `tox` will only work if both `tox` and `tox-conda`
+   are installed in a conda-based environment. Running `pytest` demands that your runtime/dev environment have all necessary
+   dependencies installed.
+
 6. Commit your changes and push your branch to GitHub::
 
     $ git add .
@@ -146,7 +152,6 @@ Tips
 To run a subset of tests::
 
 $ pytest tests.test_xscen
-
 
 Versioning/Tagging
 ------------------

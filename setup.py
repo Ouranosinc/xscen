@@ -53,8 +53,8 @@ setup(
     name="xscen",
     packages=find_packages(include=["xscen", "xscen.*"]),
     test_suite="tests",
-    tests_require=["pytest"],
+    tests_require=["pytest", "pytest-cov"],
     url="https://github.com/Ouranosinc/xscen",
-    version="0.2.3-beta",
+    version="0.2.5-beta",
     zip_safe=False,
 )

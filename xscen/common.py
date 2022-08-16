@@ -162,7 +162,9 @@ def natural_sort(_list: list):
     return sorted(_list, key=alphanum_key)
 
 
-def maybe_unstack(ds, coords, rechunk: bool = None, stack_drop_nans: bool = False):
+def maybe_unstack(
+    ds, coords: str = None, rechunk: bool = None, stack_drop_nans: bool = False
+):
     """If stack_drop_nans is True, unstack and rechunk."""
     if stack_drop_nans:
         ds = unstack_fill_nan(ds, coords=coords)
