@@ -768,9 +768,9 @@ def parse_directory(
     - Not all column names have to be present, but "xrfreq" (obtainable through "frequency"), "variable",
         "date_start" and "processing_level" are necessary for a workable catalog.
     - 'patterns' should highlight the columns with braces.
-        Wildcards (*, ?) can be used for irrelevant parts of a path. 
+        Wildcards (*, ?) can be used for irrelevant parts of a path.
         "*" will match everything, with the exception of "/".
-        "?" behaves similarly to a wildcard, but will also exclude the "_" character. 
+        "?" behaves similarly to a wildcard, but will also exclude the "_" character.
         Note: In order to have human readable placeholders, all the words following a wildcard within a bracket will be ignored.
         Example: `"{?ignored project name}_{?}_{domain}_{?}_{variable}_{date_start}_{activity}_{experiment}_{processing_level}_{*gibberish}.nc"`
 
