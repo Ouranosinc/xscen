@@ -52,7 +52,7 @@ def climatological_mean(
     Returns
     -------
     xr.Dataset
-      Returns a Dataset with the requested operation applied over time.
+      Returns a Dataset of the climatological mean
 
     """
 
@@ -67,7 +67,7 @@ def climatological_mean(
 
     # Rolling will ignore jumps in time, so we want to raise an exception beforehand
     if (not all(ds_unstack.year.diff(dim="year", n=1) == 1)) & (periods is None):
-        raise ValueError("Data is not contiguous. Use the 'periods' argument.")
+        raise ValueError("Data is not continuous. Use the 'periods' argument.")
 
     # Compute temporal means
     concats = []
@@ -270,7 +270,7 @@ def spatial_mean(
       Dataset to use for the computation.
     method: str
       'mean' will perform a .mean() over the spatial dimensions of the Dataset.
-      'interp_coord' will (optionally) find the region's centroid, then perform a .interp() over the spatial dimensions of the Dataset.
+      'interp_coord' will find the region's centroid (if coordinates are not fed through kwargs), then perform a .interp() over the spatial dimensions of the Dataset.
       The coordinate can also be directly fed to .interp() through the 'kwargs' argument below.
       'xesmf' will make use of xESMF's SpatialAverager. Note that this can be much slower than other methods.
     call_clisops: bool
