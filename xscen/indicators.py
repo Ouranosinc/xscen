@@ -78,7 +78,7 @@ def compute_indicators(
       tuples (indicator name, indicator) as returned by `iter_indicators()`.
     periods : list
       list of [start, end] of continuous periods over which to compute the indicators. This is needed when the time axis of ds contains some jumps in time.
-      If left at None, the dataset will be considered continuous.
+      If None, the dataset will be considered continuous.
     to_level : str, optional
       The processing level to assign to the output.
       If None, the processing level of the inputs is preserved.
