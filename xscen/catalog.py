@@ -729,7 +729,7 @@ def parse_directory(
     globpattern: str
         A glob pattern for file name matching, usually only a suffix like "*.nc".
         May include folder matching, in which case don't forget that the search is parallelized for
-        subfolders up to the depth given by `parallel_depth`. Also, contrary to real posix glob patterns,
+        subfolders up to the depth given by `parallel_depth`. Contrary to real posix glob patterns,
         this makes no difference between "**" and "*".
     patterns : list
         List of possible patterns to be used by intake.source.utils.reverse_filename() to decode the file names. See Notes below.
@@ -753,8 +753,8 @@ def parse_directory(
     xr_open_kwargs: dict
         If needed, arguments to send xr.open_dataset() when opening the file to read the attributes.
     parallel_depth: int
-        The depth at which to parallelize the finding of files in the directories. A value of 1 (default and minimum),
-        means each subfolder of a given directory are searched in parallel.
+        The level at which to parallelize the file search. A value of 1 (default and minimum), means the subfolders
+        of each directory are searched in parallel, a value of 2 would search the subfolders' subfolders in parallel, and so on.
     only_official_columns: bool
         If True (default), this ensure the final catalog has all official columns and only those. Other fields in the patterns will raise an error.
         If False, the columns are those used in the patterns and the homogenous info. In that case, the column order is not determined.
@@ -893,10 +893,22 @@ def parse_directory(
         df["date_end"] = df["date_end"].apply(date_parser, end_of_period=True)
 
     # Checks
+    if {"date_start", "date_end", "xrfreq", "frequency"}.issubset(df.columns):
+        # All NaN dates correspond to a fx frequency.
+        invalid = (
+            df.date_start.isnull() & df.date_end.isnull() & df.xrfreq
+            != "fx" & df.frequency
+            != "fx"
+        )
+        n = invalid.sum()
+        if n > 0:
+            raise ValueError(
+                f"{n} invalid entries where the start and end dates are Null but the frequency is not 'fx'.\nPaths: {df.path[invalid]}."
+            )
+
     # todo
-    # 1. Les dates NaT correspondent à une fréquence fx
-    # 2. Toutes les xrfreq sont correctes (pandas + fx)
-    # 3. Format est zarr ou nc
+    # - Vocabulary check on xrfreq and other columns
+    # - Format is understood
 
     # Create id from user specifications
     df["id"] = generate_id(df, id_columns)
