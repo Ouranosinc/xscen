@@ -541,8 +541,8 @@ def concat_data_catalogs(*dcs):
 
 
 @parse_config
-def get_asset_list(root_paths, extension="*.nc", parallel_depth=1):
-    """List files with a given extension from a list of paths.
+def get_asset_list(root_paths, globpat="*.nc", parallel_depth=1):
+    """List files fitting a given glob pattern from a list of paths.
 
     Search is done with GNU's `find` and parallized through `dask`.
     """
@@ -562,11 +562,39 @@ def get_asset_list(root_paths, extension="*.nc", parallel_depth=1):
             root_paths.extend(new_roots)
 
     @dask.delayed
-    def _file_dir_files(directory, extension):
+    def _file_dir_files(directory, pattern):
         try:
-            cmd = ["find", "-L", directory.as_posix(), "-name", extension]
-            proc = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-            output = proc.stdout.read().decode("utf-8").split()
+            if "/" in pattern:
+                *foldparts, extension = pattern.split("/")
+                foldpatt = "/".join(foldparts)
+                folders = subprocess.run(
+                    [
+                        "find",
+                        "-L",
+                        directory.as_posix(),
+                        "-type",
+                        "d",
+                        "-wholename",
+                        foldpatt,
+                    ],
+                    capture_output=True,
+                    encoding="utf-8",
+                ).stdout.split()
+                output = []
+                for folder in folders:
+                    output.extend(
+                        subprocess.run(
+                            ["find", "-L", folder, "-name", extension],
+                            capture_output=True,
+                            encoding="utf-8",
+                        ).stdout.split()
+                    )
+            else:
+                output = subprocess.run(
+                    ["find", "-L", directory.as_posix(), "-name", pattern],
+                    capture_output=True,
+                    encoding="utf-8",
+                ).stdout.split()
         except Exception:
             output = []
         return output
@@ -583,14 +611,16 @@ def get_asset_list(root_paths, extension="*.nc", parallel_depth=1):
                         dirs.remove(x.parent)
                     dirs.append(x)
 
-        filelist = [_file_dir_files(directory, extension) for directory in dirs]
+        filelist = [_file_dir_files(directory, globpat) for directory in dirs]
         # watch progress
         with ProgressBar():
             filelist = dask.compute(*filelist)
         filecoll[root] = list(itertools.chain(*filelist))
 
-        # add files in the first directory
-        filecoll[root].extend([str(x.name) for x in root.glob(f"{extension}")])
+        # add files in the first directory, unless the glob pattern includes
+        # folder matching, in which case we don't want to risk recomputing the same parsing.
+        if "/" not in globpat:
+            filecoll[root].extend([str(x.name) for x in root.glob(f"{globpat}")])
         filecoll[root].sort()
 
     return filecoll
@@ -674,7 +704,7 @@ def name_parser(
 @parse_config
 def parse_directory(
     directories: list,
-    extension: str,
+    globpattern: str,
     patterns: list,
     *,
     id_columns: list = None,
@@ -696,8 +726,11 @@ def parse_directory(
     ----------
     directories : list
         List of directories to parse. The parse is recursive and accepts wildcards (*).
-    extension: str
-        A glob pattern for file name matching, usually only a suffix like ".nc".
+    globpattern: str
+        A glob pattern for file name matching, usually only a suffix like "*.nc".
+        May include folder matching, in which case don't forget that the search is parallelized for
+        subfolders up to the depth given by `parallel_depth`. Also, contrary to real posix glob patterns,
+        this makes no difference between "**" and "*".
     patterns : list
         List of possible patterns to be used by intake.source.utils.reverse_filename() to decode the file names. See Notes below.
     id_columns : list
@@ -782,7 +815,7 @@ def parse_directory(
 
     # Find files
     filecoll = get_asset_list(
-        directories, extension=extension, parallel_depth=parallel_depth
+        directories, globpat=globpattern, parallel_depth=parallel_depth
     )
     logger.info(
         f"Found {sum(len(filelist) for filelist in filecoll.values())} files to parse."
