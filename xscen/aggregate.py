@@ -268,7 +268,7 @@ def spatial_mean(
       Dataset to use for the computation.
     method: str
       'mean' will perform a .mean() over the spatial dimensions of the Dataset.
-      'interp_coord' will (optionally) find the region's centroid, then perform a .interp() over the spatial dimensions of the Dataset.
+      'interp_coord' will find the region's centroid (if coordinates are not fed through kwargs), then perform a .interp() over the spatial dimensions of the Dataset.
       The coordinate can also be directly fed to .interp() through the 'kwargs' argument below.
       'xesmf' will make use of xESMF's SpatialAverager. Note that this can be much slower than other methods.
     call_clisops: bool
