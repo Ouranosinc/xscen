@@ -33,7 +33,6 @@ logger = logging.getLogger(__name__)
 # Monkey patch for attribute names in the output of to_dataset_dict
 intake_esm.set_options(attrs_prefix="cat")
 
-"""Official column names."""
 # As much as possible, these catalog columns and entries should align with: https://github.com/WCRP-CMIP/CMIP6_CVs and https://github.com/ES-DOC/pyessv-archive
 # See docs/columns.rst for a description of each entry.
 COLUMNS = [
@@ -60,8 +59,8 @@ COLUMNS = [
     "format",
     "path",
 ]
+"""Official column names."""
 
-"""Default columns used to create a unique ID"""
 ID_COLUMNS = [
     "bias_adjust_project",
     "mip_era",
@@ -73,10 +72,10 @@ ID_COLUMNS = [
     "member",
     "domain",
 ]
+"""Default columns used to create a unique ID"""
 
 
-"""Official ESM column data for the catalogs."""
-_esm_col_data = {
+esm_col_data = {
     "esmcat_version": "0.1.0",  # intake-esm JSON file structure version, as per: https://github.com/NCAR/esm-collection-spec
     "assets": {"column_name": "path", "format_column_name": "format"},
     "aggregation_control": {
@@ -93,6 +92,7 @@ _esm_col_data = {
     },
     "attributes": [],
 }
+"""Default ESM column data for the official catalogs."""
 
 
 def parse_list_of_strings(elem):
@@ -103,7 +103,6 @@ def parse_list_of_strings(elem):
     return (elem,)
 
 
-"""Offical kwargs to pass to `pd.read_csv` when opening an Ouranos catalog."""
 csv_kwargs = {
     "dtype": {
         key: "category" if not key == "path" else "string[pyarrow]"
@@ -116,6 +115,7 @@ csv_kwargs = {
     "parse_dates": ["date_start", "date_end"],
     "date_parser": lambda s: pd.Period(s, "H"),
 }
+"""Kwargs to pass to `pd.read_csv` when opening an official Ouranos catalog."""
 
 
 class DataCatalog(intake_esm.esm_datastore):
@@ -150,9 +150,9 @@ class DataCatalog(intake_esm.esm_datastore):
           One or more paths to csv files.
         esmdata: path or dict, optional
           The "ESM collection data" as a path to a json file or a dict.
-          If None (default), `catalog._esm_col_data` is used.
+          If None (default), :py:data:`esm_col_data` is used.
         read_csv_kwargs : dict, optional
-          Extra kwargs to pass to `pd.read_csv`, in addition to the ones in `catalog.csv_kwargs`.
+          Extra kwargs to pass to `pd.read_csv`, in addition to the ones in :py:data:`csv_kwargs`.
         name: str, optional
           If `metadata` doesn't contain it, a name to give to the catalog.
         """
@@ -163,7 +163,7 @@ class DataCatalog(intake_esm.esm_datastore):
             with open(esmdata) as f:
                 esmdata = json.load(f)
         elif esmdata is None:
-            esmdata = deepcopy(_esm_col_data)
+            esmdata = deepcopy(esm_col_data)
         if "id" not in esmdata:
             esmdata["id"] = name
 
@@ -262,17 +262,15 @@ class DataCatalog(intake_esm.esm_datastore):
 
     def exists_in_cat(self, **columns):
         """
-        Check if there is an entry in the catalogue corresponding to the arguments given
+        Check if there is an entry in the catalogue corresponding to the arguments given.
 
         Parameters
         ----------
-        cat: catalogue
         columns: Arguments that will be given to `catalog.search`
 
         Returns
         -------
         Boolean if an entry exist
-
         """
         exists = bool(len(self.search(**columns)))
         if exists:
@@ -293,7 +291,7 @@ class ProjectCatalog(DataCatalog):
     ):
         r"""Create a new project catalog from some project metadata.
 
-        Creates the json from default `_esmcol_data` and an empty csv file.
+        Creates the json from default :py:data:`esm_col_data` and an empty csv file.
 
         Parameters
         ----------
@@ -308,7 +306,7 @@ class ProjectCatalog(DataCatalog):
                  Defaults to a modified name.
           - version : Version of the project (and thus the catalog), string like "x.y.z".
           - description : Detailed description of the project, given to the catalog's "description".
-          - Any other entry defined in catalog._esm_col_data
+          - Any other entry defined in :py:data:`esm_col_data`.
 
           At least one of `id` and `title` must be given, the rest is optional.
         overwrite : bool
@@ -341,7 +339,7 @@ class ProjectCatalog(DataCatalog):
         if "id" not in project:
             project["id"] = project.get("title", "").replace(" ", "")
 
-        esmdata = recursive_update(_esm_col_data.copy(), project)
+        esmdata = recursive_update(esm_col_data.copy(), project)
 
         df = pd.DataFrame(columns=COLUMNS)
 
@@ -735,6 +733,7 @@ def parse_directory(
         List of possible patterns to be used by intake.source.utils.reverse_filename() to decode the file names. See Notes below.
     id_columns : list
         List of column names on which to base the dataset definition. Empty columns will be skipped.
+        If None (default), it uses :py:data:`ID_COLUMNS`.
     read_from_file : boolean or set of strings or tuple of 2 sets of strings.
         If True, if some fields were not parsed from their path, files are opened and
         missing fields are parsed from their metadata, if found.
@@ -756,15 +755,16 @@ def parse_directory(
         The level at which to parallelize the file search. A value of 1 (default and minimum), means the subfolders
         of each directory are searched in parallel, a value of 2 would search the subfolders' subfolders in parallel, and so on.
     only_official_columns: bool
-        If True (default), this ensure the final catalog only has the columns defined in 'catalog.COLUMNS'. Other fields in the patterns will raise an error.
+        If True (default), this ensure the final catalog only has the columns defined in :py:data:`COLUMNS`. Other fields in the patterns will raise an error.
         If False, the columns are those used in the patterns and the homogenous info. In that case, the column order is not determined.
         Path, format and id are always present in the output.
 
     Notes
     -----
-    - Offical columns names are controlled and ordered by 'catalog.COLUMNS': ["id", "type", "processing_level", "mip_era", "activity", "driving_institution", "driving_model", "institution",
-                          "source", "bias_adjust_institution", "bias_adjust_project","experiment", "member",
-                          "xrfreq", "frequency", "variable", "domain", "date_start", "date_end", "version"]
+    - Offical columns names are controlled and ordered by :py:data:`COLUMNS`:
+        ["id", "type", "processing_level", "mip_era", "activity", "driving_institution", "driving_model", "institution",
+         "source", "bias_adjust_institution", "bias_adjust_project","experiment", "member",
+         "xrfreq", "frequency", "variable", "domain", "date_start", "date_end", "version"]
     - Not all column names have to be present, but "xrfreq" (obtainable through "frequency"), "variable",
         "date_start" and "processing_level" are necessary for a workable catalog.
     - 'patterns' should highlight the columns with braces.
@@ -1040,10 +1040,7 @@ def _parse_from_zarr(path: os.PathLike, get_vars=True):
 
 
 def _parse_from_nc(path: os.PathLike, get_vars=True, get_time=True):
-    """Obtains the list of variables, the time coordinate and the list of global attributes from a netCDF dataset, using netCDF4.
-
-    Variabl
-    """
+    """Obtains the list of variables, the time coordinate and the list of global attributes from a netCDF dataset, using netCDF4."""
     ds = netCDF4.Dataset(str(path))
     ds_attrs = {k: ds.getncattr(k) for k in ds.ncattrs()}
 
@@ -1098,7 +1095,6 @@ def date_parser(
     -------
     pd.Period, pd.Timestamp, str
       Parsed date
-
     """
 
     # Formats, ordered depending on string length
@@ -1173,6 +1169,7 @@ def generate_id(df: pd.DataFrame, id_columns: Optional[list] = None):
       Data for which to create an ID.
     id_columns : list
       List of column names on which to base the dataset definition. Empty columns will be skipped.
+      If None (default), uses :py:data:`ID_COLUMNS`.
     """
 
     id_columns = [x for x in (id_columns or ID_COLUMNS) if x in df.columns]
