@@ -21,7 +21,7 @@ New features and enhancements
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* Patterns in ``parse_directory`` start and the end of the paths in ``directories``. (:pull:`30`).
+* Patterns in ``parse_directory`` start at the end of the paths in ``directories``. (:pull:`30`).
 * Argument ``extension`` of ``parse_directory`` has been renamed ``globpattern``. (:pull:`30`).
 
 Internal changes
