@@ -905,9 +905,11 @@ def parse_directory(
         )
         n = invalid.sum()
         if n > 0:
-            raise ValueError(
-                f"{n} invalid entries where the start and end dates are Null but the frequency is not 'fx'.\nPaths: {df.path[invalid]}."
+            warnings.warn(
+                f"{n} invalid entries where the start and end dates are Null but the frequency is not 'fx'."
             )
+            logger.debug("Paths: {df.path[invalid].values}")
+            df = df[~invalid]
 
     # todo
     # - Vocabulary check on xrfreq and other columns
