@@ -65,7 +65,7 @@ def climatological_mean(
 
     # Rolling will ignore jumps in time, so we want to raise an exception beforehand
     if (not all(ds_unstack.year.diff(dim="year", n=1) == 1)) & (periods is None):
-        raise ValueError("Data is not contiguous. Use the 'periods' argument.")
+        raise ValueError("Data is not continuous. Use the 'periods' argument.")
 
     # Compute temporal means
     concats = []
