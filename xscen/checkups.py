@@ -1,13 +1,23 @@
-from typing import Tuple
+import logging
+from pathlib import Path
+from typing import Optional, Tuple
 
 import matplotlib as mpl
 import xarray as xr
+import xclim as xc
 from cartopy import crs
 from matplotlib import pyplot as plt
+from xclim import sdba
+from xclim.core.units import convert_units_to
 from xclim.sdba import measures
 
 from .catalog import DataCatalog
+from .common import maybe_unstack, unstack_fill_nan
+from .indicators import load_xclim_module
 from .io import save_to_zarr
+
+logger = logging.getLogger(__name__)
+
 
 # TODO: Implement logging, warnings, etc.
 # TODO: Change all paths to PosixPath objects, including in the catalog?
@@ -89,6 +99,90 @@ def _invert_unphysical_temperatures(
     tx.attrs.update(tasmax.attrs)
     return tn, tx, switch.sum()
 
+
+def properties_and_measures(
+    ds,
+    properties,
+    periods: list = None,
+    unstack: bool = False,
+    ref_measure: Optional[xr.Dataset] = None,
+    unit_conversion: Optional[dict] = None,
+    to_level_prop: str = "properties",
+    to_level_meas: str = "measures",
+):
+
+    if isinstance(properties, (str, Path)):
+        logger.debug("Loading properties module.")
+        module = load_xclim_module(properties)
+        properties = module.iter_indicators()
+    elif hasattr(properties, "iter_indicators"):
+        properties = properties.iter_indicators()
+
+    try:
+        N = len(properties)
+    except TypeError:
+        N = None
+    else:
+        logger.info(f"Computing {N} indicators.")
+
+    # select periods for ds
+    if periods is not None and "time" in ds:
+        if not isinstance(periods[0], list):
+            periods = [periods]
+        slices = []
+        for period in periods:
+            slices.extend([ds.sel({"time": slice(str(period[0]), str(period[1]))})])
+        ds = xr.concat(slices, dim="time")
+        # select periods for ref_measure
+        if ref_measure is not None and "time" in ref_measure:
+            slices_ref = []
+            for period in periods:
+                slices_ref.extend(
+                    [ref_measure.sel({"time": slice(str(period[0]), str(period[1]))})]
+                )
+            ref_measure = xr.concat(slices_ref, dim="time")
+
+    if unstack:
+        ds = unstack_fill_nan(ds)
+
+    unit_conversion = unit_conversion or {}
+    for var, unit in unit_conversion.items():
+        ds[var] = convert_units_to(ds[var], unit)
+
+    out = xr.Dataset()  # dataset with all properties
+    meas = xr.Dataset()  # dataset with all measures
+    for i, ind in enumerate(properties, 1):
+        if isinstance(ind, tuple):
+            iden, ind = ind
+        else:
+            iden = ind.identifier
+        logger.info(f"{i} - Computing {iden}.")
+
+        # Make the call to xclim
+        out[iden] = ind(ds=ds)
+
+        # calculate the measure if a reference dataset is given for the measure
+        if ref_measure and iden in ref_measure:
+            # TODO: should I put measure in the var name ?
+            meas[iden] = ind.get_measure()(sim=out[iden], ref=ref_measure[iden])
+
+    for ds1 in [out, meas]:
+        ds1.attrs = ds.attrs
+        ds1.attrs["cat/xrfreq"] = "fx"
+        ds1.attrs.pop("cat/variable", None)
+        ds1.attrs["cat/frequency"] = "fx"
+        ds1.attrs["cat/timedelta"] = "NAN"
+        # not erasing the date_start/end to keep track of what time range was collapsed
+
+    out.attrs["cat/processing_level"] = to_level_prop
+    meas.attrs["cat/processing_level"] = to_level_meas
+
+    return out, meas
+
+
+# TODO: heatmap
+# TODO: percentage grid improved
+# fonction with all diags
 
 # """
 # Diagnostics for bias-adjustment
