@@ -756,20 +756,22 @@ def parse_directory(
         The depth at which to parallelize the finding of files in the directories. A value of 1 (default and minimum),
         means each subfolder of a given directory are searched in parallel.
     only_official_columns: bool
-        If True (default), this ensure the final catalog has all official columns and only those. Other fields in the patterns will raise an error.
+        If True (default), this ensure the final catalog only has the columns defined in 'catalog.COLUMNS'. Other fields in the patterns will raise an error.
         If False, the columns are those used in the patterns and the homogenous info. In that case, the column order is not determined.
         Path, format and id are always present in the output.
 
     Notes
     -----
-    - Offical columns names are: ["id", "type", "processing_level", "mip_era", "activity", "driving_institution", "driving_model", "institution",
+    - Offical columns names are controlled and ordered by 'catalog.COLUMNS': ["id", "type", "processing_level", "mip_era", "activity", "driving_institution", "driving_model", "institution",
                           "source", "bias_adjust_institution", "bias_adjust_project","experiment", "member",
                           "xrfreq", "frequency", "variable", "domain", "date_start", "date_end", "version"]
     - Not all column names have to be present, but "xrfreq" (obtainable through "frequency"), "variable",
         "date_start" and "processing_level" are necessary for a workable catalog.
     - 'patterns' should highlight the columns with braces.
-        Wildcards can be used for irrelevant parts of a path. "*" means anything including the "_" character (but not "/"),
-        while "?" fits any string without "_". Any character following the wildcard is ignored, in order to have human readable placeholders.
+        Wildcards (*, ?) can be used for irrelevant parts of a path. 
+        "*" will match everything, with the exception of "/".
+        "?" behaves similarly to a wildcard, but will also exclude the "_" character. 
+        Note: In order to have human readable placeholders, all the words following a wildcard within a bracket will be ignored.
         Example: `"{?ignored project name}_{?}_{domain}_{?}_{variable}_{date_start}_{activity}_{experiment}_{processing_level}_{*gibberish}.nc"`
 
     Returns
@@ -794,7 +796,7 @@ def parse_directory(
         # Get all columns defined in the patterns
         columns = pattern_fields.union({"path", "format"})
 
-    read_file_groups = False  # Whether to read file per groupe or not.
+    read_file_groups = False  # Whether to read file per group or not.
     if not isinstance(read_from_file, bool) and not isinstance(read_from_file[0], str):
         # A tuple of 2 lists
         read_file_groups = True
