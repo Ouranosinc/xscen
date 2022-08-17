@@ -5,7 +5,7 @@ import pandas as pd
 import xarray as xr
 from xclim import ensembles
 
-from xscen.catalog import generate_id  # ProjectCatalog
+from .catalog import generate_id  # ProjectCatalog
 
 # from typing import Optional, Union
 

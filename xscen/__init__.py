@@ -33,6 +33,7 @@ from .scripting import (
     send_mail_on_exit,
     timeout,
 )
+from .utils import clean_up
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"

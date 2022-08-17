@@ -19,7 +19,7 @@ Extraction
 ----------
 
 .. automodule:: xscen
-   :members: clisops_subset dispatch_historical_to_future extract_dataset resample restrict_by_resolution restrict_multimembers search_data_catalogs",
+   :members: clisops_subset dispatch_historical_to_future extract_dataset resample restrict_by_resolution restrict_multimembers search_data_catalogs
    :noindex:
 
 Controlled Vocabulary and mappings
@@ -85,6 +85,6 @@ Script utilities
 Packaging utilities
 -------------------
 
-.. automodule:: xscen.helpers
+.. automodule:: xscen.utils
    :members:
    :noindex:
