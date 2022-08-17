@@ -21,7 +21,7 @@ from . import (
 from .aggregate import *
 from .biasadjust import *
 from .catalog import DataCatalog, ProjectCatalog  # noqa
-from .config import CONFIG  # noqa
+from .config import CONFIG, load_config  # noqa
 from .ensembles import *
 from .extract import extract_dataset, search_data_catalogs  # noqa
 from .indicators import compute_indicators  # noqa
