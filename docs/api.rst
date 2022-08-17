@@ -19,10 +19,10 @@ Extraction
 ----------
 
 .. automodule:: xscen
-   :members: clisops_subset dispatch_historical_to_future extract_dataset resample restrict_by_resolution restrict_multimembers search_data_catalogs
+   :members:
    :noindex:
 
-Controlled Vocabulary and mappings
+Controlled Vocabulary and Mappings
 ----------------------------------
 
 .. automodule:: xscen.CV
@@ -33,10 +33,10 @@ Regridding
 ----------
 
 .. automodule:: xscen
-   :members: xscen.create_mask xscen.regrid
+   :members:
    :noindex:
 
-Bias adjustment
+Bias Adjustment
 ---------------
 
 .. automodule:: xscen
@@ -51,38 +51,41 @@ Indicators
    :noindex:
 
 Ensembles
--------------------
+---------
 
 .. automodule:: xscen.ensembles
    :members:
    :noindex:
 
 Diagnostics and Quality Checks
---------------
+------------------------------
 
 .. automodule:: xscen.diagnostics
    :members:
    :noindex:
 
-Input / output
+Input / Output
 --------------
 
 .. automodule:: xscen.io
    :members:
    :noindex:
 
-.. automodule:: xscen
-   :members: save_to_netcdf save_to_zarr
+Configuration Utilities
+-----------------------
+
+.. automodule:: xscen.config
+   :members:
    :noindex:
 
-Script utilities
+Script Utilities
 ----------------
 
 .. automodule:: xscen.scripting
    :members:
    :noindex:
 
-Packaging utilities
+Packaging Utilities
 -------------------
 
 .. automodule:: xscen.utils

@@ -3,6 +3,7 @@ import warnings
 
 # Import the submodules
 from . import (
+    aggregate,
     biasadjust,
     catalog,
     config,
