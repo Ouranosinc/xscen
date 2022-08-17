@@ -17,7 +17,7 @@ New features and enhancements
 * New function ``xscen.ensemble.ensemble_stats`` added. (:issue:`3`, :pull:`28`).
 * Add argument ``intermediate_reg_grids`` to ``xscen.regridding.regrid``. (:issue:`34`, :pull:`39`).
 * Add argument ``moving_yearly_window`` to ``xscen.biasadjust.adjust``. (:pull:`39`).
-* Many adjustments to ``parse_directory``: better wildcards (:issue:`24`), allow custom columns, fastpaths for ``parse_from_ds``, and more (:pull:`30`).
+* Many adjustments to ``parse_directory``: better wildcards (:issue:`24`), allow custom columns, fastpaths for ``parse_from_ds``, and more (:pull:`30`, :pull:`47`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
