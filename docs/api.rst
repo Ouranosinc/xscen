@@ -57,10 +57,10 @@ Ensembles
    :members:
    :noindex:
 
-Quality Checks
+Diagnostics and Quality Checks
 --------------
 
-.. automodule:: xscen.checkups
+.. automodule:: xscen.diagnostics
    :members:
    :noindex:
 

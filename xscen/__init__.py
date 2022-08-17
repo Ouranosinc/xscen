@@ -5,8 +5,8 @@ import warnings
 from . import (
     biasadjust,
     catalog,
-    checkups,
     config,
+    diagnostics,
     ensembles,
     extract,
     indicators,
