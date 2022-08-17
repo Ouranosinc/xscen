@@ -103,7 +103,7 @@ def _invert_unphysical_temperatures(
 def properties_and_measures(
     ds,
     properties,
-    periods: list = None,
+    period: list = None,
     unstack: bool = False,
     ref_measure: Optional[xr.Dataset] = None,
     unit_conversion: Optional[dict] = None,
@@ -126,21 +126,11 @@ def properties_and_measures(
         logger.info(f"Computing {N} indicators.")
 
     # select periods for ds
-    if periods is not None and "time" in ds:
-        if not isinstance(periods[0], list):
-            periods = [periods]
-        slices = []
-        for period in periods:
-            slices.extend([ds.sel({"time": slice(str(period[0]), str(period[1]))})])
-        ds = xr.concat(slices, dim="time")
-        # select periods for ref_measure
-        if ref_measure is not None and "time" in ref_measure:
-            slices_ref = []
-            for period in periods:
-                slices_ref.extend(
-                    [ref_measure.sel({"time": slice(str(period[0]), str(period[1]))})]
-                )
-            ref_measure = xr.concat(slices_ref, dim="time")
+    if period is not None and "time" in ds:
+        ds = ds.sel({"time": slice(str(period[0]), str(period[1]))})
+    # select periods for ref_measure
+    if ref_measure is not None and period is not None and "time" in ref_measure:
+        ref_measure = ref_measure.sel({"time": slice(str(period[0]), str(period[1]))})
 
     if unstack:
         ds = unstack_fill_nan(ds)
