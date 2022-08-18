@@ -33,9 +33,9 @@ extra actions when finding the following special sections:
 - ``logging``:
   The content of this section will be sent directly to :py:func:`logging.config.dictConfig`.
 - ``xarray``:
-  The content of this section will be sent directry to :py:func:`xarray.set_options`.
+  The content of this section will be sent directly to :py:func:`xarray.set_options`.
 - ``xclim``:
-  The content of this section will be sent directry to :py:func:`xclim.set_options`.
+  The content of this section will be sent directly to :py:func:`xclim.set_options`.
 - ``warnings``:
   The content of this section must be a simple mapping. The keys are understood as python
   warning categories (types) and the values as an action to add to the filter. The key "all"
@@ -57,6 +57,12 @@ import yaml
 
 logger = logging.getLogger(__name__)
 EXTERNAL_MODULES = ["logging", "xarray", "xclim", "warnings"]
+
+__all__ = [
+    "CONFIG",
+    "load_config",
+    "parse_config",
+]
 
 
 class ConfigDict(dict):
@@ -133,7 +139,7 @@ def load_config(*files, reset=False, verbose=False):
 
     for module, old in zip(EXTERNAL_MODULES, old_external):
         if old != CONFIG.get(module, {}):
-            setup_external(module, CONFIG.get(module, {}))
+            _setup_external(module, CONFIG.get(module, {}))
 
 
 def parse_config(func_or_cls):
@@ -168,7 +174,7 @@ def parse_config(func_or_cls):
     return _wrapper
 
 
-def setup_external(module, config):
+def _setup_external(module, config):
     if module == "logging":
         config.update(version=1)
         logging.config.dictConfig(config)

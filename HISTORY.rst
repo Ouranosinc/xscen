@@ -18,11 +18,14 @@ New features and enhancements
 * Add argument ``intermediate_reg_grids`` to ``xscen.regridding.regrid``. (:issue:`34`, :pull:`39`).
 * Add argument ``moving_yearly_window`` to ``xscen.biasadjust.adjust``. (:pull:`39`).
 * Many adjustments to ``parse_directory``: better wildcards (:issue:`24`), allow custom columns, fastpaths for ``parse_from_ds``, and more (:pull:`30`).
+* Documentation now makes better use of autodoc to generate package index. (:pull:`41`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * Patterns in ``parse_directory`` start at the end of the paths in ``directories``. (:pull:`30`).
 * Argument ``extension`` of ``parse_directory`` has been renamed ``globpattern``. (:pull:`30`).
+* The ``xscen`` API and filestructure have been significantly refactored. (:issue:`40`, :pull:`41`). The following functions are available from the top-level:
+    - ``adjust``, ``train``, ``ensemble_stats``, ``clisops_subset``, ``dispatch_historical_to_future``, ``extract_dataset``, ``resample``, ``restrict_by_resolution``, ``restrict_multimembers``, ``search_data_catalogs``, ``save_to_netcdf``, ``save_to_zarr``, ``rechunk``, ``compute_indicators``, ``regrid_dataset``, and ``create_mask``.
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -35,7 +38,7 @@ Internal changes
 * `import xscen` smoke test is now run on all pull requests. (:pull:`44`).
 
 v0.2.0 (first official release)
-------------------------------
+-------------------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
 
 Announcements
