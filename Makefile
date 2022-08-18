@@ -62,8 +62,8 @@ test-all: ## run tests on every Python version with tox
 
 docs: ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs clean
+	sphinx-apidoc -o docs/ --module-first xscen
 	$(MAKE) -C docs html
-	$(BROWSER) docs/_build/html/index.html
 ifndef READTHEDOCS
 	$(BROWSER) docs/_build/html/index.html
 endif

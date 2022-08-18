@@ -12,480 +12,112 @@ import xarray as xr
 import xclim as xc
 from intake_esm.derived import DerivedVariableRegistry
 
+from .catalog import DataCatalog  # noqa
 from .catalog import (
     ID_COLUMNS,
-    DataCatalog,
     concat_data_catalogs,
     date_parser,
     generate_id,
     parse_from_ds,
 )
-from .common import CV, natural_sort
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
+from .utils import CV, natural_sort
 
 logger = logging.getLogger(__name__)
 
 
-@parse_config
-def search_data_catalogs(
-    data_catalogs: Union[list, DataCatalog],
-    variables_and_freqs: dict,
-    *,
-    other_search_criteria: Optional[dict] = None,
-    exclusions: dict = None,
-    match_hist_and_fut: bool = False,
-    periods: list = None,
-    id_columns: Optional[List[str]] = None,
-    allow_resampling: bool = True,
-    allow_conversion: bool = True,
-    restrict_resolution: str = None,
-    restrict_members: dict = None,
-) -> dict:
+__all__ = ["clisops_subset", "extract_dataset", "resample", "search_data_catalogs"]
+
+
+def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
     """
-    Search through DataCatalogs.
+    Custom call to clisops.subset() that allows for an automatic buffer around the region.
 
     Parameters
     ----------
-    data_catalogs : Union[list, DataCatalog]
-      DataCatalog (or multiple, in a list) or path to JSON data catalogs. They must use the same columns.
-    variables_and_freqs : dict
-      Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format.
-    other_search_criteria : dict, optional
-      Other criteria to search for in the catalogs' columns, following a 'column_name: list(subset)' format.
-    exclusions : dict, optional
-      Same as other_search_criteria, but for eliminating results.
-    match_hist_and_fut: bool, optional
-      If True, historical and future simulations will be combined into the same line, and search results lacking one of them will be rejected.
-    periods : list
-      [start, end] of the period to be evaluated (or a list of lists)
-    id_columns : list, optional
-      List of columns used to create a id column. If None is given, the original
-      "id" is left.
-    allow_resampling: bool
-      If True (default), variables with a higher time resolution than requested are considered.
-    allow_conversion: bool
-      If True (default) and if the requested variable cannot be found, intermediate variables are
-      searched given that there exists a converting function in the "derived variable registry"
-      defined by "xclim_modules/conversions.yml".
-    restrict_resolution: str
-      Used to restrict the results to the finest/coarsest resolution available for a given simulation.
-      ['finest', 'coarsest'].
-    restrict_members: dict
-      Used to restrict the results to a given number of members for a given simulation.
-      Currently only supports {"ordered": int} format.
+    ds : xr.Dataset
+      Dataset to be subsetted
+    region : dict
+      Description of the region and the subsetting method (required fields listed in the Notes)
 
     Note
     ----------
-    - The "other_search_criteria" argument accepts wildcard (*) and regular expressions.
-    - Frequency can be wildcarded with 'NA' in the `variables_and_freqs` dict.
-    - Variable names cannot be wildcarded, they must be CMIP6-standard.
+    'region' fields:
+        method: str
+            ['gridpoint', 'bbox', shape']
+        <method>: dict
+            Arguments specific to the method used.
+        buffer: float, optional
+            Multiplier to apply to the model resolution.
 
     Returns
     -------
-    dict
-        Keys are the id and values are the DataCatalogs for each entry.
-        A single DataCatalog can be retrieved with `concat_data_catalogs(*out.values())`.
-        Each DataCatalog has a subset of the derived variable registry that corresponds
-        to the needs of this specific group.
-        Usually, each entry can be written to file in a single Dataset when using
-        `extract_dataset` with the same arguments.
+    xr.Dataset
+      Subsetted Dataset
+
     """
-    cat_kwargs = {}
-    if allow_conversion:
-        cat_kwargs = {
-            "registry": registry_from_module(
-                load_xclim_module(
-                    Path(__file__).parent / "xclim_modules" / "conversions"
-                )
-            )
-        }
-
-    # Prepare a unique catalog to search from, with the DerivedCat added if required
-    if isinstance(data_catalogs, DataCatalog):
-        paths = [data_catalogs.esmcat.catalog_file]
-    elif isinstance(data_catalogs, list) and all(
-        isinstance(dc, DataCatalog) for dc in data_catalogs
-    ):
-        paths = [dc.esmcat.catalog_file for dc in data_catalogs]
-    elif isinstance(data_catalogs, list) and all(
-        isinstance(dc, str) for dc in data_catalogs
-    ):
-        paths = [DataCatalog(dc).esmcat.catalog_file for dc in data_catalogs]
-    else:
-        raise ValueError("Catalogs type not recognized.")
-    catalog = DataCatalog.from_csv(paths, name="source", **cat_kwargs)
-    logger.info(f"Catalog opened: {catalog} from {len(paths)} files.")
-
-    if match_hist_and_fut:
-        logger.info("Dispatching historical dataset to future experiments.")
-        catalog = dispatch_historical_to_future(catalog, id_columns)
-
-    # Cut entries that do not match search criteria
-    if other_search_criteria:
-        catalog = catalog.search(**other_search_criteria)
-        logger.info(
-            f"{len(catalog.df)} assets matched the criteria : {other_search_criteria}."
-        )
-    if exclusions:
-        ex = catalog.search(**exclusions)
-        catalog.esmcat._df = pd.concat([catalog.df, ex.df]).drop_duplicates(keep=False)
-        logger.info(
-            f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
-        )
-
-    ids = generate_id(catalog.df, id_columns)
-    if id_columns is not None:
-        # Recreate id from user specifications
-        catalog.df["id"] = ids
-    else:
-        # Only fill in the missing IDs
-        catalog.df["id"] = catalog.df["id"].fillna(ids)
-
-    logger.info(f"Iterating over {catalog.nunique()['id']} potential datasets.")
-    # Loop on each dataset to assess whether they have all required variables
-    # And select best freq/timedelta for each
-    catalogs = {}
-    for (sim_id,), scat in catalog.iter_unique("id"):
-        # Find all the entries that match search parameters
-        varcats = []
-        for var_id, xrfreq in variables_and_freqs.items():
-            if xrfreq == "fx":
-                varcat = scat.search(
-                    xrfreq=xrfreq,
-                    variable=var_id,
-                    require_all_on=["id", "xrfreq"],
-                )
-                # TODO: Temporary fix until this is changed in intake_esm
-                varcat._requested_variables_true = [var_id]
-                varcat._dependent_variables = list(
-                    set(varcat._requested_variables).difference(
-                        varcat._requested_variables_true
-                    )
-                )
-            else:
-                # TODO: Add support for DerivedVariables that themselves require DerivedVariables
-                # TODO: Add support for DerivedVariables that exist on different frequencies (e.g. 1hr 'pr' & 3hr 'tas')
-                varcat = scat.search(variable=var_id, require_all_on=["id", "xrfreq"])
-                logger.debug(
-                    f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
-                )
-                # TODO: Temporary fix until this is changed in intake_esm
-                varcat._requested_variables_true = [var_id]
-                varcat._dependent_variables = list(
-                    set(varcat._requested_variables).difference(
-                        varcat._requested_variables_true
-                    )
-                )
-
-                # We want to match lines with the correct freq,
-                # IF allow_resampling is True and xrfreq translates to a timedelta,
-                # we also want those with (stricyly) higher temporal resolution
-                same_frq = varcat.df.xrfreq == xrfreq
-                td = pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq))
-                varcat.df["timedelta"] = pd.to_timedelta(
-                    varcat.df.xrfreq.apply(CV.xrfreq_to_timedelta, default="NAN")
-                )
-                # else is joker (any timedelta)
-                lower_frq = (
-                    np.less(varcat.df.timedelta, td) if pd.notnull(td) else False
-                )
-                varcat.esmcat._df = varcat.df[same_frq | (lower_frq & allow_resampling)]
-
-                # For each dataset (id - xrfreq - processing_level - domain - variable), make sure that file availability covers the requested time periods
-                if periods is not None and len(varcat) > 0:
-                    valid_tp = []
-                    for var, group in varcat.df.groupby(
-                        varcat.esmcat.aggregation_control.groupby_attrs + ["variable"]
-                    ):
-                        valid_tp.append(
-                            _subset_file_coverage(group, periods)
-                        )  # If valid, this returns the subset of files that cover the time period
-                    varcat.esmcat._df = pd.concat(valid_tp)
-
-                # We now select the coarsest timedelta for each variable
-                # we need to re-iterate over variables in case we used the registry (and thus there are multiple variables in varcat)
-                rows = []
-                for var, group in varcat.df.groupby("variable"):
-                    rows.append(group[group.timedelta == group.timedelta.max()])
-                if rows:
-                    # check if the requested variable exists and if so, remove DeriveVariable references
-                    v_list = [rows[i]["variable"].iloc[0] for i in range(len(rows))]
-                    v_list_check = [
-                        var_id in v_list[i] for i in range(len(v_list))
-                    ]  # necessary in case a file has multiple variables
-                    if any(v_list_check):
-                        rows = [rows[v_list_check.index(True)]]
-                        varcat.derivedcat = DerivedVariableRegistry()
-                    varcat.esmcat._df = pd.concat(rows, ignore_index=True)
-                else:
-                    varcat.esmcat._df = pd.DataFrame()
-
-            if varcat.df.empty:
-                logger.info(
-                    f"Dataset {sim_id} doesn't have all needed variables (missing at least {var_id})."
-                )
-                break
-            if "timedelta" in varcat.df.columns:
-                varcat.df.drop(columns=["timedelta"], inplace=True)
-            varcat._requested_variable_freqs = [xrfreq]
-            varcats.append(varcat)
+    if "buffer" in region.keys():
+        # estimate the model resolution
+        if len(ds.lon.dims) == 1:  # 1D lat-lon
+            lon_res = np.abs(ds.lon.diff("lon")[0].values)
+            lat_res = np.abs(ds.lat.diff("lat")[0].values)
         else:
-            catalogs[sim_id] = concat_data_catalogs(*varcats)
-            if periods is not None:
-                if not isinstance(periods[0], list):
-                    periods = [periods]
-                catalogs[sim_id]._requested_periods = periods
+            lon_res = np.abs(ds.lon[0, 0].values - ds.lon[0, 1].values)
+            lat_res = np.abs(ds.lat[0, 0].values - ds.lat[1, 0].values)
 
-    logger.info(
-        f"Found {len(catalogs)} with all variables requested and corresponding to the criteria."
-    )
+    kwargs = deepcopy(region[region["method"]])
 
-    if restrict_resolution is not None:
-        catalogs = restrict_by_resolution(catalogs, id_columns, restrict_resolution)
-
-    if restrict_members is not None:
-        catalogs = restrict_multimembers(catalogs, id_columns, restrict_members)
-
-    return catalogs
-
-
-def dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
-    """Updates a DataCatalog by recopying each "historical" entry to its corresponding future experiments.
-
-    For examples, if an historical entry has corresonding "ssp245" and "ssp585" entries,
-    then it is copied twice, with its "experiment" field modified accordingly.
-    The original "historical" entry is removed. This way, a subsequent search of the catalog
-    with "experiment='ssp245'" includes the _historical_ assets (with no apparent distinction).
-
-    "Historical" assets that did not find a match are removed from the output catalog.
-    """
-    expcols = [
-        "experiment",
-        "id",
-        "variable",
-        "xrfreq",
-        "date_start",
-        "date_end",
-        "path",
-        "format",
-        "activity",
-    ]  # These columns can differentiate the historical from the future.
-    sim_id_no_exp = list(
-        filter(
-            lambda c: c not in expcols,
-            set(id_columns or ID_COLUMNS).intersection(catalog.df.columns),
+    if region["method"] in ["gridpoint"]:
+        ds_subset = clisops.core.subset_gridpoint(ds, **kwargs)
+        new_history = (
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+            f"{region['method']} spatial subsetting on {len(region['gridpoint']['lon'])} coordinates - clisops v{clisops.__version__}"
         )
-    )
-    # For each unique element from this column list, the historical shouldn't be distinct
-    # from the future scenario, allowing us to match them.
-    # "Same hist member" as in "each future realization stems from the same historical member"
 
-    df = catalog.df.copy()
-    df["same_hist_member"] = df[sim_id_no_exp].apply(
-        lambda row: "_".join(row.values.astype(str)), axis=1
-    )
-
-    new_lines = []
-    for group in df.same_hist_member.unique():
-        sdf = df[df.same_hist_member == group]
-        hist = sdf[sdf.experiment == "historical"]
-        if hist.empty:
-            continue
-        for activity_id in set(sdf.activity) - {"HighResMip", np.NaN}:
-            sub_sdf = sdf[sdf.activity == activity_id]
-            for exp_id in set(sub_sdf.experiment) - {"historical", "piControl", np.NaN}:
-
-                exp_hist = hist.copy()
-                exp_hist["experiment"] = exp_id
-                exp_hist["activity"] = activity_id
-                exp_hist["same_hist_member"] = group
-                sim_ids = sub_sdf[sub_sdf.experiment == exp_id].id.unique()
-                if len(sim_ids) > 1:
-                    raise ValueError(
-                        f"Got multiple dataset ids where we expected only one... : {sim_ids}"
-                    )
-                exp_hist["id"] = sim_ids[0]
-                new_lines.append(exp_hist)
-
-    df = pd.concat([df] + new_lines, ignore_index=True).drop(
-        columns=["same_hist_member"]
-    )
-    df = df[df.experiment != "historical"].reset_index(drop=True)
-    return DataCatalog(
-        {"esmcat": catalog.esmcat.dict(), "df": df},
-        registry=catalog.derivedcat,
-        drop_duplicates=False,
-    )
-
-
-def restrict_by_resolution(catalogs: dict, id_columns: list, restrictions: str):
-    """Updates the results from search_data_catalogs by removing simulations with multiple resolutions available.
-
-    Notes
-    -----
-    Currently supports:
-        CMIP5 and CMIP6 (in that order, giving the highest priority to elements on the left):
-            [gn, gn{a/g}, gr, gr{0-9}{a/g}, global, gnz, gr{0-9}z, gm]
-        CORDEX:
-            [DOM-{resolution}, DOM-{resolution}i]
-    """
-    df = pd.concat([catalogs[s].df for s in catalogs.keys()])
-    # remove the domain from the group_by
-    df["id_nodom"] = df[
-        list(
-            set(id_columns or ID_COLUMNS)
-            .intersection(df.columns)
-            .difference(["domain"])
-        )
-    ].apply(lambda row: "_".join(map(str, filter(pd.notna, row.values))), axis=1)
-    for i in pd.unique(df["id_nodom"]):
-        df_sim = df[df["id_nodom"] == i]
-        domains = pd.unique(df_sim["domain"])
-
-        if len(domains) > 1:
-            logger.info(f"Dataset {i} appears to have multiple resolutions.")
-
-            # For CMIP, the order is dictated by a list of grid labels
-            if pd.unique(df_sim["activity"])[0] == "CMIP":
-                order = np.array([])
-                for d in domains:
-                    match = [
-                        CV.infer_resolution("CMIP").index(r)
-                        for r in CV.infer_resolution("CMIP")
-                        if re.match(pattern=r, string=d)
-                    ]
-                    if len(match) != 1:
-                        raise ValueError(f"'{d}' matches no known CMIP domain.")
-                    order = np.append(order, match[0])
-
-                if restrictions == "finest":
-                    chosen = [
-                        np.sort(
-                            np.array(domains)[
-                                np.where(order == np.array(order).min())[0]
-                            ]
-                        )[0]
-                    ]
-                elif restrictions == "coarsest":
-                    chosen = [
-                        np.sort(
-                            np.array(domains)[
-                                np.where(order == np.array(order).max())[0]
-                            ]
-                        )[-1]
-                    ]
-                else:
-                    raise ValueError(
-                        "'restrict_resolution' should be 'finest' or 'coarsest'"
-                    )
-
-            # For CORDEX, the order is dictated by both the grid label and the resolution itself (as well as the domain name)
-            elif pd.unique(df_sim["activity"])[0] == "CORDEX":
-                # Unique CORDEX domains
-                cordex_doms = pd.unique([d.split("-")[0] for d in domains])
-                chosen = []
-
-                for d in cordex_doms:
-                    sub = [doms for doms in domains if d in doms]
-                    order = [
-                        int(re.split("^([A-Z]{3})-([0-9]{2})([i]{0,1})$", s)[2])
-                        for s in sub
-                    ]
-
-                    if restrictions == "finest":
-                        chosen.extend(
-                            [
-                                np.sort(
-                                    np.array(sub)[
-                                        np.where(order == np.array(order).min())[0]
-                                    ]
-                                )[0]
-                            ]
-                        )
-                    elif restrictions == "coarsest":
-                        chosen.extend(
-                            [
-                                np.sort(
-                                    np.array(sub)[
-                                        np.where(order == np.array(order).max())[0]
-                                    ]
-                                )[0]
-                            ]
-                        )
-                    else:
-                        raise ValueError(
-                            "'restrict_resolution' should be 'finest' or 'coarsest'"
-                        )
-
-            else:
-                logger.warning(
-                    f"Dataset {i} seems to have multiple resolutions, but its activity is not recognized or supported yet."
-                )
-                chosen = list(domains)
-                pass
-
-            to_remove = pd.unique(
-                df_sim[
-                    df_sim["domain"].isin(
-                        list(set(pd.unique(df_sim["domain"])).difference(chosen))
-                    )
-                ]["id"]
+    elif region["method"] in ["bbox"]:
+        if "buffer" in region.keys():
+            # adjust the boundaries
+            kwargs["lon_bnds"] = (
+                kwargs["lon_bnds"][0] - lon_res * region["buffer"],
+                kwargs["lon_bnds"][1] + lon_res * region["buffer"],
+            )
+            kwargs["lat_bnds"] = (
+                kwargs["lat_bnds"][0] - lat_res * region["buffer"],
+                kwargs["lat_bnds"][1] + lat_res * region["buffer"],
             )
 
-            for k in to_remove:
-                logger.info(f"Removing {k} from the results.")
-                catalogs.pop(k)
-
-    return catalogs
-
-
-def restrict_multimembers(catalogs: dict, id_columns: list, restrictions: dict):
-    """Updates the results from search_data_catalogs by removing simulations with multiple members available
-
-    Uses regex to try and adequately detect and order the member's identification number, but only tested for 'r-i-p'.
-
-    """
-
-    df = pd.concat([catalogs[s].df for s in catalogs.keys()])
-    # remove the member from the group_by
-    df["id_nomem"] = df[
-        list(
-            set(id_columns or ID_COLUMNS)
-            .intersection(df.columns)
-            .difference(["member"])
+        ds_subset = clisops.core.subset_bbox(ds, **kwargs)
+        new_history = (
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+            f"{region['method']} spatial subsetting with {'buffer=' + str(region['buffer']) if 'buffer' in region else 'no buffer'}"
+            f", lon_bnds={np.array(region['bbox']['lon_bnds'])}, lat_bnds={np.array(region['bbox']['lat_bnds'])}"
+            f" - clisops v{clisops.__version__}"
         )
-    ].apply(lambda row: "_".join(map(str, filter(pd.notna, row.values))), axis=1)
 
-    for i in pd.unique(df["id_nomem"]):
-        df_sim = df[df["id_nomem"] == i]
-        members = pd.unique(df_sim["member"])
+    elif region["method"] in ["shape"]:
+        if "buffer" in region.keys():
+            kwargs["buffer"] = np.max([lon_res, lat_res]) * region["buffer"]
 
-        if len(members) > 1:
-            logger.info(
-                f"Dataset {i} has {len(members)} valid members. Restricting as per requested."
-            )
+        ds_subset = clisops.core.subset_shape(ds, **kwargs)
+        new_history = (
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+            f"{region['method']} spatial subsetting with {'buffer=' + str(region['buffer']) if 'buffer' in region else 'no buffer'}"
+            f", shape={Path(region['shape']['shape']).name if isinstance(region['shape']['shape'], (str, Path)) else 'gpd.GeoDataFrame'}"
+            f" - clisops v{clisops.__version__}"
+        )
 
-            if "ordered" in restrictions:
-                members = natural_sort(members)[0 : restrictions["ordered"]]
-            else:
-                raise NotImplementedError(
-                    "Subsetting multiple members currently only supports 'ordered'."
-                )
+    else:
+        raise ValueError("Subsetting type not recognized")
 
-            to_remove = pd.unique(
-                df_sim[
-                    df_sim["member"].isin(
-                        list(set(pd.unique(df_sim["member"])).difference(members))
-                    )
-                ]["id"]
-            )
+    history = (
+        new_history + " \n " + ds_subset.attrs["history"]
+        if "history" in ds_subset.attrs
+        else new_history
+    )
+    ds_subset.attrs["history"] = history
 
-            for k in to_remove:
-                logger.info(f"Removing {k} from the results.")
-                catalogs.pop(k)
-
-    return catalogs
+    return ds_subset
 
 
 @parse_config
@@ -812,6 +444,469 @@ def resample(
     return out
 
 
+@parse_config
+def search_data_catalogs(
+    data_catalogs: Union[list, DataCatalog],
+    variables_and_freqs: dict,
+    *,
+    other_search_criteria: Optional[dict] = None,
+    exclusions: dict = None,
+    match_hist_and_fut: bool = False,
+    periods: list = None,
+    id_columns: Optional[List[str]] = None,
+    allow_resampling: bool = True,
+    allow_conversion: bool = True,
+    restrict_resolution: str = None,
+    restrict_members: dict = None,
+) -> dict:
+    """
+    Search through DataCatalogs.
+
+    Parameters
+    ----------
+    data_catalogs : Union[list, DataCatalog]
+      DataCatalog (or multiple, in a list) or path to JSON data catalogs. They must use the same columns.
+    variables_and_freqs : dict
+      Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format.
+    other_search_criteria : dict, optional
+      Other criteria to search for in the catalogs' columns, following a 'column_name: list(subset)' format.
+    exclusions : dict, optional
+      Same as other_search_criteria, but for eliminating results.
+    match_hist_and_fut: bool, optional
+      If True, historical and future simulations will be combined into the same line, and search results lacking one of them will be rejected.
+    periods : list
+      [start, end] of the period to be evaluated (or a list of lists)
+    id_columns : list, optional
+      List of columns used to create a id column. If None is given, the original
+      "id" is left.
+    allow_resampling: bool
+      If True (default), variables with a higher time resolution than requested are considered.
+    allow_conversion: bool
+      If True (default) and if the requested variable cannot be found, intermediate variables are
+      searched given that there exists a converting function in the "derived variable registry"
+      defined by "xclim_modules/conversions.yml".
+    restrict_resolution: str
+      Used to restrict the results to the finest/coarsest resolution available for a given simulation.
+      ['finest', 'coarsest'].
+    restrict_members: dict
+      Used to restrict the results to a given number of members for a given simulation.
+      Currently only supports {"ordered": int} format.
+
+    Note
+    ----------
+    - The "other_search_criteria" argument accepts wildcard (*) and regular expressions.
+    - Frequency can be wildcarded with 'NA' in the `variables_and_freqs` dict.
+    - Variable names cannot be wildcarded, they must be CMIP6-standard.
+
+    Returns
+    -------
+    dict
+        Keys are the id and values are the DataCatalogs for each entry.
+        A single DataCatalog can be retrieved with `concat_data_catalogs(*out.values())`.
+        Each DataCatalog has a subset of the derived variable registry that corresponds
+        to the needs of this specific group.
+        Usually, each entry can be written to file in a single Dataset when using
+        `extract_dataset` with the same arguments.
+    """
+    cat_kwargs = {}
+    if allow_conversion:
+        cat_kwargs = {
+            "registry": registry_from_module(
+                load_xclim_module(
+                    Path(__file__).parent / "xclim_modules" / "conversions"
+                )
+            )
+        }
+
+    # Prepare a unique catalog to search from, with the DerivedCat added if required
+    if isinstance(data_catalogs, DataCatalog):
+        paths = [data_catalogs.esmcat.catalog_file]
+    elif isinstance(data_catalogs, list) and all(
+        isinstance(dc, DataCatalog) for dc in data_catalogs
+    ):
+        paths = [dc.esmcat.catalog_file for dc in data_catalogs]
+    elif isinstance(data_catalogs, list) and all(
+        isinstance(dc, str) for dc in data_catalogs
+    ):
+        paths = [DataCatalog(dc).esmcat.catalog_file for dc in data_catalogs]
+    else:
+        raise ValueError("Catalogs type not recognized.")
+    catalog = DataCatalog.from_csv(paths, name="source", **cat_kwargs)
+    logger.info(f"Catalog opened: {catalog} from {len(paths)} files.")
+
+    if match_hist_and_fut:
+        logger.info("Dispatching historical dataset to future experiments.")
+        catalog = _dispatch_historical_to_future(catalog, id_columns)
+
+    # Cut entries that do not match search criteria
+    if other_search_criteria:
+        catalog = catalog.search(**other_search_criteria)
+        logger.info(
+            f"{len(catalog.df)} assets matched the criteria : {other_search_criteria}."
+        )
+    if exclusions:
+        ex = catalog.search(**exclusions)
+        catalog.esmcat._df = pd.concat([catalog.df, ex.df]).drop_duplicates(keep=False)
+        logger.info(
+            f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
+        )
+
+    ids = generate_id(catalog.df, id_columns)
+    if id_columns is not None:
+        # Recreate id from user specifications
+        catalog.df["id"] = ids
+    else:
+        # Only fill in the missing IDs
+        catalog.df["id"] = catalog.df["id"].fillna(ids)
+
+    logger.info(f"Iterating over {catalog.nunique()['id']} potential datasets.")
+    # Loop on each dataset to assess whether they have all required variables
+    # And select best freq/timedelta for each
+    catalogs = {}
+    for (sim_id,), scat in catalog.iter_unique("id"):
+        # Find all the entries that match search parameters
+        varcats = []
+        for var_id, xrfreq in variables_and_freqs.items():
+            if xrfreq == "fx":
+                varcat = scat.search(
+                    xrfreq=xrfreq,
+                    variable=var_id,
+                    require_all_on=["id", "xrfreq"],
+                )
+                # TODO: Temporary fix until this is changed in intake_esm
+                varcat._requested_variables_true = [var_id]
+                varcat._dependent_variables = list(
+                    set(varcat._requested_variables).difference(
+                        varcat._requested_variables_true
+                    )
+                )
+            else:
+                # TODO: Add support for DerivedVariables that themselves require DerivedVariables
+                # TODO: Add support for DerivedVariables that exist on different frequencies (e.g. 1hr 'pr' & 3hr 'tas')
+                varcat = scat.search(variable=var_id, require_all_on=["id", "xrfreq"])
+                logger.debug(
+                    f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
+                )
+                # TODO: Temporary fix until this is changed in intake_esm
+                varcat._requested_variables_true = [var_id]
+                varcat._dependent_variables = list(
+                    set(varcat._requested_variables).difference(
+                        varcat._requested_variables_true
+                    )
+                )
+
+                # We want to match lines with the correct freq,
+                # IF allow_resampling is True and xrfreq translates to a timedelta,
+                # we also want those with (stricyly) higher temporal resolution
+                same_frq = varcat.df.xrfreq == xrfreq
+                td = pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq))
+                varcat.df["timedelta"] = pd.to_timedelta(
+                    varcat.df.xrfreq.apply(CV.xrfreq_to_timedelta, default="NAN")
+                )
+                # else is joker (any timedelta)
+                lower_frq = (
+                    np.less(varcat.df.timedelta, td) if pd.notnull(td) else False
+                )
+                varcat.esmcat._df = varcat.df[same_frq | (lower_frq & allow_resampling)]
+
+                # For each dataset (id - xrfreq - processing_level - domain - variable), make sure that file availability covers the requested time periods
+                if periods is not None and len(varcat) > 0:
+                    valid_tp = []
+                    for var, group in varcat.df.groupby(
+                        varcat.esmcat.aggregation_control.groupby_attrs + ["variable"]
+                    ):
+                        valid_tp.append(
+                            _subset_file_coverage(group, periods)
+                        )  # If valid, this returns the subset of files that cover the time period
+                    varcat.esmcat._df = pd.concat(valid_tp)
+
+                # We now select the coarsest timedelta for each variable
+                # we need to re-iterate over variables in case we used the registry (and thus there are multiple variables in varcat)
+                rows = []
+                for var, group in varcat.df.groupby("variable"):
+                    rows.append(group[group.timedelta == group.timedelta.max()])
+                if rows:
+                    # check if the requested variable exists and if so, remove DeriveVariable references
+                    v_list = [rows[i]["variable"].iloc[0] for i in range(len(rows))]
+                    v_list_check = [
+                        var_id in v_list[i] for i in range(len(v_list))
+                    ]  # necessary in case a file has multiple variables
+                    if any(v_list_check):
+                        rows = [rows[v_list_check.index(True)]]
+                        varcat.derivedcat = DerivedVariableRegistry()
+                    varcat.esmcat._df = pd.concat(rows, ignore_index=True)
+                else:
+                    varcat.esmcat._df = pd.DataFrame()
+
+            if varcat.df.empty:
+                logger.info(
+                    f"Dataset {sim_id} doesn't have all needed variables (missing at least {var_id})."
+                )
+                break
+            if "timedelta" in varcat.df.columns:
+                varcat.df.drop(columns=["timedelta"], inplace=True)
+            varcat._requested_variable_freqs = [xrfreq]
+            varcats.append(varcat)
+        else:
+            catalogs[sim_id] = concat_data_catalogs(*varcats)
+            if periods is not None:
+                if not isinstance(periods[0], list):
+                    periods = [periods]
+                catalogs[sim_id]._requested_periods = periods
+
+    logger.info(
+        f"Found {len(catalogs)} with all variables requested and corresponding to the criteria."
+    )
+
+    if restrict_resolution is not None:
+        catalogs = _restrict_by_resolution(catalogs, id_columns, restrict_resolution)
+
+    if restrict_members is not None:
+        catalogs = _restrict_multimembers(catalogs, id_columns, restrict_members)
+
+    return catalogs
+
+
+def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
+    """Updates a DataCatalog by recopying each "historical" entry to its corresponding future experiments.
+
+    For examples, if an historical entry has corresponding "ssp245" and "ssp585" entries,
+    then it is copied twice, with its "experiment" field modified accordingly.
+    The original "historical" entry is removed. This way, a subsequent search of the catalog
+    with "experiment='ssp245'" includes the _historical_ assets (with no apparent distinction).
+
+    "Historical" assets that did not find a match are removed from the output catalog.
+    """
+    expcols = [
+        "experiment",
+        "id",
+        "variable",
+        "xrfreq",
+        "date_start",
+        "date_end",
+        "path",
+        "format",
+        "activity",
+    ]  # These columns can differentiate the historical from the future.
+    sim_id_no_exp = list(
+        filter(
+            lambda c: c not in expcols,
+            set(id_columns or ID_COLUMNS).intersection(catalog.df.columns),
+        )
+    )
+    # For each unique element from this column list, the historical shouldn't be distinct
+    # from the future scenario, allowing us to match them.
+    # "Same hist member" as in "each future realization stems from the same historical member"
+
+    df = catalog.df.copy()
+    df["same_hist_member"] = df[sim_id_no_exp].apply(
+        lambda row: "_".join(row.values.astype(str)), axis=1
+    )
+
+    new_lines = []
+    for group in df.same_hist_member.unique():
+        sdf = df[df.same_hist_member == group]
+        hist = sdf[sdf.experiment == "historical"]
+        if hist.empty:
+            continue
+        for activity_id in set(sdf.activity) - {"HighResMip", np.NaN}:
+            sub_sdf = sdf[sdf.activity == activity_id]
+            for exp_id in set(sub_sdf.experiment) - {"historical", "piControl", np.NaN}:
+
+                exp_hist = hist.copy()
+                exp_hist["experiment"] = exp_id
+                exp_hist["activity"] = activity_id
+                exp_hist["same_hist_member"] = group
+                sim_ids = sub_sdf[sub_sdf.experiment == exp_id].id.unique()
+                if len(sim_ids) > 1:
+                    raise ValueError(
+                        f"Got multiple dataset ids where we expected only one... : {sim_ids}"
+                    )
+                exp_hist["id"] = sim_ids[0]
+                new_lines.append(exp_hist)
+
+    df = pd.concat([df] + new_lines, ignore_index=True).drop(
+        columns=["same_hist_member"]
+    )
+    df = df[df.experiment != "historical"].reset_index(drop=True)
+    return DataCatalog(
+        {"esmcat": catalog.esmcat.dict(), "df": df},
+        registry=catalog.derivedcat,
+        drop_duplicates=False,
+    )
+
+
+def _restrict_by_resolution(catalogs: dict, id_columns: list, restrictions: str):
+    """Updates the results from search_data_catalogs by removing simulations with multiple resolutions available.
+
+    Notes
+    -----
+    Currently supports:
+        CMIP5 and CMIP6 (in that order, giving the highest priority to elements on the left):
+            [gn, gn{a/g}, gr, gr{0-9}{a/g}, global, gnz, gr{0-9}z, gm]
+        CORDEX:
+            [DOM-{resolution}, DOM-{resolution}i]
+    """
+    df = pd.concat([catalogs[s].df for s in catalogs.keys()])
+    # remove the domain from the group_by
+    df["id_nodom"] = df[
+        list(
+            set(id_columns or ID_COLUMNS)
+            .intersection(df.columns)
+            .difference(["domain"])
+        )
+    ].apply(lambda row: "_".join(map(str, filter(pd.notna, row.values))), axis=1)
+    for i in pd.unique(df["id_nodom"]):
+        df_sim = df[df["id_nodom"] == i]
+        domains = pd.unique(df_sim["domain"])
+
+        if len(domains) > 1:
+            logger.info(f"Dataset {i} appears to have multiple resolutions.")
+
+            # For CMIP, the order is dictated by a list of grid labels
+            if pd.unique(df_sim["activity"])[0] == "CMIP":
+                order = np.array([])
+                for d in domains:
+                    match = [
+                        CV.infer_resolution("CMIP").index(r)
+                        for r in CV.infer_resolution("CMIP")
+                        if re.match(pattern=r, string=d)
+                    ]
+                    if len(match) != 1:
+                        raise ValueError(f"'{d}' matches no known CMIP domain.")
+                    order = np.append(order, match[0])
+
+                if restrictions == "finest":
+                    chosen = [
+                        np.sort(
+                            np.array(domains)[
+                                np.where(order == np.array(order).min())[0]
+                            ]
+                        )[0]
+                    ]
+                elif restrictions == "coarsest":
+                    chosen = [
+                        np.sort(
+                            np.array(domains)[
+                                np.where(order == np.array(order).max())[0]
+                            ]
+                        )[-1]
+                    ]
+                else:
+                    raise ValueError(
+                        "'restrict_resolution' should be 'finest' or 'coarsest'"
+                    )
+
+            # Note: For CORDEX, the order is dictated by both the grid label
+            # and the resolution itself as well as the domain name
+            elif pd.unique(df_sim["activity"])[0] == "CORDEX":
+                # Unique CORDEX domains
+                cordex_doms = pd.unique([d.split("-")[0] for d in domains])
+                chosen = []
+
+                for d in cordex_doms:
+                    sub = [doms for doms in domains if d in doms]
+                    order = [
+                        int(re.split("^([A-Z]{3})-([0-9]{2})([i]{0,1})$", s)[2])
+                        for s in sub
+                    ]
+
+                    if restrictions == "finest":
+                        chosen.extend(
+                            [
+                                np.sort(
+                                    np.array(sub)[
+                                        np.where(order == np.array(order).min())[0]
+                                    ]
+                                )[0]
+                            ]
+                        )
+                    elif restrictions == "coarsest":
+                        chosen.extend(
+                            [
+                                np.sort(
+                                    np.array(sub)[
+                                        np.where(order == np.array(order).max())[0]
+                                    ]
+                                )[0]
+                            ]
+                        )
+                    else:
+                        raise ValueError(
+                            "'restrict_resolution' should be 'finest' or 'coarsest'"
+                        )
+
+            else:
+                logger.warning(
+                    f"Dataset {i} seems to have multiple resolutions, "
+                    "but its activity is not yet recognized or supported."
+                )
+                chosen = list(domains)
+                pass
+
+            to_remove = pd.unique(
+                df_sim[
+                    df_sim["domain"].isin(
+                        list(set(pd.unique(df_sim["domain"])).difference(chosen))
+                    )
+                ]["id"]
+            )
+
+            for k in to_remove:
+                logger.info(f"Removing {k} from the results.")
+                catalogs.pop(k)
+
+    return catalogs
+
+
+def _restrict_multimembers(catalogs: dict, id_columns: list, restrictions: dict):
+    """Updates the results from search_data_catalogs by removing simulations with multiple members available
+
+    Uses regex to try and adequately detect and order the member's identification number, but only tested for 'r-i-p'.
+
+    """
+
+    df = pd.concat([catalogs[s].df for s in catalogs.keys()])
+    # remove the member from the group_by
+    df["id_nomem"] = df[
+        list(
+            set(id_columns or ID_COLUMNS)
+            .intersection(df.columns)
+            .difference(["member"])
+        )
+    ].apply(lambda row: "_".join(map(str, filter(pd.notna, row.values))), axis=1)
+
+    for i in pd.unique(df["id_nomem"]):
+        df_sim = df[df["id_nomem"] == i]
+        members = pd.unique(df_sim["member"])
+
+        if len(members) > 1:
+            logger.info(
+                f"Dataset {i} has {len(members)} valid members. Restricting as per requested."
+            )
+
+            if "ordered" in restrictions:
+                members = natural_sort(members)[0 : restrictions["ordered"]]
+            else:
+                raise NotImplementedError(
+                    "Subsetting multiple members currently only supports 'ordered'."
+                )
+
+            to_remove = pd.unique(
+                df_sim[
+                    df_sim["member"].isin(
+                        list(set(pd.unique(df_sim["member"])).difference(members))
+                    )
+                ]["id"]
+            )
+
+            for k in to_remove:
+                logger.info(f"Removing {k} from the results.")
+                catalogs.pop(k)
+
+    return catalogs
+
+
 def _subset_file_coverage(
     df: pd.DataFrame, periods: list, *, coverage: float = 0.99
 ) -> pd.DataFrame:
@@ -890,93 +985,3 @@ def _subset_file_coverage(
         files_to_keep = files_to_keep | files_in_range
 
     return df[files_to_keep]
-
-
-def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
-    """
-    Custom call to clisops.subset() that allows for an automatic buffer around the region.
-
-    Parameters
-    ----------
-    ds : xr.Dataset
-      Dataset to be subsetted
-    region : dict
-      Description of the region and the subsetting method (required fields listed in the Notes)
-
-    Note
-    ----------
-    'region' fields:
-        method: str
-            ['gridpoint', 'bbox', shape']
-        <method>: dict
-            Arguments specific to the method used.
-        buffer: float, optional
-            Multiplier to apply to the model resolution.
-
-    Returns
-    -------
-    xr.Dataset
-      Subsetted Dataset
-
-    """
-    if "buffer" in region.keys():
-        # estimate the model resolution
-        if len(ds.lon.dims) == 1:  # 1D lat-lon
-            lon_res = np.abs(ds.lon.diff("lon")[0].values)
-            lat_res = np.abs(ds.lat.diff("lat")[0].values)
-        else:
-            lon_res = np.abs(ds.lon[0, 0].values - ds.lon[0, 1].values)
-            lat_res = np.abs(ds.lat[0, 0].values - ds.lat[1, 0].values)
-
-    kwargs = deepcopy(region[region["method"]])
-
-    if region["method"] in ["gridpoint"]:
-        ds_subset = clisops.core.subset_gridpoint(ds, **kwargs)
-        new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{region['method']} spatial subsetting on {len(region['gridpoint']['lon'])} coordinates - clisops v{clisops.__version__}"
-        )
-
-    elif region["method"] in ["bbox"]:
-        if "buffer" in region.keys():
-            # adjust the boundaries
-            kwargs["lon_bnds"] = (
-                kwargs["lon_bnds"][0] - lon_res * region["buffer"],
-                kwargs["lon_bnds"][1] + lon_res * region["buffer"],
-            )
-            kwargs["lat_bnds"] = (
-                kwargs["lat_bnds"][0] - lat_res * region["buffer"],
-                kwargs["lat_bnds"][1] + lat_res * region["buffer"],
-            )
-
-        ds_subset = clisops.core.subset_bbox(ds, **kwargs)
-        new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{region['method']} spatial subsetting with {'buffer=' + str(region['buffer']) if 'buffer' in region else 'no buffer'}"
-            f", lon_bnds={np.array(region['bbox']['lon_bnds'])}, lat_bnds={np.array(region['bbox']['lat_bnds'])}"
-            f" - clisops v{clisops.__version__}"
-        )
-
-    elif region["method"] in ["shape"]:
-        if "buffer" in region.keys():
-            kwargs["buffer"] = np.max([lon_res, lat_res]) * region["buffer"]
-
-        ds_subset = clisops.core.subset_shape(ds, **kwargs)
-        new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{region['method']} spatial subsetting with {'buffer=' + str(region['buffer']) if 'buffer' in region else 'no buffer'}"
-            f", shape={Path(region['shape']['shape']).name if isinstance(region['shape']['shape'], (str, Path)) else 'gpd.GeoDataFrame'}"
-            f" - clisops v{clisops.__version__}"
-        )
-
-    else:
-        raise ValueError("Subsetting type not recognized")
-
-    history = (
-        new_history + " \n " + ds_subset.attrs["history"]
-        if "history" in ds_subset.attrs
-        else new_history
-    )
-    ds_subset.attrs["history"] = history
-
-    return ds_subset

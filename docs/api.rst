@@ -1,64 +1,93 @@
 API
 ===
 
+Aggregation
+-----------
+
+.. automodule:: xscen.aggregate
+   :members:
+   :noindex:
+
 Catalog
 -------
 
 .. automodule:: xscen.catalog
    :members:
+   :noindex:
 
 Extraction
 ----------
 
-.. automodule:: xscen.extraction
+.. automodule:: xscen
    :members:
+   :noindex:
 
-Controlled Vocabulary and mappings
+Controlled Vocabulary and Mappings
 ----------------------------------
 
 .. automodule:: xscen.CV
    :members:
+   :noindex:
 
 Regridding
 ----------
 
-.. automodule:: xscen.regridding
+.. automodule:: xscen
    :members:
+   :noindex:
 
-Bias adjustment
+Bias Adjustment
 ---------------
 
-.. automodule:: xscen.biasadjust
-   :members:
+.. automodule:: xscen
+   :members: adjust train
+   :noindex:
 
 Indicators
 ----------
 
 .. automodule:: xscen.indicators
    :members:
+   :noindex:
 
-Final product tweaks
---------------------
+Ensembles
+---------
 
-.. automodule:: xscen.finalize
+.. automodule:: xscen.ensembles
    :members:
+   :noindex:
 
-Quality Checks
---------------
+Diagnostics and Quality Checks
+------------------------------
 
-.. automodule:: xscen.checkups
+.. automodule:: xscen.diagnostics
    :members:
+   :noindex:
 
-Input / output
+Input / Output
 --------------
 
 .. automodule:: xscen.io
    :members:
+   :noindex:
 
-Script utilities
+Configuration Utilities
+-----------------------
+
+.. automodule:: xscen.config
+   :members:
+   :noindex:
+
+Script Utilities
 ----------------
 
-.. automodule:: xscen.common
+.. automodule:: xscen.scripting
    :members:
-.. automodule:: xscen.scr_utils
+   :noindex:
+
+Packaging Utilities
+-------------------
+
+.. automodule:: xscen.utils
    :members:
+   :noindex:

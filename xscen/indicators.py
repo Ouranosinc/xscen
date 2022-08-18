@@ -4,26 +4,23 @@ from pathlib import Path, PosixPath
 from types import ModuleType
 from typing import Sequence, Tuple, Union
 
-import pandas as pd
 import xarray as xr
 import xclim as xc
 from intake_esm import DerivedVariableRegistry
 from xclim.core.indicator import Indicator
 from yaml import safe_load
 
-from .common import CV
-from .config import parse_config
+from xscen.config import parse_config
+
+from .utils import CV
 
 logger = logging.getLogger(__name__)
 
 
-def ensure_list(x):
-    if not isinstance(x, (list, tuple)):
-        return [x]
-    return x
+__all__ = ["compute_indicators"]
 
 
-def load_xclim_module(filename, reload=False):
+def load_xclim_module(filename, reload=False) -> ModuleType:
     """Return the xclim module described by the yaml file (or group of yaml, jsons and py).
 
     Parameters
@@ -32,6 +29,10 @@ def load_xclim_module(filename, reload=False):
       The filepath to the yaml file of the module or to the stem of yaml, jsons and py files.
     reload : bool
       If False (default) and the module already exists in `xclim.indicators`, it is not re-build.
+
+    Returns
+    -------
+    ModuleType
     """
     if not reload:
         # Same code as in xclim to get the module name.
@@ -164,19 +165,9 @@ def compute_indicators(
     return out_dict
 
 
-def derived_func(ind: xc.core.indicator.Indicator, nout: int):
-    def func(ds, *, ind, nout):
-        out = ind(ds=ds)
-        if isinstance(out, tuple):
-            out = out[nout]
-        ds[out.name] = out
-        return ds
-
-    func.__name__ = ind.identifier
-    return partial(func, ind=ind, nout=nout)
-
-
-def registry_from_module(module, registry=None, variable_column="variable"):
+def registry_from_module(
+    module, registry=None, variable_column="variable"
+) -> DerivedVariableRegistry:
     """Converts a xclim virtual indicators module to an intake_esm Derived Variable Registry.
 
     Parameters
@@ -204,5 +195,23 @@ def registry_from_module(module, registry=None, variable_column="variable"):
             variable_column: [p.default for p in ind.parameters.values() if p.kind == 0]
         }
         for i, attrs in enumerate(ind.cf_attrs):
-            dvr.register(variable=attrs["var_name"], query=query)(derived_func(ind, i))
+            dvr.register(variable=attrs["var_name"], query=query)(_derived_func(ind, i))
     return dvr
+
+
+def _ensure_list(x):
+    if not isinstance(x, (list, tuple)):
+        return [x]
+    return x
+
+
+def _derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
+    def func(ds, *, ind, nout):
+        out = ind(ds=ds)
+        if isinstance(out, tuple):
+            out = out[nout]
+        ds[out.name] = out
+        return ds
+
+    func.__name__ = ind.identifier
+    return partial(func, ind=ind, nout=nout)
