@@ -1016,10 +1016,10 @@ def parse_from_ds(
             attrs["date_start"] = time[0]
         elif name == "date_end" and time is not None:
             attrs["date_end"] = time[-1]
-        elif name in ds_attrs:
-            attrs[name] = ds_attrs[name].strip()
         elif name in rev_attrs_map and rev_attrs_map[name] in ds_attrs:
             attrs[name] = ds_attrs[rev_attrs_map[name]].strip()
+        elif name in ds_attrs:
+            attrs[name] = ds_attrs[name].strip()
 
     logger.debug(f"Got fields {attrs.keys()} from file.")
     return attrs
