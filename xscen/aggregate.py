@@ -41,8 +41,8 @@ def climatological_mean(
     interval: int
       Interval (in years) at which to provide an output.
     periods: list
-      list of [start, end] of the contiguous periods to be evaluated, in the case of disjointed datasets.
-      If left at None, the dataset will be considered continuous.
+      list of [start, end] of continuous periods to be considered. This is needed when the time axis of ds contains some jumps in time.
+      If None, the dataset will be considered continuous.
     to_level : str, optional
       The processing level to assign to the output.
       If None, the processing level of the inputs is preserved.
@@ -99,9 +99,7 @@ def climatological_mean(
                 ds_rolling.year.values, ds_rolling.month.values, ds_rolling.day.values
             )
         ]
-        ds_rolling = ds_rolling.assign_coords(time=time_coord).transpose(
-            "time", "lat", "lon"
-        )
+        ds_rolling = ds_rolling.assign_coords(time=time_coord).transpose("time", ...)
 
         concats.extend([ds_rolling])
     ds_rolling = xr.concat(concats, dim="time", data_vars="minimal")
@@ -270,7 +268,7 @@ def spatial_mean(
       'mean' will perform a .mean() over the spatial dimensions of the Dataset.
       'interp_coord' will find the region's centroid (if coordinates are not fed through kwargs), then perform a .interp() over the spatial dimensions of the Dataset.
       The coordinate can also be directly fed to .interp() through the 'kwargs' argument below.
-      'xesmf' will make use of xESMF's SpatialAverager. Note that this can be much slower than other methods.
+      'xesmf' will make use of xESMF's SpatialAverager. This will typically be more precise, especially for irregular regions, but can be much slower than other methods.
     call_clisops: bool
       If True, xscen.extraction.clisops_subset will be called prior to the other operations. This requires the 'region' argument.
     region: dict
