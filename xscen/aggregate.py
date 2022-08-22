@@ -140,7 +140,7 @@ def compute_deltas(
     *,
     kind: Union[str, dict] = "+",
     rename_variables: bool = True,
-    to_level: str = None,
+    to_level: str = 'delta_climatology',
 ) -> xr.Dataset:
     """
     Computes deltas in comparison to a reference time period, respecting the temporal resolution of ds.
