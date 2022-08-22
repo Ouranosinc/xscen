@@ -25,13 +25,27 @@ from dask.diagnostics import ProgressBar
 from intake.source.utils import reverse_format
 from intake_esm.cat import ESMCatalogModel
 
-from . import CV
 from .config import CONFIG, parse_config, recursive_update
 from .io import get_engine
+from .utils import CV
 
 logger = logging.getLogger(__name__)
 # Monkey patch for attribute names in the output of to_dataset_dict
 intake_esm.set_options(attrs_prefix="cat")
+
+
+__all__ = [
+    "COLUMNS",
+    "DataCatalog",
+    "ID_COLUMNS",
+    "ProjectCatalog",
+    "concat_data_catalogs",
+    "date_parser",
+    "generate_id",
+    "parse_directory",
+    "parse_from_ds",
+]
+
 
 # As much as possible, these catalog columns and entries should align with: https://github.com/WCRP-CMIP/CMIP6_CVs and https://github.com/ES-DOC/pyessv-archive
 # See docs/columns.rst for a description of each entry.
@@ -95,8 +109,8 @@ esm_col_data = {
 """Default ESM column data for the official catalogs."""
 
 
-def parse_list_of_strings(elem):
-    """Parse a element of a csv in case it is a list of strings."""
+def _parse_list_of_strings(elem):
+    """Parse an element of a csv in case it is a list of strings."""
     if elem.startswith("(") or elem.startswith("["):
         out = ast.literal_eval(elem)
         return out
@@ -110,7 +124,7 @@ csv_kwargs = {
         if key not in ["variable", "date_start", "date_end"]
     },
     "converters": {
-        "variable": parse_list_of_strings,
+        "variable": _parse_list_of_strings,
     },
     "parse_dates": ["date_start", "date_end"],
     "date_parser": lambda s: pd.Period(s, "H"),
@@ -202,8 +216,11 @@ class DataCatalog(intake_esm.esm_datastore):
             if sim:  # So we never yield empty catalogs
                 yield values, sim
 
-    def drop_duplicates(self, columns=["id", "path"]):
+    def drop_duplicates(self, columns: Optional[List[str]] = None):
         # In case variables are being added in an existing Zarr, append them
+        if columns is None:
+            columns = ["id", "path"]
+
         if len(self.df) > 0:
             # By default, duplicated will mark the later entries as True
             duplicated = self.df.duplicated(subset="path")
@@ -539,7 +556,7 @@ def concat_data_catalogs(*dcs):
 
 
 @parse_config
-def get_asset_list(root_paths, globpat="*.nc", parallel_depth=1):
+def _get_asset_list(root_paths, globpat="*.nc", parallel_depth=1):
     """List files fitting a given glob pattern from a list of paths.
 
     Search is done with GNU's `find` and parallized through `dask`.
@@ -624,8 +641,13 @@ def get_asset_list(root_paths, globpat="*.nc", parallel_depth=1):
     return filecoll
 
 
-def name_parser(
-    path, root, patterns, read_from_file=None, attrs_map=None, xr_open_kwargs=None
+def _name_parser(
+    path,
+    root,
+    patterns,
+    read_from_file=None,
+    attrs_map: Mapping[str, Any] = None,
+    xr_open_kwargs: Mapping[str, Any] = None,
 ):
     """Extract metadata information from the file path.
 
@@ -637,7 +659,7 @@ def name_parser(
       List of patterns to try in `reverse_format`
     read_from_file : list of string or dict, optional
       If not None, passed directly to :py:func:`parse_from_ds` as `names`.
-    attrs_map:
+    attrs_map: dict
       If `read_from_file` is not None, passed directly to :py:func:`parse_from_ds`.
     xr_open_kwargs: dict
       If required, arguments to send to xr.open_dataset() when opening the file to read the attributes.
@@ -816,7 +838,7 @@ def parse_directory(
         attrs_map = {}
 
     # Find files
-    filecoll = get_asset_list(
+    filecoll = _get_asset_list(
         directories, globpat=globpattern, parallel_depth=parallel_depth
     )
     logger.info(
@@ -830,7 +852,7 @@ def parse_directory(
 
     @dask.delayed
     def delayed_parser(*args, **kwargs):
-        return _update_dict(name_parser(*args, **kwargs))
+        return _update_dict(_name_parser(*args, **kwargs))
 
     parsed = [
         delayed_parser(

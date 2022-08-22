@@ -9,13 +9,19 @@ from xclim.core.calendar import convert_calendar, get_calendar
 from xclim.sdba import construct_moving_yearly_window, unpack_moving_yearly_window
 
 from .catalog import parse_from_ds
-from .common import minimum_calendar
 from .config import parse_config
+from .utils import minimum_calendar
 
 # TODO: Change all paths to PosixPath objects, including in the catalog?
 # TODO: Compute sometimes fails randomly (in debug, pretty much always). Also (detrend?) fails with pr. Investigate why.
 
 logger = logging.getLogger(__name__)
+
+
+__all__ = [
+    "adjust",
+    "train",
+]
 
 
 def _add_preprocessing_attr(scen, train_kwargs):

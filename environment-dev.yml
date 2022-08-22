@@ -5,33 +5,35 @@ dependencies:
   # Don't forget to sync the changes here with environment.yml!
   # Some pins here are meant to accelerate conda and might not be related to real needs
   # Main packages
+  - cftime
+  - clisops
   - xarray
   - xclim>=0.37
   - xesmf>=0.6.3
   - dask
+  - geopandas
   - pandas
-  - clisops
   - rechunker
-  - cftime
+  - shapely
   - yaml
   # This ensures that the correct numpy is installed as of 2022-07-15.
   - numba>=0.55.2
   # Plotting
-  - matplotlib
   - cartopy
+  - matplotlib
   - nc-time-axis>=1.3.1
   # IO
   - h5netcdf
-  - zarr
   - netCDF4
   - pyarrow>=1.0.0  # For lighter in-memory catalogs
+  - zarr
   # For intake-esm (so that conda installs the dependencies and not pip)
   - fastprogress
   - fsspec
   - intake
   - pydantic
-  - xcollection
   - requests
+  - xcollection
   # Dev
   - ipykernel
   - ipython
@@ -40,6 +42,7 @@ dependencies:
   - pandoc
   - pooch
   - pre-commit
+  - pytest
   - sphinx
   - sphinx-autoapi
   - sphinx_rtd_theme

@@ -1,24 +1,28 @@
 import logging
 from pathlib import Path
-from typing import Optional, Union
 
 import pandas as pd
 import xarray as xr
 from xclim import ensembles
 
-from .catalog import ProjectCatalog, generate_id
+from .catalog import generate_id  # ProjectCatalog
+
+# from typing import Optional, Union
+
 
 logger = logging.getLogger(__name__)
+
+__all__ = ["ensemble_stats"]
 
 
 def ensemble_stats(
     datasets: list,
-    create_kwargs: dict = {},
+    create_kwargs: dict = None,
     statistics: str = "ensemble_percentiles",
-    stats_kwargs: dict = {},
+    stats_kwargs: dict = None,
     common_attrs_only: bool = True,
     to_level: str = "ensemble",
-):
+) -> xr.Dataset:
     """
     Create ensemble and calculate statistics on it.
 
@@ -28,12 +32,12 @@ def ensemble_stats(
         List of file paths or xarray Dataset/DataArray objects to include in the ensemble
         Tip: With a project catalog, you can do: `datasets = list(pcat.search(**search_dict).df.path)` to get a list of paths.
     create_kwargs: dict
-        Dictionary of arguments for xclim.ensembles.create_ensemble
+        Dictionary of arguments for xclim.ensembles.create_ensemble.
     statistics: str
         Name of the xclim.ensemble function to call on the ensemble
-        (eg. "ensemble_percentiles","ensemble_mean_std_max_min").
+        (e.g. "ensemble_percentiles","ensemble_mean_std_max_min")
     stats_kwargs: dict
-        Dictionary of arguments for the statictics function
+        Dictionary of arguments for the statistics function.
     common_attrs_only:
         If True, keeps only the global attributes that are the same for all datasets and generate new id.
         If False, keeps global attrs of the first dataset (same behaviour as xclim.ensembles.create_ensemble)
@@ -42,9 +46,13 @@ def ensemble_stats(
 
     Returns
     -------
-    ens_stats: xr.Dataset
+    xr.Dataset
         Dataset with ensemble statistics
     """
+    if stats_kwargs is None:
+        stats_kwargs = {}
+    if create_kwargs is None:
+        create_kwargs = {}
     logger.info(f"Creating ensemble with {len(datasets)} and calculating {statistics}.")
 
     # if input files are .zarr, change the engine automatically

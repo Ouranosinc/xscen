@@ -7,7 +7,6 @@ from pathlib import PosixPath
 from typing import Optional, Union
 
 import numpy as np
-import xarray
 import xarray as xr
 import xesmf as xe
 
@@ -19,16 +18,19 @@ from .config import parse_config
 # TODO: Implement support for an OBS2SIM kind of interpolation
 
 
+__all__ = ["regrid_dataset", "create_mask"]
+
+
 @parse_config
-def regrid(
-    ds: xarray.Dataset,
+def regrid_dataset(
+    ds: xr.Dataset,
     weights_location: Union[str, PosixPath],
     ds_grid: xr.Dataset,
     *,
     regridder_kwargs: Optional[dict] = None,
     intermediate_grids: Optional[dict] = None,
     to_level: str = "regridded",
-) -> xarray.Dataset:
+) -> xr.Dataset:
     """
     Based on an intake_esm catalog, this function regrids Zarr files.
 
@@ -56,7 +58,7 @@ def regrid(
 
     Returns
     -------
-    out: xarray.Dataset
+    xarray.Dataset
       Regridded dataset
 
     Notes
@@ -81,7 +83,7 @@ def regrid(
 
     out = None
 
-    # Whether or not regridding is required
+    # Whether regridding is required
     if ds["lon"].equals(ds_grid["lon"]) & ds["lat"].equals(ds_grid["lat"]):
         out = ds
         if "mask" in out:
@@ -89,7 +91,6 @@ def regrid(
             out = out.drop_vars(["mask"])
 
     else:
-
         for i, (ds_grid, regridder_kwargs) in enumerate(zip(ds_grids, reg_arguments)):
             # if this is not the first iteration (out != None),
             # get result from last iteration (out) as input
@@ -181,7 +182,7 @@ def regrid(
                     f"regridded with arguments {kwargs_for_hist} - xESMF v{xe.__version__}"
                 )
             history = (
-                new_history + " \n " + out.attrs["history"]
+                f"{new_history}\n{out.attrs['history']}"
                 if "history" in out.attrs
                 else new_history
             )
@@ -203,13 +204,13 @@ def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.Data
 
     Parameters
     ----------
-    ds : [xr.Dataset, xr.DataArray]
+    ds : xr.Dataset or xr.DataArray
       Dataset or DataArray to be evaluated
     mask_args : dict
       Instructions to build the mask (required fields listed in the Notes).
 
     Note
-    ----------
+    ----
     'mask' fields:
         variable: str, optional
             Variable on which to base the mask, if ds_mask is not a DataArray.
@@ -218,7 +219,7 @@ def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.Data
         where_threshold: str, optional
             Value threshold to be used in conjunction with where_operator.
         mask_nans: bool
-            Whether or not to apply a mask on NaNs.
+            Whether to apply a mask on NaNs.
 
     Returns
     -------
@@ -259,7 +260,7 @@ def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.Data
     else:
         mask = xr.ones_like(mask)
     if ("mask_nans" in mask_args) & (mask_args["mask_nans"] is True):
-        mask = xr.where(np.isreal(mask), mask, 0)
+        mask = mask.where(np.isreal(mask), other=0)
 
     # Attributes
     if "where_operator" in mask_args:
@@ -298,7 +299,7 @@ def _regridder(
 
     Returns
     -------
-    xe.frontend.Regridde
+    xe.frontend.Regridder
       Regridder object
 
     """
