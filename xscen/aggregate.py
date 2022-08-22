@@ -139,6 +139,7 @@ def compute_deltas(
     reference_horizon: str,
     *,
     kind: Union[str, dict] = "+",
+    rename_variables: bool = True,
     to_level: str = None,
 ) -> xr.Dataset:
     """
@@ -153,6 +154,8 @@ def compute_deltas(
     kind: str
       ['+', '/'] Whether to provide absolute or relative deltas.
       Can also be a dictionary separated per variable name.
+    rename_variables: bool
+      If True, '_delta_YYYY-YYYY' will be added to variable names.
     to_level : str, optional
       The processing level to assign to the output.
       If None, the processing level of the inputs is preserved.
@@ -192,47 +195,36 @@ def compute_deltas(
         else:
             raise ValueError("Delta 'kind' not understood.")
 
+        v_name = (
+            vv
+            if rename_variables is False
+            else f"{vv}_delta_{reference_horizon.replace('-', '_')}"
+        )
         with xr.set_options(keep_attrs=True):
             if _kind == "absolute":
-                deltas[f"{vv}_delta_{reference_horizon.replace('-', '_')}"] = (
-                    other_hz[vv] - ref[vv]
-                )
+                deltas[v_name] = other_hz[vv] - ref[vv]
             else:
-                deltas[f"{vv}_delta_{reference_horizon.replace('-', '_')}"] = (
-                    other_hz[vv] / ref[vv]
-                )
-                deltas[f"{vv}_delta_{reference_horizon.replace('-', '_')}"].attrs[
-                    "units"
-                ] = ""
+                deltas[v_name] = other_hz[vv] / ref[vv]
+                deltas[v_name].attrs["units"] = ""
 
         # modify attrs and history
-        deltas[f"{vv}_delta_{reference_horizon.replace('-', '_')}"].attrs[
-            "delta_kind"
-        ] = _kind
-        deltas[f"{vv}_delta_{reference_horizon.replace('-', '_')}"].attrs[
-            "delta_reference"
-        ] = reference_horizon
+        deltas[v_name].attrs["delta_kind"] = _kind
+        deltas[v_name].attrs["delta_reference"] = reference_horizon
 
         for a in ["description", "long_name"]:
             if hasattr(other_hz[vv], a):
-                deltas[f"{vv}_delta_{reference_horizon.replace('-', '_')}"].attrs[
+                deltas[v_name].attrs[
                     a
                 ] = f"{other_hz[vv].attrs[a]}: {_kind} delta compared to {reference_horizon.replace('-', '_')}."
 
         new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {_kind} delta vs. {reference_horizon} - xarray v{xr.__version__}"
         history = (
-            new_history
-            + " \n "
-            + deltas[f"{vv}_delta_{reference_horizon.replace('-', '_')}"].attrs[
-                "history"
-            ]
+            new_history + " \n " + deltas[v_name].attrs["history"]
             if "history"
             in deltas[f"{vv}_delta_{reference_horizon.replace('-', '_')}"].attrs
             else new_history
         )
-        deltas[f"{vv}_delta_{reference_horizon.replace('-', '_')}"].attrs[
-            "history"
-        ] = history
+        deltas[v_name].attrs["history"] = history
 
     # get back to 1D time
     deltas = deltas.stack(time=("year", "month", "day"))
