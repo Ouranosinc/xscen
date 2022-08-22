@@ -260,7 +260,7 @@ def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.Data
     else:
         mask = xr.ones_like(mask)
     if ("mask_nans" in mask_args) & (mask_args["mask_nans"] is True):
-        mask = xr.where(np.isreal(mask), mask, 0)
+        mask = mask.where(np.isreal(mask), other=0)
 
     # Attributes
     if "where_operator" in mask_args:

@@ -37,6 +37,7 @@ def climatological_mean(
       Dataset to use for the computation.
     window: int
       Number of years to use for the time periods.
+      If left at None, all years will be used.
     min_periods: int
       For the rolling operation, minimum number of years required for a value to be computed.
       If left at None, it will be deemed the same as 'window'
@@ -56,6 +57,7 @@ def climatological_mean(
 
     """
 
+    window = window or int(ds.time.dt.year[-1] - ds.time.dt.year[0])
     min_periods = min_periods or window
 
     # separate 1d time in coords (day, month, and year) to make climatological mean faster
@@ -278,7 +280,7 @@ def spatial_mean(
       If method=='interp_coord', this is used to find the region's centroid.
       If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
     kwargs: dict
-      Arguments to send to either interp() or SpatialAverager().
+      Arguments to send to either mean(), interp() or SpatialAverager().
     simplify_tolerance: float
       Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
       The simpler the polygons, the faster the averaging, but it will lose some precision.
@@ -314,13 +316,31 @@ def spatial_mean(
 
     # This simply calls .mean() over the spatial dimensions
     if method == "mean":
-        # Determine the X and Y names
-        spatial_dims = {}
-        for d in ds.dims:
-            if "axis" in ds[d].attrs and ds[d].attrs["axis"] in ["X", "x", "Y", "y"]:
-                spatial_dims.update({ds[d].attrs["axis"].upper(): d})
+        if "dim" not in kwargs:
+            # Determine the X and Y names
+            spatial_dims = []
+            for d in ["X", "Y"]:
+                if d in ds.cf.axes:
+                    spatial_dims.extend([ds.cf[d]])
+                elif (
+                    (d == "X")
+                    & ("longitude" in ds.cf.coordinates)
+                    & (len(ds[ds.cf.coordinates["longitude"][0]].dims) == 1)
+                ):
+                    spatial_dims.extend(ds.cf.coordinates["longitude"])
+                elif (
+                    (d == "Y")
+                    & ("latitude" in ds.cf.coordinates)
+                    & (len(ds[ds.cf.coordinates["latitude"][0]].dims) == 1)
+                ):
+                    spatial_dims.extend(ds.cf.coordinates["latitude"])
+            if len(spatial_dims) == 0:
+                raise ValueError(
+                    "Could not determine the spatial dimension(s) using CF conventions. Use kwargs = {dim: list} to specify on which dimension to perform the averaging."
+                )
+            kwargs["dim"] = spatial_dims
 
-        ds_agg = ds.mean(dim=list(spatial_dims.values()), keep_attrs=True)
+        ds_agg = ds.mean(keep_attrs=True, **kwargs)
 
         # Prepare the History field
         new_history = (
