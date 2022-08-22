@@ -26,7 +26,7 @@ def climatological_mean(
     min_periods: int = None,
     interval: int = 1,
     periods: list = None,
-    to_level: str = 'climatology',
+    to_level: str = "climatology",
 ) -> xr.Dataset:
     """
     Computes the mean over 'year' for given time periods, respecting the temporal resolution of ds.
