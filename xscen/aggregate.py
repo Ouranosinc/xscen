@@ -26,7 +26,7 @@ def climatological_mean(
     min_periods: int = None,
     interval: int = 1,
     periods: list = None,
-    to_level: str = None,
+    to_level: str = "climatology",
 ) -> xr.Dataset:
     """
     Computes the mean over 'year' for given time periods, respecting the temporal resolution of ds.
@@ -140,7 +140,7 @@ def compute_deltas(
     *,
     kind: Union[str, dict] = "+",
     rename_variables: bool = True,
-    to_level: str = None,
+    to_level: str = "delta_climatology",
 ) -> xr.Dataset:
     """
     Computes deltas in comparison to a reference time period, respecting the temporal resolution of ds.
