@@ -148,11 +148,11 @@ def compute_indicators(
 
             # TODO: Double-check History, units, attrs, add missing variables (grid_mapping), etc.
             out_dict[key].attrs = ds.attrs
-            out_dict[key].attrs.pop("cat/variable", None)
-            out_dict[key].attrs["cat/xrfreq"] = freq
-            out_dict[key].attrs["cat/frequency"] = CV.xrfreq_to_frequency(freq, None)
+            out_dict[key].attrs.pop("cat:variable", None)
+            out_dict[key].attrs["cat:xrfreq"] = freq
+            out_dict[key].attrs["cat:frequency"] = CV.xrfreq_to_frequency(freq, None)
             if to_level is not None:
-                out_dict[key].attrs["cat/processing_level"] = to_level
+                out_dict[key].attrs["cat:processing_level"] = to_level
 
         else:
             if isinstance(out, tuple):  # In the case of multiple outputs

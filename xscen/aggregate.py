@@ -128,7 +128,7 @@ def climatological_mean(
         ds_rolling[vv].attrs["history"] = history
 
     if to_level is not None:
-        ds_rolling.attrs["cat/processing_level"] = to_level
+        ds_rolling.attrs["cat:processing_level"] = to_level
 
     return ds_rolling
 
@@ -237,7 +237,7 @@ def compute_deltas(
     deltas = deltas.reindex_like(ds)
 
     if to_level is not None:
-        deltas.attrs["cat/processing_level"] = to_level
+        deltas.attrs["cat:processing_level"] = to_level
 
     return deltas
 
@@ -448,8 +448,8 @@ def spatial_mean(
 
     # Attrs
     if to_domain is not None:
-        ds_agg.attrs["cat/domain"] = to_domain
+        ds_agg.attrs["cat:domain"] = to_domain
     if to_level is not None:
-        ds_agg.attrs["cat/processing_level"] = to_level
+        ds_agg.attrs["cat:processing_level"] = to_level
 
     return ds_agg

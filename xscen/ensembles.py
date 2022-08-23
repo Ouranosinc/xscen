@@ -81,7 +81,7 @@ def ensemble_stats(
             for a_key, a_val in attributes.items():
                 if (
                     (a_key not in ds.attrs)
-                    or (a_key in ["cat/date_start", "cat/date_end"])
+                    or (a_key in ["cat:date_start", "cat:date_end"])
                     or (a_val != ds.attrs[a_key])
                 ):
                     del ens_stats.attrs[a_key]
@@ -90,11 +90,11 @@ def ensemble_stats(
             {
                 key[4:]: [value]
                 for key, value in ens_stats.attrs.items()
-                if key[:4] == "cat/"
+                if key.startswith("cat:")
             }
         )
-        ens_stats.attrs["cat/id"] = generate_id(df)[0]
+        ens_stats.attrs["cat:id"] = generate_id(df)[0]
 
-    ens_stats.attrs["cat/processing_level"] = to_level
+    ens_stats.attrs["cat:processing_level"] = to_level
 
     return ens_stats

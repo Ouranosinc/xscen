@@ -301,11 +301,11 @@ def extract_dataset(
 
         ds.attrs = attrs
         if "time" not in ds.dims:
-            ds.attrs["cat/frequency"] = "fx"
-            ds.attrs["cat/xrfreq"] = "fx"
+            ds.attrs["cat:frequency"] = "fx"
+            ds.attrs["cat:xrfreq"] = "fx"
         else:
-            ds.attrs["cat/xrfreq"] = xrfreq
-            ds.attrs["cat/frequency"] = CV.xrfreq_to_frequency(xrfreq)
+            ds.attrs["cat:xrfreq"] = xrfreq
+            ds.attrs["cat:frequency"] = CV.xrfreq_to_frequency(xrfreq)
 
         # Subset time on the periods
         if periods is None and hasattr(catalog, "_requested_periods"):
@@ -321,12 +321,12 @@ def extract_dataset(
         # Custom call to clisops
         if region is not None:
             ds = clisops_subset(ds, region)
-            ds.attrs["cat/domain"] = region["name"]
+            ds.attrs["cat:domain"] = region["name"]
 
         # add relevant attrs
-        ds.attrs["cat/processing_level"] = to_level
-        if "cat/variable" not in ds.attrs:
-            ds.attrs["cat/variable"] = parse_from_ds(ds, ["variable"])["variable"]
+        ds.attrs["cat:processing_level"] = to_level
+        if "cat:variable" not in ds.attrs:
+            ds.attrs["cat:variable"] = parse_from_ds(ds, ["variable"])["variable"]
 
         out_dict[xrfreq] = ds
 
