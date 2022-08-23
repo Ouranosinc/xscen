@@ -2,9 +2,8 @@
 History
 =======
 
-v0.3.3 (2022-08-23)
+v0.3.0 (2022-08-23)
 -------------------
-This also includes changelog for v0.3.0, v0.3.2 and v0.3.3.
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
