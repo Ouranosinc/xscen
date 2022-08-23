@@ -184,7 +184,7 @@ def natural_sort(_list: list):
     return sorted(_list, key=alphanum_key)
 
 
-def get_cat_attrs(ds: xr.Dataset | dict):
+def get_cat_attrs(ds: Union[xr.Dataset, dict]):
     """Return the catalog-specific attributes from a dataset or dictionary."""
     if isinstance(ds, (xr.Dataset, xr.DataArray)):
         attrs = ds.attrs
