@@ -22,6 +22,14 @@ from .config import parse_config
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "send_mail",
+    "send_mail_on_exit",
+    "measure_time",
+    "timeout",
+    "TimeoutException",
+]
+
 
 @parse_config
 def send_mail(
@@ -34,10 +42,10 @@ def send_mail(
     attachments: Optional[
         List[Union[Tuple[str, Union[Figure, os.PathLike]], Figure, os.PathLike]]
     ] = None,
-):
+) -> None:
     """Send email.
 
-    Send an email to a single address through a login-less SMTP server.
+    Email a single address through a login-less SMTP server.
     The default values of server and port should work out-of-the-box on Ouranos's systems.
 
     Parameters
@@ -57,6 +65,10 @@ def send_mail(
       Elements of the list can be paths, the mimetypes of those is guessed and the files are read and sent.
       Elements can also be matplotlib Figures which are send as png image (savefig) with names like "Figure00.png".
       Finally, elements can be tuples of a filename to use in the email and the attachment, handled as above.
+
+    Returns
+    -------
+    None
     """
     # Inspired by https://betterprogramming.pub/how-to-send-emails-with-attachments-using-python-dd37c4b6a7fd
     email = EmailMessage()
@@ -146,7 +158,7 @@ def send_mail_on_exit(
     on_error_only: bool = False,
     skip_ctrlc: bool = True,
     **mail_kwargs,
-):
+) -> None:
     """Send an email with content depending on how the system exited.
 
     This function is best used by registering it with `atexit`. Calls :py:func:`send_mail`.
@@ -168,6 +180,10 @@ def send_mail_on_exit(
     mail_kwargs
       Other arguments passed to :py:func:`send_mail`.
       The `to` argument is necessary for this function to work.
+
+    Returns
+    -------
+    None
 
     Example
     -------
@@ -209,7 +225,7 @@ class measure_time:
 
     Parameters
     ----------
-    name : str, optiona
+    name : str, optional
       A name to give to the block being timed, for meaningful logging.
     cpu : boolean
       If True, the CPU time is also measured and logged.

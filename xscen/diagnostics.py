@@ -15,9 +15,9 @@ from xclim.core.units import convert_units_to
 from xclim.sdba import measures
 
 from .catalog import DataCatalog
-from .common import maybe_unstack, unstack_fill_nan
 from .indicators import load_xclim_module
 from .io import save_to_zarr
+from .utils import maybe_unstack, unstack_fill_nan
 
 logger = logging.getLogger(__name__)
 
