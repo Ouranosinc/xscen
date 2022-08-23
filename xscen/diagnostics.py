@@ -21,6 +21,12 @@ from .utils import maybe_unstack, unstack_fill_nan
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "fix_unphysical_values",
+    "properties_and_measures",
+    "heatmap",
+    "improved_grid_points",
+]
 
 # TODO: Implement logging, warnings, etc.
 # TODO: Change all paths to PosixPath objects, including in the catalog?
