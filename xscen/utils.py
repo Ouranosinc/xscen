@@ -384,7 +384,7 @@ def clean_up(
         For global attrs, use the key 'global'.
         eg. {'global': {'title': 'amazing new dataset'}, 'tasmax': {'note': 'important info about tasmax'}}
     change_attr_prefix: str
-        Replace "cat:" in the catalogue global attrs by this new string
+        Replace "cat:" in the catalog global attrs by this new string
     to_level: str
         The processing level to assign to the output.
 
