@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "change_units",
     "clean_up",
+    "get_cat_attrs",
     "maybe_unstack",
     "minimum_calendar",
     "natural_sort",
