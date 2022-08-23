@@ -15,7 +15,7 @@ on:
       - .yamllint.yaml
       - AUTHORS.rst
       - CONTRIBUTING.rst
-      - docs/**.ipynb
+      - docs/notebooks
       - docs/*.py
       - docs/*.rst
       - environment-dev.yml
