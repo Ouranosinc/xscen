@@ -221,16 +221,16 @@ def properties_and_measures(
 
     for ds1 in [prop, meas]:
         ds1.attrs = ds.attrs
-        ds1.attrs["cat/xrfreq"] = "fx"
-        ds1.attrs.pop("cat/variable", None)
-        ds1.attrs["cat/frequency"] = "fx"
-        ds1.attrs["cat/timedelta"] = "NAN"
+        ds1.attrs["cat:xrfreq"] = "fx"
+        ds1.attrs.pop("cat:variable", None)
+        ds1.attrs["cat:frequency"] = "fx"
+        ds1.attrs["cat:timedelta"] = "NAN"
         if period:
-            ds1.attrs["cat/date_start"] = date_start
-            ds1.attrs["cat/date_end"] = date_end
+            ds1.attrs["cat:date_start"] = date_start
+            ds1.attrs["cat:date_end"] = date_end
 
-    prop.attrs["cat/processing_level"] = to_level_prop
-    meas.attrs["cat/processing_level"] = to_level_meas
+    prop.attrs["cat:processing_level"] = to_level_prop
+    meas.attrs["cat:processing_level"] = to_level_meas
 
     return prop, meas
 
@@ -297,8 +297,8 @@ def heatmap(
     ds_hmap = ds_hmap.to_dataset(name="heatmap")
 
     ds_hmap.attrs = meas_datasets[0].attrs
-    ds_hmap.attrs["cat/processing_level"] = to_level
-    ds_hmap.attrs.pop("cat/variable", None)
+    ds_hmap.attrs["cat:processing_level"] = to_level
+    ds_hmap.attrs.pop("cat:variable", None)
 
     return ds_hmap
 
@@ -344,7 +344,7 @@ def improved_grid_points(ds1, ds2, to_level: str = "diag-improvedgridpoints"):
     ds_better = ds_better.to_dataset(name="improved_grid_points")
 
     ds_better.attrs = ds2.attrs
-    ds_better.attrs["cat/processing_level"] = to_level
-    ds_better.attrs.pop("cat/variable", None)
+    ds_better.attrs["cat:processing_level"] = to_level
+    ds_better.attrs.pop("cat:variable", None)
 
     return ds_better
