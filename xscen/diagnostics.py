@@ -1,4 +1,5 @@
 import logging
+import warnings
 from pathlib import Path, PosixPath
 from types import ModuleType
 from typing import Optional, Sequence, Tuple, Union
@@ -24,8 +25,8 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "fix_unphysical_values",
     "properties_and_measures",
-    "heatmap",
-    "improved_grid_points",
+    "measures_heatmap",
+    "measures_improvement",
 ]
 
 # TODO: Implement logging, warnings, etc.
@@ -150,7 +151,7 @@ def properties_and_measures(
         It is useful to be able to convert units, because, for the measure, sim and ref need to have similar units.
     to_level_prop: str
         processing_level to give the first output (prop)
-    to_level_meas
+    to_level_meas: str
         processing_level to give the second output (meas)
 
     Returns
@@ -235,9 +236,8 @@ def properties_and_measures(
     return prop, meas
 
 
-def heatmap(
-    meas_datasets: list, name_of_datasets: list = None, to_level: str = "diag-heatmap"
-):
+# TODO: maybe accept dict form to_dataset_dict()
+def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-heatmap"):
     """
     Create a heat map to compare the performance of the different datasets.
     The columns are properties and the rows are datasets.
@@ -246,19 +246,24 @@ def heatmap(
 
     Parameters
     ----------
-    meas_datasets: list
-        List of datasets of measures of properties.
+    meas_datasets: list|dict
+        List or dictionary of datasets of measures of properties.
+        If it is a dictionary, the keys will be used to name the rows.
+        If it is a list, the rows will be given a number.
 
-    name_of_datasets: list
-        List of names for meas_datasets
-        If None, they will be given a number.
-    to_level
+    to_level: str
         processing_level to assign to the output
 
     Returns
     -------
         xr.DataArray
     """
+
+    name_of_datasets = None
+    if isinstance(meas_datasets, dict):
+        name_of_datasets = list(meas_datasets.keys())
+        meas_datasets = list(meas_datasets.values())
+
     hmap = []
     for meas in meas_datasets:
         row = []
@@ -290,7 +295,7 @@ def heatmap(
         hmap,
         coords={
             "datasets": name_of_datasets,
-            "properties": list(meas.data_vars),
+            "properties": list(meas_datasets[0].data_vars),
         },
         dims=["datasets", "properties"],
     )
@@ -303,17 +308,19 @@ def heatmap(
     return ds_hmap
 
 
-def improved_grid_points(ds1, ds2, to_level: str = "diag-improvedgridpoints"):
+def measures_improvement(
+    meas_datasets: Union[list, dict], to_level: str = "diag-improved"
+):
     """
     Calculate the fraction of improved grid points for each properties between two datasets of measures.
 
     Parameters
     ----------
-    ds1: xr.Dataset
-        Initial dataset of measures
-    ds2: xr.Dataset
-        Final dataset of measures. Must have the same variables as ds1.
-    to_level:
+    meas_datasets: list|dict
+     List of 2 datasets: Initial dataset of measures and final (improved) dataset of measures.
+     Both datasets must have the same variables.
+     It is also possible to pass a dictionary where the values are the datasets and the key are not used.
+    to_level: str
         processing_level to assign to the output dataset
 
     Returns
@@ -321,10 +328,19 @@ def improved_grid_points(ds1, ds2, to_level: str = "diag-improvedgridpoints"):
     xr.Dataset
 
     """
+    if isinstance(meas_datasets, dict):
+        meas_datasets = list(meas_datasets.values())
 
+    if len(meas_datasets) != 2:
+        warnings.warn(
+            "meas_datasets has more than 2 datasets."
+            " Only the first 2 will be compared."
+        )
+    ds1 = meas_datasets[0]
+    ds2 = meas_datasets[1]
     percent_better = []
     for var in ds2.data_vars:
-        if "xclim.sdba.measures.RATIO" in ds1.attrs["history"]:
+        if "xclim.sdba.measures.RATIO" in ds1[var].attrs["history"]:
             diff_bias = abs(ds1[var] - 1) - abs(ds2[var] - 1)
         else:
             diff_bias = abs(ds1[var]) - abs(ds2[var])

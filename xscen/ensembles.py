@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import xarray as xr
@@ -7,16 +8,13 @@ from xclim import ensembles
 
 from .catalog import generate_id  # ProjectCatalog
 
-# from typing import Optional, Union
-
-
 logger = logging.getLogger(__name__)
 
 __all__ = ["ensemble_stats"]
 
 
 def ensemble_stats(
-    datasets: list,
+    datasets: Any,
     create_kwargs: dict = None,
     statistics: str = "ensemble_percentiles",
     stats_kwargs: dict = None,
@@ -28,9 +26,11 @@ def ensemble_stats(
 
     Parameters
     ----------
-    datasets: list
-        List of file paths or xarray Dataset/DataArray objects to include in the ensemble
-        Tip: With a project catalog, you can do: `datasets = list(pcat.search(**search_dict).df.path)` to get a list of paths.
+    datasets: Any
+        List of file paths or xarray Dataset/DataArray objects to include in the ensemble.
+        A dictionary can be passed instead of a list, in which case the keys are used as coordinates along the new
+        `realization` axis.
+        Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
     create_kwargs: dict
         Dictionary of arguments for xclim.ensembles.create_ensemble.
     statistics: str
