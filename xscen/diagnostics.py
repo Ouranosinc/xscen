@@ -138,7 +138,7 @@ def properties_and_measures(
       tuples (indicator name, indicator) as returned by `iter_indicators()`.
     period: lst
         [start, end] of the period to be evaluated. The period will be selected on ds
-        and dref_for_measure if it is given.
+        and dref_for_measure it it is given.
     unstack: bool
         Whether to unstack ds before computing the properties.
     dref_for_measure: xr.Dataset
@@ -202,6 +202,8 @@ def properties_and_measures(
     prop = xr.Dataset()  # dataset with all properties
     meas = xr.Dataset()  # dataset with all measures
     for i, ind in enumerate(properties, 1):
+        if isinstance(ind, tuple):
+            iden, ind = ind
         # Make the call to xclim
         out = ind(ds=ds)
         vname = out.name
@@ -299,7 +301,9 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
     )
     ds_hmap = ds_hmap.to_dataset(name="heatmap")
 
-    ds_hmap.attrs = meas_datasets[0].attrs
+    ds_hmap.attrs = xr.core.merge.merge_attrs(
+        [ds.attrs for ds in meas_datasets], combine_attrs="drop_conflicts"
+    )
     ds_hmap.attrs["cat:processing_level"] = to_level
     ds_hmap.attrs.pop("cat:variable", None)
 
