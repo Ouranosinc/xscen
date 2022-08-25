@@ -112,7 +112,7 @@ def _invert_unphysical_temperatures(
 
 # TODO: just measures?
 
-# TODO: add this to top-level
+
 def properties_and_measures(
     ds: xr.Dataset,
     properties: Union[
@@ -236,7 +236,6 @@ def properties_and_measures(
     return prop, meas
 
 
-# TODO: maybe accept dict form to_dataset_dict()
 def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-heatmap"):
     """
     Create a heat map to compare the performance of the different datasets.
