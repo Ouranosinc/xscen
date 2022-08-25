@@ -202,23 +202,22 @@ def properties_and_measures(
     prop = xr.Dataset()  # dataset with all properties
     meas = xr.Dataset()  # dataset with all measures
     for i, ind in enumerate(properties, 1):
-        if isinstance(ind, tuple):
-            iden, ind = ind
-        else:
-            iden = ind.identifier
-        logger.info(f"{i} - Computing {iden}.")
-
         # Make the call to xclim
-        prop[iden] = ind(ds=ds)
+        out = ind(ds=ds)
+        vname = out.name
+        logger.info(f"{i} - Computing {vname}.")
+        prop[vname] = out
 
         # calculate the measure if a reference dataset is given for the measure
-        if dref_for_measure and iden in dref_for_measure:
-            meas[iden] = ind.get_measure()(sim=prop[iden], ref=dref_for_measure[iden])
+        if dref_for_measure and vname in dref_for_measure:
+            meas[vname] = ind.get_measure()(
+                sim=prop[vname], ref=dref_for_measure[vname]
+            )
             # create a merged long_name
-            prop_ln = prop[iden].attrs.pop("long_name", "").replace(".", "")
-            meas_ln = meas[iden].attrs.pop("long_name", "").lower()
+            prop_ln = prop[vname].attrs.pop("long_name", "").replace(".", "")
+            meas_ln = meas[vname].attrs.pop("long_name", "").lower()
             meas_ln = meas_ln.replace("between the simulation and the reference", "")
-            meas[iden].attrs["long_name"] = f"{prop_ln} {meas_ln}"
+            meas[vname].attrs["long_name"] = f"{prop_ln} {meas_ln}"
 
     for ds1 in [prop, meas]:
         ds1.attrs = ds.attrs
