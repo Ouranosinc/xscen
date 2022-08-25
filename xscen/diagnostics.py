@@ -138,7 +138,7 @@ def properties_and_measures(
       tuples (indicator name, indicator) as returned by `iter_indicators()`.
     period: lst
         [start, end] of the period to be evaluated. The period will be selected on ds
-        and dref_for_measure it it is given.
+        and dref_for_measure if it is given.
     unstack: bool
         Whether to unstack ds before computing the properties.
     dref_for_measure: xr.Dataset
