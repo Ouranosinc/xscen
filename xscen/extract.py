@@ -291,6 +291,15 @@ def extract_dataset(
                         catalog[key].df["xrfreq"].iloc[0]
                         == variables_and_freqs[var_name]
                     ):
+                        counts = da.time.resample(
+                            time=variables_and_freqs[var_name]
+                        ).count()
+                        if any(counts > 1):
+                            raise ValueError(
+                                "Dataset is labelled as having a sampling frequency of "
+                                f"{variables_and_freqs[var_name]}, but some periods have more than one data point."
+                            )
+                        da["time"] = counts.time
                         ds = ds.assign({var_name: da})
                     else:
                         raise ValueError(
