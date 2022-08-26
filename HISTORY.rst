@@ -2,6 +2,22 @@
 History
 =======
 
+v0.4.0 (unreleased)
+-------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* N/A
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* N/A
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Small bugfixes in aggregate.py (:pull:`55`).
+
 v0.3.0 (2022-08-23)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
