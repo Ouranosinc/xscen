@@ -336,7 +336,7 @@ def spatial_mean(
         # Prepare the History field
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"xarray.mean(dim={spatial_dims}) - xarray v{xr.__version__}"
+            f"xarray.mean(dim={kwargs['dim']}) - xarray v{xr.__version__}"
         )
 
     # This calls .interp() to a pair of coordinates
