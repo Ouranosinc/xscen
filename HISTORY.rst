@@ -16,7 +16,7 @@ Breaking changes
 
 Internal changes
 ^^^^^^^^^^^^^^^^
-* Small bugfixes in aggregate.py
+* Small bugfixes in aggregate.py (:pull:`55`).
 
 v0.3.0 (2022-08-23)
 -------------------
