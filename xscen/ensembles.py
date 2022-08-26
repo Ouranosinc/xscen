@@ -56,7 +56,7 @@ def ensemble_stats(
     logger.info(f"Creating ensemble with {len(datasets)} and calculating {statistics}.")
 
     # if input files are .zarr, change the engine automatically
-    if isinstance(datasets[0], (str, Path)):
+    if isinstance(datasets, list) and isinstance(datasets[0], (str, Path)):
         if len(datasets) > 1:
             create_kwargs.setdefault("mf_flag", True)
         path = Path(datasets[0])
@@ -74,6 +74,7 @@ def ensemble_stats(
                 create_kwargs.pop("mf_flag", None)
                 create_kwargs.pop("resample_freq", None)
                 create_kwargs.pop("calendar", None)
+                create_kwargs.pop("preprocess", None)
                 ds = xr.open_dataset(datasets[i], **create_kwargs)
             else:
                 ds = datasets[i]

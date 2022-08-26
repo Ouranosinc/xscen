@@ -18,7 +18,7 @@ from xclim.sdba import measures
 from .catalog import DataCatalog
 from .indicators import load_xclim_module
 from .io import save_to_zarr
-from .utils import maybe_unstack, unstack_fill_nan
+from .utils import change_units, maybe_unstack, unstack_fill_nan
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ def properties_and_measures(
     period: list = None,
     unstack: bool = False,
     dref_for_measure: Optional[xr.Dataset] = None,
-    unit_conversion: Optional[dict] = None,
+    change_units_arg: Optional[dict] = None,
     to_level_prop: str = "diag-properties",
     to_level_meas: str = "diag-measures",
 ):
@@ -146,9 +146,9 @@ def properties_and_measures(
         Ideally, this is the first output (prop) of a previous call to this function.
         Only measures on properties that are provided both in this dataset and in the properties list will be computed.
         If None, the second output of the function (meas) will be an empty Dataset.
-    unit_conversion: dict
-        Dictionary of unit conversion to apply to ds before computing the properties.
-        It is useful to be able to convert units, because, for the measure, sim and ref need to have similar units.
+    change_units_arg: dict
+        If not None, call `xscen.utils.change_units` on ds before computing properties using this dictionary for the `variables_and_units` argument.
+        It can be useful to convert units before computing the properties, because it is sometimes easier to convert the units of the variables than the units of the properties (eg. variance).
     to_level_prop: str
         processing_level to give the first output (prop)
     to_level_meas: str
@@ -195,9 +195,8 @@ def properties_and_measures(
     if unstack:
         ds = unstack_fill_nan(ds)
 
-    unit_conversion = unit_conversion or {}
-    for var, unit in unit_conversion.items():
-        ds[var] = convert_units_to(ds[var], unit)
+    if change_units_arg:
+        ds = change_units(ds, variables_and_units=change_units_arg)
 
     prop = xr.Dataset()  # dataset with all properties
     meas = xr.Dataset()  # dataset with all measures
