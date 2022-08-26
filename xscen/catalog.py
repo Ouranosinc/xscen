@@ -14,6 +14,7 @@ from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
 
 import cftime
 import dask
+import dask.bag as bag
 import fsspec as fs
 import intake_esm
 import netCDF4
@@ -627,17 +628,16 @@ def _get_asset_list(root_paths, globpat="*.nc", parallel_depth=1):
                     dirs.append(x)
 
         filelist = [_file_dir_files(directory, globpat) for directory in dirs]
-        # watch progress
-        with ProgressBar():
-            filelist = dask.compute(*filelist)
-        filecoll[root] = list(itertools.chain(*filelist))
+        filecoll[root] = filelist
 
         # add files in the first directory, unless the glob pattern includes
         # folder matching, in which case we don't want to risk recomputing the same parsing.
         if "/" not in globpat:
-            filecoll[root].extend([str(x.name) for x in root.glob(f"{globpat}")])
-        filecoll[root].sort()
+            filecoll[root].append([str(x.name) for x in root.glob(f"{globpat}")])
 
+    with ProgressBar():
+        (filecoll,) = dask.compute(filecoll)
+    filecoll = {root: list(itertools.chain(*lists)) for root, lists in filecoll.items()}
     return filecoll
 
 
@@ -645,9 +645,11 @@ def _name_parser(
     path,
     root,
     patterns,
+    columns: Sequence[str] = None,
     read_from_file=None,
     attrs_map: Mapping[str, Any] = None,
     xr_open_kwargs: Mapping[str, Any] = None,
+    logr: logging.Logger = None,
 ):
     """Extract metadata information from the file path.
 
@@ -657,12 +659,16 @@ def _name_parser(
       Full file path.
     patterns : list or str
       List of patterns to try in `reverse_format`
+    columns : list of string, optional
+      If given, the metadata is restricted to fields from this list.
     read_from_file : list of string or dict, optional
       If not None, passed directly to :py:func:`parse_from_ds` as `names`.
-    attrs_map: dict
+    attrs_map: dict, optional
       If `read_from_file` is not None, passed directly to :py:func:`parse_from_ds`.
-    xr_open_kwargs: dict
+    xr_open_kwargs: dict, optional
       If required, arguments to send to xr.open_dataset() when opening the file to read the attributes.
+    logr : logging.Logger, optional
+      A Logger object. If given, this function sends some "debug" lines.
 
     Returns
     -------
@@ -692,10 +698,12 @@ def _name_parser(
         except ValueError:
             continue
     if not d:
-        logger.debug(f"No pattern matched with path {path}")
+        if logr:
+            logr.debug(f"No pattern matched with path {path}")
         return {"path": None}
 
-    logger.debug(f"Parsed file path {path} and got {len(d)} fields.")
+    if logr:
+        logr.debug(f"Parsed file path {path} and got {len(d)} fields.")
 
     # files with a single year/month
     if "date_end" not in d and "date_start" in d:
@@ -710,14 +718,15 @@ def _name_parser(
                 abs_path, names=read_from_file, attrs_map=attrs_map, **xr_open_kwargs
             )
         except Exception as err:
-            logger.error(f"Unable to parse file {path}, got : {err}")
+            if logr:
+                logr.error(f"Unable to parse file {path}, got : {err}")
         else:
             d.update(fromfile)
     # strip to clean off lost spaces and line jumps
     return {
         k: v.strip() if isinstance(v, str) else v
         for k, v in d.items()
-        if not k.startswith("*") and not k.startswith("?")  # Wildcards
+        if not k.startswith("*") and not k.startswith("?") and k in columns
     }
 
 
@@ -845,32 +854,26 @@ def parse_directory(
         f"Found {sum(len(filelist) for filelist in filecoll.values())} files to parse."
     )
 
-    # Parse the file names
-    def _update_dict(entry):
-        z = {k: entry.get(k) for k in columns}
-        return z
+    paths = bag.from_sequence(
+        [(x, root) for root, filelist in filecoll.items() for x in filelist]
+    )
 
-    @dask.delayed
-    def delayed_parser(*args, **kwargs):
-        return _update_dict(_name_parser(*args, **kwargs))
+    def _wrap_name_parser(path_and_root, *args, **kwargs):
+        path, root = path_and_root
+        return _name_parser(path, root, *args, **kwargs)
 
-    parsed = [
-        delayed_parser(
-            x,
-            root,
-            patterns,
-            read_from_file=read_from_file if not read_file_groups else None,
-            attrs_map=attrs_map,
-            xr_open_kwargs=xr_open_kwargs,
-        )
-        for root, filelist in filecoll.items()
-        for x in filelist
-    ]
-    if len(parsed) == 0:
-        raise FileNotFoundError("No files found while parsing.")
+    parsed = paths.map(
+        _wrap_name_parser,
+        patterns,
+        columns=columns,
+        read_from_file=read_from_file if not read_file_groups else None,
+        attrs_map=attrs_map,
+        xr_open_kwargs=xr_open_kwargs,
+    )
 
     with ProgressBar():
-        parsed = dask.compute(*parsed)
+        parsed = list(parsed.compute())
+
     # Path has become NaN when some paths didn't fit any passed pattern
     df = pd.DataFrame(parsed).dropna(axis=0, subset=["path"])
 
