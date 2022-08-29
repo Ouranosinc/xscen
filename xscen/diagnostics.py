@@ -198,6 +198,8 @@ def properties_and_measures(
     for i, ind in enumerate(properties, 1):
         if isinstance(ind, tuple):
             iden, ind = ind
+        else:
+            iden = ind.identifier
         # Make the call to xclim
         logger.info(f"{i} - Computing {iden}.")
         out = ind(ds=ds)
