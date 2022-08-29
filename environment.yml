@@ -25,6 +25,7 @@ dependencies:
   # IO
   - h5py
   - netCDF4
+  - pyarrow
   - zarr
   # For intake-esm (so that conda installs the dependencies and not pip)
   - fastprogress
