@@ -214,7 +214,6 @@ def properties_and_measures(
             # create a merged long_name
             prop_ln = prop[vname].attrs.pop("long_name", "").replace(".", "")
             meas_ln = meas[vname].attrs.pop("long_name", "").lower()
-            meas_ln = meas_ln.replace("between the simulation and the reference", "")
             meas[vname].attrs["long_name"] = f"{prop_ln} {meas_ln}"
 
     for ds1 in [prop, meas]:
