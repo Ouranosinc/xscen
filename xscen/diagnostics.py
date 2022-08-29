@@ -204,9 +204,9 @@ def properties_and_measures(
         if isinstance(ind, tuple):
             iden, ind = ind
         # Make the call to xclim
+        logger.info(f"{i} - Computing {iden}.")
         out = ind(ds=ds)
         vname = out.name
-        logger.info(f"{i} - Computing {vname}.")
         prop[vname] = out
 
         # calculate the measure if a reference dataset is given for the measure
