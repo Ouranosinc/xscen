@@ -147,7 +147,7 @@ def properties_and_measures(
         Only measures on properties that are provided both in this dataset and in the properties list will be computed.
         If None, the second output of the function (meas) will be an empty Dataset.
     change_units_arg: dict
-        If not None, call `xscen.utils.change_units` on ds before computing properties using this dictionary for the `variables_and_units` argument.
+        If not None, calls `xscen.utils.change_units` on ds before computing properties using this dictionary for the `variables_and_units` argument.
         It can be useful to convert units before computing the properties, because it is sometimes easier to convert the units of the variables than the units of the properties (eg. variance).
     to_level_prop: str
         processing_level to give the first output (prop)
