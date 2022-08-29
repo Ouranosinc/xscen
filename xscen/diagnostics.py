@@ -271,7 +271,7 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
         # append all properties
         hmap.append(row)
 
-    # plot heat map of biases ( 1 column per properties, 1 column for sim , 1 column for scen)
+    # plot heatmap of biases ( 1 column per properties, 1 column for sim , 1 column for scen)
     hmap = np.array(hmap)
     # normalize to 0-1 -> best-worst
     hmap = np.array(
