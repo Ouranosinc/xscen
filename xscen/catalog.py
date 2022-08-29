@@ -14,7 +14,6 @@ from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
 
 import cftime
 import dask
-import dask.bag as bag
 import fsspec as fs
 import intake_esm
 import netCDF4
@@ -557,10 +556,14 @@ def concat_data_catalogs(*dcs):
 
 
 @parse_config
-def _get_asset_list(root_paths, globpat="*.nc", parallel_depth=1):
+def _get_asset_list(root_paths, globpat="*.nc", parallel_depth=1, compute=True):
     """List files fitting a given glob pattern from a list of paths.
 
-    Search is done with GNU's `find` and parallized through `dask`.
+    Search is done with GNU's `find` and parallelized through `dask`.
+
+    Parameters
+    ----------
+    root_paths: Sequence of strings or paths
     """
     if isinstance(root_paths, str):
         root_paths = [root_paths]
@@ -615,7 +618,7 @@ def _get_asset_list(root_paths, globpat="*.nc", parallel_depth=1):
             output = []
         return output
 
-    filecoll = dict()
+    files = list()
     for r in root_paths:
         root = Path(r)
         dirs = []
@@ -627,25 +630,25 @@ def _get_asset_list(root_paths, globpat="*.nc", parallel_depth=1):
                         dirs.remove(x.parent)
                     dirs.append(x)
 
-        filelist = [_file_dir_files(directory, globpat) for directory in dirs]
-        filecoll[root] = filelist
+        files.extend(
+            [(root, _file_dir_files(directory, globpat)) for directory in dirs]
+        )
 
         # add files in the first directory, unless the glob pattern includes
         # folder matching, in which case we don't want to risk recomputing the same parsing.
         if "/" not in globpat:
-            filecoll[root].append([str(x.name) for x in root.glob(f"{globpat}")])
+            files.append((root, [str(x.name) for x in root.glob(f"{globpat}")]))
 
-    with ProgressBar():
-        (filecoll,) = dask.compute(filecoll)
-    filecoll = {root: list(itertools.chain(*lists)) for root, lists in filecoll.items()}
-    return filecoll
+    if compute:
+        with ProgressBar():
+            (files,) = dask.compute(files)
+    return files
 
 
 def _name_parser(
     path,
     root,
     patterns,
-    columns: Sequence[str] = None,
     read_from_file=None,
     attrs_map: Mapping[str, Any] = None,
     xr_open_kwargs: Mapping[str, Any] = None,
@@ -722,11 +725,13 @@ def _name_parser(
                 logr.error(f"Unable to parse file {path}, got : {err}")
         else:
             d.update(fromfile)
+
     # strip to clean off lost spaces and line jumps
+    # do not include wildcarded fields
     return {
         k: v.strip() if isinstance(v, str) else v
         for k, v in d.items()
-        if not k.startswith("*") and not k.startswith("?") and k in columns
+        if not k.startswith("*") and not k.startswith("?")
     }
 
 
@@ -823,9 +828,6 @@ def parse_directory(
                 f"Patterns include fields which are not recognized by xscen : {unrecognized}. "
                 "If this is wanted, pass only_official_columns=False to remove the check."
             )
-    else:
-        # Get all columns defined in the patterns
-        columns = pattern_fields.union({"path", "format"})
 
     read_file_groups = False  # Whether to read file per group or not.
     if not isinstance(read_from_file, bool) and not isinstance(read_from_file[0], str):
@@ -847,35 +849,36 @@ def parse_directory(
         attrs_map = {}
 
     # Find files
-    filecoll = _get_asset_list(
-        directories, globpat=globpattern, parallel_depth=parallel_depth
-    )
-    logger.info(
-        f"Found {sum(len(filelist) for filelist in filecoll.values())} files to parse."
+    files = _get_asset_list(
+        directories, globpat=globpattern, parallel_depth=parallel_depth, compute=False
     )
 
-    paths = bag.from_sequence(
-        [(x, root) for root, filelist in filecoll.items() for x in filelist]
-    )
+    @dask.delayed
+    def _wrap_name_parser(paths, root, *args, **kwargs):
+        return [_name_parser(path, root, *args, **kwargs) for path in paths]
 
-    def _wrap_name_parser(path_and_root, *args, **kwargs):
-        path, root = path_and_root
-        return _name_parser(path, root, *args, **kwargs)
-
-    parsed = paths.map(
-        _wrap_name_parser,
-        patterns,
-        columns=columns,
-        read_from_file=read_from_file if not read_file_groups else None,
-        attrs_map=attrs_map,
-        xr_open_kwargs=xr_open_kwargs,
-    )
+    parsed = [
+        _wrap_name_parser(
+            paths,
+            root,
+            patterns,
+            read_from_file=read_from_file if not read_file_groups else None,
+            attrs_map=attrs_map,
+            xr_open_kwargs=xr_open_kwargs,
+        )
+        for root, paths in files
+    ]
 
     with ProgressBar():
-        parsed = list(parsed.compute())
+        (parsed,) = dask.compute(parsed)
+    parsed = itertools.chain(*parsed)
 
     # Path has become NaN when some paths didn't fit any passed pattern
     df = pd.DataFrame(parsed).dropna(axis=0, subset=["path"])
+
+    if only_official_columns:
+        for col in set(COLUMNS) - set(df.columns):
+            df[col] = None
 
     # Parse attributes from one file per group
     def read_first_file(grp, cols):
