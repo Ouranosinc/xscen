@@ -221,7 +221,6 @@ def properties_and_measures(
         ds1.attrs["cat:xrfreq"] = "fx"
         ds1.attrs.pop("cat:variable", None)
         ds1.attrs["cat:frequency"] = "fx"
-        ds1.attrs["cat:timedelta"] = "NAN"
 
     prop.attrs["cat:processing_level"] = to_level_prop
     meas.attrs["cat:processing_level"] = to_level_meas
@@ -271,7 +270,7 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
         # append all properties
         hmap.append(row)
 
-    # plot heatmap of biases ( 1 column per properties, 1 column for sim , 1 column for scen)
+    # plot heatmap of biases (1 column per properties, 1 row per dataset)
     hmap = np.array(hmap)
     # normalize to 0-1 -> best-worst
     hmap = np.array(
