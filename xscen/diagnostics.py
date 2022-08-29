@@ -231,7 +231,7 @@ def properties_and_measures(
 
 def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-heatmap"):
     """
-    Create a heat map to compare the performance of the different datasets.
+    Creates a heatmap to compare the performance of the different datasets.
     The columns are properties and the rows are datasets.
     Each point is the absolute value of the mean of the measure over the whole domain.
     Each column is normalized from 0 (best) to 1 (worst).
