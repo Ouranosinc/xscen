@@ -10,6 +10,14 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New functions ``diagnostics.properties_and_measures``, ``diagnostics.measures_heatmap`` and ``diagnostics.measures_improvement``. (:issue:`5`, :pull:`53`)
 
+Breaking changes
+^^^^^^^^^^^^^^^^
+* N/A
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Small bugfixes in aggregate.py (:pull:`55`, :pull:`56`).
+
 v0.3.0 (2022-08-23)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
