@@ -177,11 +177,6 @@ def properties_and_measures(
     else:
         logger.info(f"Computing {N} properties.")
 
-    # select periods for ds
-    if period is not None and "time" in ds:
-        ds = ds.sel({"time": slice(str(period[0]), str(period[1]))})
-        date_start = ds.time.values[0]
-        date_end = ds.time.values[-1]
     # select periods for ref_measure
     if (
         dref_for_measure is not None
@@ -208,6 +203,8 @@ def properties_and_measures(
         vname = out.name
         logger.info(f"{i} - Computing {vname}.")
         prop[vname] = out
+        if period:
+            prop[vname].attrs["period"] = f"{period[0]}-{period[1]}"
 
         # calculate the measure if a reference dataset is given for the measure
         if dref_for_measure and vname in dref_for_measure:
@@ -226,9 +223,6 @@ def properties_and_measures(
         ds1.attrs.pop("cat:variable", None)
         ds1.attrs["cat:frequency"] = "fx"
         ds1.attrs["cat:timedelta"] = "NAN"
-        if period:
-            ds1.attrs["cat:date_start"] = date_start
-            ds1.attrs["cat:date_end"] = date_end
 
     prop.attrs["cat:processing_level"] = to_level_prop
     meas.attrs["cat:processing_level"] = to_level_meas
