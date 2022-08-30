@@ -637,7 +637,7 @@ def _get_asset_list(root_paths, globpat="*.nc", parallel_depth=1, compute=True):
         # add files in the first directory, unless the glob pattern includes
         # folder matching, in which case we don't want to risk recomputing the same parsing.
         if "/" not in globpat:
-            files.append((root, [str(x.name) for x in root.glob(f"{globpat}")]))
+            files.append((root, [str(x.absolute()) for x in root.glob(f"{globpat}")]))
 
     if compute:
         with ProgressBar():
@@ -871,7 +871,12 @@ def parse_directory(
 
     with ProgressBar():
         (parsed,) = dask.compute(parsed)
-    parsed = itertools.chain(*parsed)
+    parsed = list(itertools.chain(*parsed))
+
+    if not parsed:
+        raise ValueError("No files found.")
+    else:
+        logger.info(f"Found and parsed {len(parsed)} files.")
 
     # Path has become NaN when some paths didn't fit any passed pattern
     df = pd.DataFrame(parsed).dropna(axis=0, subset=["path"])
