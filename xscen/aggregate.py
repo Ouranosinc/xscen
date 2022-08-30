@@ -220,8 +220,7 @@ def compute_deltas(
         new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {_kind} delta vs. {reference_horizon} - xarray v{xr.__version__}"
         history = (
             new_history + " \n " + deltas[v_name].attrs["history"]
-            if "history"
-            in deltas[f"{vv}_delta_{reference_horizon.replace('-', '_')}"].attrs
+            if "history" in deltas[v_name].attrs
             else new_history
         )
         deltas[v_name].attrs["history"] = history
@@ -233,7 +232,7 @@ def compute_deltas(
         pd.to_datetime(f"{y}, {m}, {d}")
         for y, m, d in zip(deltas.year.values, deltas.month.values, deltas.day.values)
     ]
-    deltas = deltas.assign_coords(time=time_coord).transpose("time", ...)
+    deltas = deltas.assign(time=time_coord).transpose("time", ...)
     deltas = deltas.reindex_like(ds)
 
     if to_level is not None:
@@ -313,17 +312,17 @@ def spatial_mean(
             spatial_dims = []
             for d in ["X", "Y"]:
                 if d in ds.cf.axes:
-                    spatial_dims.extend([ds.cf[d]])
+                    spatial_dims.extend([ds.cf[d].name])
                 elif (
                     (d == "X")
-                    & ("longitude" in ds.cf.coordinates)
-                    & (len(ds[ds.cf.coordinates["longitude"][0]].dims) == 1)
+                    and ("longitude" in ds.cf.coordinates)
+                    and (len(ds[ds.cf.coordinates["longitude"][0]].dims) == 1)
                 ):
                     spatial_dims.extend(ds.cf.coordinates["longitude"])
                 elif (
                     (d == "Y")
-                    & ("latitude" in ds.cf.coordinates)
-                    & (len(ds[ds.cf.coordinates["latitude"][0]].dims) == 1)
+                    and ("latitude" in ds.cf.coordinates)
+                    and (len(ds[ds.cf.coordinates["latitude"][0]].dims) == 1)
                 ):
                     spatial_dims.extend(ds.cf.coordinates["latitude"])
             if len(spatial_dims) == 0:
@@ -337,7 +336,7 @@ def spatial_mean(
         # Prepare the History field
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"xarray.mean(dim={list(spatial_dims.values())}) - xarray v{xr.__version__}"
+            f"xarray.mean(dim={kwargs['dim']}) - xarray v{xr.__version__}"
         )
 
     # This calls .interp() to a pair of coordinates
