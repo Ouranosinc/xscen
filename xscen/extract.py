@@ -131,7 +131,7 @@ def extract_dataset(
     xr_open_kwargs: dict = None,
     xr_combine_kwargs: dict = None,
     preprocess: Callable = None,
-    resampling_method: Optional[str] = None,
+    resample_method: Optional[str] = None,
 ) -> Union[dict, xr.Dataset]:
     """
     Takes one element of the output of `search_data_catalogs` and returns a dataset,
@@ -163,7 +163,7 @@ def extract_dataset(
       will be passed to `xr.combine_by_coords`.
     preprocess : callable, optional
       If provided, call this function on each dataset prior to aggregation.
-    resampling_method : {'mean', 'min', 'max', 'sum', 'wind_direction'}, optional
+    resample_method : {'mean', 'min', 'max', 'sum', 'wind_direction'}, optional
       The resampling method. If None (default), it is guessed from the variable name and frequency,
       using the mapping in CVs/resampling_methods.json. If the variable is not found there,
       "mean" is used by default.
@@ -291,7 +291,7 @@ def extract_dataset(
                                     da,
                                     variables_and_freqs[var_name],
                                     ds=ds_ts,
-                                    method=resampling_method,
+                                    method=resample_method,
                                 )
                             }
                         )
