@@ -177,6 +177,10 @@ def properties_and_measures(
     else:
         logger.info(f"Computing {N} properties.")
 
+    # select period for ds
+    if period is not None and "time" in ds:
+        ds = ds.sel({"time": slice(str(period[0]), str(period[1]))})
+
     # select periods for ref_measure
     if (
         dref_for_measure is not None
