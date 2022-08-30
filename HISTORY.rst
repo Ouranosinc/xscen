@@ -8,7 +8,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliet
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* N/A
+* Add argument `resample_method` to `xs.extract.resample`. (:issue:`57`, :pull:`57`)
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -17,6 +17,7 @@ Breaking changes
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Small bugfixes in aggregate.py (:pull:`55`, :pull:`56`).
+* Default method of `xs.extract.resample` now depends on frequency. (:issue:`57`, :pull:`57`).
 
 v0.3.0 (2022-08-23)
 -------------------
