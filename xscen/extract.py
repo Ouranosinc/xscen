@@ -379,16 +379,21 @@ def resample(
     var_name = da.name
 
     if method is None:
-        if var_name in CV.resampling_methods.dict["any"]:
+        if (
+            target_frequency in CV.resampling_methods.dict
+            and var_name in CV.resampling_methods.dict[target_frequency]
+        ):
+            method = CV.resampling_methods(target_frequency)[var_name]
+            logger.info(
+                f"Resampling method for {var_name}: '{method}', based on variable name and frequency."
+            )
+
+        elif var_name in CV.resampling_methods.dict["any"]:
             method = CV.resampling_methods("any")[var_name]
             logger.info(
                 f"Resampling method for {var_name}: '{method}', based on variable name."
             )
-        elif target_frequency == "D" and var_name in CV.resampling_methods.dict["D"]:
-            method = CV.resampling_methods("D")[var_name]
-            logger.info(
-                f"Resampling method for {var_name}: '{method}', based on variable name and frequency."
-            )
+
         else:
             method = "mean"
             logger.info(f"Resampling method for {var_name} defaulted to: 'mean'.")
