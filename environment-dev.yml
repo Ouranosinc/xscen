@@ -35,6 +35,7 @@ dependencies:
   - requests
   - xcollection
   # Dev
+  - bumpversion
   - ipykernel
   - ipython
   - jupyter_client

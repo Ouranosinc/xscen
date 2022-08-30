@@ -466,7 +466,7 @@ class ProjectCatalog(DataCatalog):
         ----------
         ds : xarray.Dataset
           Dataset that we want to add to the catalog.
-          The columns of the catalog will be filled from the global attributes starting with 'cat/' of the dataset.
+          The columns of the catalog will be filled from the global attributes starting with 'cat:' of the dataset.
         info_dict: dict
           Optional extra information to fill the catalog.
         path: str
@@ -475,8 +475,8 @@ class ProjectCatalog(DataCatalog):
         d = {}
 
         for col in self.df.columns:
-            if f"cat/{col}" in ds.attrs:
-                d[col] = ds.attrs[f"cat/{col}"]
+            if f"cat:{col}" in ds.attrs:
+                d[col] = ds.attrs[f"cat:{col}"]
         if info_dict:
             d.update(info_dict)
 

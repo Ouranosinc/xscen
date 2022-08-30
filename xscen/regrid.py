@@ -100,7 +100,7 @@ def regrid_dataset(
             # if weights_location does no exist, create it
             if not os.path.exists(weights_location):
                 os.makedirs(weights_location)
-            id = ds.attrs["cat/id"] if "cat/id" in ds.attrs else "weights"
+            id = ds.attrs["cat:id"] if "cat:id" in ds.attrs else "weights"
             # give unique name to weights file
             weights_filename = os.path.join(
                 weights_location,
@@ -190,9 +190,9 @@ def regrid_dataset(
 
     out = out.drop_vars("latitude_longitude", errors="ignore")
     # Attrs
-    out.attrs["cat/processing_level"] = to_level
-    out.attrs["cat/domain"] = (
-        ds_grid.attrs["cat/domain"] if "cat/domain" in ds_grid.attrs else None
+    out.attrs["cat:processing_level"] = to_level
+    out.attrs["cat:domain"] = (
+        ds_grid.attrs["cat:domain"] if "cat:domain" in ds_grid.attrs else None
     )
     return out
 

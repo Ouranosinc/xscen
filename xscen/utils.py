@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "change_units",
     "clean_up",
+    "get_cat_attrs",
     "maybe_unstack",
     "minimum_calendar",
     "natural_sort",
@@ -181,6 +182,15 @@ def natural_sort(_list: list):
         convert(c) for c in re.split("([0-9]+)", key)
     ]
     return sorted(_list, key=alphanum_key)
+
+
+def get_cat_attrs(ds: Union[xr.Dataset, dict]):
+    """Return the catalog-specific attributes from a dataset or dictionary."""
+    if isinstance(ds, (xr.Dataset, xr.DataArray)):
+        attrs = ds.attrs
+    else:
+        attrs = ds
+    return {k[4:]: v for k, v in attrs.items() if k.startswith("cat:")}
 
 
 def maybe_unstack(
@@ -369,13 +379,13 @@ def clean_up(
         or use the same substring matching rules as intake_esm:
         - ending with a '*' means checks if the substring is contained in the string
         - starting with a '^' means check if the string starts with the substring.
-        eg. {'global': ['necessary note', '^cat/'], 'tasmax': 'new_name'}
+        eg. {'global': ['necessary note', '^cat:'], 'tasmax': 'new_name'}
     add_attrs: dict
         Dictionary where the keys are the variables and the values are a another dictionary of attributes.
         For global attrs, use the key 'global'.
         eg. {'global': {'title': 'amazing new dataset'}, 'tasmax': {'note': 'important info about tasmax'}}
     change_attr_prefix: str
-        Replace "cat/" in the catalogue global attrs by this new string
+        Replace "cat:" in the catalog global attrs by this new string
     to_level: str
         The processing level to assign to the output.
 
@@ -439,7 +449,7 @@ def clean_up(
         else:
             return a == b
 
-    ds.attrs["cat/processing_level"] = to_level
+    ds.attrs["cat:processing_level"] = to_level
 
     # remove attrs
     if attrs_to_remove:
@@ -472,7 +482,7 @@ def clean_up(
 
     if change_attr_prefix:
         for ds_attr in list(ds.attrs.keys()):
-            new_name = ds_attr.replace("cat/", change_attr_prefix)
+            new_name = ds_attr.replace("cat:", change_attr_prefix)
             if new_name:
                 ds.attrs[new_name] = ds.attrs.pop(ds_attr)
 

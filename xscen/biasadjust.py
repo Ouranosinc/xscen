@@ -171,9 +171,9 @@ def train(
     }
 
     # attrs that are needed to open with .to_dataset_dict()
-    for a in ["cat/xrfreq", "cat/domain", "cat/id"]:
+    for a in ["cat:xrfreq", "cat:domain", "cat:id"]:
         ds.attrs[a] = dhist.attrs[a] if a in dhist.attrs else None
-    ds.attrs["cat/processing_level"] = f"training_{var[0]}"
+    ds.attrs["cat:processing_level"] = f"training_{var[0]}"
 
     return ds
 
@@ -287,12 +287,12 @@ def adjust(
     dscen = xr.Dataset(data_vars={var: dscen}, attrs=dsim.attrs)
     # TODO: History, attrs, etc. (TODO kept from previous version of `biasadjust`)
     # TODO: Check for variables to add (grid_mapping, etc.) (TODO kept from previous version of `biasadjust`)
-    dscen.attrs["cat/processing_level"] = to_level
-    dscen.attrs["cat/variable"] = parse_from_ds(dscen, ["variable"])["variable"]
+    dscen.attrs["cat:processing_level"] = to_level
+    dscen.attrs["cat:variable"] = parse_from_ds(dscen, ["variable"])["variable"]
     if bias_adjust_institution is not None:
-        dscen.attrs["cat/bias_adjust_institution"] = bias_adjust_institution
+        dscen.attrs["cat:bias_adjust_institution"] = bias_adjust_institution
     if bias_adjust_project is not None:
-        dscen.attrs["cat/bias_adjust_project"] = bias_adjust_project
+        dscen.attrs["cat:bias_adjust_project"] = bias_adjust_project
 
     if moving_yearly_window:
         dscen = unpack_moving_yearly_window(dscen)
