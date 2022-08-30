@@ -8,7 +8,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliet
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* Add argument `resample_method` to `xs.extract.resample`. (:issue:`57`, :pull:`57`)
+* Add argument `resample_methods` to `xs.extract.resample`. (:issue:`57`, :pull:`57`)
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
