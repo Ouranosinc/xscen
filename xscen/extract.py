@@ -131,6 +131,7 @@ def extract_dataset(
     xr_open_kwargs: dict = None,
     xr_combine_kwargs: dict = None,
     preprocess: Callable = None,
+    resampling_method: Optional[str] = None,
 ) -> Union[dict, xr.Dataset]:
     """
     Takes one element of the output of `search_data_catalogs` and returns a dataset,
@@ -162,6 +163,10 @@ def extract_dataset(
       will be passed to `xr.combine_by_coords`.
     preprocess : callable, optional
       If provided, call this function on each dataset prior to aggregation.
+    resampling_method : {'mean', 'min', 'max', 'sum', 'wind_direction'}, optional
+      The resampling method. If None (default), it is guessed from the variable name and frequency,
+      using the mapping in CVs/resampling_methods.json. If the variable is not found there,
+      "mean" is used by default.
 
     Returns
     -------
@@ -283,7 +288,10 @@ def extract_dataset(
                         ds = ds.assign(
                             {
                                 var_name: resample(
-                                    da, variables_and_freqs[var_name], ds=ds_ts
+                                    da,
+                                    variables_and_freqs[var_name],
+                                    ds=ds_ts,
+                                    method=resampling_method,
                                 )
                             }
                         )
@@ -354,7 +362,7 @@ def resample(
     ds : xr.Dataset, optional
       The "wind_direction" resampling method needs extra variables, which can be given here.
     method : {'mean', 'min', 'max', 'sum', 'wind_direction'}, optional
-      The resampling method. If None (default), it is guessed from the variable name,
+      The resampling method. If None (default), it is guessed from the variable name and frequency,
       using the mapping in CVs/resampling_methods.json. If the variable is not found there,
       "mean" is used by default.
 
@@ -367,10 +375,15 @@ def resample(
     var_name = da.name
 
     if method is None:
-        if var_name in CV.resampling_methods.dict:
-            method = CV.resampling_methods(var_name)
+        if var_name in CV.resampling_methods.dict["any"]:
+            method = CV.resampling_methods("any")[var_name]
             logger.info(
                 f"Resampling method for {var_name}: '{method}', based on variable name."
+            )
+        elif target_frequency == "D" and var_name in CV.resampling_methods.dict["D"]:
+            method = CV.resampling_methods("D")[var_name]
+            logger.info(
+                f"Resampling method for {var_name}: '{method}', based on variable name and frequency."
             )
         else:
             method = "mean"
