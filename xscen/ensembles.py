@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import xarray as xr
@@ -7,16 +8,13 @@ from xclim import ensembles
 
 from .catalog import generate_id  # ProjectCatalog
 
-# from typing import Optional, Union
-
-
 logger = logging.getLogger(__name__)
 
 __all__ = ["ensemble_stats"]
 
 
 def ensemble_stats(
-    datasets: list,
+    datasets: Any,
     create_kwargs: dict = None,
     statistics: str = "ensemble_percentiles",
     stats_kwargs: dict = None,
@@ -28,9 +26,11 @@ def ensemble_stats(
 
     Parameters
     ----------
-    datasets: list
-        List of file paths or xarray Dataset/DataArray objects to include in the ensemble
-        Tip: With a project catalog, you can do: `datasets = list(pcat.search(**search_dict).df.path)` to get a list of paths.
+    datasets: Any
+        List of file paths or xarray Dataset/DataArray objects to include in the ensemble.
+        A dictionary can be passed instead of a list, in which case the keys are used as coordinates along the new
+        `realization` axis.
+        Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
     create_kwargs: dict
         Dictionary of arguments for xclim.ensembles.create_ensemble.
     statistics: str
@@ -56,9 +56,7 @@ def ensemble_stats(
     logger.info(f"Creating ensemble with {len(datasets)} and calculating {statistics}.")
 
     # if input files are .zarr, change the engine automatically
-    if isinstance(datasets[0], (str, Path)):
-        if len(datasets) > 1:
-            create_kwargs.setdefault("mf_flag", True)
+    if isinstance(datasets, list) and isinstance(datasets[0], (str, Path)):
         path = Path(datasets[0])
         if path.suffix == ".zarr" and "engine" not in create_kwargs:
             create_kwargs["engine"] = "zarr"
@@ -74,6 +72,7 @@ def ensemble_stats(
                 create_kwargs.pop("mf_flag", None)
                 create_kwargs.pop("resample_freq", None)
                 create_kwargs.pop("calendar", None)
+                create_kwargs.pop("preprocess", None)
                 ds = xr.open_dataset(datasets[i], **create_kwargs)
             else:
                 ds = datasets[i]
