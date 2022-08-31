@@ -87,6 +87,11 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
                 kwargs["lat_bnds"][1] + lat_res * region["buffer"],
             )
 
+        if xc.core.utils.uses_dask(ds.cf["longitude"]):
+            ds[ds.cf["longitude"].name].load()
+        if xc.core.utils.uses_dask(ds.cf["latitude"]):
+            ds[ds.cf["latitude"].name].load()
+
         ds_subset = clisops.core.subset_bbox(ds, **kwargs)
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "

@@ -22,6 +22,7 @@ from .aggregate import *
 from .biasadjust import *
 from .catalog import DataCatalog, ProjectCatalog  # noqa
 from .config import CONFIG, load_config  # noqa
+from .diagnostics import properties_and_measures
 from .ensembles import *
 from .extract import extract_dataset, search_data_catalogs  # noqa
 from .indicators import compute_indicators  # noqa
@@ -38,7 +39,7 @@ from .utils import clean_up
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.3.2-beta"
+__version__ = "0.3.3-beta"
 
 
 # monkeypatch so that warnings.warn() doesn't mention itself

@@ -25,6 +25,7 @@ Features
     notebooks/catalog
     notebooks/getting_started
     notebooks/config_usage
+    notebooks/diagnostics
     columns
     api
     contributing
