@@ -986,12 +986,12 @@ def parse_from_ds(
 
     if isinstance(obj, Path) and obj.suffixes[-1] == ".zarr" and not get_time:
         logger.info(f"Parsing attributes from Zarr {obj}.")
-        ds_attrs, variables = _parse_from_zarr(obj, get_vars="variables" in names)
+        ds_attrs, variables = _parse_from_zarr(obj, get_vars="variable" in names)
         time = None
     elif isinstance(obj, Path) and obj.suffixes[-1] == ".nc":
         logger.info(f"Parsing attributes with netCDF4 from {obj}.")
         ds_attrs, variables, time = _parse_from_nc(
-            obj, get_vars="variables" in names, get_time=get_time
+            obj, get_vars="variable" in names, get_time=get_time
         )
     else:
         if isinstance(obj, Path):
@@ -1008,7 +1008,7 @@ def parse_from_ds(
 
     for name in names:
         if name == "variable":
-            attrs["variable"] = tuple(variables)
+            attrs["variable"] = tuple(sorted(variables))
         elif name in ("frequency", "xrfreq") and time is not None and time.size > 3:
             # round to the minute to catch floating point imprecision
             freq = xr.infer_freq(time.round("T"))
@@ -1069,7 +1069,9 @@ def _parse_from_zarr(path: os.PathLike, get_vars=True):
                         list(map(str.strip, var_attrs["coordinates"].split(" ")))
                     )
         variables = [
-            varpath.name for varpath in path.iterdir() if varpath.name not in coords
+            varpath.name
+            for varpath in path.iterdir()
+            if varpath.name not in coords and varpath.is_dir()
         ]
     return ds_attrs, variables
 
