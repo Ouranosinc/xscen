@@ -1,7 +1,7 @@
 import inspect
 import logging
 from pathlib import Path
-from typing import Union
+from typing import Any, Union
 
 import numpy as np
 import xarray as xr
@@ -19,7 +19,7 @@ __all__ = ["ensemble_stats"]
 
 @parse_config
 def ensemble_stats(
-    datasets: Union[list, dict],
+    datasets: Any,
     statistics: dict,
     *,
     create_kwargs: dict = None,
@@ -33,9 +33,11 @@ def ensemble_stats(
 
     Parameters
     ----------
-    datasets: list
-        List of file paths or xarray Dataset/DataArray objects to include in the ensemble
-        Tip: With a project catalog, you can do: `datasets = list(pcat.search(**search_dict).df.path)` to get a list of paths.
+    datasets: Any
+        List of file paths or xarray Dataset/DataArray objects to include in the ensemble.
+        A dictionary can be passed instead of a list, in which case the keys are used as coordinates along the new
+        `realization` axis.
+        Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
     create_kwargs: dict
         Dictionary of arguments for xclim.ensembles.create_ensemble.
     statistics: str
@@ -132,6 +134,7 @@ def ensemble_stats(
         create_kwargs.pop("mf_flag", None)
         create_kwargs.pop("resample_freq", None)
         create_kwargs.pop("calendar", None)
+        create_kwargs.pop("preprocess", None)
 
         ens_stats = clean_up(
             ds=ens_stats, common_attrs_only=datasets, xrkwargs=create_kwargs
