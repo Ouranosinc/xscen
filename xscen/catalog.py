@@ -44,6 +44,7 @@ __all__ = [
     "generate_id",
     "parse_directory",
     "parse_from_ds",
+    "unstack_id",
 ]
 
 
@@ -1212,6 +1213,19 @@ def generate_id(df: Union[pd.DataFrame, xr.Dataset], id_columns: Optional[list] 
 
 
 def unstack_id(df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]) -> dict:
+    """
+    Utility that reverse-engineers an ID using catalog entries.
+
+    Parameters
+    ----------
+    df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]
+        Either a Project/DataCatalog or the pandas DataFrame.
+
+    Returns
+    -------
+    dict
+        Dictionary with one entry per unique ID, which are themselves dictionaries of all the individual parts of the ID.
+    """
 
     if isinstance(df, (ProjectCatalog, DataCatalog)):
         df = df.df

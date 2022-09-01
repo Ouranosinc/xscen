@@ -28,6 +28,7 @@ from .ensembles import *
 from .extract import extract_dataset, search_data_catalogs  # noqa
 from .indicators import compute_indicators  # noqa
 from .io import save_to_netcdf, save_to_zarr  # noqa
+from .reduce import build_reduction_data, reduce_ensemble
 from .regrid import *
 from .scripting import (
     TimeoutException,

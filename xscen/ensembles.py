@@ -14,7 +14,7 @@ from .utils import clean_up
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["ensemble_stats"]
+__all__ = ["ensemble_stats", "generate_weights"]
 
 
 @parse_config
@@ -23,13 +23,12 @@ def ensemble_stats(
     statistics: dict,
     *,
     create_kwargs: dict = None,
-    ref: dict = None,
-    weighted: Union[xr.DataArray, dict] = None,
+    weighted: dict = None,
     common_attrs_only: bool = True,
     to_level: str = "ensemble",
 ) -> xr.Dataset:
     """
-    Create ensemble and calculate statistics on it.
+    Creates an ensemble and computes statistics on it.
 
     Parameters
     ----------
@@ -38,13 +37,21 @@ def ensemble_stats(
         A dictionary can be passed instead of a list, in which case the keys are used as coordinates along the new
         `realization` axis.
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
+    statistics: dict
+        xclim.ensembles statistics to be called. Dictionary in the format {function: arguments}.
+        If a function requires 'ref', the dictionary entry should be the inputs of a .loc[], e.g. {"ref": {"horizons": "1981-2010"}}
     create_kwargs: dict
         Dictionary of arguments for xclim.ensembles.create_ensemble.
-    statistics: str
-        Name of the xclim.ensemble function to call on the ensemble
-        (e.g. "ensemble_percentiles","ensemble_mean_std_max_min")
-    stats_kwargs: dict
-        Dictionary of arguments for the statistics function.
+    weighted: dict
+        'weights': xr.DataArray, optional
+            DataArray of weights along the 'realization' dimension.
+            If absent, 'info' and 'independence_level' will be used to generate weights.
+        'info': dict, optional
+            Dictionary in the format {realization: attrs} detailing each realization.
+            If absent, the attributes will be guessed using the datasets' metadata.
+        'independence_level': str
+            ['all', 'GCM'] Whether to consider all simulations independent or to weight "1 GCM 1 vote".
+            This entry is required unless weights are explicitely given in weighted["weights"].
     common_attrs_only:
         If True, keeps only the global attributes that are the same for all datasets and generate new id.
         If False, keeps global attrs of the first dataset (same behaviour as xclim.ensembles.create_ensemble)
@@ -109,11 +116,8 @@ def ensemble_stats(
             and "weights" in inspect.getfullargspec(getattr(ensembles, stat))[0]
         ):
             stats_kwargs.setdefault("weights", weights)
-        if (
-            ref is not None
-            and "ref" in inspect.getfullargspec(getattr(ensembles, stat))[0]
-        ):
-            stats_kwargs.setdefault("ref", ens.loc[ref])
+        if "ref" in stats_kwargs:
+            stats_kwargs["ref"] = ens.loc[stats_kwargs["ref"]]
 
         if stat == "change_significance":
             for v in ens.data_vars:
@@ -148,9 +152,32 @@ def ensemble_stats(
     return ens_stats
 
 
-def generate_weights(ens, info, independence_level: str = "all"):
+def generate_weights(
+    ens: Union[xr.Dataset, xr.DataArray],
+    info: dict = None,
+    independence_level: str = "all",
+) -> xr.DataArray:
+    """
+    Uses realization attributes to automatically generate weights along the 'realization' dimension.
 
-    # TODO: Weights along the horizon dimension
+    Parameters
+    ----------
+    ens: xr.Dataset, xr.DataArray
+        Result of xclim.ensembles.create_ensemble, with datasets aligned on a dimension 'realization'.
+    info: dict
+        Dictionary in the format {realization: attrs} detailing each realization. Only required if independence_level != 'all'.
+        The minimum required fields are 'activity' and 'source', with also 'driving_model' for regional models.
+    independence_level: str
+        'all': All realizations with a unique ID are considered independent.
+        'GCM': Weights using the method '1 GCM - 1 Vote'
+
+    Returns
+    -------
+    xr.DataArray
+        Weights along the 'realization' dimension.
+    """
+
+    # TODO: 2-D weights along the horizon dimension, in the case of
 
     # Prepare an array of 0s, with size == nb. realization
     weights = xr.zeros_like(ens.realization, dtype=int)
@@ -160,13 +187,6 @@ def generate_weights(ens, info, independence_level: str = "all"):
         # Weight == 0 means it hasn't been processed yet
         if weights.sel(realization=r) == 0:
             sim = ens.sel(realization=r)
-
-            if ("driving_model" in info[r.item()].keys()) and not (
-                str(info[r.item()].get("driving_model", None)) in (["nan", "None"])
-            ):
-                gcm = info[r.item()].get("driving_model", None)
-            else:
-                gcm = info[r.item()].get("source", None)
 
             # Exact group corresponding to the current simulation
             group = ens.sel(
@@ -189,6 +209,13 @@ def generate_weights(ens, info, independence_level: str = "all"):
             )
 
             if independence_level == "GCM":
+                if ("driving_model" in info[r.item()].keys()) and not (
+                    str(info[r.item()].get("driving_model", None)) in (["nan", "None"])
+                ):
+                    gcm = info[r.item()].get("driving_model", None)
+                else:
+                    gcm = info[r.item()].get("source", None)
+
                 # Global models
                 group_g = ens.sel(
                     realization=[
