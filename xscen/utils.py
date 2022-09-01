@@ -323,15 +323,18 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
 
 def clean_up(
     ds: xr.Dataset,
+    *,
+    xrkwargs: dict = None,
     variables_and_units: Optional[dict] = None,
     convert_calendar_kwargs: Optional[dict] = None,
     missing_by_var: Optional[dict] = None,
     maybe_unstack_dict: Optional[dict] = None,
+    common_attrs_only: Union[dict, list] = None,
     attrs_to_remove: Optional[dict] = None,
     remove_all_attrs_except: Optional[dict] = None,
     add_attrs: Optional[dict] = None,
     change_attr_prefix: Optional[str] = None,
-    to_level: Optional[str] = "cleanedup",
+    to_level: Optional[str] = None,
 ):
     """Clean up of the dataset.
 
@@ -350,6 +353,8 @@ def clean_up(
     ----------
     ds: xr.Dataset
         Input dataset to clean up
+    xrkwargs: dict
+        Dictionary of arguments for xclim.open_dataset(). Used with common_attrs_only if given paths.
     variables_and_units: dict
         Dictionary of variable to convert. eg. {'tasmax': 'degC', 'pr': 'mm d-1'}
     convert_calendar_kwargs: dict
@@ -363,6 +368,9 @@ def clean_up(
     maybe_unstack_dict: dict
         Dictionary to pass to xscen.common.maybe_unstack function.
         The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
+    common_attrs_only: dict, list
+        List of datasets, or path to NetCDF or Zarr files.
+        Keeps only the global attributes that are the same for all datasets and generates a new id.
     attrs_to_remove: dict
         Dictionary where the keys are the variables and the values are a list of the attrs that should be removed.
         For global attrs, use the key 'global'.
@@ -449,7 +457,27 @@ def clean_up(
         else:
             return a == b
 
-    ds.attrs["cat:processing_level"] = to_level
+    if common_attrs_only:
+        xrkwargs = xrkwargs or {}
+        if isinstance(common_attrs_only, dict):
+            common_attrs_only = list(common_attrs_only.values())
+
+        for i in range(len(common_attrs_only)):
+            if isinstance(common_attrs_only[i], (str, Path)):
+                dataset = xr.open_dataset(common_attrs_only[i], **xrkwargs)
+            else:
+                dataset = common_attrs_only[i]
+            attributes = ds.attrs.copy()
+            for a_key, a_val in attributes.items():
+                if (
+                    (a_key not in dataset.attrs)
+                    or (a_key in ["cat:date_start", "cat:date_end"])
+                    or (a_val != dataset.attrs[a_key])
+                ):
+                    del ds.attrs[a_key]
+
+    if to_level:
+        ds.attrs["cat:processing_level"] = to_level
 
     # remove attrs
     if attrs_to_remove:

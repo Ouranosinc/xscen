@@ -12,6 +12,7 @@ from . import (
     extract,
     indicators,
     io,
+    reduce,
     regrid,
     scripting,
     utils,
