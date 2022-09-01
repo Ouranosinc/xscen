@@ -136,6 +136,7 @@ def extract_dataset(
     xr_open_kwargs: dict = None,
     xr_combine_kwargs: dict = None,
     preprocess: Callable = None,
+    resample_methods: Optional[dict] = None,
 ) -> Union[dict, xr.Dataset]:
     """
     Takes one element of the output of `search_data_catalogs` and returns a dataset,
@@ -167,6 +168,12 @@ def extract_dataset(
       will be passed to `xr.combine_by_coords`.
     preprocess : callable, optional
       If provided, call this function on each dataset prior to aggregation.
+    resample_methods : dict, optional
+      Dictionary where the keys are the variables and the values are the resampling method.
+      Options for the resampling method are {'mean', 'min', 'max', 'sum', 'wind_direction'}.
+      If the method is not given for a variable, it is guessed from the variable name and frequency,
+      using the mapping in CVs/resampling_methods.json. If the variable is not found there,
+      "mean" is used by default.
 
     Returns
     -------
@@ -187,6 +194,8 @@ def extract_dataset(
         buffer: float, optional
             Multiplier to apply to the model resolution.
     """
+    resample_methods = resample_methods or {}
+
     # Checks
     # must have all the same processing level and same id
     unique = catalog.unique()
@@ -288,7 +297,10 @@ def extract_dataset(
                         ds = ds.assign(
                             {
                                 var_name: resample(
-                                    da, variables_and_freqs[var_name], ds=ds_ts
+                                    da,
+                                    variables_and_freqs[var_name],
+                                    ds=ds_ts,
+                                    method=resample_methods.get(var_name, None),
                                 )
                             }
                         )
@@ -359,7 +371,7 @@ def resample(
     ds : xr.Dataset, optional
       The "wind_direction" resampling method needs extra variables, which can be given here.
     method : {'mean', 'min', 'max', 'sum', 'wind_direction'}, optional
-      The resampling method. If None (default), it is guessed from the variable name,
+      The resampling method. If None (default), it is guessed from the variable name and frequency,
       using the mapping in CVs/resampling_methods.json. If the variable is not found there,
       "mean" is used by default.
 
@@ -372,11 +384,21 @@ def resample(
     var_name = da.name
 
     if method is None:
-        if var_name in CV.resampling_methods.dict:
-            method = CV.resampling_methods(var_name)
+        if (
+            target_frequency in CV.resampling_methods.dict
+            and var_name in CV.resampling_methods.dict[target_frequency]
+        ):
+            method = CV.resampling_methods(target_frequency)[var_name]
+            logger.info(
+                f"Resampling method for {var_name}: '{method}', based on variable name and frequency."
+            )
+
+        elif var_name in CV.resampling_methods.dict["any"]:
+            method = CV.resampling_methods("any")[var_name]
             logger.info(
                 f"Resampling method for {var_name}: '{method}', based on variable name."
             )
+
         else:
             method = "mean"
             logger.info(f"Resampling method for {var_name} defaulted to: 'mean'.")
