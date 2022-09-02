@@ -382,7 +382,7 @@ def save_to_zarr(
 
     Returns
     -------
-    None
+    dask.delayed object if compute=False, None otherwise.
     """
 
     if rechunk:
@@ -479,7 +479,7 @@ def save_to_zarr(
             )
     else:
         logger.debug(f"Writing {list(ds.data_vars.keys())} for {filename}.")
-        ds.to_zarr(
+        return ds.to_zarr(
             filename, compute=compute, mode="a", encoding=encoding, **zarr_kwargs
         )
 

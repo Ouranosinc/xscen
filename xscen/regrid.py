@@ -29,6 +29,7 @@ def regrid_dataset(
     *,
     regridder_kwargs: Optional[dict] = None,
     intermediate_grids: Optional[dict] = None,
+    skipna: bool = False,
     to_level: str = "regridded",
 ) -> xr.Dataset:
     """
@@ -52,6 +53,8 @@ def regrid_dataset(
         This is useful when there is a large jump in resolution between ds and ds grid.
         The format is a nested dictionary shown in Notes.
         If None, no intermediary grid is used, there is only a regrid from ds to ds_grid.
+    skipna: bool
+      Passed to the regridder.
     to_level: str
       The processing level to assign to the output.
       Defaults to 'regridded'
@@ -123,7 +126,7 @@ def regrid_dataset(
             # The regridder (when fed Datasets) doesn't like if 'mask' is present.
             if "mask" in ds:
                 ds = ds.drop_vars(["mask"])
-            out = regridder(ds, keep_attrs=True)
+            out = regridder(ds, keep_attrs=True, skipna=skipna)
 
             # double-check that grid_mapping information is transferred
             gridmap_out = any(
