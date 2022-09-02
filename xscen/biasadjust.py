@@ -108,7 +108,7 @@ def train(
 
     See Also
     --------
-    xclim.sdba.train
+    # TODO: find what to put here
 
     """
     # TODO: To be adequately fixed later when we add multivariate
@@ -231,7 +231,8 @@ def adjust(
 
     See Also
     --------
-     xclim.sdba.adjustment.TrainAdjust, scipy.stats.skew
+    # TODO: find what to put here
+    scipy.stats.skew
 
     """
     # TODO: To be adequately fixed later
