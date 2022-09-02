@@ -48,6 +48,11 @@ def ensemble_stats(
     -------
     xr.Dataset
         Dataset with ensemble statistics
+
+    See Also
+    --------
+    xclim.ensembles.create_ensemble, xclim.ensembles.ensemble_percentiles , xclim.ensembles.ensemble_mean_std_max_min
+
     """
     if stats_kwargs is None:
         stats_kwargs = {}

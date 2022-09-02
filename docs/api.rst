@@ -18,28 +18,28 @@ Catalog
 Extraction
 ----------
 
-.. automodule:: xscen
+.. automodule:: xscen.extract
    :members:
    :noindex:
 
 Controlled Vocabulary and Mappings
 ----------------------------------
-
-.. automodule:: xscen.CV
+# TODO: do we really want to show something here ? because nothing shows up for now..
+.. automodule:: xscen.CVs
    :members:
    :noindex:
 
 Regridding
 ----------
 
-.. automodule:: xscen
+.. automodule:: xscen.regrid
    :members:
    :noindex:
 
 Bias Adjustment
 ---------------
 
-.. automodule:: xscen
+.. automodule:: xscen.biasadjust
    :members: adjust train
    :noindex:
 

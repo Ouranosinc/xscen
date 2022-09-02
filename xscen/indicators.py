@@ -90,6 +90,10 @@ def compute_indicators(
     dict
       Dictionary (keys = timedeltas) with indicators separated by temporal resolution.
 
+    See Also
+    --------
+    xclim.core.indicator.build_indicator_module_from_yaml
+
     """
     if isinstance(indicators, (str, Path)):
         logger.debug("Loading indicator module.")

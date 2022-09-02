@@ -161,6 +161,10 @@ def properties_and_measures(
     meas: xr.Dataset
         Dataset of measures between prop and dref_for_meas
 
+    See Also
+    --------
+    xclim.sdba.properties, xclim.sdba.measures, xclim.core.indicator.build_indicator_module_from_yaml
+
     """
 
     if isinstance(properties, (str, Path)):

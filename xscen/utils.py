@@ -393,6 +393,11 @@ def clean_up(
     -------
     xr.Dataset
         Cleaned up dataset
+
+    See Also
+    --------
+    xclim.core.calendar.convert_calendar
+
     """
 
     if variables_and_units:
