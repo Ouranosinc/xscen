@@ -231,7 +231,7 @@ def adjust(
 
     See Also
     --------
-    xclim.sdba.adjust
+     xclim.sdba.adjustment.TrainAdjust, scipy.stats.skew
 
     """
     # TODO: To be adequately fixed later

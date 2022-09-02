@@ -81,7 +81,8 @@ napoleon_use_param = False
 napoleon_use_ivar = True
 
 intersphinx_mapping = {
-    "xclim": ("https://xclim.readthedocs.io/en/latest/", None)
+    "xclim": ("https://xclim.readthedocs.io/en/latest/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None)
 }
 
 extlinks = {
