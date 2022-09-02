@@ -80,7 +80,9 @@ napoleon_use_rtype = False
 napoleon_use_param = False
 napoleon_use_ivar = True
 
-intersphinx_mapping = {}
+intersphinx_mapping = {
+    "xclim": ("https://xclim.readthedocs.io/en/latest/", None)
+}
 
 extlinks = {
     "issue": ("https://github.com/Ouranosinc/xscen/issues/%s", "GH/%s"),
