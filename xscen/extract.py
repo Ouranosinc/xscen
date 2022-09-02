@@ -133,6 +133,7 @@ def extract_dataset(
     periods: list = None,
     region: Optional[dict] = None,
     to_level: str = "extracted",
+    ensure_correct_time: bool = True,
     xr_open_kwargs: dict = None,
     xr_combine_kwargs: dict = None,
     preprocess: Callable = None,
@@ -160,6 +161,11 @@ def extract_dataset(
     to_level: str
       The processing level to assign to the output.
       Defaults to 'extracted'
+    ensure_correct_time : bool
+      When True (default), even if the data has the correct frequency, its time coordinate is
+      checked so that it exactly matches the frequency code. For example, daily data given at
+      noon would be transformed to be given at midnight. If the time coordinate is invalid,
+      it raises an error.
     xr_open_kwargs : dict, optional
       A dictionary of keyword arguments to pass to `DataCatalogs.to_dataset_dict`, which
       will be passed to `xr.open_dataset`.
@@ -308,6 +314,14 @@ def extract_dataset(
                         catalog[key].df["xrfreq"].iloc[0]
                         == variables_and_freqs[var_name]
                     ):
+                        if ensure_correct_time:
+                            counts = da.time.resample(time=xrfreq).count()
+                            if any(counts > 1):
+                                raise ValueError(
+                                    "Dataset is labelled as having a sampling frequency of "
+                                    f"{xrfreq}, but some periods have more than one data point."
+                                )
+                            da["time"] = counts.time
                         ds = ds.assign({var_name: da})
                     else:
                         raise ValueError(
