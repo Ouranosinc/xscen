@@ -19,7 +19,6 @@ Features
 * Regridding with xESMF.
 * Bias adjustment with xclim.
 
-
 .. toctree::
     :maxdepth: 2
     :caption: Contents:

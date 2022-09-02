@@ -24,7 +24,6 @@ Extraction
 
 Controlled Vocabulary and Mappings
 ----------------------------------
-# TODO: do we really want to show something here ? because nothing shows up for now..
 .. automodule:: xscen.CVs
    :members:
    :noindex:

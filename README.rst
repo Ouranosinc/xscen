@@ -6,9 +6,6 @@ A climate change scenario-building analysis framework, built with Intake-esm cat
 
 The documentation hosted in this repository is only partial. For the full documentation, please consult: https://scenario.gitlab.ouranos.ca/xscen/ (works only on the Ouranos VPN)
 
-
-
-
 Features
 --------
 * Supports workflows with YAML configuration files for better transparency, reproducibility, and long-term backups.
