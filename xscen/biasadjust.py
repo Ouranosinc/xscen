@@ -108,7 +108,8 @@ def train(
 
     See Also
     --------
-    # TODO: find what to put here
+    xclim.sdba.adjustment.DetrendedQuantileMapping,
+     xclim.sdba.adjustment.ExtremeValues,
 
     """
     # TODO: To be adequately fixed later when we add multivariate
@@ -231,8 +232,8 @@ def adjust(
 
     See Also
     --------
-    # TODO: find what to put here
-    scipy.stats.skew
+    xclim.sdba.adjustment.DetrendedQuantileMapping,
+     xclim.sdba.adjustment.ExtremeValues,
 
     """
     # TODO: To be adequately fixed later
