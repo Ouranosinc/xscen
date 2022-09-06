@@ -6,7 +6,7 @@ values in the config.
 The ``CONFIG`` dictionary contains all values, structured by submodules and functions. For example,
 for function ``function`` defined in ``module.py`` of this package, the config would look like:
 
-.. code-block::
+.. code-block:: yaml
 
     module:
         function:
