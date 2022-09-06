@@ -7,7 +7,8 @@ xscen: A climate change scenario-building analysis framework, built with Intake-
 Need help?
 ==========
 * Ouranos employees can ask questions on the Ouranos private StackOverflow where you can tag subjects and people. (https://stackoverflow.com/c/ouranos/questions ).
-* Potential bugs can be reported as an issue on github (https://github.com/Ouranosinc/xscen/issues ).
+* Potential bugs in xscen can be reported as an issue here: https://github.com/Ouranosinc/xscen/issues .
+* Problem with data on Ouranos servers can be reported as an issue here: https://github.com/Ouranosinc/miranda/issues
 * To be aware of changes in xscen, you can "watch" the github repo. You can customize the watch function to notify you of new releases. (https://github.com/Ouranosinc/xscen )
 
 Features
