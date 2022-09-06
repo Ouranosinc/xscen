@@ -92,7 +92,7 @@ def compute_indicators(
 
     See Also
     --------
-    xclim.atmos, xclim.core.indicator.build_indicator_module_from_yaml
+    xclim.indicators, xclim.core.indicator.build_indicator_module_from_yaml
 
     """
     if isinstance(indicators, (str, Path)):
