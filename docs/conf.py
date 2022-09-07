@@ -87,7 +87,7 @@ intersphinx_mapping = {
     "intake-esm": ("https://intake-esm.readthedocs.io/en/stable/", None),
     "clisops": ("https://clisops.readthedocs.io/en/latest/", None),
     "rechunker": ("https://rechunker.readthedocs.io/en/latest/", None),
-
+    "xesmf": ("https://xesmf.readthedocs.io/en/latest/", None),
 }
 
 extlinks = {

@@ -293,6 +293,10 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     Returns
     -------
     xr.Dataset
+
+    See Also
+    ________
+    xclim.core.units.convert_units_to, xclim.core.units.rate2amount
     """
 
     with xr.set_options(keep_attrs=True):

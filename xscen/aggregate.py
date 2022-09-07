@@ -300,7 +300,7 @@ def spatial_mean(
 
     See Also
     ________
-    xarray.Dataset.mean, xarray.Dataset.interp
+    xarray.Dataset.mean, xarray.Dataset.interp, xesmf.SpatialAverager
 
     """
 
