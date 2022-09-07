@@ -9,13 +9,14 @@ import pandas as pd
 import xarray as xr
 import xesmf as xe
 from shapely.geometry import Polygon
+from xclim.core.calendar import parse_offset
 
 from .config import parse_config
 from .extract import clisops_subset
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["climatological_mean", "compute_deltas", "spatial_mean"]
+__all__ = ["climatological_mean", "compute_deltas", "spatial_mean", "unstack_dates"]
 
 
 @parse_config
@@ -272,6 +273,7 @@ def spatial_mean(
       If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
     kwargs: dict
       Arguments to send to either mean(), interp() or SpatialAverager().
+      In the latter case, one can give `skipna` here, to be passed to the averager call itself.
     simplify_tolerance: float
       Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
       The simpler the polygons, the faster the averaging, but it will lose some precision.
@@ -425,8 +427,9 @@ def spatial_mean(
         else:
             raise ValueError("'method' not understood.")
 
+        skipna = kwargs.pop("skipna", False)
         savg = xe.SpatialAverager(ds, polygon.geometry, **kwargs)
-        ds_agg = savg(ds, keep_attrs=True)
+        ds_agg = savg(ds, keep_attrs=True, skipna=skipna)
         extra_coords = {
             col: xr.DataArray(polygon[col], dims=("geom",))
             for col in polygon.columns
@@ -457,3 +460,84 @@ def spatial_mean(
         ds_agg.attrs["cat:processing_level"] = to_level
 
     return ds_agg
+
+
+@parse_config
+def unstack_dates(
+    ds: xr.Dataset,
+    seasons: dict = None,
+    new_dim: str = "season",
+):
+    """Unstack a multi-season timeseries into a yearly axis and a season one.
+
+    Parameters
+    ----------
+    ds: xr.Dataset or DataArray
+      The xarray object with a "time" coordinate.
+    seasons: dict, optional
+      A dictonary from "MM-DD" dates to a season name.
+      If not given, it is guessed from the time coord's frequency.
+      See notes.
+    new_dim: str
+      The name of the new dimension.
+
+    Returns
+    -------
+    xr.Dataset or DataArray
+      Same as ds but the time axis is now yearly (AS-JAN) and the seasons are long the new dimenion.
+
+    Notes
+    -----
+    When `seasons` is None, :py:func:`xarray.infer_freq` is called and its output determines the new coordinate:
+
+    - For MS, the coordinates are the month abbreviations in english (JAN, FEB, etc.)
+    - For ?QS-? and other ?MS frequencies, the coordinates are the initials of the months in each season.
+      Ex: QS-DEC : DJF, MAM, JJA, SON.
+    - For YS or AS-JAN, the new coordinate has a single value of "annual".
+    - For ?AS-? frequencies, the new coordinate has a single value of "annual-{anchor}", were "anchor"
+      is the abbreviation of the first month of the year. Ex: AS-JUL -> "annual-JUL".
+    - For any other frequency, this function fails is `seasons` is None.
+    """
+    if seasons is None:
+        freq = xr.infer_freq(ds.time)
+        if freq is not None:
+            mult, base, _, _ = parse_offset(freq)
+        if freq is None or base not in ["A", "Q", "M", "Y"]:
+            raise ValueError(
+                f"Can't infer season labels for time coordinate with frequency {freq}. Consider passing the  `seasons` dict explicitly."
+            )
+
+        # We want the class of the datetime coordinate, to ensure it is conserved.
+        if base == "Q" or (base == "M" and mult > 1):
+            # Labels are the month initials
+            months = np.array(list("JFMAMJJASOND"))
+            n = mult * {"M": 1, "Q": 3}[base]
+            seasons = {
+                f"{m:02d}-01": "".join(months[np.array(range(m - 1, m + n - 1)) % 12])
+                for m in np.unique(ds.time.dt.month)
+            }
+        elif base in ["A", "Y"]:
+            seasons = {
+                f"{m:02d}-01": f"annual-{abb}"
+                for m, abb in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.items()
+            }
+            seasons["01-01"] = "annual"
+        else:  # M or MS
+            seasons = {
+                f"{m:02d}-01": abb
+                for m, abb in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.items()
+            }
+
+    datetime = xr.coding.cftime_offsets.get_date_type(
+        ds.time.dt.calendar, xr.coding.times.contains_cftime_datetimes(ds.time)
+    )
+    years = [datetime(yr, 1, 1) for yr in ds.time.dt.year.values]
+    seas = [seasons[k] for k in ds.time.dt.strftime("%m-%d").values]
+    ds = ds.assign_coords(
+        time=pd.MultiIndex.from_arrays([years, seas], names=["_year", new_dim])
+    )
+    ds = ds.unstack("time").rename(_year="time")
+
+    # Sort new coord
+    inverted = dict(zip(seasons.values(), seasons.keys()))
+    return ds.sortby(ds[new_dim].copy(data=[inverted[s] for s in ds[new_dim].values]))

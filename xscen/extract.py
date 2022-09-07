@@ -680,7 +680,7 @@ def search_data_catalogs(
                     varcat.esmcat._df = pd.DataFrame()
 
             if varcat.df.empty:
-                logger.info(
+                logger.debug(
                     f"Dataset {sim_id} doesn't have all needed variables (missing at least {var_id})."
                 )
                 break

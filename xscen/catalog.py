@@ -911,6 +911,12 @@ def parse_directory(
     if cvs:
         # Read all CVs and replace values in catalog accordingly
         df = df.replace(cvs)
+        if "variable" in cvs:
+            df["variable"] = df.variable.apply(
+                lambda vs: vs
+                if isinstance(vs, str)
+                else tuple(cvs["variable"].get(v, v) for v in vs)
+            )
 
     # translate xrfreq into frequencies and vice-versa
     if {"xrfreq", "frequency"}.issubset(df.columns):

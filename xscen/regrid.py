@@ -29,7 +29,6 @@ def regrid_dataset(
     *,
     regridder_kwargs: Optional[dict] = None,
     intermediate_grids: Optional[dict] = None,
-    skipna: bool = False,
     to_level: str = "regridded",
 ) -> xr.Dataset:
     """
@@ -46,15 +45,14 @@ def regrid_dataset(
       Destination grid. The Dataset needs to have lat/lon coordinates.
       Supports a 'mask' variable compatible with ESMF standards.
     regridder_kwargs : dict
-      Arguments to send xe.Regridder().
+      Arguments to send xe.Regridder(). If it contains `skipna`, that
+      one is passed to the regridder call directly.
     intermediate_grids: dict
         This argument is used to do a regridding in many steps, regridding to regular
         grids before regridding to the final ds_grid.
         This is useful when there is a large jump in resolution between ds and ds grid.
         The format is a nested dictionary shown in Notes.
         If None, no intermediary grid is used, there is only a regrid from ds to ds_grid.
-    skipna: bool
-      Passed to the regridder.
     to_level: str
       The processing level to assign to the output.
       Defaults to 'regridded'
@@ -119,6 +117,7 @@ def regrid_dataset(
             ):
                 kwargs["weights"] = weights_filename
                 kwargs["reuse_weights"] = True
+            skipna = regridder_kwargs.pop("skipna", False)
             regridder = _regridder(
                 ds_in=ds, ds_grid=ds_grid, filename=weights_filename, **regridder_kwargs
             )
@@ -138,21 +137,25 @@ def regrid_dataset(
                         ds_grid[da].attrs["grid_mapping"]
                         for da in ds_grid.data_vars
                         if "grid_mapping" in ds_grid[da].attrs
+                        and ds_grid[da].attrs["grid_mapping"] in ds_grid
                     ]
                 )
                 if len(gridmap) != 1:
-                    raise ValueError("Could not determine grid_mapping information.")
-                # Add the grid_mapping attribute
-                for v in out.data_vars:
-                    out[v].attrs["grid_mapping"] = gridmap[0]
-                # Add the grid_mapping coordinate
-                if gridmap[0] not in out:
-                    out = out.assign_coords({gridmap[0]: ds_grid[gridmap[0]]})
-                # Regridder seems to seriously mess up the rotated dimensions
-                for d in out.lon.dims:
-                    out[d] = ds_grid[d]
-                    if d not in out.coords:
-                        out = out.assign_coords({d: ds_grid[d]})
+                    warnings.warn(
+                        "Could not determine and transfer grid_mapping information."
+                    )
+                else:
+                    # Add the grid_mapping attribute
+                    for v in out.data_vars:
+                        out[v].attrs["grid_mapping"] = gridmap[0]
+                    # Add the grid_mapping coordinate
+                    if gridmap[0] not in out:
+                        out = out.assign_coords({gridmap[0]: ds_grid[gridmap[0]]})
+                    # Regridder seems to seriously mess up the rotated dimensions
+                    for d in out.lon.dims:
+                        out[d] = ds_grid[d]
+                        if d not in out.coords:
+                            out = out.assign_coords({d: ds_grid[d]})
             else:
                 gridmap = np.unique(
                     [
