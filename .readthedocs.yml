@@ -1,0 +1,27 @@
+version: 2
+
+sphinx:
+  configuration: docs/conf.py
+  fail_on_warning: true
+
+formats:
+  - pdf
+
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "mambaforge-4.10"
+  jobs:
+#    pre_install:
+#      - pip install llvmlite~=0.38 --ignore-installed
+    pre_build:
+      - sphinx-apidoc -o docs/ --private --module-first xscen
+      - sphinx-build -b linkcheck docs/ _build/linkcheck || true
+
+conda:
+  environment: environment-dev.yml
+
+python:
+  install:
+    - method: pip
+      path: .
