@@ -297,6 +297,10 @@ def save_to_netcdf(
     Returns
     -------
     None
+
+    See Also
+    ________
+    xarray.Dataset.to_netcdf
     """
 
     if rechunk:
@@ -383,6 +387,10 @@ def save_to_zarr(
     Returns
     -------
     None
+
+    See Also
+    ________
+    xarray.Dataset.to_zarr
     """
 
     if rechunk:
@@ -520,6 +528,10 @@ def rechunk(
     Returns
     -------
     None
+
+    See Also
+    ________
+    rechunker.rechunk
     """
     if Path(path_out).is_dir() and overwrite:
         sh.rmtree(path_out)
