@@ -106,12 +106,17 @@ def stack_drop_nans(
     --------
     unstack_fill_nan : The inverse operation.
     """
+
     mask_1d = mask.stack({new_dim: mask.dims})
     out = ds.stack({new_dim: mask.dims}).where(mask_1d, drop=True).reset_index(new_dim)
     for dim in mask.dims:
         out[dim].attrs.update(ds[dim].attrs)
 
     if to_file is not None:
+        # set default path to store the information necessary to unstack
+        to_file = to_file.format(domain=ds.attrs["cat:domain"])
+        if not Path(to_file).parent.exists():
+            os.mkdir(Path(to_file).parent)
         mask.coords.to_dataset().to_netcdf(to_file)
     return out
 
@@ -143,6 +148,9 @@ def unstack_fill_nan(
       Same as `ds`, but `dim` has been unstacked to coordinates in `coords`.
       Missing elements are filled according to the defaults of `fill_value` of :py:meth:`xarray.Dataset.unstack`.
     """
+    if coords is None:
+        logger.info("Dataset unstacked using no coords argument.")
+
     if isinstance(coords, (list, tuple)):
         dims, crds = zip(*[(name, ds[name].load().values) for name in coords])
     else:
@@ -162,6 +170,8 @@ def unstack_fill_nan(
 
     if not isinstance(coords, (list, tuple)) and coords is not None:
         if isinstance(coords, (str, os.PathLike)):
+            coords = coords.format(domain=ds.attrs["cat:domain"])
+            logger.info(f"Dataset unstacked using {coords}.")
             coords = xr.open_dataset(coords)
         out = out.reindex(**coords.coords)
 
