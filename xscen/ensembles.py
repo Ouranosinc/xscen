@@ -51,7 +51,7 @@ def ensemble_stats(
 
     See Also
     --------
-    xclim.ensembles._base.create_ensemble, xclim.ensembles._base.ensemble_percentiles , xclim.ensembles._base.ensemble_mean_std_max_min
+    xclim.ensembles._base.create_ensemble, xclim.ensembles._base.ensemble_percentiles, xclim.ensembles._base.ensemble_mean_std_max_min, xclim.ensembles._robustness.change_significance, xclim.ensembles._robustness.robustness_coefficient,
 
     """
     if stats_kwargs is None:
