@@ -69,7 +69,7 @@ def regrid_dataset(
 
     See Also
     ________
-    xesmf.regridder
+    xesmf.regridder,xesmf.util.cf_grid_2d
     """
 
     regridder_kwargs = regridder_kwargs or {}
