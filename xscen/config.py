@@ -42,7 +42,7 @@ import ast
 import builtins
 import collections.abc
 import inspect
-import logging
+import logging.config
 import warnings
 from copy import deepcopy
 from functools import wraps
