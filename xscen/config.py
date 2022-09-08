@@ -9,9 +9,9 @@ for function ``function`` defined in ``module.py`` of this package, the config w
 .. code-block:: json
 
     {
-        'module': {
-            'function' : {
-                ... kwargs ...
+        "module": {
+            "function": {
+                "keywords": "arguments"
              }
         }
     }
@@ -45,7 +45,7 @@ import ast
 import builtins
 import collections.abc
 import inspect
-import logging
+import logging.config
 import warnings
 from copy import deepcopy
 from functools import wraps
