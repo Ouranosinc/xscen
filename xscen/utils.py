@@ -247,6 +247,7 @@ def get_cat_attrs(ds: Union[xr.Dataset, dict]):
     return {k[4:]: v for k, v in attrs.items() if k.startswith("cat:")}
 
 
+@parse_config
 def maybe_unstack(
     ds: xr.Dataset,
     coords: str = None,
@@ -375,6 +376,7 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     return ds
 
 
+@parse_config
 def clean_up(
     ds: xr.Dataset,
     variables_and_units: Optional[dict] = None,
