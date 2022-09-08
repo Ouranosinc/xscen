@@ -24,7 +24,7 @@ Extraction
 
 Controlled Vocabulary and Mappings
 ----------------------------------
-.. automodule:: xscen.CVs
+.. automodule:: xscen.utils.CV
    :members:
    :noindex:
 

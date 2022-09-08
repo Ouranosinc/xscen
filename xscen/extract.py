@@ -58,7 +58,7 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
 
     See Also
     ________
-    clisops.core.subset_gridpoint, clisops.core.subset_bbox, clisops.core.subset_shape
+    clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
     if "buffer" in region.keys():
         # estimate the model resolution
