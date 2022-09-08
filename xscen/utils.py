@@ -213,8 +213,9 @@ def unstack_fill_nan(
 
     if not isinstance(coords, (list, tuple)) and coords is not None:
         if isinstance(coords, (str, os.PathLike)):
-            original_shape = ds.lat.attrs["original_shape"]
-            coords = coords.format(domain=ds.attrs["cat:domain"], shape=original_shape)
+            original_shape = ds.lat.attrs.get("original_shape", "unknown_shape")
+            domain = ds.attrs.get("cat:domain", "unknown_domain")
+            coords = coords.format(domain=domain, shape=original_shape)
             logger.info(f"Dataset unstacked using {coords}.")
             coords = xr.open_dataset(coords)
         out = out.reindex(**coords.coords)
