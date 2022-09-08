@@ -18,21 +18,21 @@ Catalog
 Extraction
 ----------
 
-.. automodule:: xscen
+.. automodule:: xscen.extract
    :members:
    :noindex:
 
 Controlled Vocabulary and Mappings
 ----------------------------------
 
-.. automodule:: xscen.CV
-   :members:
+.. automodule:: xscen.utils
+   :members: CV
    :noindex:
 
 Regridding
 ----------
 
-.. automodule:: xscen
+.. automodule:: xscen.regrid
    :members:
    :noindex:
 
