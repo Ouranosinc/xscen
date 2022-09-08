@@ -133,7 +133,13 @@ csv_kwargs = {
 
 
 class DataCatalog(intake_esm.esm_datastore):
-    """A read-only intake_esm catalog adapted to xscen's syntax."""
+    """
+    A read-only intake_esm catalog adapted to xscen's syntax.
+
+    See Also
+    ________
+    intake_esm.core.esm_datastore
+    """
 
     def __init__(self, *args, check_valid=False, drop_duplicates=False, **kwargs):
 
@@ -169,6 +175,10 @@ class DataCatalog(intake_esm.esm_datastore):
           Extra kwargs to pass to `pd.read_csv`, in addition to the ones in :py:data:`csv_kwargs`.
         name: str, optional
           If `metadata` doesn't contain it, a name to give to the catalog.
+
+        See Also
+        ________
+        pandas.read_csv
         """
         if isinstance(paths, os.PathLike):
             paths = [paths]
@@ -296,7 +306,13 @@ class DataCatalog(intake_esm.esm_datastore):
 
 
 class ProjectCatalog(DataCatalog):
-    """A DataCatalog with additional 'write' functionalities that can update and upload itself."""
+    """
+    A DataCatalog with additional 'write' functionalities that can update and upload itself.
+
+    See Also
+    ________
+    intake_esm.core.esm_datastore
+    """
 
     @classmethod
     def create(

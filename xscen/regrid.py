@@ -68,6 +68,9 @@ def regrid_dataset(
       {'name_of_inter_grid_1': {'cf_grid_2d': {arguments for util.cf_grid_2d },'regridder_kwargs':{arguments for xe.Regridder}},
         'name_of_inter_grid_2': dictionary_as_above}
 
+    See Also
+    ________
+    xesmf.regridder,xesmf.util.cf_grid_2d
     """
 
     regridder_kwargs = regridder_kwargs or {}

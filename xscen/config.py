@@ -6,15 +6,12 @@ values in the config.
 The ``CONFIG`` dictionary contains all values, structured by submodules and functions. For example,
 for function ``function`` defined in ``module.py`` of this package, the config would look like:
 
-.. code-block:: json
+.. code-block:: yaml
 
-    {
-        'module': {
-            'function' : {
-                ... kwargs ...
-             }
-        }
-    }
+    module:
+        function:
+            ...kwargs...
+
 
 The :py:func:`load_config` function fills the ``CONFIG`` dict from yaml files.
 It always updates the dictionary, so the latest file read has the highest priority.
@@ -45,7 +42,7 @@ import ast
 import builtins
 import collections.abc
 import inspect
-import logging
+import logging.config
 import warnings
 from copy import deepcopy
 from functools import wraps

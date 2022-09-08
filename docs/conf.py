@@ -80,7 +80,15 @@ napoleon_use_rtype = False
 napoleon_use_param = False
 napoleon_use_ivar = True
 
-intersphinx_mapping = {}
+intersphinx_mapping = {
+    "xclim": ("https://xclim.readthedocs.io/en/latest/", None),
+    "xarray": ("https://docs.xarray.dev/en/stable/", None),
+    "pandas": ("https://pandas.pydata.org/docs/", None),
+    "intake-esm": ("https://intake-esm.readthedocs.io/en/stable/", None),
+    "clisops": ("https://clisops.readthedocs.io/en/latest/", None),
+    "rechunker": ("https://rechunker.readthedocs.io/en/latest/", None),
+    "xesmf": ("https://pangeo-xesmf.readthedocs.io/en/latest/", None),
+}
 
 extlinks = {
     "issue": ("https://github.com/Ouranosinc/xscen/issues/%s", "GH/%s"),

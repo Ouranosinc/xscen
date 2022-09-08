@@ -4,7 +4,12 @@ Welcome to xscen's documentation!
 
 xscen: A climate change scenario-building analysis framework, built with Intake-esm catalogs and xarray-based packages such as xclim and xESMF.
 
-The documentation hosted in this repository is only partial. For the full documentation, please consult: https://scenario.gitlab.ouranos.ca/scenarios_main/
+Need help?
+==========
+* Ouranos employees can ask questions on the Ouranos private StackOverflow where you can tag subjects and people. (https://stackoverflow.com/c/ouranos/questions ).
+* Potential bugs in xscen can be reported as an issue here: https://github.com/Ouranosinc/xscen/issues .
+* Problems with data on Ouranos' servers can be reported as an issue here: https://github.com/Ouranosinc/miranda/issues
+* To be aware of changes in xscen, you can "watch" the github repo. You can customize the watch function to notify you of new releases. (https://github.com/Ouranosinc/xscen )
 
 Features
 ========

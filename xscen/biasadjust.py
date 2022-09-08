@@ -106,6 +106,10 @@ def train(
     xr.Dataset
       Trained algorithm's data.
 
+    See Also
+    --------
+    xclim.sdba.adjustment.DetrendedQuantileMapping, xclim.sdba.adjustment.ExtremeValues
+
     """
     # TODO: To be adequately fixed later when we add multivariate
     if len(var) != 1:
@@ -224,6 +228,11 @@ def adjust(
     -------
     xr.Dataset
       dscen, the bias-adjusted timeseries.
+
+    See Also
+    --------
+    xclim.sdba.adjustment.DetrendedQuantileMapping, xclim.sdba.adjustment.ExtremeValues
+
     """
     # TODO: To be adequately fixed later
 
