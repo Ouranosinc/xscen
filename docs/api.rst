@@ -25,8 +25,8 @@ Extraction
 Controlled Vocabulary and Mappings
 ----------------------------------
 
-.. automodule:: xscen.utils
-   :members: CV
+.. automodule:: xscen.utils.CV
+   :members:
    :noindex:
 
 Regridding
