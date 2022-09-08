@@ -10,6 +10,7 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New functions ``diagnostics.properties_and_measures``, ``diagnostics.measures_heatmap`` and ``diagnostics.measures_improvement``. (:issue:`5`, :pull:`53`)
 * Add argument `resample_methods` to `xs.extract.resample`. (:issue:`57`, :pull:`57`)
+* ``xs.utils.stack_drop_nans``/ ``xs.utils.unstack_fill_nan`` will now format the `to_file`/`coords` string to add the domain and the shape. (:issue:`59`, :pull:`67`)
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
