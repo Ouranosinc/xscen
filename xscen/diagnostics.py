@@ -161,6 +161,10 @@ def properties_and_measures(
     meas: xr.Dataset
         Dataset of measures between prop and dref_for_meas
 
+    See Also
+    --------
+    xclim.sdba.properties, xclim.sdba.measures, xclim.core.indicator.build_indicator_module_from_yaml
+
     """
 
     if isinstance(properties, (str, Path)):
@@ -209,6 +213,7 @@ def properties_and_measures(
         out = ind(ds=ds)
         vname = out.name
         prop[vname] = out
+
         if period:
             prop[vname].attrs["period"] = f"{period[0]}-{period[1]}"
 
@@ -218,8 +223,8 @@ def properties_and_measures(
                 sim=prop[vname], ref=dref_for_measure[vname]
             )
             # create a merged long_name
-            prop_ln = prop[vname].attrs.pop("long_name", "").replace(".", "")
-            meas_ln = meas[vname].attrs.pop("long_name", "").lower()
+            prop_ln = prop[vname].attrs.get("long_name", "").replace(".", "")
+            meas_ln = meas[vname].attrs.get("long_name", "").lower()
             meas[vname].attrs["long_name"] = f"{prop_ln} {meas_ln}"
 
     for ds1 in [prop, meas]:
