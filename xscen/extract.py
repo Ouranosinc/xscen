@@ -513,7 +513,7 @@ def search_data_catalogs(
     Parameters
     ----------
     data_catalogs : Union[list, DataCatalog]
-      DataCatalog (or multiple, in a list) or path to JSON data catalogs. They must use the same columns.
+      DataCatalog (or multiple, in a list) or paths to JSON/CSV data catalogs. They must use the same columns and aggregation options.
     variables_and_freqs : dict
       Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format.
     other_search_criteria : dict, optional
@@ -572,19 +572,38 @@ def search_data_catalogs(
 
     # Prepare a unique catalog to search from, with the DerivedCat added if required
     if isinstance(data_catalogs, DataCatalog):
-        paths = [data_catalogs.esmcat.catalog_file]
+        catalog = DataCatalog(
+            {"esmcat": data_catalogs.esmcat.dict(), "df": data_catalogs.df},
+            **cat_kwargs,
+        )
+        data_catalogs = [catalog]  # simply for a meaningful logging line
     elif isinstance(data_catalogs, list) and all(
         isinstance(dc, DataCatalog) for dc in data_catalogs
     ):
-        paths = [dc.esmcat.catalog_file for dc in data_catalogs]
+        catalog = DataCatalog(
+            {
+                "esmcat": data_catalogs[0].esmcat.dict(),
+                "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
+            },
+            **cat_kwargs,
+        )
     elif isinstance(data_catalogs, list) and all(
         isinstance(dc, str) for dc in data_catalogs
     ):
-        paths = [DataCatalog(dc).esmcat.catalog_file for dc in data_catalogs]
+        data_catalogs = [
+            DataCatalog(path) if path.endswith(".json") else DataCatalog.from_csv(path)
+            for path in data_catalogs
+        ]
+        catalog = DataCatalog(
+            {
+                "esmcat": data_catalogs[0].esmcat.dict(),
+                "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
+            },
+            **cat_kwargs,
+        )
     else:
         raise ValueError("Catalogs type not recognized.")
-    catalog = DataCatalog.from_csv(paths, name="source", **cat_kwargs)
-    logger.info(f"Catalog opened: {catalog} from {len(paths)} files.")
+    logger.info(f"Catalog opened: {catalog} from {len(data_catalogs)} files.")
 
     if match_hist_and_fut:
         logger.info("Dispatching historical dataset to future experiments.")

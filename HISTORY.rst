@@ -11,10 +11,28 @@ New features and enhancements
 * New functions ``diagnostics.properties_and_measures``, ``diagnostics.measures_heatmap`` and ``diagnostics.measures_improvement``. (:issue:`5`, :pull:`54`)
 * Add argument `resample_methods` to `xs.extract.resample`. (:issue:`57`, :pull:`57`)
 * Added a ReadTheDocs configuration to expose public documentation. (:issue:`65`, :pull:`66`).
+* New unstack_dates function to "extract" seasons or months from a timeseries. (:pull:`68`).
+* Better spatial_mean for cases using xESMF and a shapefile with multiple polygons. (:pull:`68`).
+* Yet more changes to parse_directory: (:pull:`68`).
+    - Better parallelization by merging the finding and name-parsing step in the same dask tree.
+    - Allow cvs for the variable columns
+    - Fix parsing the variable names from datasets
+    - Sort the variables in the tuples (for a more consistent output)
+* In extract_dataset, add option ``ensure_correct_time`` to ensure the time coordinate matches the expected freq. Ex: monthly values given on the 15th day are moved to the 1st, as expected when asking for "MS".
+* In regrid_dataset: (:pull:`68`).
+    * Allow passing skipna to the regridder kwargs.
+    * Do not fail for any grid mapping problem, includin if a grid_mapping attribute mentions a variable that doesn't exist.
+* Default email sent to the local user. (:pull:`68`).
+
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * N/A
+
+Bug fixes
+^^^^^^^^^
+* Add a missing dependencies to the env. (pyarrow for faster string handling in catalogs) (:pull:`68`).
+* Allow passing compute=False to save_to_zarr. (:pull:`68`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
