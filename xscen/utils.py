@@ -98,7 +98,6 @@ def stack_drop_nans(
       the original shape of the dataset and the global attributes 'cat:domain'.
       If None (default), nothing is written to disk.
       It is recommended to fill this argument in the config. Ex:
-      .. code-block:: yaml
 
           utils:
             stack_drop_nans:
@@ -173,7 +172,6 @@ def unstack_fill_nan(
       the original shape of the dataset that should have been store in the latitude
       attributes by `stack_drop_nans` and the global attributes 'cat:domain'.
       It is recommended to fill this argument in the config. Ex:
-      .. code-block:: yaml
 
           utils:
             stack_drop_nans:
