@@ -2,9 +2,13 @@
 xscen
 =====
 
+|build| |docs| |black| |pre-commit|
+
 A climate change scenario-building analysis framework, built with Intake-esm catalogs and xarray-based packages such as xclim and xESMF.
 
-The documentation hosted in this repository is only partial. For the full documentation, please consult: https://scenario.gitlab.ouranos.ca/xscen/ (works only on the Ouranos VPN)
+For documentation concerning the public API of `xscen`, see: https://xscen.readthedocs.io/en/latest/
+
+For the full documentation with notebooks/examples, please consult: https://scenario.gitlab.ouranos.ca/xscen/ (available only via the Ouranos intranet)
 
 Features
 --------
@@ -21,3 +25,19 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
 
 .. _Cookiecutter: https://github.com/audreyfeldroy/cookiecutter-pypackage
 .. _`Ouranosinc/cookiecutter-pypackage`: https://github.com/Ouranosinc/cookiecutter-pypackage
+
+.. |build| image:: https://github.com/Ouranosinc/xscen/actions/workflows/main.yml/badge.svg
+        :target: https://github.com/Ouranosinc/xscen/actions/workflows/main.yml
+        :alt: Build Status
+
+.. |docs| image:: https://readthedocs.org/projects/xscen/badge/?version=latest
+        :target: https://xscen.readthedocs.io/en/latest/?badge=latest
+        :alt: Documentation Status
+
+.. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+        :target: https://github.com/psf/black
+        :alt: Python Black
+
+.. |pre-commit| image:: https://results.pre-commit.ci/badge/github/Ouranosinc/xscen/main.svg
+        :target: https://results.pre-commit.ci/latest/github/Ouranosinc/xscen/main
+        :alt: pre-commit.ci status
