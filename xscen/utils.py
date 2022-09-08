@@ -97,7 +97,8 @@ def stack_drop_nans(
       If given a string with {shape} and {domain}, the formatting will fill them with
       the original shape of the dataset and the global attributes 'cat:domain'.
       If None (default), nothing is written to disk.
-      It is recommended to fill this argument in the config. Ex:
+      It is recommended to fill this argument in the config. It will be parsed automatically.
+      E.g.:
 
           utils:
             stack_drop_nans:
@@ -171,7 +172,8 @@ def unstack_fill_nan(
       If given a string with {shape} and {domain}, the formatting will fill them with
       the original shape of the dataset that should have been store in the latitude
       attributes by `stack_drop_nans` and the global attributes 'cat:domain'.
-      It is recommended to fill this argument in the config. Ex:
+      It is recommended to fill this argument in the config. It will be parsed automatically.
+      E.g.:
 
           utils:
             stack_drop_nans:
