@@ -6,13 +6,15 @@ import pandas as pd
 import xarray as xr
 from xclim import ensembles
 
-from .catalog import generate_id  # ProjectCatalog
+from .catalog import generate_id
+from .config import parse_config
 
 logger = logging.getLogger(__name__)
 
 __all__ = ["ensemble_stats"]
 
 
+@parse_config
 def ensemble_stats(
     datasets: Any,
     create_kwargs: dict = None,

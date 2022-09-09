@@ -835,7 +835,7 @@ def _restrict_by_resolution(catalogs: dict, id_columns: list, restrictions: str)
             logger.info(f"Dataset {i} appears to have multiple resolutions.")
 
             # For CMIP, the order is dictated by a list of grid labels
-            if pd.unique(df_sim["activity"])[0] == "CMIP":
+            if "MIP" in pd.unique(df_sim["activity"])[0]:
                 order = np.array([])
                 for d in domains:
                     match = [

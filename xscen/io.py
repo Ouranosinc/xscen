@@ -273,6 +273,7 @@ def clean_incomplete(path: Union[str, os.PathLike], complete: Sequence[str]) -> 
             sh.rmtree(fold)
 
 
+@parse_config
 def save_to_netcdf(
     ds: xr.Dataset,
     filename: str,
@@ -346,6 +347,7 @@ def save_to_netcdf(
     ds.to_netcdf(filename, **netcdf_kwargs)
 
 
+@parse_config
 def save_to_zarr(
     ds: xr.Dataset,
     filename: str,

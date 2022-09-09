@@ -242,6 +242,7 @@ def compute_deltas(
     return deltas
 
 
+@parse_config
 def spatial_mean(
     ds: xr.Dataset,
     method: str,

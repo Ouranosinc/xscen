@@ -11,6 +11,7 @@ New features and enhancements
 * New functions ``diagnostics.properties_and_measures``, ``diagnostics.measures_heatmap`` and ``diagnostics.measures_improvement``. (:issue:`5`, :pull:`54`)
 * Add argument `resample_methods` to `xs.extract.resample`. (:issue:`57`, :pull:`57`)
 * Added a ReadTheDocs configuration to expose public documentation. (:issue:`65`, :pull:`66`).
+* ``xs.utils.stack_drop_nans``/ ``xs.utils.unstack_fill_nan`` will now format the `to_file`/`coords` string to add the domain and the shape. (:issue:`59`, :pull:`67`)
 * New unstack_dates function to "extract" seasons or months from a timeseries. (:pull:`68`).
 * Better spatial_mean for cases using xESMF and a shapefile with multiple polygons. (:pull:`68`).
 * Yet more changes to parse_directory: (:pull:`68`).
@@ -23,7 +24,6 @@ New features and enhancements
     * Allow passing skipna to the regridder kwargs.
     * Do not fail for any grid mapping problem, includin if a grid_mapping attribute mentions a variable that doesn't exist.
 * Default email sent to the local user. (:pull:`68`).
-
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -38,6 +38,7 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * Small bugfixes in aggregate.py (:pull:`55`, :pull:`56`).
 * Default method of `xs.extract.resample` now depends on frequency. (:issue:`57`, :pull:`58`).
+* Bugfix for `_restrict_by_resolution` with CMIP6 datasets (:pull:`71`).
 
 v0.3.0 (2022-08-23)
 -------------------
