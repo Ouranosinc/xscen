@@ -267,15 +267,52 @@ def maybe_unstack(
 CV = ModuleType(
     "CV",
     (
-        "Mappings of (controlled) vocabulary. This module is generated automatically "
-        "from json files in xscen/CVs. Functions are essentially mappings, most of "
-        "which are meant to provide translations between columns.\n\n"
-        "Json files must be shallow dictionaries to be supported. If the json file "
-        "contains a ``is_regex: True`` entry, then the keys are automatically "
-        "translated as regex patterns and the function returns the value of the first "
-        "key that matches the pattern. Otherwise the function essentially acts like a "
-        "normal dictionary. The 'raw' data parsed from the json file is added in the "
-        "``dict`` attribute of the function."
+        """
+        Mappings of (controlled) vocabulary. This module is generated automatically
+        from json files in xscen/CVs. Functions are essentially mappings, most of
+        which are meant to provide translations between columns.\n\n
+        Json files must be shallow dictionaries to be supported. If the json file
+        contains a ``is_regex: True`` entry, then the keys are automatically
+        translated as regex patterns and the function returns the value of the first
+        key that matches the pattern. Otherwise the function essentially acts like a
+        normal dictionary. The 'raw' data parsed from the json file is added in the
+        ``dict`` attribute of the function.
+        Example:
+
+        .. code-block:: python
+
+            xs.utils.CV.frequency_to_timedelta.dict
+
+        .. literalinclude:: ../xscen/CVs/frequency_to_timedelta.json
+           :language: json
+           :caption: frequency_to_timedelta
+
+        .. literalinclude:: ../xscen/CVs/frequency_to_xrfreq.json
+           :language: json
+           :caption: frequency_to_xrfreq
+
+        .. literalinclude:: ../xscen/CVs/infer_resolution.json
+           :language: json
+           :caption: infer_resolution
+
+        .. literalinclude:: ../xscen/CVs/resampling_methods.json
+           :language: json
+           :caption: resampling_methods
+
+        .. literalinclude:: ../xscen/CVs/variable_names.json
+           :language: json
+           :caption: variable_names
+
+        .. literalinclude:: ../xscen/CVs/xrfreq_to_frequency.json
+           :language: json
+           :caption: xrfreq_to_frequency
+
+        .. literalinclude:: ../xscen/CVs/xrfreq_to_timedelta.json
+           :language: json
+           :caption: xrfreq_to_timedelta
+
+
+        """
     ),
 )
 
@@ -349,6 +386,10 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     Returns
     -------
     xr.Dataset
+
+    See Also
+    ________
+    xclim.core.units.convert_units_to, xclim.core.units.rate2amount
     """
 
     with xr.set_options(keep_attrs=True):
@@ -450,6 +491,11 @@ def clean_up(
     -------
     xr.Dataset
         Cleaned up dataset
+
+    See Also
+    --------
+    xclim.core.calendar.convert_calendar
+
     """
 
     if variables_and_units:
