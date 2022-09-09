@@ -18,7 +18,7 @@ New features and enhancements
     - Allow cvs for the variable columns
     - Fix parsing the variable names from datasets
     - Sort the variables in the tuples (for a more consistent output)
-* In extract_dataset, add option ``ensure_correct_time`` to ensure the time coordinate matches the expected freq. Ex: monthly values given on the 15th day are moved to the 1st, as expected when asking for "MS".
+* In extract_dataset, add option ``ensure_correct_time`` to ensure the time coordinate matches the expected freq. Ex: monthly values given on the 15th day are moved to the 1st, as expected when asking for "MS". (:issue: `53`).
 * In regrid_dataset: (:pull:`68`).
     * Allow passing skipna to the regridder kwargs.
     * Do not fail for any grid mapping problem, includin if a grid_mapping attribute mentions a variable that doesn't exist.
