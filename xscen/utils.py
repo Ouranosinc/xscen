@@ -94,7 +94,17 @@ def stack_drop_nans(
       The name of the new stacked dim.
     to_file : str, optional
       A netCDF filename where to write the stacked coords for use in `unstack_fill_nan`.
+      If given a string with {shape} and {domain}, the formatting will fill them with
+      the original shape of the dataset and the global attributes 'cat:domain'.
       If None (default), nothing is written to disk.
+      It is recommended to fill this argument in the config. It will be parsed automatically.
+      E.g.:
+
+          utils:
+            stack_drop_nans:
+                to_file: /some_path/coords/coords_{domain}_{shape}.nc
+            unstack_fill_nan:
+                coords: /some_path/coords/coords_{domain}_{shape}.nc
 
     Returns
     -------
@@ -106,13 +116,39 @@ def stack_drop_nans(
     --------
     unstack_fill_nan : The inverse operation.
     """
+
+    original_shape = "x".join(map(str, mask.shape))
+
     mask_1d = mask.stack({new_dim: mask.dims})
-    out = ds.stack({new_dim: mask.dims}).where(mask_1d, drop=True).reset_index(new_dim)
+    out = (
+        ds.stack({new_dim: mask.dims})
+        .where(mask_1d, drop=True)
+        .reset_index(new_dim, drop=True)
+    )
     for dim in mask.dims:
         out[dim].attrs.update(ds[dim].attrs)
 
     if to_file is not None:
+        # set default path to store the information necessary to unstack
+        # the name includes the domain and the original shape to uniquely identify the dataset
+        domain = ds.attrs.get("cat:domain", "unknown")
+        to_file = to_file.format(domain=domain, shape=original_shape)
+        if not Path(to_file).parent.exists():
+            os.mkdir(Path(to_file).parent)
         mask.coords.to_dataset().to_netcdf(to_file)
+
+    # carry information about original shape to be able to unstack properly
+    for dim in mask.dims:
+        out[dim].attrs["original_shape"] = original_shape
+
+        # this is needed to fix a bug in xarray '2022.6.0'
+        out[dim] = xr.DataArray(
+            out[dim].values,
+            dims=out[dim].dims,
+            coords=out[dim].coords,
+            attrs=out[dim].attrs,
+        )
+
     return out
 
 
@@ -133,6 +169,18 @@ def unstack_fill_nan(
       dimensions, those original dimensions must be listed here.
       If a dict : a mapping from the name to the array of the coords to unstack
       If a str : a filename to a dataset containing only those coords (as coords).
+      If given a string with {shape} and {domain}, the formatting will fill them with
+      the original shape of the dataset (that should have been store in the
+      attributes of the stacked dimensions) by `stack_drop_nans` and the global attributes 'cat:domain'.
+      It is recommended to fill this argument in the config. It will be parsed automatically.
+      E.g.:
+
+          utils:
+            stack_drop_nans:
+                to_file: /some_path/coords/coords_{domain}_{shape}.nc
+            unstack_fill_nan:
+                coords: /some_path/coords/coords_{domain}_{shape}.nc
+
       If None (default), all coords that have `dim` a single dimension are used as the
       new dimensions/coords in the unstacked output.
       Coordinates will be loaded within this function.
@@ -143,6 +191,9 @@ def unstack_fill_nan(
       Same as `ds`, but `dim` has been unstacked to coordinates in `coords`.
       Missing elements are filled according to the defaults of `fill_value` of :py:meth:`xarray.Dataset.unstack`.
     """
+    if coords is None:
+        logger.info("Dataset unstacked using no coords argument.")
+
     if isinstance(coords, (list, tuple)):
         dims, crds = zip(*[(name, ds[name].load().values) for name in coords])
     else:
@@ -162,6 +213,14 @@ def unstack_fill_nan(
 
     if not isinstance(coords, (list, tuple)) and coords is not None:
         if isinstance(coords, (str, os.PathLike)):
+            # find original shape in the attrs of one of the dimension
+            original_shape = "unknown"
+            for dim in ds.dims:
+                if "original_shape" in dim.attrs:
+                    original_shape = ds[dim].attrs["original_shape"]
+            domain = ds.attrs.get("cat:domain", "unknown")
+            coords = coords.format(domain=domain, shape=original_shape)
+            logger.info(f"Dataset unstacked using {coords}.")
             coords = xr.open_dataset(coords)
         out = out.reindex(**coords.coords)
 
@@ -193,6 +252,7 @@ def get_cat_attrs(ds: Union[xr.Dataset, dict]):
     return {k[4:]: v for k, v in attrs.items() if k.startswith("cat:")}
 
 
+@parse_config
 def maybe_unstack(
     ds: xr.Dataset,
     coords: str = None,
@@ -362,6 +422,7 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     return ds
 
 
+@parse_config
 def clean_up(
     ds: xr.Dataset,
     variables_and_units: Optional[dict] = None,

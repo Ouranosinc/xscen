@@ -16,6 +16,7 @@ from xclim.core.units import convert_units_to
 from xclim.sdba import measures
 
 from .catalog import DataCatalog
+from .config import parse_config
 from .indicators import load_xclim_module
 from .io import save_to_zarr
 from .utils import change_units, maybe_unstack, unstack_fill_nan
@@ -113,6 +114,7 @@ def _invert_unphysical_temperatures(
 # TODO: just measures?
 
 
+@parse_config
 def properties_and_measures(
     ds: xr.Dataset,
     properties: Union[
