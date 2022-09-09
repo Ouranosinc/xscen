@@ -131,7 +131,7 @@ def stack_drop_nans(
     if to_file is not None:
         # set default path to store the information necessary to unstack
         # the name includes the domain and the original shape to uniquely identify the dataset
-        domain = ds.attrs.get("cat:domain", "unknown_domain")
+        domain = ds.attrs.get("cat:domain", "unknown")
         to_file = to_file.format(domain=domain, shape=original_shape)
         if not Path(to_file).parent.exists():
             os.mkdir(Path(to_file).parent)
