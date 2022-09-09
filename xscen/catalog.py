@@ -686,8 +686,6 @@ def _name_parser(
       If `read_from_file` is not None, passed directly to :py:func:`parse_from_ds`.
     xr_open_kwargs: dict, optional
       If required, arguments to send to xr.open_dataset() when opening the file to read the attributes.
-    logr : logging.Logger, optional
-      A Logger object. If given, this function sends some "debug" lines.
 
     Returns
     -------
@@ -717,12 +715,10 @@ def _name_parser(
         except ValueError:
             continue
     if not d:
-        if logr:
-            logr.debug(f"No pattern matched with path {path}")
+        logger.debug(f"No pattern matched with path {path}")
         return {"path": None}
 
-    if logr:
-        logr.debug(f"Parsed file path {path} and got {len(d)} fields.")
+    logger.debug(f"Parsed file path {path} and got {len(d)} fields.")
 
     # files with a single year/month
     if "date_end" not in d and "date_start" in d:
@@ -737,8 +733,7 @@ def _name_parser(
                 abs_path, names=read_from_file, attrs_map=attrs_map, **xr_open_kwargs
             )
         except Exception as err:
-            if logr:
-                logr.error(f"Unable to parse file {path}, got : {err}")
+            logger.error(f"Unable to parse file {path}, got : {err}")
         else:
             d.update(fromfile)
 
@@ -864,11 +859,12 @@ def parse_directory(
     else:
         attrs_map = {}
 
-    # Find files
+    # Find files (returns a list of tuples of (root, delayed_file_list)).
     files = _get_asset_list(
         directories, globpat=globpattern, parallel_depth=parallel_depth, compute=False
     )
 
+    # Paths is a delayed object
     @dask.delayed
     def _wrap_name_parser(paths, root, *args, **kwargs):
         return [_name_parser(path, root, *args, **kwargs) for path in paths]
@@ -885,7 +881,7 @@ def parse_directory(
         for root, paths in files
     ]
 
-    with ProgressBar():
+    with ProgressBar():  # Finding the files and parsing the names is done here.
         (parsed,) = dask.compute(parsed)
     parsed = list(itertools.chain(*parsed))
 
@@ -897,7 +893,7 @@ def parse_directory(
     # Path has become NaN when some paths didn't fit any passed pattern
     df = pd.DataFrame(parsed).dropna(axis=0, subset=["path"])
 
-    if only_official_columns:
+    if only_official_columns:  # Add the missing official columns
         for col in set(COLUMNS) - set(df.columns):
             df[col] = None
 
@@ -928,6 +924,7 @@ def parse_directory(
         # Read all CVs and replace values in catalog accordingly
         df = df.replace(cvs)
         if "variable" in cvs:
+            # Variable can be a tuple, we still want to replace individual names through the cvs
             df["variable"] = df.variable.apply(
                 lambda vs: vs
                 if isinstance(vs, str)

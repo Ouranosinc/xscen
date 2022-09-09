@@ -274,7 +274,7 @@ def spatial_mean(
       If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
     kwargs: dict
       Arguments to send to either mean(), interp() or SpatialAverager().
-      In the latter case, one can give `skipna` here, to be passed to the averager call itself.
+      For SpatialAverager, one can give `skipna` here, to be passed to the averager call itself.
     simplify_tolerance: float
       Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
       The simpler the polygons, the faster the averaging, but it will lose some precision.
