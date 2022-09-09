@@ -220,8 +220,8 @@ def properties_and_measures(
                 sim=prop[vname], ref=dref_for_measure[vname]
             )
             # create a merged long_name
-            prop_ln = prop[vname].attrs.pop("long_name", "").replace(".", "")
-            meas_ln = meas[vname].attrs.pop("long_name", "").lower()
+            prop_ln = prop[vname].attrs.get("long_name", "").replace(".", "")
+            meas_ln = meas[vname].attrs.get("long_name", "").lower()
             meas[vname].attrs["long_name"] = f"{prop_ln} {meas_ln}"
 
     for ds1 in [prop, meas]:
