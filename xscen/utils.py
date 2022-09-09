@@ -117,7 +117,7 @@ def stack_drop_nans(
     unstack_fill_nan : The inverse operation.
     """
 
-    original_shape = f"{len(ds.lon)}x{len(ds.lat)}"
+    original_shape = "x".join(map(str, mask.shape))
 
     mask_1d = mask.stack({new_dim: mask.dims})
     out = (
@@ -138,16 +138,16 @@ def stack_drop_nans(
         mask.coords.to_dataset().to_netcdf(to_file)
 
     # carry information about original shape to be able to unstack properly
-    out["lat"].attrs["original_shape"] = original_shape
-    out["lon"].attrs["original_shape"] = original_shape
+    for dim in mask.dims:
+        out[dim].attrs["original_shape"] = original_shape
 
-    # this is needed to fix a bug in xarray '2022.6.0'
-    out["lon"] = xr.DataArray(
-        out.lon.values, dims=out.lon.dims, coords=out.lon.coords, attrs=out.lon.attrs
-    )
-    out["lat"] = xr.DataArray(
-        out.lat.values, dims=out.lat.dims, coords=out.lat.coords, attrs=out.lat.attrs
-    )
+        # this is needed to fix a bug in xarray '2022.6.0'
+        out[dim] = xr.DataArray(
+            out[dim].values,
+            dims=out[dim].dims,
+            coords=out[dim].coords,
+            attrs=out[dim].attrs,
+        )
 
     return out
 
@@ -170,8 +170,8 @@ def unstack_fill_nan(
       If a dict : a mapping from the name to the array of the coords to unstack
       If a str : a filename to a dataset containing only those coords (as coords).
       If given a string with {shape} and {domain}, the formatting will fill them with
-      the original shape of the dataset that should have been store in the latitude
-      attributes by `stack_drop_nans` and the global attributes 'cat:domain'.
+      the original shape of the dataset (that should have been store in the
+      attributes of the stacked dimensions) by `stack_drop_nans` and the global attributes 'cat:domain'.
       It is recommended to fill this argument in the config. It will be parsed automatically.
       E.g.:
 
@@ -213,8 +213,12 @@ def unstack_fill_nan(
 
     if not isinstance(coords, (list, tuple)) and coords is not None:
         if isinstance(coords, (str, os.PathLike)):
-            original_shape = ds.lat.attrs.get("original_shape", "unknown_shape")
-            domain = ds.attrs.get("cat:domain", "unknown_domain")
+            # find original shape in the attrs of one of the dimension
+            original_shape = "unknown"
+            for dim in ds.dims:
+                if "original_shape" in dim.attrs:
+                    original_shape = ds[dim].attrs["original_shape"]
+            domain = ds.attrs.get("cat:domain", "unknown")
             coords = coords.format(domain=domain, shape=original_shape)
             logger.info(f"Dataset unstacked using {coords}.")
             coords = xr.open_dataset(coords)
