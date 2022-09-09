@@ -489,7 +489,7 @@ def unstack_dates(
     Returns
     -------
     xr.Dataset or DataArray
-      Same as ds but the time axis is now yearly (AS-JAN) and the seasons are long the new dimenion.
+      Same as ds but the time axis is now yearly (AS-JAN) and the seasons are along the new dimenion.
 
     Notes
     -----
@@ -501,7 +501,7 @@ def unstack_dates(
     - For YS or AS-JAN, the new coordinate has a single value of "annual".
     - For ?AS-? frequencies, the new coordinate has a single value of "annual-{anchor}", were "anchor"
       is the abbreviation of the first month of the year. Ex: AS-JUL -> "annual-JUL".
-    - For any other frequency, this function fails is `seasons` is None.
+    - For any other frequency, this function fails if `seasons` is None.
     """
     if seasons is None:
         freq = xr.infer_freq(ds.time)

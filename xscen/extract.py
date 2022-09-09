@@ -166,7 +166,7 @@ def extract_dataset(
       Defaults to 'extracted'
     ensure_correct_time : bool
       When True (default), even if the data has the correct frequency, its time coordinate is
-      checked so that it exactly matches the frequency code. For example, daily data given at
+      checked so that it exactly matches the frequency code (xrfreq). For example, daily data given at
       noon would be transformed to be given at midnight. If the time coordinate is invalid,
       it raises an error.
     xr_open_kwargs : dict, optional
