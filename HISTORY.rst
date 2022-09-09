@@ -20,6 +20,7 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * Small bugfixes in aggregate.py (:pull:`55`, :pull:`56`).
 * Default method of `xs.extract.resample` now depends on frequency. (:issue:`57`, :pull:`58`).
+* Bugfix for `_restrict_by_resolution` with CMIP6 datasets (:pull:`71`).
 
 v0.3.0 (2022-08-23)
 -------------------
