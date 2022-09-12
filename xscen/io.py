@@ -273,6 +273,7 @@ def clean_incomplete(path: Union[str, os.PathLike], complete: Sequence[str]) -> 
             sh.rmtree(fold)
 
 
+@parse_config
 def save_to_netcdf(
     ds: xr.Dataset,
     filename: str,
@@ -297,6 +298,10 @@ def save_to_netcdf(
     Returns
     -------
     None
+
+    See Also
+    ________
+    xarray.Dataset.to_netcdf
     """
 
     if rechunk:
@@ -342,6 +347,7 @@ def save_to_netcdf(
     ds.to_netcdf(filename, **netcdf_kwargs)
 
 
+@parse_config
 def save_to_zarr(
     ds: xr.Dataset,
     filename: str,
@@ -383,6 +389,10 @@ def save_to_zarr(
     Returns
     -------
     None
+
+    See Also
+    ________
+    xarray.Dataset.to_zarr
     """
 
     if rechunk:
@@ -520,6 +530,10 @@ def rechunk(
     Returns
     -------
     None
+
+    See Also
+    ________
+    rechunker.rechunk
     """
     if Path(path_out).is_dir() and overwrite:
         sh.rmtree(path_out)

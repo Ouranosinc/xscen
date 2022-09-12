@@ -56,6 +56,11 @@ def ensemble_stats(
     -------
     xr.Dataset
         Dataset with ensemble statistics
+
+    See Also
+    --------
+    xclim.ensembles._base.create_ensemble, xclim.ensembles._base.ensemble_percentiles, xclim.ensembles._base.ensemble_mean_std_max_min, xclim.ensembles._robustness.change_significance, xclim.ensembles._robustness.robustness_coefficient,
+
     """
     create_kwargs = create_kwargs or {}
 

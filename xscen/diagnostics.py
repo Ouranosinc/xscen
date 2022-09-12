@@ -16,6 +16,7 @@ from xclim.core.units import convert_units_to
 from xclim.sdba import measures
 
 from .catalog import DataCatalog
+from .config import parse_config
 from .indicators import load_xclim_module
 from .io import save_to_zarr
 from .utils import change_units, maybe_unstack, unstack_fill_nan
@@ -113,6 +114,7 @@ def _invert_unphysical_temperatures(
 # TODO: just measures?
 
 
+@parse_config
 def properties_and_measures(
     ds: xr.Dataset,
     properties: Union[
@@ -160,6 +162,10 @@ def properties_and_measures(
         Dataset of properties of ds
     meas: xr.Dataset
         Dataset of measures between prop and dref_for_meas
+
+    See Also
+    --------
+    xclim.sdba.properties, xclim.sdba.measures, xclim.core.indicator.build_indicator_module_from_yaml
 
     """
 
@@ -209,6 +215,7 @@ def properties_and_measures(
         out = ind(ds=ds)
         vname = out.name
         prop[vname] = out
+
         if period:
             prop[vname].attrs["period"] = f"{period[0]}-{period[1]}"
 
@@ -218,8 +225,8 @@ def properties_and_measures(
                 sim=prop[vname], ref=dref_for_measure[vname]
             )
             # create a merged long_name
-            prop_ln = prop[vname].attrs.pop("long_name", "").replace(".", "")
-            meas_ln = meas[vname].attrs.pop("long_name", "").lower()
+            prop_ln = prop[vname].attrs.get("long_name", "").replace(".", "")
+            meas_ln = meas[vname].attrs.get("long_name", "").lower()
             meas[vname].attrs["long_name"] = f"{prop_ln} {meas_ln}"
 
     for ds1 in [prop, meas]:

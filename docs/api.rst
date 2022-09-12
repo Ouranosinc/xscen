@@ -25,8 +25,8 @@ Extraction
 Controlled Vocabulary and Mappings
 ----------------------------------
 
-.. automodule:: xscen.utils
-   :members: CV
+.. automodule:: xscen.utils.CV
+   :members:
    :noindex:
 
 Regridding
@@ -39,7 +39,7 @@ Regridding
 Bias Adjustment
 ---------------
 
-.. automodule:: xscen
+.. automodule:: xscen.biasadjust
    :members: adjust train
    :noindex:
 

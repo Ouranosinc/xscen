@@ -241,6 +241,7 @@ def compute_deltas(
     return deltas
 
 
+@parse_config
 def spatial_mean(
     ds: xr.Dataset,
     method: str,
@@ -297,6 +298,11 @@ def spatial_mean(
             Arguments specific to the method used.
         buffer: float, optional
             Multiplier to apply to the model resolution. Only used if call_clisops==True.
+
+    See Also
+    ________
+    xarray.Dataset.mean, xarray.Dataset.interp, xesmf.SpatialAverager
+
     """
 
     kwargs = kwargs or {}

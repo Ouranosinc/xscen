@@ -56,6 +56,9 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
     xr.Dataset
       Subsetted Dataset
 
+    See Also
+    ________
+    clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
     if "buffer" in region.keys():
         # estimate the model resolution
@@ -193,6 +196,10 @@ def extract_dataset(
             Arguments specific to the method used.
         buffer: float, optional
             Multiplier to apply to the model resolution.
+
+    See Also
+    ________
+    intake_esm.core.esm_datastore.to_dataset_dict, xarray.open_dataset, xarray.combine_by_coords
     """
     resample_methods = resample_methods or {}
 
@@ -534,6 +541,10 @@ def search_data_catalogs(
         to the needs of this specific group.
         Usually, each entry can be written to file in a single Dataset when using
         `extract_dataset` with the same arguments.
+
+    See Also
+    ________
+    intake_esm.core.esm_datastore.search
     """
     cat_kwargs = {}
     if allow_conversion:
@@ -791,7 +802,7 @@ def _restrict_by_resolution(catalogs: dict, id_columns: list, restrictions: str)
             logger.info(f"Dataset {i} appears to have multiple resolutions.")
 
             # For CMIP, the order is dictated by a list of grid labels
-            if pd.unique(df_sim["activity"])[0] == "CMIP":
+            if "MIP" in pd.unique(df_sim["activity"])[0]:
                 order = np.array([])
                 for d in domains:
                     match = [
@@ -987,6 +998,7 @@ def _subset_file_coverage(
 
         # Very rough guess of the coverage relative to the requested period,
         # without having to open the files or checking day-by-day
+        # This is only checking that you have the first and last time point, not that you have everything in between.
         guessed_nb_hrs = np.min(
             [
                 df[files_in_range]["date_end"].max(),
@@ -998,12 +1010,22 @@ def _subset_file_coverage(
                 date_parser(str(period[0]), freq="H"),
             ]
         )
+
+        # This checks the sum of hours in all selected files
+        guessed_nb_hrs_sum = (
+            df[files_in_range]["date_end"] - df[files_in_range]["date_start"]
+        ).sum()
+
         period_nb_hrs = date_parser(
             str(period[1]), end_of_period=True, freq="H"
         ) - date_parser(str(period[0]), freq="H")
 
         # 'coverage' adds some leeway, for example to take different calendars into account or missing 2100-12-31
-        if guessed_nb_hrs / period_nb_hrs < coverage or len(df[files_in_range]) == 0:
+        if (
+            guessed_nb_hrs / period_nb_hrs < coverage
+            or len(df[files_in_range]) == 0
+            or guessed_nb_hrs_sum / period_nb_hrs < coverage
+        ):
             logging.warning(
                 f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage."
             )

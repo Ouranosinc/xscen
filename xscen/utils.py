@@ -94,7 +94,17 @@ def stack_drop_nans(
       The name of the new stacked dim.
     to_file : str, optional
       A netCDF filename where to write the stacked coords for use in `unstack_fill_nan`.
+      If given a string with {shape} and {domain}, the formatting will fill them with
+      the original shape of the dataset and the global attributes 'cat:domain'.
       If None (default), nothing is written to disk.
+      It is recommended to fill this argument in the config. It will be parsed automatically.
+      E.g.:
+
+          utils:
+            stack_drop_nans:
+                to_file: /some_path/coords/coords_{domain}_{shape}.nc
+            unstack_fill_nan:
+                coords: /some_path/coords/coords_{domain}_{shape}.nc
 
     Returns
     -------
@@ -106,13 +116,39 @@ def stack_drop_nans(
     --------
     unstack_fill_nan : The inverse operation.
     """
+
+    original_shape = "x".join(map(str, mask.shape))
+
     mask_1d = mask.stack({new_dim: mask.dims})
-    out = ds.stack({new_dim: mask.dims}).where(mask_1d, drop=True).reset_index(new_dim)
+    out = (
+        ds.stack({new_dim: mask.dims})
+        .where(mask_1d, drop=True)
+        .reset_index(new_dim, drop=True)
+    )
     for dim in mask.dims:
         out[dim].attrs.update(ds[dim].attrs)
 
     if to_file is not None:
+        # set default path to store the information necessary to unstack
+        # the name includes the domain and the original shape to uniquely identify the dataset
+        domain = ds.attrs.get("cat:domain", "unknown")
+        to_file = to_file.format(domain=domain, shape=original_shape)
+        if not Path(to_file).parent.exists():
+            os.mkdir(Path(to_file).parent)
         mask.coords.to_dataset().to_netcdf(to_file)
+
+    # carry information about original shape to be able to unstack properly
+    for dim in mask.dims:
+        out[dim].attrs["original_shape"] = original_shape
+
+        # this is needed to fix a bug in xarray '2022.6.0'
+        out[dim] = xr.DataArray(
+            out[dim].values,
+            dims=out[dim].dims,
+            coords=out[dim].coords,
+            attrs=out[dim].attrs,
+        )
+
     return out
 
 
@@ -133,6 +169,18 @@ def unstack_fill_nan(
       dimensions, those original dimensions must be listed here.
       If a dict : a mapping from the name to the array of the coords to unstack
       If a str : a filename to a dataset containing only those coords (as coords).
+      If given a string with {shape} and {domain}, the formatting will fill them with
+      the original shape of the dataset (that should have been store in the
+      attributes of the stacked dimensions) by `stack_drop_nans` and the global attributes 'cat:domain'.
+      It is recommended to fill this argument in the config. It will be parsed automatically.
+      E.g.:
+
+          utils:
+            stack_drop_nans:
+                to_file: /some_path/coords/coords_{domain}_{shape}.nc
+            unstack_fill_nan:
+                coords: /some_path/coords/coords_{domain}_{shape}.nc
+
       If None (default), all coords that have `dim` a single dimension are used as the
       new dimensions/coords in the unstacked output.
       Coordinates will be loaded within this function.
@@ -143,6 +191,9 @@ def unstack_fill_nan(
       Same as `ds`, but `dim` has been unstacked to coordinates in `coords`.
       Missing elements are filled according to the defaults of `fill_value` of :py:meth:`xarray.Dataset.unstack`.
     """
+    if coords is None:
+        logger.info("Dataset unstacked using no coords argument.")
+
     if isinstance(coords, (list, tuple)):
         dims, crds = zip(*[(name, ds[name].load().values) for name in coords])
     else:
@@ -162,6 +213,14 @@ def unstack_fill_nan(
 
     if not isinstance(coords, (list, tuple)) and coords is not None:
         if isinstance(coords, (str, os.PathLike)):
+            # find original shape in the attrs of one of the dimension
+            original_shape = "unknown"
+            for dim in ds.dims:
+                if "original_shape" in dim.attrs:
+                    original_shape = ds[dim].attrs["original_shape"]
+            domain = ds.attrs.get("cat:domain", "unknown")
+            coords = coords.format(domain=domain, shape=original_shape)
+            logger.info(f"Dataset unstacked using {coords}.")
             coords = xr.open_dataset(coords)
         out = out.reindex(**coords.coords)
 
@@ -193,6 +252,7 @@ def get_cat_attrs(ds: Union[xr.Dataset, dict]):
     return {k[4:]: v for k, v in attrs.items() if k.startswith("cat:")}
 
 
+@parse_config
 def maybe_unstack(
     ds: xr.Dataset,
     coords: str = None,
@@ -211,15 +271,52 @@ def maybe_unstack(
 CV = ModuleType(
     "CV",
     (
-        "Mappings of (controlled) vocabulary. This module is generated automatically "
-        "from json files in xscen/CVs. Functions are essentially mappings, most of "
-        "which are meant to provide translations between columns.\n\n"
-        "Json files must be shallow dictionaries to be supported. If the json file "
-        "contains a ``is_regex: True`` entry, then the keys are automatically "
-        "translated as regex patterns and the function returns the value of the first "
-        "key that matches the pattern. Otherwise the function essentially acts like a "
-        "normal dictionary. The 'raw' data parsed from the json file is added in the "
-        "``dict`` attribute of the function."
+        """
+        Mappings of (controlled) vocabulary. This module is generated automatically
+        from json files in xscen/CVs. Functions are essentially mappings, most of
+        which are meant to provide translations between columns.\n\n
+        Json files must be shallow dictionaries to be supported. If the json file
+        contains a ``is_regex: True`` entry, then the keys are automatically
+        translated as regex patterns and the function returns the value of the first
+        key that matches the pattern. Otherwise the function essentially acts like a
+        normal dictionary. The 'raw' data parsed from the json file is added in the
+        ``dict`` attribute of the function.
+        Example:
+
+        .. code-block:: python
+
+            xs.utils.CV.frequency_to_timedelta.dict
+
+        .. literalinclude:: ../xscen/CVs/frequency_to_timedelta.json
+           :language: json
+           :caption: frequency_to_timedelta
+
+        .. literalinclude:: ../xscen/CVs/frequency_to_xrfreq.json
+           :language: json
+           :caption: frequency_to_xrfreq
+
+        .. literalinclude:: ../xscen/CVs/infer_resolution.json
+           :language: json
+           :caption: infer_resolution
+
+        .. literalinclude:: ../xscen/CVs/resampling_methods.json
+           :language: json
+           :caption: resampling_methods
+
+        .. literalinclude:: ../xscen/CVs/variable_names.json
+           :language: json
+           :caption: variable_names
+
+        .. literalinclude:: ../xscen/CVs/xrfreq_to_frequency.json
+           :language: json
+           :caption: xrfreq_to_frequency
+
+        .. literalinclude:: ../xscen/CVs/xrfreq_to_timedelta.json
+           :language: json
+           :caption: xrfreq_to_timedelta
+
+
+        """
     ),
 )
 
@@ -293,6 +390,10 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     Returns
     -------
     xr.Dataset
+
+    See Also
+    ________
+    xclim.core.units.convert_units_to, xclim.core.units.rate2amount
     """
 
     with xr.set_options(keep_attrs=True):
@@ -321,6 +422,7 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     return ds
 
 
+@parse_config
 def clean_up(
     ds: xr.Dataset,
     *,
@@ -401,6 +503,11 @@ def clean_up(
     -------
     xr.Dataset
         Cleaned up dataset
+
+    See Also
+    --------
+    xclim.core.calendar.convert_calendar
+
     """
 
     if variables_and_units:
