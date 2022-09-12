@@ -1,7 +1,6 @@
 import datetime
 import logging
 import re
-import warnings
 from copy import deepcopy
 from pathlib import Path
 from typing import Callable, List, Optional, Union
@@ -999,7 +998,7 @@ def _subset_file_coverage(
 
         # Very rough guess of the coverage relative to the requested period,
         # without having to open the files or checking day-by-day
-        # This is only checking that you have the first and last time point, not that you have everything in between!!
+        # This is only checking that you have the first and last time point, not that you have everything in between.
         guessed_nb_hrs = np.min(
             [
                 df[files_in_range]["date_end"].max(),
