@@ -316,20 +316,6 @@ def extract_dataset(
                         catalog[key].df["xrfreq"].iloc[0]
                         == variables_and_freqs[var_name]
                     ):
-                        # test
-                        if True:
-                            counts = da.time.resample(time=xrfreq).count()
-                            if any(counts > 1):
-                                raise ValueError(
-                                    "Dataset is labelled as having a sampling frequency of "
-                                    f"{xrfreq}, but some periods have more than one data point."
-                                )
-                            if any(counts.isnull()):
-                                raise ValueError(
-                                    "The resampling count contains nans. There might be missing data"
-                                )
-                            da["time"] = counts.time
-                        # test
                         ds = ds.assign({var_name: da})
                     else:
                         raise ValueError(
