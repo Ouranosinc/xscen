@@ -1,6 +1,7 @@
 import datetime
 import logging
 import re
+import warnings
 from copy import deepcopy
 from pathlib import Path
 from typing import Callable, List, Optional, Union
@@ -315,6 +316,20 @@ def extract_dataset(
                         catalog[key].df["xrfreq"].iloc[0]
                         == variables_and_freqs[var_name]
                     ):
+                        # test
+                        if True:
+                            counts = da.time.resample(time=xrfreq).count()
+                            if any(counts > 1):
+                                raise ValueError(
+                                    "Dataset is labelled as having a sampling frequency of "
+                                    f"{xrfreq}, but some periods have more than one data point."
+                                )
+                            if any(counts.isnull()):
+                                raise ValueError(
+                                    "The resampling count contains nans. There might be missing data"
+                                )
+                            da["time"] = counts.time
+                        # test
                         ds = ds.assign({var_name: da})
                     else:
                         raise ValueError(
@@ -998,6 +1013,7 @@ def _subset_file_coverage(
 
         # Very rough guess of the coverage relative to the requested period,
         # without having to open the files or checking day-by-day
+        # This is only checking that you have the first and last time point, not that you have everything in between!!
         guessed_nb_hrs = np.min(
             [
                 df[files_in_range]["date_end"].max(),
@@ -1009,12 +1025,22 @@ def _subset_file_coverage(
                 date_parser(str(period[0]), freq="H"),
             ]
         )
+
+        # This checks the sum of hours in all selected files
+        guessed_nb_hrs_sum = (
+            df[files_in_range]["date_end"] - df[files_in_range]["date_start"]
+        ).sum()
+
         period_nb_hrs = date_parser(
             str(period[1]), end_of_period=True, freq="H"
         ) - date_parser(str(period[0]), freq="H")
 
         # 'coverage' adds some leeway, for example to take different calendars into account or missing 2100-12-31
-        if guessed_nb_hrs / period_nb_hrs < coverage or len(df[files_in_range]) == 0:
+        if (
+            guessed_nb_hrs / period_nb_hrs < coverage
+            or len(df[files_in_range]) == 0
+            or guessed_nb_hrs_sum / period_nb_hrs < coverage
+        ):
             logging.warning(
                 f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage."
             )
