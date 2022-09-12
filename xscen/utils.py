@@ -324,12 +324,12 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
 def clean_up(
     ds: xr.Dataset,
     *,
-    xrkwargs: dict = None,
     variables_and_units: Optional[dict] = None,
     convert_calendar_kwargs: Optional[dict] = None,
     missing_by_var: Optional[dict] = None,
     maybe_unstack_dict: Optional[dict] = None,
     common_attrs_only: Union[dict, list] = None,
+    common_attrs_open_kwargs: dict = None,
     attrs_to_remove: Optional[dict] = None,
     remove_all_attrs_except: Optional[dict] = None,
     add_attrs: Optional[dict] = None,
@@ -353,8 +353,6 @@ def clean_up(
     ----------
     ds: xr.Dataset
         Input dataset to clean up
-    xrkwargs: dict
-        Dictionary of arguments for xarray.open_dataset(). Used with common_attrs_only if given paths.
     variables_and_units: dict
         Dictionary of variable to convert. eg. {'tasmax': 'degC', 'pr': 'mm d-1'}
     convert_calendar_kwargs: dict
@@ -371,6 +369,8 @@ def clean_up(
     common_attrs_only: dict, list
         List of datasets, or path to NetCDF or Zarr files.
         Keeps only the global attributes that are the same for all datasets and generates a new id.
+    common_attrs_open_kwargs: dict
+        Dictionary of arguments for xarray.open_dataset(). Used with common_attrs_only if given paths.
     attrs_to_remove: dict
         Dictionary where the keys are the variables and the values are a list of the attrs that should be removed.
         For global attrs, use the key 'global'.
@@ -458,13 +458,15 @@ def clean_up(
             return a == b
 
     if common_attrs_only:
-        xrkwargs = xrkwargs or {}
+        common_attrs_open_kwargs = common_attrs_open_kwargs or {}
         if isinstance(common_attrs_only, dict):
             common_attrs_only = list(common_attrs_only.values())
 
         for i in range(len(common_attrs_only)):
             if isinstance(common_attrs_only[i], (str, Path)):
-                dataset = xr.open_dataset(common_attrs_only[i], **xrkwargs)
+                dataset = xr.open_dataset(
+                    common_attrs_only[i], **common_attrs_open_kwargs
+                )
             else:
                 dataset = common_attrs_only[i]
             attributes = ds.attrs.copy()

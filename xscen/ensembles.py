@@ -123,7 +123,9 @@ def ensemble_stats(
         create_kwargs.pop("preprocess", None)
 
         ens_stats = clean_up(
-            ds=ens_stats, common_attrs_only=datasets, xrkwargs=create_kwargs
+            ds=ens_stats,
+            common_attrs_only=datasets,
+            common_attrs_open_kwargs=create_kwargs,
         )
 
         # generate new id
