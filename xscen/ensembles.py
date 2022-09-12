@@ -79,8 +79,8 @@ def ensemble_stats(
     ens = ensembles.create_ensemble(datasets, **create_kwargs)
 
     ens_stats = xr.Dataset(attrs=ens.attrs)
-    for stat in statistics.keys():
-        stats_kwargs = deepcopy(statistics.get(stat, None) or {})
+    for stat, stats_kwargs in statistics.items():
+        stats_kwargs = deepcopy(stats_kwargs or {})
         if (
             weights is not None
             and "weights" in inspect.getfullargspec(getattr(ensembles, stat))[0]
