@@ -216,7 +216,7 @@ def unstack_fill_nan(
             # find original shape in the attrs of one of the dimension
             original_shape = "unknown"
             for dim in ds.dims:
-                if "original_shape" in dim.attrs:
+                if "original_shape" in ds[dim].attrs:
                     original_shape = ds[dim].attrs["original_shape"]
             domain = ds.attrs.get("cat:domain", "unknown")
             coords = coords.format(domain=domain, shape=original_shape)
