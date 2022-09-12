@@ -58,9 +58,6 @@ def ensemble_stats(
         Dataset with ensemble statistics
     """
     create_kwargs = create_kwargs or {}
-    logger.info(
-        f"Creating ensemble with {len(datasets)} simulations and calculating {statistics}."
-    )
 
     if isinstance(statistics, str) and isinstance(stats_kwargs, dict):
         logger.warning(
@@ -79,6 +76,9 @@ def ensemble_stats(
 
     ens_stats = xr.Dataset(attrs=ens.attrs)
     for stat in statistics.keys():
+        logger.info(
+            f"Creating ensemble with {len(datasets)} simulations and calculating {stat}."
+        )
         stats_kwargs = deepcopy(statistics.get(stat, None) or {})
         if (
             weights is not None
