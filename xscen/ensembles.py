@@ -180,8 +180,7 @@ def generate_weights(
         [0] * len(keys), coords={"realization": ("realization", list(keys))}
     )
 
-    for r in weights.realization:
-        r = r.item()
+    for r in weights.realization.values:
 
         # Weight == 0 means it hasn't been processed yet
         if weights.sel(realization=r) == 0:
