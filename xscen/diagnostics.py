@@ -122,6 +122,7 @@ def properties_and_measures(
     ],
     period: list = None,
     unstack: bool = False,
+    rechunk: dict = None,
     dref_for_measure: Optional[xr.Dataset] = None,
     change_units_arg: Optional[dict] = None,
     to_level_prop: str = "diag-properties",
@@ -199,6 +200,9 @@ def properties_and_measures(
 
     if unstack:
         ds = unstack_fill_nan(ds)
+
+    if rechunk:
+        ds = ds.chunk(rechunk)
 
     if change_units_arg:
         ds = change_units(ds, variables_and_units=change_units_arg)
