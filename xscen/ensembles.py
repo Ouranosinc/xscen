@@ -44,16 +44,8 @@ def ensemble_stats(
         If a function requires 'ref', the dictionary entry should be the inputs of a .loc[], e.g. {"ref": {"horizons": "1981-2010"}}
     create_kwargs: dict
         Dictionary of arguments for xclim.ensembles.create_ensemble.
-    weights: dict
-        'weights': xr.DataArray, optional
-            DataArray of weights along the 'realization' dimension.
-            If absent, 'info' and 'independence_level' will be used to generate weights.
-        'info': dict, optional
-            Dictionary in the format {realization: attrs} detailing each realization.
-            If absent, the attributes will be guessed using the datasets' metadata.
-        'independence_level': str
-            ['all', 'GCM'] Whether to consider all simulations independent or to weight "1 GCM 1 vote".
-            This entry is required unless weights are explicitely given in weighted["weights"].
+    weights: xr.DataArray
+        Weights to apply along the 'realization' dimension. This array cannot contain missing values.
     common_attrs_only:
         If True, keeps only the global attributes that are the same for all datasets and generate new id.
         If False, keeps global attrs of the first dataset (same behaviour as xclim.ensembles.create_ensemble)
@@ -142,7 +134,7 @@ def ensemble_stats(
 
 
 def generate_weights(
-    datasets: dict,
+    datasets: Union[dict, list],
     independence_level: str = "all",
 ) -> xr.DataArray:
     """
