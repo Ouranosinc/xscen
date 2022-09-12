@@ -63,8 +63,9 @@ def ensemble_stats(
     )
 
     if isinstance(statistics, str) and isinstance(stats_kwargs, dict):
-        logger.warning(
-            "DeprecationWarning: The usage of 'statistics: str' with 'stats_kwargs: dict' will be abandoned. Please use 'statistics: dict' instead."
+        warnings.warn(
+            "The usage of 'statistics: str' with 'stats_kwargs: dict' will be abandoned. Please use 'statistics: dict' instead.",
+            category=FutureWarning
         )
         statistics = {statistics: stats_kwargs}
         stats_kwargs = None
