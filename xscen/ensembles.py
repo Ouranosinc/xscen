@@ -1,12 +1,12 @@
 import inspect
 import logging
+import warnings
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Union
 
 import numpy as np
 import xarray as xr
-import xclim as xc
 from xclim import ensembles
 
 from .catalog import generate_id
@@ -60,8 +60,9 @@ def ensemble_stats(
     create_kwargs = create_kwargs or {}
 
     if isinstance(statistics, str) and isinstance(stats_kwargs, dict):
-        logger.warning(
-            "DeprecationWarning: The usage of 'statistics: str' with 'stats_kwargs: dict' will be abandoned. Please use 'statistics: dict' instead."
+        warnings.warn(
+            "The usage of 'statistics: str' with 'stats_kwargs: dict' will be abandoned. Please use 'statistics: dict' instead.",
+            category=FutureWarning,
         )
         statistics = {statistics: stats_kwargs}
         stats_kwargs = None
@@ -75,11 +76,11 @@ def ensemble_stats(
     ens = ensembles.create_ensemble(datasets, **create_kwargs)
 
     ens_stats = xr.Dataset(attrs=ens.attrs)
-    for stat in statistics.keys():
+    for stat, stats_kwargs in statistics.items():
+        stats_kwargs = deepcopy(stats_kwargs or {})
         logger.info(
             f"Creating ensemble with {len(datasets)} simulations and calculating {stat}."
         )
-        stats_kwargs = deepcopy(statistics.get(stat, None) or {})
         if (
             weights is not None
             and "weights" in inspect.getfullargspec(getattr(ensembles, stat))[0]
@@ -90,7 +91,7 @@ def ensemble_stats(
 
         if stat == "change_significance":
             for v in ens.data_vars:
-                with xc.set_options(keep_attrs=True):
+                with xr.set_options(keep_attrs=True):
                     deltak = ens[v].attrs.get("delta_kind", None)
                     if stats_kwargs.get("ref", None):
                         raise ValueError(
@@ -179,8 +180,7 @@ def generate_weights(
         [0] * len(keys), coords={"realization": ("realization", list(keys))}
     )
 
-    for r in weights.realization:
-        r = r.item()
+    for r in weights.realization.values:
 
         # Weight == 0 means it hasn't been processed yet
         if weights.sel(realization=r) == 0:
