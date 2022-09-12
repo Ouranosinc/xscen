@@ -215,9 +215,9 @@ def unstack_fill_nan(
         if isinstance(coords, (str, os.PathLike)):
             # find original shape in the attrs of one of the dimension
             original_shape = "unknown"
-            for dim in ds.dims:
-                if "original_shape" in ds[dim].attrs:
-                    original_shape = ds[dim].attrs["original_shape"]
+            for c in ds.coords:
+                if "original_shape" in ds[c].attrs:
+                    original_shape = ds[c].attrs["original_shape"]
             domain = ds.attrs.get("cat:domain", "unknown")
             coords = coords.format(domain=domain, shape=original_shape)
             logger.info(f"Dataset unstacked using {coords}.")
