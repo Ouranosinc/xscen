@@ -11,6 +11,8 @@ New features and enhancements
 * New functions ``diagnostics.properties_and_measures``, ``diagnostics.measures_heatmap`` and ``diagnostics.measures_improvement``. (:issue:`5`, :pull:`54`)
 * Add argument `resample_methods` to `xs.extract.resample`. (:issue:`57`, :pull:`57`)
 * Added a ReadTheDocs configuration to expose public documentation. (:issue:`65`, :pull:`66`).
+* ``xs.utils.stack_drop_nans``/ ``xs.utils.unstack_fill_nan`` will now format the `to_file`/`coords` string to add the domain and the shape. (:issue:`59`, :pull:`67`)
+
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
