@@ -354,7 +354,7 @@ def clean_up(
     ds: xr.Dataset
         Input dataset to clean up
     xrkwargs: dict
-        Dictionary of arguments for xclim.open_dataset(). Used with common_attrs_only if given paths.
+        Dictionary of arguments for xarray.open_dataset(). Used with common_attrs_only if given paths.
     variables_and_units: dict
         Dictionary of variable to convert. eg. {'tasmax': 'degC', 'pr': 'mm d-1'}
     convert_calendar_kwargs: dict
