@@ -133,9 +133,6 @@ def ensemble_stats(
             common_attrs_open_kwargs=create_kwargs,
         )
 
-        # generate new id
-        ens_stats.attrs["cat:id"] = generate_id(ens_stats).iloc[0]
-
     ens_stats.attrs["cat:processing_level"] = to_level
 
     return ens_stats

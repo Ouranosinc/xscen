@@ -565,6 +565,8 @@ def clean_up(
             return a == b
 
     if common_attrs_only:
+        from .catalog import generate_id
+
         common_attrs_open_kwargs = common_attrs_open_kwargs or {}
         if isinstance(common_attrs_only, dict):
             common_attrs_only = list(common_attrs_only.values())
@@ -584,6 +586,9 @@ def clean_up(
                     or (a_val != dataset.attrs[a_key])
                 ):
                     del ds.attrs[a_key]
+
+        # generate a new id
+        ds.attrs["cat:id"] = generate_id(ds).iloc[0]
 
     if to_level:
         ds.attrs["cat:processing_level"] = to_level
