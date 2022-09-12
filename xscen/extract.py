@@ -328,6 +328,8 @@ def extract_dataset(
                                     "Dataset is labelled as having a sampling frequency of "
                                     f"{xrfreq}, but some periods have more than one data point."
                                 )
+                            if any(counts.isnull()):
+                                raise ValueError('The resampling count contains nans. There might be some missing data.')
                             da["time"] = counts.time
                         ds = ds.assign({var_name: da})
                     else:
