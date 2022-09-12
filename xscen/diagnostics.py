@@ -235,6 +235,12 @@ def properties_and_measures(
         ds1.attrs.pop("cat:variable", None)
         ds1.attrs["cat:frequency"] = "fx"
 
+        # to be able to save in zarr, convert object to string
+        if "season" in ds1:
+            ds1["season"] = ds1.season.astype("str")
+        if "month" in ds1:
+            ds1["month"] = ds1.month.astype("str")
+
     prop.attrs["cat:processing_level"] = to_level_prop
     meas.attrs["cat:processing_level"] = to_level_meas
 
@@ -288,7 +294,9 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
     # normalize to 0-1 -> best-worst
     hmap = np.array(
         [
-            (c - min(c)) / (max(c) - min(c)) if max(c) != min(c) else [0.5] * len(c)
+            (c - np.min(c)) / (np.max(c) - np.min(c))
+            if np.max(c) != np.min(c)
+            else [0.5] * len(c)
             for c in hmap.T
         ]
     ).T
