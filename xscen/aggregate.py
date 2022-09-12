@@ -273,6 +273,7 @@ def spatial_mean(
       If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
     kwargs: dict
       Arguments to send to either mean(), interp() or SpatialAverager().
+      For SpatialAverager, one can give `skipna` here, to be passed to the averager call itself.
     simplify_tolerance: float
       Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
       The simpler the polygons, the faster the averaging, but it will lose some precision.
@@ -414,10 +415,6 @@ def spatial_mean(
         # If the region is a shapefile, open with geopandas
         elif region["method"] == "shape":
             polygon = gpd.read_file(region["shape"]["shape"])
-            if len(polygon != 1):
-                raise NotImplementedError(
-                    "spatial_mean currently accepts only single polygons."
-                )
 
             # Simplify the geometries to a given tolerance, if needed.
             # The simpler the polygons, the faster the averaging, but it will lose some precision.
@@ -435,8 +432,18 @@ def spatial_mean(
         else:
             raise ValueError("'method' not understood.")
 
+        skipna = kwargs.pop("skipna", False)
         savg = xe.SpatialAverager(ds, polygon.geometry, **kwargs)
-        ds_agg = savg(ds, keep_attrs=True).isel(geom=0)
+        ds_agg = savg(ds, keep_attrs=True, skipna=skipna)
+        extra_coords = {
+            col: xr.DataArray(polygon[col], dims=("geom",))
+            for col in polygon.columns
+            if col != "geometry"
+        }
+        extra_coords["geom"] = xr.DataArray(polygon.index, dims=("geom",))
+        ds_agg = ds_agg.assign_coords(**extra_coords)
+        if len(polygon) == 1:
+            ds_agg = ds_agg.squeeze("geom")
 
     else:
         raise ValueError(
