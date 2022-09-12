@@ -91,7 +91,7 @@ def ensemble_stats(
 
         if stat == "change_significance":
             for v in ens.data_vars:
-                with xc.set_options(keep_attrs=True):
+                with xr.set_options(keep_attrs=True):
                     deltak = ens[v].attrs.get("delta_kind", None)
                     if stats_kwargs.get("ref", None):
                         raise ValueError(
