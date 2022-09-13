@@ -469,7 +469,7 @@ def clean_up(
         Dictionary to pass to xscen.common.maybe_unstack function.
         The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
     common_attrs_only: dict, list
-        List of datasets, or path to NetCDF or Zarr files.
+        Dictionnary of datasets or list of datasets, or path to NetCDF or Zarr files.
         Keeps only the global attributes that are the same for all datasets and generates a new id.
     common_attrs_open_kwargs: dict
         Dictionary of arguments for xarray.open_dataset(). Used with common_attrs_only if given paths.
