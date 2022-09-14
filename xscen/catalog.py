@@ -117,6 +117,20 @@ def _parse_list_of_strings(elem):
     return (elem,)
 
 
+def _parse_dates(elem):
+    try:
+        if isinstance(elem, str):
+            return pd.Timestamp(elem).to_period("H")
+        return pd.DatetimeIndex(elem).to_period("H")
+    except pd.errors.OutOfBoundsDatetime:
+        warnings.warn(
+            "Somes dates are out of the datetime64[ns] range, switching to slower direct period parsing."
+        )
+        if isinstance(elem, str):
+            return pd.Period(elem, freq="H")
+        return pd.PeriodIndex(elem, freq="H")
+
+
 csv_kwargs = {
     "dtype": {
         key: "category" if not key == "path" else "string[pyarrow]"
@@ -127,7 +141,7 @@ csv_kwargs = {
         "variable": _parse_list_of_strings,
     },
     "parse_dates": ["date_start", "date_end"],
-    "date_parser": lambda s: pd.Period(s, "H"),
+    "date_parser": _parse_dates,
 }
 """Kwargs to pass to `pd.read_csv` when opening an official Ouranos catalog."""
 
@@ -713,6 +727,9 @@ def _name_parser(
             else:
                 d = {}
         except ValueError:
+            continue
+        except IndexError as err:
+            logger.debug(f"Filename parsing failed with {err} for {pattern} on {path}.")
             continue
     if not d:
         logger.debug(f"No pattern matched with path {path}")

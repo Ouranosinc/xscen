@@ -24,6 +24,7 @@ New features and enhancements
     * Allow passing skipna to the regridder kwargs.
     * Do not fail for any grid mapping problem, includin if a grid_mapping attribute mentions a variable that doesn't exist.
 * Default email sent to the local user. (:pull:`68`).
+* Special accelerated pathway for parsing catalogs with all dates within the datetime64[ns] range (:pull:`75`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
