@@ -5,6 +5,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Union
 
+import pandas as pd
 import xarray as xr
 from xclim import ensembles
 
@@ -170,7 +171,7 @@ def generate_weights(
     # Use metadata to identify the simulation attributes
     info = {}
     keys = datasets.keys() if isinstance(datasets, dict) else range(len(datasets))
-    defdict = {'source': None, 'activity': None, 'driving_model': None}
+    defdict = {"source": None, "activity": None, "driving_model": None}
     info = {key: dict(defdict, **get_cat_attrs(datasets[key])) for key in keys}
 
     # Prepare an array of 0s, with size == nb. realization
