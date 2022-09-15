@@ -29,6 +29,13 @@ Controlled Vocabulary and Mappings
    :members:
    :noindex:
 
+Reduction
+----------
+
+.. automodule:: xscen.reduce
+   :members:
+   :noindex:
+
 Regridding
 ----------
 

@@ -25,10 +25,15 @@ New features and enhancements
     * Do not fail for any grid mapping problem, includin if a grid_mapping attribute mentions a variable that doesn't exist.
 * Default email sent to the local user. (:pull:`68`).
 * Special accelerated pathway for parsing catalogs with all dates within the datetime64[ns] range (:pull:`75`).
+* New functions ``reduce_ensemble`` and ``build_reduction_data`` to support kkz and kmeans clustering (:issue:`4`, :pull:`63`)
+* `ensemble_stats` can now loop through multiple statistics, support functions located in `xclim.ensembles._robustness`, and supports weighted realizations (:pull:`63`).
+* New function `ensemble_stats.generate_weights` that estimates weights based on simulation metadata (:pull:`63`).
+* New function `catalog.unstack_id` to reverse-engineer IDs (:pull:`63`).
+* `generate_id` now accepts Datasets (:pull:`63`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* N/A
+* `statistics / stats_kwargs` have been changed/eliminated in `ensemble_stats`, respectively (:pull:`63`).
 
 Bug fixes
 ^^^^^^^^^
@@ -41,6 +46,9 @@ Internal changes
 * Default method of `xs.extract.resample` now depends on frequency. (:issue:`57`, :pull:`58`).
 * Bugfix for `_restrict_by_resolution` with CMIP6 datasets (:pull:`71`).
 * More complete check of coverage in ``_subset_file_coverage`` (:issue: `70`, :pull: `72`)
+* The code that performs `common_attrs_only` in `ensemble_stats` has been moved to `clean_up` (:pull:`63`).
+* Removed the default `to_level` in `clean_up` (:pull:`63`).
+
 
 v0.3.0 (2022-08-23)
 -------------------
