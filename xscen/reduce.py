@@ -101,7 +101,8 @@ def reduce_ensemble(data: xr.DataArray, method: str, kwargs: dict):
 
     selected = getattr(xce, f"{method}_reduce_ensemble")(data=data, **kwargs)
 
-    clusters = fig_data = None
+    clusters = {}
+    fig_data = {}
     if method == "kmeans":
         fig_data = selected[2]
         clusters_tmp = selected[1]
