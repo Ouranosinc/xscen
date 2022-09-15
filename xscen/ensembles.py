@@ -11,7 +11,7 @@ from xclim import ensembles
 
 from .catalog import generate_id
 from .config import parse_config
-from .utils import clean_up
+from .utils import clean_up, get_cat_attrs
 
 logger = logging.getLogger(__name__)
 
