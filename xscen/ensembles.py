@@ -98,7 +98,7 @@ def ensemble_stats(
             for v in ens.data_vars:
                 with xr.set_options(keep_attrs=True):
                     deltak = ens[v].attrs.get("delta_kind", None)
-                    if stats_kwargs.get("ref", None):
+                    if stats_kwargs.get("ref") is not None and deltak is not None:
                         raise ValueError(
                             "{v} is a delta, but 'ref' was still specified."
                         )
