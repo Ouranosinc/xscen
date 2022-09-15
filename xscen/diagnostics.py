@@ -144,6 +144,8 @@ def properties_and_measures(
         and dref_for_measure if it is given.
     unstack: bool
         Whether to unstack ds before computing the properties.
+    rechunk: dict
+        Dictionary of chunks to use for a rechunk before computing the properties.
     dref_for_measure: xr.Dataset
         Dataset of properties to be used as the ref argument in the computation of the measure.
         Ideally, this is the first output (prop) of a previous call to this function.
