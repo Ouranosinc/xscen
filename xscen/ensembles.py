@@ -210,11 +210,9 @@ def generate_weights(
                     gcm = sim.get("source", None)
 
                 # Global models
-                group_g = [k for k in info.keys() if info[k].get("source", None) == gcm]
+                group_g = [k for k, v in info.item() if v.get("source") == gcm]
                 # Regional models with the same GCM
-                group_r = [
-                    k for k in info.keys() if info[k].get("driving_model", None) == gcm
-                ]
+                group_r = [k for k, v in info.items() if v.get("driving_model") == gcm]
 
                 # Divide the weight equally between the GCMs and RCMs
                 divisor = 1 / ((len(group_g) > 0) + (len(group_r) > 0))
