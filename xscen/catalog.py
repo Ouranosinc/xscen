@@ -118,6 +118,20 @@ def _parse_list_of_strings(elem):
     return (elem,)
 
 
+def _parse_dates(elem):
+    try:
+        if isinstance(elem, str):
+            return pd.Timestamp(elem).to_period("H")
+        return pd.DatetimeIndex(elem).to_period("H")
+    except pd.errors.OutOfBoundsDatetime:
+        warnings.warn(
+            "Somes dates are out of the datetime64[ns] range, switching to slower direct period parsing."
+        )
+        if isinstance(elem, str):
+            return pd.Period(elem, freq="H")
+        return pd.PeriodIndex(elem, freq="H")
+
+
 csv_kwargs = {
     "dtype": {
         key: "category" if not key == "path" else "string[pyarrow]"
@@ -128,7 +142,7 @@ csv_kwargs = {
         "variable": _parse_list_of_strings,
     },
     "parse_dates": ["date_start", "date_end"],
-    "date_parser": lambda s: pd.Period(s, "H"),
+    "date_parser": _parse_dates,
 }
 """Kwargs to pass to `pd.read_csv` when opening an official Ouranos catalog."""
 
@@ -573,10 +587,14 @@ def concat_data_catalogs(*dcs):
 
 
 @parse_config
-def _get_asset_list(root_paths, globpat="*.nc", parallel_depth=1):
+def _get_asset_list(root_paths, globpat="*.nc", parallel_depth=1, compute=True):
     """List files fitting a given glob pattern from a list of paths.
 
-    Search is done with GNU's `find` and parallized through `dask`.
+    Search is done with GNU's `find` and parallelized through `dask`.
+
+    Parameters
+    ----------
+    root_paths: Sequence of strings or paths
     """
     if isinstance(root_paths, str):
         root_paths = [root_paths]
@@ -631,7 +649,7 @@ def _get_asset_list(root_paths, globpat="*.nc", parallel_depth=1):
             output = []
         return output
 
-    filecoll = dict()
+    files = list()
     for r in root_paths:
         root = Path(r)
         dirs = []
@@ -643,19 +661,19 @@ def _get_asset_list(root_paths, globpat="*.nc", parallel_depth=1):
                         dirs.remove(x.parent)
                     dirs.append(x)
 
-        filelist = [_file_dir_files(directory, globpat) for directory in dirs]
-        # watch progress
-        with ProgressBar():
-            filelist = dask.compute(*filelist)
-        filecoll[root] = list(itertools.chain(*filelist))
+        files.extend(
+            [(root, _file_dir_files(directory, globpat)) for directory in dirs]
+        )
 
         # add files in the first directory, unless the glob pattern includes
         # folder matching, in which case we don't want to risk recomputing the same parsing.
         if "/" not in globpat:
-            filecoll[root].extend([str(x.name) for x in root.glob(f"{globpat}")])
-        filecoll[root].sort()
+            files.append((root, [str(x.absolute()) for x in root.glob(f"{globpat}")]))
 
-    return filecoll
+    if compute:
+        with ProgressBar():
+            (files,) = dask.compute(files)
+    return files
 
 
 def _name_parser(
@@ -665,6 +683,7 @@ def _name_parser(
     read_from_file=None,
     attrs_map: Mapping[str, Any] = None,
     xr_open_kwargs: Mapping[str, Any] = None,
+    logr: logging.Logger = None,
 ):
     """Extract metadata information from the file path.
 
@@ -674,11 +693,13 @@ def _name_parser(
       Full file path.
     patterns : list or str
       List of patterns to try in `reverse_format`
+    columns : list of string, optional
+      If given, the metadata is restricted to fields from this list.
     read_from_file : list of string or dict, optional
       If not None, passed directly to :py:func:`parse_from_ds` as `names`.
-    attrs_map: dict
+    attrs_map: dict, optional
       If `read_from_file` is not None, passed directly to :py:func:`parse_from_ds`.
-    xr_open_kwargs: dict
+    xr_open_kwargs: dict, optional
       If required, arguments to send to xr.open_dataset() when opening the file to read the attributes.
 
     Returns
@@ -708,6 +729,9 @@ def _name_parser(
                 d = {}
         except ValueError:
             continue
+        except IndexError as err:
+            logger.debug(f"Filename parsing failed with {err} for {pattern} on {path}.")
+            continue
     if not d:
         logger.debug(f"No pattern matched with path {path}")
         return {"path": None}
@@ -730,11 +754,13 @@ def _name_parser(
             logger.error(f"Unable to parse file {path}, got : {err}")
         else:
             d.update(fromfile)
+
     # strip to clean off lost spaces and line jumps
+    # do not include wildcarded fields
     return {
         k: v.strip() if isinstance(v, str) else v
         for k, v in d.items()
-        if not k.startswith("*") and not k.startswith("?")  # Wildcards
+        if not k.startswith("*") and not k.startswith("?")
     }
 
 
@@ -831,9 +857,6 @@ def parse_directory(
                 f"Patterns include fields which are not recognized by xscen : {unrecognized}. "
                 "If this is wanted, pass only_official_columns=False to remove the check."
             )
-    else:
-        # Get all columns defined in the patterns
-        columns = pattern_fields.union({"path", "format"})
 
     read_file_groups = False  # Whether to read file per group or not.
     if not isinstance(read_from_file, bool) and not isinstance(read_from_file[0], str):
@@ -854,42 +877,43 @@ def parse_directory(
     else:
         attrs_map = {}
 
-    # Find files
-    filecoll = _get_asset_list(
-        directories, globpat=globpattern, parallel_depth=parallel_depth
-    )
-    logger.info(
-        f"Found {sum(len(filelist) for filelist in filecoll.values())} files to parse."
+    # Find files (returns a list of tuples of (root, delayed_file_list)).
+    files = _get_asset_list(
+        directories, globpat=globpattern, parallel_depth=parallel_depth, compute=False
     )
 
-    # Parse the file names
-    def _update_dict(entry):
-        z = {k: entry.get(k) for k in columns}
-        return z
-
+    # Paths is a delayed object
     @dask.delayed
-    def delayed_parser(*args, **kwargs):
-        return _update_dict(_name_parser(*args, **kwargs))
+    def _wrap_name_parser(paths, root, *args, **kwargs):
+        return [_name_parser(path, root, *args, **kwargs) for path in paths]
 
     parsed = [
-        delayed_parser(
-            x,
+        _wrap_name_parser(
+            paths,
             root,
             patterns,
             read_from_file=read_from_file if not read_file_groups else None,
             attrs_map=attrs_map,
             xr_open_kwargs=xr_open_kwargs,
         )
-        for root, filelist in filecoll.items()
-        for x in filelist
+        for root, paths in files
     ]
-    if len(parsed) == 0:
-        raise FileNotFoundError("No files found while parsing.")
 
-    with ProgressBar():
-        parsed = dask.compute(*parsed)
+    with ProgressBar():  # Finding the files and parsing the names is done here.
+        (parsed,) = dask.compute(parsed)
+    parsed = list(itertools.chain(*parsed))
+
+    if not parsed:
+        raise ValueError("No files found.")
+    else:
+        logger.info(f"Found and parsed {len(parsed)} files.")
+
     # Path has become NaN when some paths didn't fit any passed pattern
     df = pd.DataFrame(parsed).dropna(axis=0, subset=["path"])
+
+    if only_official_columns:  # Add the missing official columns
+        for col in set(COLUMNS) - set(df.columns):
+            df[col] = None
 
     # Parse attributes from one file per group
     def read_first_file(grp, cols):
@@ -917,6 +941,13 @@ def parse_directory(
     if cvs:
         # Read all CVs and replace values in catalog accordingly
         df = df.replace(cvs)
+        if "variable" in cvs:
+            # Variable can be a tuple, we still want to replace individual names through the cvs
+            df["variable"] = df.variable.apply(
+                lambda vs: vs
+                if isinstance(vs, str)
+                else tuple(cvs["variable"].get(v, v) for v in vs)
+            )
 
     # translate xrfreq into frequencies and vice-versa
     if {"xrfreq", "frequency"}.issubset(df.columns):
@@ -992,12 +1023,12 @@ def parse_from_ds(
 
     if isinstance(obj, Path) and obj.suffixes[-1] == ".zarr" and not get_time:
         logger.info(f"Parsing attributes from Zarr {obj}.")
-        ds_attrs, variables = _parse_from_zarr(obj, get_vars="variables" in names)
+        ds_attrs, variables = _parse_from_zarr(obj, get_vars="variable" in names)
         time = None
     elif isinstance(obj, Path) and obj.suffixes[-1] == ".nc":
         logger.info(f"Parsing attributes with netCDF4 from {obj}.")
         ds_attrs, variables, time = _parse_from_nc(
-            obj, get_vars="variables" in names, get_time=get_time
+            obj, get_vars="variable" in names, get_time=get_time
         )
     else:
         if isinstance(obj, Path):
@@ -1014,7 +1045,7 @@ def parse_from_ds(
 
     for name in names:
         if name == "variable":
-            attrs["variable"] = tuple(variables)
+            attrs["variable"] = tuple(sorted(variables))
         elif name in ("frequency", "xrfreq") and time is not None and time.size > 3:
             # round to the minute to catch floating point imprecision
             freq = xr.infer_freq(time.round("T"))
@@ -1075,7 +1106,9 @@ def _parse_from_zarr(path: os.PathLike, get_vars=True):
                         list(map(str.strip, var_attrs["coordinates"].split(" ")))
                     )
         variables = [
-            varpath.name for varpath in path.iterdir() if varpath.name not in coords
+            varpath.name
+            for varpath in path.iterdir()
+            if varpath.name not in coords and varpath.is_dir()
         ]
     return ds_attrs, variables
 

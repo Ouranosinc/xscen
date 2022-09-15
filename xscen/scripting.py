@@ -34,9 +34,9 @@ __all__ = [
 @parse_config
 def send_mail(
     *,
-    to: str,
     subject: str,
     msg: str,
+    to: str = None,
     server: str = "127.0.0.1",
     port: int = 25,
     attachments: Optional[
@@ -50,12 +50,13 @@ def send_mail(
 
     Parameters
     ----------
-    to: str
-      Email address to which send the email.
     subject: str
       Subject line.
     msg: str
       Main content of the email. Can be UTF-8 and multi-line.
+    to: str, optional
+      Email address to which send the email. If None (default), the email is sent to "{os.getlogin()}@{os.uname().nodename}".
+      On unix systems simply put your real email address in `$HOME/.forward` to receive the emails sent to this local address.
     server : str
       SMTP server url. Defaults to 127.0.0.1, the local host. This function does not try to log-in.
     port: int
@@ -74,7 +75,7 @@ def send_mail(
     email = EmailMessage()
     email["Subject"] = subject
     email["From"] = f"{os.getlogin()}@{os.uname().nodename}"
-    email["To"] = to
+    email["To"] = to or f"{os.getlogin()}@{os.uname().nodename}"
     email.set_content(msg)
 
     for i, att in enumerate(attachments or []):
