@@ -5,11 +5,9 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Union
 
-import numpy as np
 import xarray as xr
 from xclim import ensembles
 
-from .catalog import generate_id
 from .config import parse_config
 from .utils import clean_up, get_cat_attrs
 
