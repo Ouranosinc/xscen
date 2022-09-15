@@ -15,7 +15,7 @@ dependencies:
   - pandas
   - rechunker
   - shapely
-  - yaml
+  - pyyaml
   # This ensures that the correct numpy is installed as of 2022-07-15.
   - numba>=0.55.2
   # Plotting
