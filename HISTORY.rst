@@ -8,47 +8,47 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliet
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* New functions ``diagnostics.properties_and_measures``, ``diagnostics.measures_heatmap`` and ``diagnostics.measures_improvement``. (:issue:`5`, :pull:`54`)
+* New functions ``diagnostics.properties_and_measures``, ``diagnostics.measures_heatmap`` and ``diagnostics.measures_improvement``. (:issue:`5`, :pull:`54`).
 * Add argument `resample_methods` to `xs.extract.resample`. (:issue:`57`, :pull:`57`)
 * Added a ReadTheDocs configuration to expose public documentation. (:issue:`65`, :pull:`66`).
-* ``xs.utils.stack_drop_nans``/ ``xs.utils.unstack_fill_nan`` will now format the `to_file`/`coords` string to add the domain and the shape. (:issue:`59`, :pull:`67`)
+* ``xs.utils.stack_drop_nans``/ ``xs.utils.unstack_fill_nan`` will now format the `to_file`/`coords` string to add the domain and the shape. (:issue:`59`, :pull:`67`).
 * New unstack_dates function to "extract" seasons or months from a timeseries. (:pull:`68`).
 * Better spatial_mean for cases using xESMF and a shapefile with multiple polygons. (:pull:`68`).
 * Yet more changes to parse_directory: (:pull:`68`).
     - Better parallelization by merging the finding and name-parsing step in the same dask tree.
-    - Allow cvs for the variable columns
-    - Fix parsing the variable names from datasets
+    - Allow cvs for the variable columns.
+    - Fix parsing the variable names from datasets.
     - Sort the variables in the tuples (for a more consistent output)
 * In extract_dataset, add option ``ensure_correct_time`` to ensure the time coordinate matches the expected freq. Ex: monthly values given on the 15th day are moved to the 1st, as expected when asking for "MS". (:issue: `53`).
 * In regrid_dataset: (:pull:`68`).
     * Allow passing skipna to the regridder kwargs.
     * Do not fail for any grid mapping problem, includin if a grid_mapping attribute mentions a variable that doesn't exist.
 * Default email sent to the local user. (:pull:`68`).
-* Special accelerated pathway for parsing catalogs with all dates within the datetime64[ns] range (:pull:`75`).
-* New functions ``reduce_ensemble`` and ``build_reduction_data`` to support kkz and kmeans clustering (:issue:`4`, :pull:`63`)
-* `ensemble_stats` can now loop through multiple statistics, support functions located in `xclim.ensembles._robustness`, and supports weighted realizations (:pull:`63`).
-* New function `ensemble_stats.generate_weights` that estimates weights based on simulation metadata (:pull:`63`).
-* New function `catalog.unstack_id` to reverse-engineer IDs (:pull:`63`).
-* `generate_id` now accepts Datasets (:pull:`63`).
+* Special accelerated pathway for parsing catalogs with all dates within the datetime64[ns] range. (:pull:`75`).
+* New functions ``reduce_ensemble`` and ``build_reduction_data`` to support kkz and kmeans clustering. (:issue:`4`, :pull:`63`).
+* `ensemble_stats` can now loop through multiple statistics, support functions located in `xclim.ensembles._robustness`, and supports weighted realizations. (:pull:`63`).
+* New function `ensemble_stats.generate_weights` that estimates weights based on simulation metadata. (:pull:`63`).
+* New function `catalog.unstack_id` to reverse-engineer IDs. (:pull:`63`).
+* `generate_id` now accepts Datasets. (:pull:`63`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* `statistics / stats_kwargs` have been changed/eliminated in `ensemble_stats`, respectively (:pull:`63`).
+* `statistics / stats_kwargs` have been changed/eliminated in `ensemble_stats`, respectively. (:pull:`63`).
 
 Bug fixes
 ^^^^^^^^^
-* Add a missing dependencies to the env. (pyarrow for faster string handling in catalogs) (:pull:`68`).
-* Allow passing compute=False to save_to_zarr. (:pull:`68`).
+* Add a missing dependencies to the env (`pyarrow`, for faster string handling in catalogs). (:pull:`68`).
+* Allow passing ``compute=False`` to `save_to_zarr`. (:pull:`68`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
-* Small bugfixes in aggregate.py (:pull:`55`, :pull:`56`).
+* Small bugfixes in `aggregate.py`. (:pull:`55`, :pull:`56`).
 * Default method of `xs.extract.resample` now depends on frequency. (:issue:`57`, :pull:`58`).
 * Bugfix for `_restrict_by_resolution` with CMIP6 datasets (:pull:`71`).
-* More complete check of coverage in ``_subset_file_coverage`` (:issue: `70`, :pull: `72`)
-* The code that performs `common_attrs_only` in `ensemble_stats` has been moved to `clean_up` (:pull:`63`).
-* Removed the default `to_level` in `clean_up` (:pull:`63`).
-
+* More complete check of coverage in ``_subset_file_coverage``. (:issue: `70`, :pull: `72`)
+* The code that performs ``common_attrs_only`` in `ensemble_stats` has been moved to `clean_up`. (:pull:`63`).
+* Removed the default ``to_level`` in `clean_up`. (:pull:`63`).
+* `xscen` now has an official logo. (:pull:`69`).
 
 v0.3.0 (2022-08-23)
 -------------------
