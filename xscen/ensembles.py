@@ -219,9 +219,7 @@ def generate_weights(
 
                 # For regional models, divide between them
                 if r in group_r:
-                    divisor = divisor / len(
-                        np.unique([info[k].get("source", None) for k in group_r])
-                    )
+                    divisor = divisor / len({info[k].get("source") for k in group_r})
 
             elif independence_level == "all":
                 divisor = 1
