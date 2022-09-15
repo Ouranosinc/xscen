@@ -273,6 +273,7 @@ def clean_incomplete(path: Union[str, os.PathLike], complete: Sequence[str]) -> 
             sh.rmtree(fold)
 
 
+@parse_config
 def save_to_netcdf(
     ds: xr.Dataset,
     filename: str,
@@ -346,6 +347,7 @@ def save_to_netcdf(
     ds.to_netcdf(filename, **netcdf_kwargs)
 
 
+@parse_config
 def save_to_zarr(
     ds: xr.Dataset,
     filename: str,
@@ -386,7 +388,7 @@ def save_to_zarr(
 
     Returns
     -------
-    None
+    dask.delayed object if compute=False, None otherwise.
 
     See Also
     ________
@@ -487,7 +489,7 @@ def save_to_zarr(
             )
     else:
         logger.debug(f"Writing {list(ds.data_vars.keys())} for {filename}.")
-        ds.to_zarr(
+        return ds.to_zarr(
             filename, compute=compute, mode="a", encoding=encoding, **zarr_kwargs
         )
 

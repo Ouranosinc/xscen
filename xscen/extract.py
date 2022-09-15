@@ -136,6 +136,7 @@ def extract_dataset(
     periods: list = None,
     region: Optional[dict] = None,
     to_level: str = "extracted",
+    ensure_correct_time: bool = True,
     xr_open_kwargs: dict = None,
     xr_combine_kwargs: dict = None,
     preprocess: Callable = None,
@@ -163,6 +164,11 @@ def extract_dataset(
     to_level: str
       The processing level to assign to the output.
       Defaults to 'extracted'
+    ensure_correct_time : bool
+      When True (default), even if the data has the correct frequency, its time coordinate is
+      checked so that it exactly matches the frequency code (xrfreq). For example, daily data given at
+      noon would be transformed to be given at midnight. If the time coordinate is invalid,
+      it raises an error.
     xr_open_kwargs : dict, optional
       A dictionary of keyword arguments to pass to `DataCatalogs.to_dataset_dict`, which
       will be passed to `xr.open_dataset`.
@@ -315,6 +321,18 @@ def extract_dataset(
                         catalog[key].df["xrfreq"].iloc[0]
                         == variables_and_freqs[var_name]
                     ):
+                        if ensure_correct_time:
+                            counts = da.time.resample(time=xrfreq).count()
+                            if any(counts > 1):
+                                raise ValueError(
+                                    "Dataset is labelled as having a sampling frequency of "
+                                    f"{xrfreq}, but some periods have more than one data point."
+                                )
+                            if any(counts.isnull()):
+                                raise ValueError(
+                                    "The resampling count contains nans. There might be some missing data."
+                                )
+                            da["time"] = counts.time
                         ds = ds.assign({var_name: da})
                     else:
                         raise ValueError(
@@ -499,7 +517,7 @@ def search_data_catalogs(
     Parameters
     ----------
     data_catalogs : Union[list, DataCatalog]
-      DataCatalog (or multiple, in a list) or path to JSON data catalogs. They must use the same columns.
+      DataCatalog (or multiple, in a list) or paths to JSON/CSV data catalogs. They must use the same columns and aggregation options.
     variables_and_freqs : dict
       Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format.
     other_search_criteria : dict, optional
@@ -558,19 +576,38 @@ def search_data_catalogs(
 
     # Prepare a unique catalog to search from, with the DerivedCat added if required
     if isinstance(data_catalogs, DataCatalog):
-        paths = [data_catalogs.esmcat.catalog_file]
+        catalog = DataCatalog(
+            {"esmcat": data_catalogs.esmcat.dict(), "df": data_catalogs.df},
+            **cat_kwargs,
+        )
+        data_catalogs = [catalog]  # simply for a meaningful logging line
     elif isinstance(data_catalogs, list) and all(
         isinstance(dc, DataCatalog) for dc in data_catalogs
     ):
-        paths = [dc.esmcat.catalog_file for dc in data_catalogs]
+        catalog = DataCatalog(
+            {
+                "esmcat": data_catalogs[0].esmcat.dict(),
+                "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
+            },
+            **cat_kwargs,
+        )
     elif isinstance(data_catalogs, list) and all(
         isinstance(dc, str) for dc in data_catalogs
     ):
-        paths = [DataCatalog(dc).esmcat.catalog_file for dc in data_catalogs]
+        data_catalogs = [
+            DataCatalog(path) if path.endswith(".json") else DataCatalog.from_csv(path)
+            for path in data_catalogs
+        ]
+        catalog = DataCatalog(
+            {
+                "esmcat": data_catalogs[0].esmcat.dict(),
+                "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
+            },
+            **cat_kwargs,
+        )
     else:
         raise ValueError("Catalogs type not recognized.")
-    catalog = DataCatalog.from_csv(paths, name="source", **cat_kwargs)
-    logger.info(f"Catalog opened: {catalog} from {len(paths)} files.")
+    logger.info(f"Catalog opened: {catalog} from {len(data_catalogs)} files.")
 
     if match_hist_and_fut:
         logger.info("Dispatching historical dataset to future experiments.")
@@ -677,7 +714,7 @@ def search_data_catalogs(
                     varcat.esmcat._df = pd.DataFrame()
 
             if varcat.df.empty:
-                logger.info(
+                logger.debug(
                     f"Dataset {sim_id} doesn't have all needed variables (missing at least {var_id})."
                 )
                 break
@@ -802,7 +839,7 @@ def _restrict_by_resolution(catalogs: dict, id_columns: list, restrictions: str)
             logger.info(f"Dataset {i} appears to have multiple resolutions.")
 
             # For CMIP, the order is dictated by a list of grid labels
-            if pd.unique(df_sim["activity"])[0] == "CMIP":
+            if "MIP" in pd.unique(df_sim["activity"])[0]:
                 order = np.array([])
                 for d in domains:
                     match = [
@@ -998,6 +1035,7 @@ def _subset_file_coverage(
 
         # Very rough guess of the coverage relative to the requested period,
         # without having to open the files or checking day-by-day
+        # This is only checking that you have the first and last time point, not that you have everything in between.
         guessed_nb_hrs = np.min(
             [
                 df[files_in_range]["date_end"].max(),
@@ -1009,12 +1047,22 @@ def _subset_file_coverage(
                 date_parser(str(period[0]), freq="H"),
             ]
         )
+
+        # This checks the sum of hours in all selected files
+        guessed_nb_hrs_sum = (
+            df[files_in_range]["date_end"] - df[files_in_range]["date_start"]
+        ).sum()
+
         period_nb_hrs = date_parser(
             str(period[1]), end_of_period=True, freq="H"
         ) - date_parser(str(period[0]), freq="H")
 
         # 'coverage' adds some leeway, for example to take different calendars into account or missing 2100-12-31
-        if guessed_nb_hrs / period_nb_hrs < coverage or len(df[files_in_range]) == 0:
+        if (
+            guessed_nb_hrs / period_nb_hrs < coverage
+            or len(df[files_in_range]) == 0
+            or guessed_nb_hrs_sum / period_nb_hrs < coverage
+        ):
             logging.warning(
                 f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage."
             )

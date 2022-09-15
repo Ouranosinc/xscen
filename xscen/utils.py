@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from xclim.core import units
-from xclim.core.calendar import convert_calendar, get_calendar
+from xclim.core.calendar import convert_calendar, get_calendar, parse_offset
 
 from .config import parse_config
 
@@ -31,6 +31,7 @@ __all__ = [
     "stack_drop_nans",
     "translate_time_chunk",
     "unstack_fill_nan",
+    "unstack_dates",
 ]
 
 
@@ -94,7 +95,17 @@ def stack_drop_nans(
       The name of the new stacked dim.
     to_file : str, optional
       A netCDF filename where to write the stacked coords for use in `unstack_fill_nan`.
+      If given a string with {shape} and {domain}, the formatting will fill them with
+      the original shape of the dataset and the global attributes 'cat:domain'.
       If None (default), nothing is written to disk.
+      It is recommended to fill this argument in the config. It will be parsed automatically.
+      E.g.:
+
+          utils:
+            stack_drop_nans:
+                to_file: /some_path/coords/coords_{domain}_{shape}.nc
+            unstack_fill_nan:
+                coords: /some_path/coords/coords_{domain}_{shape}.nc
 
     Returns
     -------
@@ -106,13 +117,39 @@ def stack_drop_nans(
     --------
     unstack_fill_nan : The inverse operation.
     """
+
+    original_shape = "x".join(map(str, mask.shape))
+
     mask_1d = mask.stack({new_dim: mask.dims})
-    out = ds.stack({new_dim: mask.dims}).where(mask_1d, drop=True).reset_index(new_dim)
+    out = (
+        ds.stack({new_dim: mask.dims})
+        .where(mask_1d, drop=True)
+        .reset_index(new_dim, drop=True)
+    )
     for dim in mask.dims:
         out[dim].attrs.update(ds[dim].attrs)
 
     if to_file is not None:
+        # set default path to store the information necessary to unstack
+        # the name includes the domain and the original shape to uniquely identify the dataset
+        domain = ds.attrs.get("cat:domain", "unknown")
+        to_file = to_file.format(domain=domain, shape=original_shape)
+        if not Path(to_file).parent.exists():
+            os.mkdir(Path(to_file).parent)
         mask.coords.to_dataset().to_netcdf(to_file)
+
+    # carry information about original shape to be able to unstack properly
+    for dim in mask.dims:
+        out[dim].attrs["original_shape"] = original_shape
+
+        # this is needed to fix a bug in xarray '2022.6.0'
+        out[dim] = xr.DataArray(
+            out[dim].values,
+            dims=out[dim].dims,
+            coords=out[dim].coords,
+            attrs=out[dim].attrs,
+        )
+
     return out
 
 
@@ -133,6 +170,18 @@ def unstack_fill_nan(
       dimensions, those original dimensions must be listed here.
       If a dict : a mapping from the name to the array of the coords to unstack
       If a str : a filename to a dataset containing only those coords (as coords).
+      If given a string with {shape} and {domain}, the formatting will fill them with
+      the original shape of the dataset (that should have been store in the
+      attributes of the stacked dimensions) by `stack_drop_nans` and the global attributes 'cat:domain'.
+      It is recommended to fill this argument in the config. It will be parsed automatically.
+      E.g.:
+
+          utils:
+            stack_drop_nans:
+                to_file: /some_path/coords/coords_{domain}_{shape}.nc
+            unstack_fill_nan:
+                coords: /some_path/coords/coords_{domain}_{shape}.nc
+
       If None (default), all coords that have `dim` a single dimension are used as the
       new dimensions/coords in the unstacked output.
       Coordinates will be loaded within this function.
@@ -143,6 +192,9 @@ def unstack_fill_nan(
       Same as `ds`, but `dim` has been unstacked to coordinates in `coords`.
       Missing elements are filled according to the defaults of `fill_value` of :py:meth:`xarray.Dataset.unstack`.
     """
+    if coords is None:
+        logger.info("Dataset unstacked using no coords argument.")
+
     if isinstance(coords, (list, tuple)):
         dims, crds = zip(*[(name, ds[name].load().values) for name in coords])
     else:
@@ -162,6 +214,14 @@ def unstack_fill_nan(
 
     if not isinstance(coords, (list, tuple)) and coords is not None:
         if isinstance(coords, (str, os.PathLike)):
+            # find original shape in the attrs of one of the dimension
+            original_shape = "unknown"
+            for c in ds.coords:
+                if "original_shape" in ds[c].attrs:
+                    original_shape = ds[c].attrs["original_shape"]
+            domain = ds.attrs.get("cat:domain", "unknown")
+            coords = coords.format(domain=domain, shape=original_shape)
+            logger.info(f"Dataset unstacked using {coords}.")
             coords = xr.open_dataset(coords)
         out = out.reindex(**coords.coords)
 
@@ -193,6 +253,7 @@ def get_cat_attrs(ds: Union[xr.Dataset, dict]):
     return {k[4:]: v for k, v in attrs.items() if k.startswith("cat:")}
 
 
+@parse_config
 def maybe_unstack(
     ds: xr.Dataset,
     coords: str = None,
@@ -362,6 +423,7 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     return ds
 
 
+@parse_config
 def clean_up(
     ds: xr.Dataset,
     variables_and_units: Optional[dict] = None,
@@ -606,3 +668,84 @@ def publish_release_notes(
     if not file:
         return history
     print(history, file=file)
+
+
+@parse_config
+def unstack_dates(
+    ds: xr.Dataset,
+    seasons: dict = None,
+    new_dim: str = "season",
+):
+    """Unstack a multi-season timeseries into a yearly axis and a season one.
+
+    Parameters
+    ----------
+    ds: xr.Dataset or DataArray
+      The xarray object with a "time" coordinate.
+    seasons: dict, optional
+      A dictonary from "MM-DD" dates to a season name.
+      If not given, it is guessed from the time coord's frequency.
+      See notes.
+    new_dim: str
+      The name of the new dimension.
+
+    Returns
+    -------
+    xr.Dataset or DataArray
+      Same as ds but the time axis is now yearly (AS-JAN) and the seasons are along the new dimenion.
+
+    Notes
+    -----
+    When `seasons` is None, :py:func:`xarray.infer_freq` is called and its output determines the new coordinate:
+
+    - For MS, the coordinates are the month abbreviations in english (JAN, FEB, etc.)
+    - For ?QS-? and other ?MS frequencies, the coordinates are the initials of the months in each season.
+      Ex: QS-DEC : DJF, MAM, JJA, SON.
+    - For YS or AS-JAN, the new coordinate has a single value of "annual".
+    - For ?AS-? frequencies, the new coordinate has a single value of "annual-{anchor}", were "anchor"
+      is the abbreviation of the first month of the year. Ex: AS-JUL -> "annual-JUL".
+    - For any other frequency, this function fails if `seasons` is None.
+    """
+    if seasons is None:
+        freq = xr.infer_freq(ds.time)
+        if freq is not None:
+            mult, base, _, _ = parse_offset(freq)
+        if freq is None or base not in ["A", "Q", "M", "Y"]:
+            raise ValueError(
+                f"Can't infer season labels for time coordinate with frequency {freq}. Consider passing the  `seasons` dict explicitly."
+            )
+
+        # We want the class of the datetime coordinate, to ensure it is conserved.
+        if base == "Q" or (base == "M" and mult > 1):
+            # Labels are the month initials
+            months = np.array(list("JFMAMJJASOND"))
+            n = mult * {"M": 1, "Q": 3}[base]
+            seasons = {
+                f"{m:02d}-01": "".join(months[np.array(range(m - 1, m + n - 1)) % 12])
+                for m in np.unique(ds.time.dt.month)
+            }
+        elif base in ["A", "Y"]:
+            seasons = {
+                f"{m:02d}-01": f"annual-{abb}"
+                for m, abb in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.items()
+            }
+            seasons["01-01"] = "annual"
+        else:  # M or MS
+            seasons = {
+                f"{m:02d}-01": abb
+                for m, abb in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.items()
+            }
+
+    datetime = xr.coding.cftime_offsets.get_date_type(
+        ds.time.dt.calendar, xr.coding.times.contains_cftime_datetimes(ds.time)
+    )
+    years = [datetime(yr, 1, 1) for yr in ds.time.dt.year.values]
+    seas = [seasons[k] for k in ds.time.dt.strftime("%m-%d").values]
+    ds = ds.assign_coords(
+        time=pd.MultiIndex.from_arrays([years, seas], names=["_year", new_dim])
+    )
+    ds = ds.unstack("time").rename(_year="time")
+
+    # Sort new coord
+    inverted = dict(zip(seasons.values(), seasons.keys()))
+    return ds.sortby(ds[new_dim].copy(data=[inverted[s] for s in ds[new_dim].values]))
