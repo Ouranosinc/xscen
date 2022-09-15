@@ -1,6 +1,6 @@
-=====
-xscen
-=====
+============
+xscen |logo|
+============
 
 |build| |docs| |black| |pre-commit|
 
@@ -25,6 +25,9 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
 
 .. _Cookiecutter: https://github.com/audreyfeldroy/cookiecutter-pypackage
 .. _`Ouranosinc/cookiecutter-pypackage`: https://github.com/Ouranosinc/cookiecutter-pypackage
+
+.. |logo| image:: https://raw.githubusercontent.com/Ouranosinc/xscen/main/docs/_static/_images/xscen-logo-small.png
+        :target: https://github.com/Ouranosinc/xscen
 
 .. |build| image:: https://github.com/Ouranosinc/xscen/actions/workflows/main.yml/badge.svg
         :target: https://github.com/Ouranosinc/xscen/actions/workflows/main.yml
