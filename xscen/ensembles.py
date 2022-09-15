@@ -204,7 +204,7 @@ def generate_weights(
                     gcm = sim.get("source", None)
 
                 # Global models
-                group_g = [k for k, v in info.item() if v.get("source") == gcm]
+                group_g = [k for k, v in info.items() if v.get("source") == gcm]
                 # Regional models with the same GCM
                 group_r = [k for k, v in info.items() if v.get("driving_model") == gcm]
 
@@ -217,6 +217,11 @@ def generate_weights(
 
             elif independence_level == "all":
                 divisor = 1
+
+            else:
+                raise ValueError(
+                    f"'independence_level' should be between 'GCM' and 'all', received {independence_level}."
+                )
 
             weights = weights.where(
                 ~weights.realization.isin(group),
