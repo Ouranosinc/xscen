@@ -39,7 +39,9 @@ def build_reduction_data(
     for key in keys:
         info[key] = {}
         info[key]["id"] = datasets[key].attrs.get("cat:id", None) or key
-        info[key]["xrfreq"] = datasets[key].attrs.get("cat:xrfreq") or xr.infer_freq(datasets[key].time)
+        info[key]["xrfreq"] = datasets[key].attrs.get("cat:xrfreq") or xr.infer_freq(
+            datasets[key].time
+        )
 
     xrfreqs = xrfreqs or np.unique(info[key]["xrfreq"] for key in info.keys())
 
