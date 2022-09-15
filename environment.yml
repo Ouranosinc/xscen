@@ -17,7 +17,7 @@ dependencies:
   - xarray
   - xclim>=0.37
   - xesmf>=0.6.2
-  - yaml
+  - pyyaml
   # Plotting
   - cartopy
   - matplotlib
