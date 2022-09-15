@@ -199,7 +199,7 @@ def generate_weights(
 
             if independence_level == "GCM":
                 if ("driving_model" in sim.keys()) and not (
-                    str(sim.get("driving_model", None)) in (["nan", "None"])
+                    pd.isna(sim.get("driving_model"))
                 ):
                     gcm = sim.get("driving_model", None)
                 else:
