@@ -30,6 +30,7 @@ New features and enhancements
 * New function `ensemble_stats.generate_weights` that estimates weights based on simulation metadata. (:pull:`63`).
 * New function `catalog.unstack_id` to reverse-engineer IDs. (:pull:`63`).
 * `generate_id` now accepts Datasets. (:pull:`63`).
+* Add `rechunk` option to `properties_and_measures` (:pull:`76`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -45,10 +46,11 @@ Internal changes
 * Small bugfixes in `aggregate.py`. (:pull:`55`, :pull:`56`).
 * Default method of `xs.extract.resample` now depends on frequency. (:issue:`57`, :pull:`58`).
 * Bugfix for `_restrict_by_resolution` with CMIP6 datasets (:pull:`71`).
-* More complete check of coverage in ``_subset_file_coverage``. (:issue: `70`, :pull: `72`)
+* More complete check of coverage in ``_subset_file_coverage``. (:issue:`70`, :pull:`72`)
 * The code that performs ``common_attrs_only`` in `ensemble_stats` has been moved to `clean_up`. (:pull:`63`).
 * Removed the default ``to_level`` in `clean_up`. (:pull:`63`).
 * `xscen` now has an official logo. (:pull:`69`).
+* Use numpy max and min in `properties_and_measures` (:pull:`76`).
 
 v0.3.0 (2022-08-23)
 -------------------

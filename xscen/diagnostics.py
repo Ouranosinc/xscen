@@ -122,6 +122,7 @@ def properties_and_measures(
     ],
     period: list = None,
     unstack: bool = False,
+    rechunk: dict = None,
     dref_for_measure: Optional[xr.Dataset] = None,
     change_units_arg: Optional[dict] = None,
     to_level_prop: str = "diag-properties",
@@ -143,6 +144,8 @@ def properties_and_measures(
         and dref_for_measure if it is given.
     unstack: bool
         Whether to unstack ds before computing the properties.
+    rechunk: dict
+        Dictionary of chunks to use for a rechunk before computing the properties.
     dref_for_measure: xr.Dataset
         Dataset of properties to be used as the ref argument in the computation of the measure.
         Ideally, this is the first output (prop) of a previous call to this function.
@@ -200,6 +203,9 @@ def properties_and_measures(
     if unstack:
         ds = unstack_fill_nan(ds)
 
+    if rechunk:
+        ds = ds.chunk(rechunk)
+
     if change_units_arg:
         ds = change_units(ds, variables_and_units=change_units_arg)
 
@@ -234,6 +240,12 @@ def properties_and_measures(
         ds1.attrs["cat:xrfreq"] = "fx"
         ds1.attrs.pop("cat:variable", None)
         ds1.attrs["cat:frequency"] = "fx"
+
+        # to be able to save in zarr, convert object to string
+        if "season" in ds1:
+            ds1["season"] = ds1.season.astype("str")
+        if "month" in ds1:
+            ds1["month"] = ds1.month.astype("str")
 
     prop.attrs["cat:processing_level"] = to_level_prop
     meas.attrs["cat:processing_level"] = to_level_meas
@@ -288,7 +300,9 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
     # normalize to 0-1 -> best-worst
     hmap = np.array(
         [
-            (c - min(c)) / (max(c) - min(c)) if max(c) != min(c) else [0.5] * len(c)
+            (c - np.min(c)) / (np.max(c) - np.min(c))
+            if np.max(c) != np.min(c)
+            else [0.5] * len(c)
             for c in hmap.T
         ]
     ).T
