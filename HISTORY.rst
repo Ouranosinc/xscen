@@ -46,8 +46,7 @@ Internal changes
 * Small bugfixes in `aggregate.py`. (:pull:`55`, :pull:`56`).
 * Default method of `xs.extract.resample` now depends on frequency. (:issue:`57`, :pull:`58`).
 * Bugfix for `_restrict_by_resolution` with CMIP6 datasets (:pull:`71`).
-
-* More complete check of coverage in ``_subset_file_coverage``. (:issue: `70`, :pull: `72`)
+* More complete check of coverage in ``_subset_file_coverage``. (:issue:`70`, :pull:`72`)
 * The code that performs ``common_attrs_only`` in `ensemble_stats` has been moved to `clean_up`. (:pull:`63`).
 * Removed the default ``to_level`` in `clean_up`. (:pull:`63`).
 * `xscen` now has an official logo. (:pull:`69`).
