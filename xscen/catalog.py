@@ -411,6 +411,14 @@ class ProjectCatalog(DataCatalog):
         return cls(str(meta_path))
 
     def __init__(self, df, *args, **kwargs):
+        if "create" in kwargs:
+            kwargs.pop("create")
+            if isinstance(df, (str, Path)) and (
+                not os.path.isfile(Path(df)) or kwargs.get("overwrite", None) is True
+            ):
+                self.create(df, **kwargs)
+        kwargs.pop("project", None)
+        kwargs.pop("overwrite", None)
         super().__init__(df, *args, **kwargs)
         self.check_valid()
         self.drop_duplicates()
