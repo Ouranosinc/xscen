@@ -44,6 +44,7 @@ __all__ = [
     "generate_id",
     "parse_directory",
     "parse_from_ds",
+    "unstack_id",
 ]
 
 
@@ -117,6 +118,20 @@ def _parse_list_of_strings(elem):
     return (elem,)
 
 
+def _parse_dates(elem):
+    try:
+        if isinstance(elem, str):
+            return pd.Timestamp(elem).to_period("H")
+        return pd.DatetimeIndex(elem).to_period("H")
+    except pd.errors.OutOfBoundsDatetime:
+        warnings.warn(
+            "Somes dates are out of the datetime64[ns] range, switching to slower direct period parsing."
+        )
+        if isinstance(elem, str):
+            return pd.Period(elem, freq="H")
+        return pd.PeriodIndex(elem, freq="H")
+
+
 csv_kwargs = {
     "dtype": {
         key: "category" if not key == "path" else "string[pyarrow]"
@@ -127,7 +142,7 @@ csv_kwargs = {
         "variable": _parse_list_of_strings,
     },
     "parse_dates": ["date_start", "date_end"],
-    "date_parser": lambda s: pd.Period(s, "H"),
+    "date_parser": _parse_dates,
 }
 """Kwargs to pass to `pd.read_csv` when opening an official Ouranos catalog."""
 
@@ -714,6 +729,9 @@ def _name_parser(
                 d = {}
         except ValueError:
             continue
+        except IndexError as err:
+            logger.debug(f"Filename parsing failed with {err} for {pattern} on {path}.")
+            continue
     if not d:
         logger.debug(f"No pattern matched with path {path}")
         return {"path": None}
@@ -1216,20 +1234,71 @@ def date_parser(
     return date
 
 
-def generate_id(df: pd.DataFrame, id_columns: Optional[list] = None):
+def generate_id(df: Union[pd.DataFrame, xr.Dataset], id_columns: Optional[list] = None):
     """Utility to create an ID from column entries.
 
     Parameters
     ----------
-    df: pd.DataFrame
+    df: pd.DataFrame, xr.Dataset
       Data for which to create an ID.
     id_columns : list
       List of column names on which to base the dataset definition. Empty columns will be skipped.
       If None (default), uses :py:data:`ID_COLUMNS`.
     """
+    if isinstance(df, xr.Dataset):
+        df = pd.DataFrame.from_dict(
+            {
+                key[4:]: [value]
+                for key, value in df.attrs.items()
+                if key.startswith("cat:")
+            }
+        )
 
     id_columns = [x for x in (id_columns or ID_COLUMNS) if x in df.columns]
 
     return df[id_columns].apply(
         lambda row: "_".join(map(str, filter(pd.notna, row.values))), axis=1
     )
+
+
+def unstack_id(df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]) -> dict:
+    """
+    Utility that reverse-engineers an ID using catalog entries.
+
+    Parameters
+    ----------
+    df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]
+        Either a Project/DataCatalog or the pandas DataFrame.
+
+    Returns
+    -------
+    dict
+        Dictionary with one entry per unique ID, which are themselves dictionaries of all the individual parts of the ID.
+    """
+
+    if isinstance(df, (ProjectCatalog, DataCatalog)):
+        df = df.df
+
+    out = {}
+    for ids in pd.unique(df["id"]):
+        subset = df[df["id"] == ids]
+
+        # Only keep relevant columns
+        subset = subset[
+            [
+                col
+                for col in subset.columns
+                if bool(re.search(f"((_)|(^)){str(subset[col].iloc[0])}((_)|($))", ids))
+            ]
+        ].drop("id", axis=1)
+
+        # Make sure that all elements are the same, if there are multiple lines
+        if len(subset) > 1:
+            if not all([subset[col].is_unique for col in subset.columns]):
+                raise ValueError(
+                    "Not all elements of the columns are the same for a given ID!"
+                )
+
+        out[ids] = {attr: subset[attr].iloc[0] for attr in subset.columns}
+
+    return out

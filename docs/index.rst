@@ -31,6 +31,7 @@ Features
     notebooks/getting_started
     notebooks/config_usage
     notebooks/diagnostics
+    notebooks/ensemble_reduction
     columns
     api
     contributing
