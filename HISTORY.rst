@@ -24,6 +24,7 @@ New features and enhancements
     * Allow passing skipna to the regridder kwargs.
     * Do not fail for any grid mapping problem, includin if a grid_mapping attribute mentions a variable that doesn't exist.
 * Default email sent to the local user. (:pull:`68`).
+* Add `rechunk` option to `properties_and_measures` (:pull:`76`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -40,6 +41,8 @@ Internal changes
 * Default method of `xs.extract.resample` now depends on frequency. (:issue:`57`, :pull:`58`).
 * Bugfix for `_restrict_by_resolution` with CMIP6 datasets (:pull:`71`).
 * More complete check of coverage in ``_subset_file_coverage`` (:issue: `70`, :pull: `72`)
+* Cast `season` and `month` dimensions to string in `properties_and_measures` (:pull:`76`).
+* Use numpy max and min in `properties_and_measures` (:pull:`76`).
 
 v0.3.0 (2022-08-23)
 -------------------
