@@ -416,7 +416,14 @@ class ProjectCatalog(DataCatalog):
             if isinstance(df, (str, Path)) and (
                 not os.path.isfile(Path(df)) or kwargs.get("overwrite", None) is True
             ):
-                self.create(df, **kwargs)
+                self.create(
+                    df,
+                    **{
+                        key: kwargs[key]
+                        for key in ["project", "overwrite"]
+                        if key in kwargs
+                    },
+                )
         kwargs.pop("create", None)
         kwargs.pop("project", None)
         kwargs.pop("overwrite", None)
