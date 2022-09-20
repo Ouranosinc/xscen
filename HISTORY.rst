@@ -31,7 +31,7 @@ New features and enhancements
 * New function `catalog.unstack_id` to reverse-engineer IDs. (:pull:`63`).
 * `generate_id` now accepts Datasets. (:pull:`63`).
 * Add `rechunk` option to `properties_and_measures` (:pull:`76`).
-* Add `create` argument to `ProjectCatalog` (:pull:`77`).
+* Add `create` argument to `ProjectCatalog` (:issue:`11`, :pull:`77`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
