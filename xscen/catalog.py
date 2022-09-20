@@ -410,7 +410,43 @@ class ProjectCatalog(DataCatalog):
 
         return cls(str(meta_path))
 
-    def __init__(self, df, *args, **kwargs):
+    def __init__(
+        self,
+        df: Union[str, dict],
+        *args,
+        create: bool = False,
+        overwrite: bool = None,
+        project: dict = None,
+        **kwargs,
+    ):
+        """
+        Open or create a project catalog.
+
+        Parameters
+        ----------
+        df : PathLike, dict
+          If string, this must be a path or URL to a catalog JSON file.
+          If dict, this must be a dict representation of an ESM catalog.  See the notes below.
+        create: bool
+          If True, and if 'df' is a string, this will create an empty ProjectCatalog if none already exists.
+        project : dict-like
+          Metadata to create the catalog, if required.
+        overwrite : bool
+          If this and 'create' are True, this will overwrite any existing JSON and CSV file with an empty catalog.
+
+        Notes
+        ----------
+        The dictionary in 'df' must have two keys: ‘esmcat’ and ‘df’.
+        The ‘esmcat’ key must be a dict representation of the ESM catalog. This should follow the template used by xscen.catalog.esm_col_data.
+        The ‘df’ key must be a Pandas DataFrame containing content that would otherwise be in the CSV file.
+
+
+        """
+        if create:
+            if isinstance(df, (str, Path)) and (
+                not os.path.isfile(Path(df)) or overwrite
+            ):
+                self.create(df, project=project, overwrite=overwrite)
         super().__init__(df, *args, **kwargs)
         self.check_valid()
         self.drop_duplicates()
