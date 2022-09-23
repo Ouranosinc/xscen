@@ -1058,9 +1058,12 @@ def _subset_file_coverage(
         ) - date_parser(str(period[0]), freq="H")
 
         # 'coverage' adds some leeway, for example to take different calendars into account or missing 2100-12-31
+        print(df)
         print("guessed_nb_hrs", guessed_nb_hrs)
         print("period_nb_hrs", period_nb_hrs)
         print("guessed_nb_hrs_sum", guessed_nb_hrs_sum)
+        print(guessed_nb_hrs / period_nb_hrs)
+        print(guessed_nb_hrs_sum / period_nb_hrs)
         if (
             guessed_nb_hrs / period_nb_hrs < coverage
             or len(df[files_in_range]) == 0
