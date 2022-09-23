@@ -1009,6 +1009,12 @@ def _subset_file_coverage(
 
     # Create an Interval for each file
     print(df.to_string())
+    print(
+        [
+            (x.ordinal <= y.ordinal, x.ordinal, y.ordinal, x, y)
+            for x, y in zip(df["date_start"], df["date_end"])
+        ]
+    )
     file_intervals = df.apply(
         lambda r: pd.Interval(
             left=r["date_start"].ordinal, right=r["date_end"].ordinal, closed="both"
