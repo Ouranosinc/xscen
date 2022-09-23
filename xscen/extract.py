@@ -1059,6 +1059,8 @@ def _subset_file_coverage(
 
         # 'coverage' adds some leeway, for example to take different calendars into account or missing 2100-12-31
         print(df)
+        print(df[files_in_range]["date_end"])
+        print(df[files_in_range]["date_start"])
         print("guessed_nb_hrs", guessed_nb_hrs)
         print("period_nb_hrs", period_nb_hrs)
         print("guessed_nb_hrs_sum", guessed_nb_hrs_sum)
