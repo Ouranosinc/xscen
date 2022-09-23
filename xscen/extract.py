@@ -1036,6 +1036,10 @@ def _subset_file_coverage(
         # Very rough guess of the coverage relative to the requested period,
         # without having to open the files or checking day-by-day
         # This is only checking that you have the first and last time point, not that you have everything in between.
+
+        print(df[files_in_range]["date_end"])
+        print(df[files_in_range]["date_start"])
+
         guessed_nb_hrs = np.min(
             [
                 df[files_in_range]["date_end"].max(),
@@ -1048,17 +1052,21 @@ def _subset_file_coverage(
             ]
         )
 
-        # This checks the sum of hours in all selected files
-        guessed_nb_hrs_sum = (
-            df[files_in_range]["date_end"] - df[files_in_range]["date_start"]
-        ).sum()
-
         period_nb_hrs = date_parser(
             str(period[1]), end_of_period=True, freq="H"
         ) - date_parser(str(period[0]), freq="H")
 
+        # This checks the sum of hours in all selected files
+        if len(df[files_in_range]) != 0:
+            guessed_nb_hrs_sum = (
+                df[files_in_range]["date_end"] - df[files_in_range]["date_start"]
+            ).sum()
+        # if no files are selected we don't want the warming and guessed_nb_hrs_sum=0 breaks the code
+        else:
+            guessed_nb_hrs_sum = period_nb_hrs
+
         # 'coverage' adds some leeway, for example to take different calendars into account or missing 2100-12-31
-        print(df)
+        print(df.to_string())
         print(df[files_in_range]["date_end"])
         print(df[files_in_range]["date_start"])
         print("guessed_nb_hrs", guessed_nb_hrs)
