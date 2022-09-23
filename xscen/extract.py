@@ -1008,7 +1008,7 @@ def _subset_file_coverage(
         periods = [periods]
 
     # Create an Interval for each file
-
+    print(df.to_string())
     file_intervals = df.apply(
         lambda r: pd.Interval(
             left=r["date_start"].ordinal, right=r["date_end"].ordinal, closed="both"
@@ -1066,7 +1066,7 @@ def _subset_file_coverage(
             guessed_nb_hrs_sum = period_nb_hrs
 
         # 'coverage' adds some leeway, for example to take different calendars into account or missing 2100-12-31
-        print(df.to_string())
+
         print(df[files_in_range]["date_end"])
         print(df[files_in_range]["date_start"])
         print("guessed_nb_hrs", guessed_nb_hrs)
