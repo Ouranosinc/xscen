@@ -52,6 +52,8 @@ Internal changes
 * Removed the default ``to_level`` in `clean_up`. (:pull:`63`).
 * `xscen` now has an official logo. (:pull:`69`).
 * Use numpy max and min in `properties_and_measures` (:pull:`76`).
+* Cast caltalog date_start and date_end to "%4Y-%m-%d %H:00". (:issue:`83`, :pull:`79`)
+* Skip test of coverage on the sum if the list of select files is empty. (:pull:`79`)
 
 v0.3.0 (2022-08-23)
 -------------------
