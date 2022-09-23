@@ -496,8 +496,10 @@ class ProjectCatalog(DataCatalog):
         # make sure year really has 4 digits
         if "date_start" in self.df and not isinstance(self.df.date_start.loc[0], str):
             df_fix_date = self.df.copy()
-            df_fix_date["date_start"] = df.date_start.dt.strftime("%4Y-%m-%d %H:00")
-            df_fix_date["date_end"] = df.date_end.dt.strftime("%4Y-%m-%d %H:00")
+            df_fix_date["date_start"] = self.df.date_start.dt.strftime(
+                "%4Y-%m-%d %H:00"
+            )
+            df_fix_date["date_end"] = self.df.date_end.dt.strftime("%4Y-%m-%d %H:00")
             self.df = df_fix_date
 
         if self.meta_file is not None:
