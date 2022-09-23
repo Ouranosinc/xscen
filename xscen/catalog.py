@@ -488,15 +488,17 @@ class ProjectCatalog(DataCatalog):
         elif df is not None:
             if isinstance(df, pd.Series):
                 df = pd.DataFrame(df).transpose()
-            if "date_start" in df and not isinstance(df.date_start.loc[0], str):
-                df_fix_date = df.copy()
-                df_fix_date["date_start"] = df.date_start.dt.strftime("%4Y-%m-%d %H:00")
-                df_fix_date["date_end"] = df.date_end.dt.strftime("%4Y-%m-%d %H:00")
-                df = df_fix_date
             self.esmcat._df = pd.concat([self.df, df])
 
         self.check_valid()
         self.drop_duplicates()
+
+        # make sure year really has 4 digits
+        if "date_start" in self.df and not isinstance(self.df.date_start.loc[0], str):
+            df_fix_date = self.df.copy()
+            df_fix_date["date_start"] = df.date_start.dt.strftime("%4Y-%m-%d %H:00")
+            df_fix_date["date_end"] = df.date_end.dt.strftime("%4Y-%m-%d %H:00")
+            self.df = df_fix_date
 
         if self.meta_file is not None:
             with fs.open(self.esmcat.catalog_file, "wb") as csv_outfile:
