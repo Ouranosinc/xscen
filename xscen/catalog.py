@@ -488,9 +488,10 @@ class ProjectCatalog(DataCatalog):
         elif df is not None:
             if isinstance(df, pd.Series):
                 df = pd.DataFrame(df).transpose()
-            df_fix_date = df.copy()
-            df_fix_date["date_start"] = df.date_start.dt.strftime("%4Y-%m-%d %H:00")
-            df_fix_date["date_end"] = df.date_end.dt.strftime("%4Y-%m-%d %H:00")
+            if not isinstance(df.date_start, str):
+                df_fix_date = df.copy()
+                df_fix_date["date_start"] = df.date_start.dt.strftime("%4Y-%m-%d %H:00")
+                df_fix_date["date_end"] = df.date_end.dt.strftime("%4Y-%m-%d %H:00")
             self.esmcat._df = pd.concat([self.df, df_fix_date])
 
         self.check_valid()
@@ -552,10 +553,10 @@ class ProjectCatalog(DataCatalog):
 
         if "time" in ds:
             d["date_start"] = str(
-                ds.isel(time=0).time.dt.strftime("%Y-%m-%d %H:%M:%S").values
+                ds.isel(time=0).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
             )
             d["date_end"] = str(
-                ds.isel(time=-1).time.dt.strftime("%Y-%m-%d %H:%M:%S").values
+                ds.isel(time=-1).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
             )
 
         d["path"] = path
