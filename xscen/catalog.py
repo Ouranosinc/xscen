@@ -488,7 +488,7 @@ class ProjectCatalog(DataCatalog):
         elif df is not None:
             if isinstance(df, pd.Series):
                 df = pd.DataFrame(df).transpose()
-            if not isinstance(df.date_start, str):
+            if not isinstance(df.date_start.loc[0], str):
                 df_fix_date = df.copy()
                 df_fix_date["date_start"] = df.date_start.dt.strftime("%4Y-%m-%d %H:00")
                 df_fix_date["date_end"] = df.date_end.dt.strftime("%4Y-%m-%d %H:00")
