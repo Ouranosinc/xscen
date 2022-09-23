@@ -489,8 +489,10 @@ class ProjectCatalog(DataCatalog):
             if isinstance(df, pd.Series):
                 df = pd.DataFrame(df).transpose()
             self.esmcat._df = pd.concat([self.df, df])
-            df["date_start"] = df.date_start.dt.strftime("%4Y-%m-%d %H:00")
-            df["date_end"] = df.date_end.dt.strftime("%4Y-%m-%d %H:00")
+            df_copy = df.copy()
+            df_copy["date_start"] = df.date_start.dt.strftime("%4Y-%m-%d %H:00")
+            df_copy["date_end"] = df.date_end.dt.strftime("%4Y-%m-%d %H:00")
+            df = df_copy
 
         self.check_valid()
         self.drop_duplicates()
