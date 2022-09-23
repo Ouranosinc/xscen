@@ -1073,7 +1073,7 @@ def _subset_file_coverage(
         print("period_nb_hrs", period_nb_hrs)
         print("guessed_nb_hrs_sum", guessed_nb_hrs_sum)
         print(guessed_nb_hrs / period_nb_hrs)
-        print(guessed_nb_hrs_sum / period_nb_hrs)
+        print(guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos)
         if (
             guessed_nb_hrs / period_nb_hrs < coverage
             or len(df[files_in_range]) == 0
