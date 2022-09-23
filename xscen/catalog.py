@@ -492,7 +492,8 @@ class ProjectCatalog(DataCatalog):
                 df_fix_date = df.copy()
                 df_fix_date["date_start"] = df.date_start.dt.strftime("%4Y-%m-%d %H:00")
                 df_fix_date["date_end"] = df.date_end.dt.strftime("%4Y-%m-%d %H:00")
-            self.esmcat._df = pd.concat([self.df, df_fix_date])
+                df = df_fix_date
+            self.esmcat._df = pd.concat([self.df, df])
 
         self.check_valid()
         self.drop_duplicates()
