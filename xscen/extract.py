@@ -1060,7 +1060,13 @@ def _subset_file_coverage(
         # if no files are selected we don't want the warming and guessed_nb_hrs_sum=0 breaks the code
         else:
             guessed_nb_hrs_sum = period_nb_hrs
-
+        print(df[files_in_range]["date_end"])
+        print(df[files_in_range]["date_start"])
+        print("guessed_nb_hrs", guessed_nb_hrs)
+        print("period_nb_hrs", period_nb_hrs)
+        print("guessed_nb_hrs_sum", guessed_nb_hrs_sum)
+        print(guessed_nb_hrs / period_nb_hrs)
+        print(guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos)
         # 'coverage' adds some leeway, for example to take different calendars into account or missing 2100-12-31
         if (
             guessed_nb_hrs / period_nb_hrs < coverage
