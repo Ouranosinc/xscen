@@ -494,13 +494,15 @@ class ProjectCatalog(DataCatalog):
         self.drop_duplicates()
 
         # make sure year really has 4 digits
-        if "date_start" in self.df and not isinstance(self.df.date_start.iloc[0], str):
+        if "date_start" in self.df:
             df_fix_date = self.df.copy()
+            # df_fix_date.loc[not isinstance(df_fix_date.start_date, str) , 'start_date']=
+            # self.df.loc[not isinstance(self.df.date_start, str)].date_start.dt.strftime("%4Y-%m-%d %H:00")
             df_fix_date["date_start"] = self.df.date_start.dt.strftime(
                 "%4Y-%m-%d %H:00"
             )
             df_fix_date["date_end"] = self.df.date_end.dt.strftime("%4Y-%m-%d %H:00")
-            self.df = df_fix_date
+            self.esmcat._df = df_fix_date
 
         if self.meta_file is not None:
             with fs.open(self.esmcat.catalog_file, "wb") as csv_outfile:
@@ -557,12 +559,21 @@ class ProjectCatalog(DataCatalog):
             d.update(info_dict)
 
         if "time" in ds:
-            d["date_start"] = str(
-                ds.isel(time=0).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
+            # d["date_start"] = ds.isel(time=0).time.values
+            # d["date_end"] = ds.isel(time=-1).time.values
+            d["date_start"] = pd.Period(
+                ds.isel(time=0).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values[()]
             )
-            d["date_end"] = str(
-                ds.isel(time=-1).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
+            d["date_end"] = pd.Period(
+                ds.isel(time=-1).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values[()]
             )
+            # )
+            # d["date_start"] = str(
+            #     ds.isel(time=0).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
+            # )
+            # d["date_end"] = str(
+            #     ds.isel(time=-1).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
+            # )
 
         d["path"] = path
 
