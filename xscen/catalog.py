@@ -493,18 +493,50 @@ class ProjectCatalog(DataCatalog):
         self.check_valid()
         self.drop_duplicates()
 
+        # make sure year really has 4 digits
+        if "date_start" in self.df:
+            df_fix_date = self.df.copy()
+            df_fix_date["date_start"] = pd.Series(
+                [
+                    x
+                    if isinstance(x, str)
+                    else ""
+                    if pd.isnull(x)
+                    else x.strftime("%4Y-%m-%d %H:00")
+                    for x in self.df.date_start
+                ]
+            )
+
+            df_fix_date["date_end"] = pd.Series(
+                [
+                    x
+                    if isinstance(x, str)
+                    else ""
+                    if pd.isnull(x)
+                    else x.strftime("%4Y-%m-%d %H:00")
+                    for x in self.df.date_end
+                ]
+            )
+
+            df_str = df_fix_date
+        else:
+            df_str = self.df
+
         if self.meta_file is not None:
             with fs.open(self.esmcat.catalog_file, "wb") as csv_outfile:
-                self.df.to_csv(csv_outfile, index=False, compression=None)
+                df_str.to_csv(csv_outfile, index=False, compression=None)
         else:
+            read_csv_kwargs = deepcopy(self.read_csv_kwargs)
+            del read_csv_kwargs["parse_dates"]
+            del read_csv_kwargs["date_parser"]
             # Update the catalog file saved on disk
             disk_cat = DataCatalog(
                 {
                     "esmcat": self.esmcat.dict(),
-                    "df": pd.read_csv(self.esmcat.catalog_file, **self.read_csv_kwargs),
+                    "df": pd.read_csv(self.esmcat.catalog_file, **read_csv_kwargs),
                 }
             )
-            disk_cat.esmcat._df = pd.concat([disk_cat.df, self.df])
+            disk_cat.esmcat._df = pd.concat([disk_cat.df, df_str])
             disk_cat.check_valid()
             disk_cat.drop_duplicates()
             with fs.open(disk_cat.esmcat.catalog_file, "wb") as csv_outfile:
@@ -549,10 +581,10 @@ class ProjectCatalog(DataCatalog):
 
         if "time" in ds:
             d["date_start"] = str(
-                ds.isel(time=0).time.dt.strftime("%Y-%m-%d %H:%M:%S").values
+                ds.isel(time=0).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
             )
             d["date_end"] = str(
-                ds.isel(time=-1).time.dt.strftime("%Y-%m-%d %H:%M:%S").values
+                ds.isel(time=-1).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
             )
 
         d["path"] = path

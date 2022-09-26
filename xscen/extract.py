@@ -1008,7 +1008,6 @@ def _subset_file_coverage(
         periods = [periods]
 
     # Create an Interval for each file
-
     file_intervals = df.apply(
         lambda r: pd.Interval(
             left=r["date_start"].ordinal, right=r["date_end"].ordinal, closed="both"
@@ -1036,6 +1035,7 @@ def _subset_file_coverage(
         # Very rough guess of the coverage relative to the requested period,
         # without having to open the files or checking day-by-day
         # This is only checking that you have the first and last time point, not that you have everything in between.
+
         guessed_nb_hrs = np.min(
             [
                 df[files_in_range]["date_end"].max(),
@@ -1048,20 +1048,25 @@ def _subset_file_coverage(
             ]
         )
 
-        # This checks the sum of hours in all selected files
-        guessed_nb_hrs_sum = (
-            df[files_in_range]["date_end"] - df[files_in_range]["date_start"]
-        ).sum()
-
         period_nb_hrs = date_parser(
             str(period[1]), end_of_period=True, freq="H"
         ) - date_parser(str(period[0]), freq="H")
+
+        # This checks the sum of hours in all selected files
+        if len(df[files_in_range]) != 0:
+            guessed_nb_hrs_sum = (
+                df[files_in_range]["date_end"] - df[files_in_range]["date_start"]
+            ).sum()
+        # if no files are selected and guessed_nb_hrs_sum=0, the division breaks the code.
+        # The warming will be called anyway even without this test.
+        else:
+            guessed_nb_hrs_sum = period_nb_hrs
 
         # 'coverage' adds some leeway, for example to take different calendars into account or missing 2100-12-31
         if (
             guessed_nb_hrs / period_nb_hrs < coverage
             or len(df[files_in_range]) == 0
-            or guessed_nb_hrs_sum / period_nb_hrs < coverage
+            or guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos < coverage
         ):
             logging.warning(
                 f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage."
