@@ -524,20 +524,40 @@ class ProjectCatalog(DataCatalog):
 
         if self.meta_file is not None:
             with fs.open(self.esmcat.catalog_file, "wb") as csv_outfile:
-                self.df.to_csv(csv_outfile, index=False, compression=None)
+                df_str.to_csv(csv_outfile, index=False, compression=None)
         else:
+            read_csv_kwargs = deepcopy(self.read_csv_kwargs)
+            del read_csv_kwargs["parse_dates"]
+            del read_csv_kwargs["date_parser"]
             # Update the catalog file saved on disk
             disk_cat = DataCatalog(
                 {
                     "esmcat": self.esmcat.dict(),
-                    "df": pd.read_csv(self.esmcat.catalog_file, **self.read_csv_kwargs),
+                    "df": pd.read_csv(self.esmcat.catalog_file, **read_csv_kwargs),
                 }
             )
-            disk_cat.esmcat._df = pd.concat([disk_cat.df, self.df])
+            disk_cat.esmcat._df = pd.concat([disk_cat.df, df_str])
             disk_cat.check_valid()
             disk_cat.drop_duplicates()
             with fs.open(disk_cat.esmcat.catalog_file, "wb") as csv_outfile:
                 disk_cat.df.to_csv(csv_outfile, index=False, compression=None)
+
+        # if self.meta_file is not None:
+        #     with fs.open(self.esmcat.catalog_file, "wb") as csv_outfile:
+        #         self.df.to_csv(csv_outfile, index=False, compression=None)
+        # else:
+        #     # Update the catalog file saved on disk
+        #     disk_cat = DataCatalog(
+        #         {
+        #             "esmcat": self.esmcat.dict(),
+        #             "df": pd.read_csv(self.esmcat.catalog_file, **self.read_csv_kwargs),
+        #         }
+        #     )
+        #     disk_cat.esmcat._df = pd.concat([disk_cat.df, self.df])
+        #     disk_cat.check_valid()
+        #     disk_cat.drop_duplicates()
+        #     with fs.open(disk_cat.esmcat.catalog_file, "wb") as csv_outfile:
+        #         disk_cat.df.to_csv(csv_outfile, index=False, compression=None)
 
     def update_from_ds(
         self,
