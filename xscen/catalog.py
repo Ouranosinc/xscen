@@ -503,7 +503,6 @@ class ProjectCatalog(DataCatalog):
                     else ""
                     if pd.isnull(x)
                     else x.strftime("%4Y-%m-%d %H:00")
-                    # x.strftime("%4Y-%m-%d %H:00") if not pd.isnull(x) else '' if not isinstance(x, str) else x
                     for x in self.df.date_start
                 ]
             )
@@ -515,15 +514,10 @@ class ProjectCatalog(DataCatalog):
                     else ""
                     if pd.isnull(x)
                     else x.strftime("%4Y-%m-%d %H:00")
-                    # x.strftime("%4Y-%m-%d %H:00") if not pd.isnull(x) else '' if not isinstance(x, str) else x
                     for x in self.df.date_end
                 ]
             )
 
-            # df_fix_date["date_start"] = self.df.date_start.dt.strftime(
-            #     "%4Y-%m-%d %H:00"
-            # )
-            # df_fix_date["date_end"] = self.df.date_end.dt.strftime("%4Y-%m-%d %H:00")
             self.esmcat._df = df_fix_date
 
         if self.meta_file is not None:
@@ -581,15 +575,6 @@ class ProjectCatalog(DataCatalog):
             d.update(info_dict)
 
         if "time" in ds:
-            # d["date_start"] = ds.isel(time=0).time.values
-            # d["date_end"] = ds.isel(time=-1).time.values
-            # d["date_start"] = pd.Period(
-            #     ds.isel(time=0).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values[()]
-            # )
-            # d["date_end"] = pd.Period(
-            #     ds.isel(time=-1).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values[()]
-            # )
-            # )
             d["date_start"] = str(
                 ds.isel(time=0).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
             )
