@@ -1057,7 +1057,8 @@ def _subset_file_coverage(
             guessed_nb_hrs_sum = (
                 df[files_in_range]["date_end"] - df[files_in_range]["date_start"]
             ).sum()
-        # if no files are selected we don't want the warming and guessed_nb_hrs_sum=0 breaks the code
+        # if no files are selected and guessed_nb_hrs_sum=0, the division breaks the code.
+        # The warming will be called anyway even without this test.
         else:
             guessed_nb_hrs_sum = period_nb_hrs
 
