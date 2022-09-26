@@ -518,7 +518,9 @@ class ProjectCatalog(DataCatalog):
                 ]
             )
 
-            self.esmcat._df = df_fix_date
+            df_str = df_fix_date
+        else:
+            df_str = self.df
 
         if self.meta_file is not None:
             with fs.open(self.esmcat.catalog_file, "wb") as csv_outfile:
