@@ -32,6 +32,7 @@ New features and enhancements
 * `generate_id` now accepts Datasets. (:pull:`63`).
 * Add `rechunk` option to `properties_and_measures` (:pull:`76`).
 * Add `create` argument to `ProjectCatalog` (:issue:`11`, :pull:`77`).
+# Add percentage deltas to `compute_deltas` (:issue:`82`, :pull:`90`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
