@@ -23,13 +23,6 @@ indicators:
       ice_thresh: 0 degC
     cf_attrs:
       - var_name: hurs
-  relative_humidity:
-    base: hurs
-    parameters:
-      method: tetens30
-      ice_thresh: 0 degC
-    cf_attrs:
-      - var_name: hurs
   specific_humidity:
     base: huss
     parameters:
