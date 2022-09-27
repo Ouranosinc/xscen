@@ -506,8 +506,8 @@ def search_data_catalogs(
     match_hist_and_fut: bool = False,
     periods: list = None,
     id_columns: Optional[List[str]] = None,
-    allow_resampling: bool = True,
-    allow_conversion: bool = True,
+    allow_resampling: bool = False,
+    allow_conversion: bool = False,
     restrict_resolution: str = None,
     restrict_members: dict = None,
 ) -> dict:
