@@ -21,26 +21,36 @@ indicators:
     parameters:
       method: tetens30
       ice_thresh: 0 degC
+    cf_attrs:
+      - var_name: hurs
   relative_humidity:
     base: hurs
     parameters:
       method: tetens30
       ice_thresh: 0 degC
+    cf_attrs:
+      - var_name: hurs
   specific_humidity:
     base: huss
     parameters:
       method: tetens30
       ice_thresh: 0 degC
+    cf_attrs:
+      - var_name: huss
   snowfall_approximation:
     base: prsn
     parameters:
       method: binary
       thresh: 0 degC
+    cf_attrs:
+      - var_name: prsn
   rain_approximation:
     base: prlp
     parameters:
       method: binary
       thresh: 0 degC
+    cf_attrs:
+      - var_name: prlp
   precipitation:
     compute: precipitation
     cf_attrs:
@@ -58,6 +68,8 @@ indicators:
         kind: 0
       tasmax:
         kind: 0
+    cf_attrs:
+      - var_name: evspsblpot
   dtr:
     src_freq: D
     compute: dtr
