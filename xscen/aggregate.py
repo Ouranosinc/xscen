@@ -204,7 +204,7 @@ def compute_deltas(
                 deltas[v_name].attrs["units"] = ""
             elif (isinstance(kind, dict) and kind[vv] == "%") or kind == "%":
                 _kind = "percentage"
-                deltas[v_name] = (other_hz[vv] - ref[vv]) / ref[vv]
+                deltas[v_name] = 100 * (other_hz[vv] - ref[vv]) / ref[vv]
                 deltas[v_name].attrs["units"] = "%"
             else:
                 raise ValueError("Delta 'kind' not understood.")
