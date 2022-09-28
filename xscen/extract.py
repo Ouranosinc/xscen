@@ -640,105 +640,114 @@ def search_data_catalogs(
     # Loop on each dataset to assess whether they have all required variables
     # And select best freq/timedelta for each
     catalogs = {}
-    for (sim_id,), scat in catalog.iter_unique("id"):
-        # Find all the entries that match search parameters
-        varcats = []
-        for var_id, xrfreq in variables_and_freqs.items():
-            if xrfreq == "fx":
-                varcat = scat.search(
-                    xrfreq=xrfreq,
-                    variable=var_id,
-                    require_all_on=["id", "xrfreq"],
-                )
-                # TODO: Temporary fix until this is changed in intake_esm
-                varcat._requested_variables_true = [var_id]
-                varcat._dependent_variables = list(
-                    set(varcat._requested_variables).difference(
-                        varcat._requested_variables_true
+    if len(catalogs) > 0:
+        for (sim_id,), scat in catalog.iter_unique("id"):
+            # Find all the entries that match search parameters
+            varcats = []
+            for var_id, xrfreq in variables_and_freqs.items():
+                if xrfreq == "fx":
+                    varcat = scat.search(
+                        xrfreq=xrfreq,
+                        variable=var_id,
+                        require_all_on=["id", "xrfreq"],
                     )
-                )
-            else:
-                # TODO: Add support for DerivedVariables that themselves require DerivedVariables
-                # TODO: Add support for DerivedVariables that exist on different frequencies (e.g. 1hr 'pr' & 3hr 'tas')
-                varcat = scat.search(variable=var_id, require_all_on=["id", "xrfreq"])
-                logger.debug(
-                    f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
-                )
-                # TODO: Temporary fix until this is changed in intake_esm
-                varcat._requested_variables_true = [var_id]
-                varcat._dependent_variables = list(
-                    set(varcat._requested_variables).difference(
-                        varcat._requested_variables_true
+                    # TODO: Temporary fix until this is changed in intake_esm
+                    varcat._requested_variables_true = [var_id]
+                    varcat._dependent_variables = list(
+                        set(varcat._requested_variables).difference(
+                            varcat._requested_variables_true
+                        )
                     )
-                )
-
-                # We want to match lines with the correct freq,
-                # IF allow_resampling is True and xrfreq translates to a timedelta,
-                # we also want those with (stricyly) higher temporal resolution
-                same_frq = varcat.df.xrfreq == xrfreq
-                td = pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq))
-                varcat.df["timedelta"] = pd.to_timedelta(
-                    varcat.df.xrfreq.apply(CV.xrfreq_to_timedelta, default="NAN")
-                )
-                # else is joker (any timedelta)
-                lower_frq = (
-                    np.less(varcat.df.timedelta, td) if pd.notnull(td) else False
-                )
-                varcat.esmcat._df = varcat.df[same_frq | (lower_frq & allow_resampling)]
-
-                # For each dataset (id - xrfreq - processing_level - domain - variable), make sure that file availability covers the requested time periods
-                if periods is not None and len(varcat) > 0:
-                    valid_tp = []
-                    for var, group in varcat.df.groupby(
-                        varcat.esmcat.aggregation_control.groupby_attrs + ["variable"]
-                    ):
-                        valid_tp.append(
-                            _subset_file_coverage(group, periods)
-                        )  # If valid, this returns the subset of files that cover the time period
-                    varcat.esmcat._df = pd.concat(valid_tp)
-
-                # We now select the coarsest timedelta for each variable
-                # we need to re-iterate over variables in case we used the registry (and thus there are multiple variables in varcat)
-                rows = []
-                for var, group in varcat.df.groupby("variable"):
-                    rows.append(group[group.timedelta == group.timedelta.max()])
-                if rows:
-                    # check if the requested variable exists and if so, remove DeriveVariable references
-                    v_list = [rows[i]["variable"].iloc[0] for i in range(len(rows))]
-                    v_list_check = [
-                        var_id in v_list[i] for i in range(len(v_list))
-                    ]  # necessary in case a file has multiple variables
-                    if any(v_list_check):
-                        rows = [rows[v_list_check.index(True)]]
-                        varcat.derivedcat = DerivedVariableRegistry()
-                    varcat.esmcat._df = pd.concat(rows, ignore_index=True)
                 else:
-                    varcat.esmcat._df = pd.DataFrame()
+                    # TODO: Add support for DerivedVariables that themselves require DerivedVariables
+                    # TODO: Add support for DerivedVariables that exist on different frequencies (e.g. 1hr 'pr' & 3hr 'tas')
+                    varcat = scat.search(
+                        variable=var_id, require_all_on=["id", "xrfreq"]
+                    )
+                    logger.debug(
+                        f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
+                    )
+                    # TODO: Temporary fix until this is changed in intake_esm
+                    varcat._requested_variables_true = [var_id]
+                    varcat._dependent_variables = list(
+                        set(varcat._requested_variables).difference(
+                            varcat._requested_variables_true
+                        )
+                    )
 
-            if varcat.df.empty:
-                logger.debug(
-                    f"Dataset {sim_id} doesn't have all needed variables (missing at least {var_id})."
-                )
-                break
-            if "timedelta" in varcat.df.columns:
-                varcat.df.drop(columns=["timedelta"], inplace=True)
-            varcat._requested_variable_freqs = [xrfreq]
-            varcats.append(varcat)
-        else:
-            catalogs[sim_id] = concat_data_catalogs(*varcats)
-            if periods is not None:
-                if not isinstance(periods[0], list):
-                    periods = [periods]
-                catalogs[sim_id]._requested_periods = periods
+                    # We want to match lines with the correct freq,
+                    # IF allow_resampling is True and xrfreq translates to a timedelta,
+                    # we also want those with (stricyly) higher temporal resolution
+                    same_frq = varcat.df.xrfreq == xrfreq
+                    td = pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq))
+                    varcat.df["timedelta"] = pd.to_timedelta(
+                        varcat.df.xrfreq.apply(CV.xrfreq_to_timedelta, default="NAN")
+                    )
+                    # else is joker (any timedelta)
+                    lower_frq = (
+                        np.less(varcat.df.timedelta, td) if pd.notnull(td) else False
+                    )
+                    varcat.esmcat._df = varcat.df[
+                        same_frq | (lower_frq & allow_resampling)
+                    ]
 
-    logger.info(
-        f"Found {len(catalogs)} with all variables requested and corresponding to the criteria."
-    )
+                    # For each dataset (id - xrfreq - processing_level - domain - variable), make sure that file availability covers the requested time periods
+                    if periods is not None and len(varcat) > 0:
+                        valid_tp = []
+                        for var, group in varcat.df.groupby(
+                            varcat.esmcat.aggregation_control.groupby_attrs
+                            + ["variable"]
+                        ):
+                            valid_tp.append(
+                                _subset_file_coverage(group, periods)
+                            )  # If valid, this returns the subset of files that cover the time period
+                        varcat.esmcat._df = pd.concat(valid_tp)
 
-    if restrict_resolution is not None:
+                    # We now select the coarsest timedelta for each variable
+                    # we need to re-iterate over variables in case we used the registry (and thus there are multiple variables in varcat)
+                    rows = []
+                    for var, group in varcat.df.groupby("variable"):
+                        rows.append(group[group.timedelta == group.timedelta.max()])
+                    if rows:
+                        # check if the requested variable exists and if so, remove DeriveVariable references
+                        v_list = [rows[i]["variable"].iloc[0] for i in range(len(rows))]
+                        v_list_check = [
+                            var_id in v_list[i] for i in range(len(v_list))
+                        ]  # necessary in case a file has multiple variables
+                        if any(v_list_check):
+                            rows = [rows[v_list_check.index(True)]]
+                            varcat.derivedcat = DerivedVariableRegistry()
+                        varcat.esmcat._df = pd.concat(rows, ignore_index=True)
+                    else:
+                        varcat.esmcat._df = pd.DataFrame()
+
+                if varcat.df.empty:
+                    logger.debug(
+                        f"Dataset {sim_id} doesn't have all needed variables (missing at least {var_id})."
+                    )
+                    break
+                if "timedelta" in varcat.df.columns:
+                    varcat.df.drop(columns=["timedelta"], inplace=True)
+                varcat._requested_variable_freqs = [xrfreq]
+                varcats.append(varcat)
+            else:
+                catalogs[sim_id] = concat_data_catalogs(*varcats)
+                if periods is not None:
+                    if not isinstance(periods[0], list):
+                        periods = [periods]
+                    catalogs[sim_id]._requested_periods = periods
+
+    if len(catalogs) > 0:
+        logger.info(
+            f"Found {len(catalogs)} with all variables requested and corresponding to the criteria."
+        )
+    else:
+        logger.warning("Found no match corresponding to the search criteria.")
+
+    if restrict_resolution is not None and len(catalogs) > 0:
         catalogs = _restrict_by_resolution(catalogs, id_columns, restrict_resolution)
 
-    if restrict_members is not None:
+    if restrict_members is not None and len(catalogs) > 0:
         catalogs = _restrict_multimembers(catalogs, id_columns, restrict_members)
 
     return catalogs
