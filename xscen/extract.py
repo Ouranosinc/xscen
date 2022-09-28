@@ -538,7 +538,7 @@ def search_data_catalogs(
       If True (default) and if the requested variable cannot be found, intermediate variables are
       searched given that there exists a converting function in the "derived variable registry".
     conversion_yaml: str
-      Path to a YAML file that defines the possible conversions (used alongside 'allow_conversion=True').
+      Path to a YAML file that defines the possible conversions (used alongside 'allow_conversion'=True).
       This file should follow the xclim conventions for building a virtual module.
       If None, the "derived variable registry" will be defined by the file in "xscen/xclim_modules/conversions.yml"
     restrict_resolution: str
