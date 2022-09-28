@@ -152,7 +152,7 @@ def compute_deltas(
     reference_horizon: str
       YYYY-YYYY string corresponding to the 'horizon' coordinate of the reference period.
     kind: str
-      ['+', '/'] Whether to provide absolute or relative deltas.
+      ['+', '/', '%'] Whether to provide absolute, relative, or percentage deltas.
       Can also be a dictionary separated per variable name.
     rename_variables: bool
       If True, '_delta_YYYY-YYYY' will be added to variable names.
@@ -188,24 +188,26 @@ def compute_deltas(
     deltas = xr.Dataset(coords=other_hz.coords, attrs=other_hz.attrs)
     # Calculate deltas
     for vv in list(ds.data_vars):
-        if (isinstance(kind, dict) and kind[vv] == "+") or kind == "+":
-            _kind = "absolute"
-        elif (isinstance(kind, dict) and kind[vv] == "/") or kind == "/":
-            _kind = "relative"
-        else:
-            raise ValueError("Delta 'kind' not understood.")
-
         v_name = (
             vv
             if rename_variables is False
             else f"{vv}_delta_{reference_horizon.replace('-', '_')}"
         )
+
         with xr.set_options(keep_attrs=True):
-            if _kind == "absolute":
+            if (isinstance(kind, dict) and kind[vv] == "+") or kind == "+":
+                _kind = "absolute"
                 deltas[v_name] = other_hz[vv] - ref[vv]
-            else:
+            elif (isinstance(kind, dict) and kind[vv] == "/") or kind == "/":
+                _kind = "relative"
                 deltas[v_name] = other_hz[vv] / ref[vv]
                 deltas[v_name].attrs["units"] = ""
+            elif (isinstance(kind, dict) and kind[vv] == "%") or kind == "%":
+                _kind = "percentage"
+                deltas[v_name] = 100 * (other_hz[vv] - ref[vv]) / ref[vv]
+                deltas[v_name].attrs["units"] = "%"
+            else:
+                raise ValueError("Delta 'kind' not understood.")
 
         # modify attrs and history
         deltas[v_name].attrs["delta_kind"] = _kind

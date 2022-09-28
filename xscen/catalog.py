@@ -300,7 +300,8 @@ class DataCatalog(intake_esm.esm_datastore):
             self.esmcat._df = self.df[
                 self.df.apply(check_existing, axis=1)
             ].reset_index(drop=True)
-            self.esmcat._df["variable"] = self.df.apply(check_variables, axis=1)
+            if len(self.df) > 0:
+                self.esmcat._df["variable"] = self.df.apply(check_variables, axis=1)
 
     def exists_in_cat(self, **columns):
         """
