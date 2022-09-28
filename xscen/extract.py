@@ -809,6 +809,29 @@ def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
                         f"Got multiple dataset ids where we expected only one... : {sim_ids}"
                     )
                 exp_hist["id"] = sim_ids[0]
+
+                # Remove fixed fields that already exist in the future experiment
+                dupes = pd.concat(
+                    [
+                        exp_hist.loc[exp_hist["frequency"] == "fx"],
+                        sub_sdf.loc[
+                            (sub_sdf["frequency"] == "fx")
+                            & (sub_sdf["experiment"] == exp_id)
+                        ],
+                    ]
+                ).duplicated(
+                    subset=[
+                        "same_hist_member",
+                        "variable",
+                        "frequency",
+                        "experiment",
+                        "activity",
+                    ],
+                    keep=False,
+                )
+                dupes = dupes[dupes]  # Only keep the duplicated rows
+                exp_hist = exp_hist.loc[exp_hist.index.difference(dupes.index)]
+
                 new_lines.append(exp_hist)
 
     df = pd.concat([df] + new_lines, ignore_index=True).drop(
