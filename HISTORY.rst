@@ -55,6 +55,8 @@ Internal changes
 * Use numpy max and min in `properties_and_measures` (:pull:`76`).
 * Cast catalog date_start and date_end to "%4Y-%m-%d %H:00" when writing to disk. (:issue:`83`, :pull:`79`)
 * Skip test of coverage on the sum if the list of select files is empty. (:pull:`79`)
+* Added missing CMIP variable names in conversions.yml and added the ability to provide a custom file instead (:issue:`86`, :pull:`88`)
+* Changed 'allow_conversion' and 'allow_resample' default to False in search_data_catalogs (:issue:`86`, :pull:`88`)
 
 v0.3.0 (2022-08-23)
 -------------------
