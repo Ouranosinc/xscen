@@ -2,6 +2,27 @@
 History
 =======
 
+v0.5.0 (unreleased)
+-------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* N/A.
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* N/A.
+
+Bug fixes
+^^^^^^^^^
+* `search_data_catalogs` no longer crashes if it finds nothing. (:issue:`42`, :pull:`92`).
+* Prevented fixed fields from being duplicated during `_dispatch_historical_to_future` (:issue:`81`, :pull:`92`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* N/A.
+
 v0.4.0 (2022-09-28)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
