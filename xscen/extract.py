@@ -506,8 +506,9 @@ def search_data_catalogs(
     match_hist_and_fut: bool = False,
     periods: list = None,
     id_columns: Optional[List[str]] = None,
-    allow_resampling: bool = True,
-    allow_conversion: bool = True,
+    allow_resampling: bool = False,
+    allow_conversion: bool = False,
+    conversion_yaml: str = None,
     restrict_resolution: str = None,
     restrict_members: dict = None,
 ) -> dict:
@@ -535,8 +536,11 @@ def search_data_catalogs(
       If True (default), variables with a higher time resolution than requested are considered.
     allow_conversion: bool
       If True (default) and if the requested variable cannot be found, intermediate variables are
-      searched given that there exists a converting function in the "derived variable registry"
-      defined by "xclim_modules/conversions.yml".
+      searched given that there exists a converting function in the "derived variable registry".
+    conversion_yaml: str
+      Path to a YAML file that defines the possible conversions (used alongside 'allow_conversion'=True).
+      This file should follow the xclim conventions for building a virtual module.
+      If None, the "derived variable registry" will be defined by the file in "xscen/xclim_modules/conversions.yml"
     restrict_resolution: str
       Used to restrict the results to the finest/coarsest resolution available for a given simulation.
       ['finest', 'coarsest'].
@@ -566,12 +570,10 @@ def search_data_catalogs(
     """
     cat_kwargs = {}
     if allow_conversion:
+        if conversion_yaml is None:
+            conversion_yaml = Path(__file__).parent / "xclim_modules" / "conversions"
         cat_kwargs = {
-            "registry": registry_from_module(
-                load_xclim_module(
-                    Path(__file__).parent / "xclim_modules" / "conversions"
-                )
-            )
+            "registry": registry_from_module(load_xclim_module(conversion_yaml))
         }
 
     # Prepare a unique catalog to search from, with the DerivedCat added if required
