@@ -640,7 +640,7 @@ def search_data_catalogs(
     # Loop on each dataset to assess whether they have all required variables
     # And select best freq/timedelta for each
     catalogs = {}
-    if len(catalogs) > 0:
+    if len(catalog) > 0:
         for (sim_id,), scat in catalog.iter_unique("id"):
             # Find all the entries that match search parameters
             varcats = []
