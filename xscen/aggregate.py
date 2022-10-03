@@ -174,7 +174,6 @@ def compute_deltas(
     ref = ds.where(ds.horizon == reference_horizon, drop=True)
 
     if "time" in ds:
-
         # Remove references to 'year' in REF
         ind = pd.MultiIndex.from_arrays(
             [ref.time.dt.month.values, ref.time.dt.day.values], names=["month", "day"]
@@ -483,11 +482,8 @@ def spatial_mean(
     return ds_agg
 
 
-# TODO: change for min_window in climatological_mean ?
-
-
 @parse_config
-def warming_level(
+def produce_warming_level(
     ds,
     wl,
     indicators,
@@ -502,13 +498,15 @@ def warming_level(
 
     This function gets the central year when the given level of warming is reached and cut a window of the given size around that central year.
     Then, it compute the indicators and does a interannual mean. It stack the season and month in different dimensions and adds a dimension horizon for the warming level.
+    The 'horizon' dimension is added in order to facilicate the concatenation with a reference climatological mean before calculating the deltas.
 
     Parameters
     ----------
     ds: xr.Dataset
       Input dataset with a time dimension and "cat:" attributes.
     wl: str
-      Warming level. eg. '2' for a global warming level of +2 degree Celsius
+      Warming level. eg. '2' for a global warming level of +2 degree Celsius.
+      Only ['1.5', '2','3','4'] are available.
     indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
       Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     window: int
@@ -531,7 +529,7 @@ def warming_level(
     Returns
     -------
     xr.Dataset
-        Dataset of the computed indicators with "horizon" coordinates and unstack dates.
+        Warming level dataset
     """
     if min_window is None:
         min_window = window - 2
@@ -561,7 +559,7 @@ def warming_level(
     if len(right_row) == 1:
         right_row = right_row.squeeze()
         logger.info(
-            f"Computing warming level {wl} for id: {id_ds} from row: {right_row['model_run']}."
+            f"Computing warming level +{wl}C for id: {id_ds} from row: {right_row['model_run']}."
         )
 
         # get central year for this warming and this source
@@ -641,6 +639,7 @@ def warming_level(
                 ds_merge.attrs.update(ds_mean.attrs)
 
             ds_merge.attrs["cat:xrfreq"] = "fx"
+            ds_merge.attrs["cat:frequency"] = "fx"
             return ds_merge
             # return xr.concat(concats, dim = 'season')
 
@@ -657,3 +656,95 @@ def warming_level(
 
 # TODO: csv in CV or ailleurs?
 # TODO: include chris's data
+
+
+@parse_config
+def produce_horizon(
+    ds,
+    period,
+    indicators,
+    to_level="climatology-reference-{period0}-{period1}",
+):
+    """
+    Compute the climatology of indicators for a given period.
+
+    This function cuts the dataset to the given period.
+    Then, it compute the indicators and does a interannual mean. It stack the season and month in different dimensions and adds a dimension `horizon` for the period.
+    The output is formatted to facilitate the concatenation with the climatology of a warming level before calculating the deltas.
+
+    Parameters
+    ----------
+    ds: xr.Dataset
+      Input dataset with a time dimension.
+    period: list
+      List of strings of format [start_year, end_year]
+    indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+      Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
+    to_level:
+      The processing level to assign to the output.
+      Use "{period0}" and "{period1}" in the string to dynamically include the period values.
+
+    Returns
+    -------
+    xr.Dataset
+        Horizon dataset.
+    """
+
+    ds_hor = ds.sel(time=slice(period[0], period[1])).load()
+
+    # compute indicators
+    ind_dict = compute_indicators(ds=ds_hor, indicators=indicators)
+
+    window = int(period[1]) - int(period[0]) + 1
+    min_periods = (
+        window - 2
+    )  # to get a non-nan value for periods that go from DEC yo JAN
+
+    # Compute the window-year mean
+    ds_merge = xr.Dataset()
+    for freq, ds_ind in ind_dict.items():
+        ds_mean = climatological_mean(
+            ds_ind.dropna(
+                dim="time", how="all"
+            ),  # to drop first and last nan DJF, if not we start a year too early
+            window=window,
+            min_periods=min_periods,
+            to_level=to_level.format(period0=period[0], period1=period[1]),
+        )
+
+        if "AS" not in freq:  # there is only one time, can't infer_freq
+            # name new_dim
+            if "QS" in freq:
+                new_dim = "season"
+            elif "MS" in freq:
+                new_dim = "month"
+            else:
+                new_dim = "period"
+                warnings.warn(
+                    f"Frequency {freq} is not supported. Setting name of the new dimension to 'period'."
+                )
+            ds_mean = unstack_dates(
+                ds_mean,
+                new_dim=new_dim,
+            )
+            horizon = ds_mean.horizon.values[0, 0]
+            ds_mean = (
+                ds_mean.drop_vars("horizon")
+                .assign_coords(horizon=("time", [horizon]))
+                .swap_dims({"time": "horizon"})
+                .drop_vars("time")
+            )
+
+        else:
+            ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
+
+        ds_mean["horizon"] = [f"{period[0]}-{period[1]}"]
+
+        # put all indicators in one dataset
+        for var in ds_mean.data_vars:
+            ds_merge[var] = ds_mean[var]
+        ds_merge.attrs.update(ds_mean.attrs)
+
+    ds_merge.attrs["cat:xrfreq"] = "fx"
+    ds_merge.attrs["cat:frequency"] = "fx"
+    return ds_merge

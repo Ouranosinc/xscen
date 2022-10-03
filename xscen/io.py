@@ -395,11 +395,6 @@ def save_to_zarr(
     xarray.Dataset.to_zarr
     """
 
-    # cast object dimension to string:
-    for dim in ds.dims:
-        if ds[dim].dtype == "object":
-            ds[dim] = ds[dim].astype(str)
-
     if rechunk:
         for rechunk_var in ds.data_vars:
             # Support for chunks varying per variable
