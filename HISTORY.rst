@@ -2,6 +2,14 @@
 History
 =======
 
+v0.5.0 (unreleased)
+-------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* New functions ``aggregate.produce_warming_level`` and ``aggregate.produce_horizon``. (:pull:`93`)
+
 v0.4.0 (2022-09-28)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
@@ -32,7 +40,7 @@ New features and enhancements
 * `generate_id` now accepts Datasets. (:pull:`63`).
 * Add `rechunk` option to `properties_and_measures` (:pull:`76`).
 * Add `create` argument to `ProjectCatalog` (:issue:`11`, :pull:`77`).
-# Add percentage deltas to `compute_deltas` (:issue:`82`, :pull:`90`).
+* Add percentage deltas to `compute_deltas` (:issue:`82`, :pull:`90`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^

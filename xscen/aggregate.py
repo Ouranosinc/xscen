@@ -18,7 +18,13 @@ from .utils import unstack_dates
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["climatological_mean", "compute_deltas", "spatial_mean"]
+__all__ = [
+    "climatological_mean",
+    "compute_deltas",
+    "spatial_mean",
+    "produce_warming_level",
+    "produce_horizon",
+]
 
 
 @parse_config
@@ -252,6 +258,11 @@ def compute_deltas(
 
     if to_level is not None:
         deltas.attrs["cat:processing_level"] = to_level
+
+    # cast object dimension to string for easier saving to file
+    for dim in deltas.dims:
+        if deltas[dim].dtype == "object":
+            deltas[dim] = deltas[dim].astype(str)
 
     return deltas
 
