@@ -596,14 +596,6 @@ def produce_warming_level(
                 # TODO: new_dim for month ?
 
                 if "AS" not in freq:  # there is only one time, can't infer_freq
-                    # if True:
-                    # anchor =freq.split("-")[-1]
-                    # month= f'{[k for k,v xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.items() if v == anchor][0]:02d}'
-                    # seasons = {f"{month}-01":f'annual-{anchor}'} if 'AS' in freq else None
-                    # for AS there is only one time, can't infer_freq
-                    # month_day=str(ds_mean.time.isel(time=0).values)[5:10]
-                    # seasons = {month_day: f'annual-{freq.split("-")[-1]}'} if 'AS' in freq else None
-
                     # name new_dim
                     if "QS" in freq:
                         new_dim = "season"
@@ -641,11 +633,9 @@ def produce_warming_level(
             ds_merge.attrs["cat:xrfreq"] = "fx"
             ds_merge.attrs["cat:frequency"] = "fx"
             return ds_merge
-            # return xr.concat(concats, dim = 'season')
 
         else:
             logger.info(f"{right_row['model_run']} doesn't reach +{wl}C.")
-            # TODO: do we want it to fail here ?
             return None
 
     else:
@@ -654,7 +644,6 @@ def produce_warming_level(
         return None
 
 
-# TODO: csv in CV or ailleurs?
 # TODO: include chris's data
 
 
