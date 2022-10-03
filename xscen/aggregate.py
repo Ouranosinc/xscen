@@ -604,8 +604,6 @@ def produce_warming_level(
                     to_level=to_level.format(wl=wl),
                 )
 
-                # TODO: new_dim for month ?
-
                 if "AS" not in freq:  # there is only one time, can't infer_freq
                     # name new_dim
                     if "QS" in freq:

@@ -10,6 +10,10 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New functions ``aggregate.produce_warming_level`` and ``aggregate.produce_horizon``. (:pull:`93`)
 
+Internal changes
+^^^^^^^^^^^^^^^^
+* ``compute_deltas`` skips the unstacking step if there is no time dimension and cast object dimensions to string.  (:pull:`93`)
+
 v0.4.0 (2022-09-28)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
