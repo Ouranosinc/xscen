@@ -500,7 +500,7 @@ def produce_warming_level(
     indicators,
     window=20,
     min_window=None,
-    tas_ref_period=["1850", "1900"],
+    tas_base_period=["1850", "1900"],
     ignore_member=False,
     tas_csv=None,
     to_level="climatology-warminglevels-{wl}",
@@ -532,6 +532,8 @@ def produce_warming_level(
       If left at None, it will be window-2. This is to get a non-nan value for periods
       that go from december to january (ex. DJF in QS-DEC indicators) because they will have
       less occurrences than the window size because nans are dropped.
+    tas_base_period: list
+      Base period. The warming is calculated with respect to this period.
     ignore_member: bool
       Whether to use the row of the warming_level_csv, even if the member is wrong.
     tas_csv: str
@@ -589,7 +591,7 @@ def produce_warming_level(
     )
 
     # compute reference temperature for the warming
-    mean_base = right_column.loc[tas_ref_period[0] : tas_ref_period[1]].mean()
+    mean_base = right_column.loc[tas_base_period[0] : tas_base_period[1]].mean()
 
     yearly_diff = right_column - mean_base  # difference from reference
     last_year = right_column.iloc[-1].name  # last available year
