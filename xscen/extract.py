@@ -611,10 +611,6 @@ def search_data_catalogs(
         raise ValueError("Catalogs type not recognized.")
     logger.info(f"Catalog opened: {catalog} from {len(data_catalogs)} files.")
 
-    if match_hist_and_fut:
-        logger.info("Dispatching historical dataset to future experiments.")
-        catalog = _dispatch_historical_to_future(catalog, id_columns)
-
     # Cut entries that do not match search criteria
     if other_search_criteria:
         catalog = catalog.search(**other_search_criteria)
@@ -627,6 +623,10 @@ def search_data_catalogs(
         logger.info(
             f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
         )
+
+    if match_hist_and_fut:
+        logger.info("Dispatching historical dataset to future experiments.")
+        catalog = _dispatch_historical_to_future(catalog, id_columns)
 
     ids = generate_id(catalog.df, id_columns)
     if id_columns is not None:
@@ -651,6 +651,32 @@ def search_data_catalogs(
                         variable=var_id,
                         require_all_on=["id", "xrfreq"],
                     )
+                    if len(varcat) == 0:
+                        # Try searching in other experiments or members
+                        scat_id = {
+                            i: scat.df[i].iloc[0]
+                            for i in id_columns or ID_COLUMNS
+                            if i in scat.df.columns
+                        }
+                        scat_id.pop("experiment", None)
+                        scat_id.pop("member", None)
+                        varcat = catalog.search(
+                            **scat_id,
+                            xrfreq=xrfreq,
+                            variable=var_id,
+                            require_all_on=["id", "xrfreq"],
+                        )
+                        if len(varcat) > 1:
+                            varcat.esmcat._df = varcat.df.iloc[[0]]
+                        if len(varcat) == 1:
+                            logger.warning(
+                                f"Dataset {sim_id} doesn't have the fixed field {var_id}, but it can be acquired from {varcat.df['id'].iloc[0]}."
+                            )
+                            for i in {"member", "experiment", "id"}.intersection(
+                                varcat.df.columns
+                            ):
+                                varcat.df.loc[:, i] = scat.df[i].iloc[0]
+
                     # TODO: Temporary fix until this is changed in intake_esm
                     varcat._requested_variables_true = [var_id]
                     varcat._dependent_variables = list(
