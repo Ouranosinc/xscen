@@ -501,7 +501,7 @@ def produce_warming_level(
     window=20,
     min_window=None,
     tas_ref_period=["1850", "1900"],
-    ignore_member=True,
+    ignore_member=False,
     tas_csv=None,
     to_level="climatology-warminglevels-{wl}",
 ):
@@ -525,7 +525,8 @@ def produce_warming_level(
     indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
       Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     window: int
-      Size of the window for the climatological mean.
+      Size of the window over which the mean tempearture reaches wl and for over which
+      to calculate the climatological mean of the indicators.
     min_window: int
       Minimum number of years required for climatological mean to be computed.
       If left at None, it will be window-2. This is to get a non-nan value for periods
@@ -533,10 +534,10 @@ def produce_warming_level(
       less occurrences than the window size because nans are dropped.
     ignore_member: bool
       Whether to use the row of the warming_level_csv, even if the member is wrong.
-    warming_level_csv:
-      CSV file of central year of a window when each simulation for a given experiment reached a given level of warming.
-      By default, the data/IPCC_Atlas_WarmingLevel.csv will be used.
-      This file was created from the CMIP5 and CMIP6 files found here: https://github.com/IPCC-WG1/Atlas/tree/main/warming-levels.
+    tas_csv: str
+      Path to a csv of annual global mean temperature.
+      If None, it will default to data/IPCC_annual_global_tas.csv which was built from
+      the IPCC atlas data found here: https://github.com/IPCC-WG1/Atlas/tree/main/datasets-aggregated-regionally/data.
     to_level:
       The processing level to assign to the output.
       Use "{wl}" in the string to dynamically include the warming level.
@@ -579,7 +580,7 @@ def produce_warming_level(
     elif len(right_column.columns) == 0:
         # TODO: should this fail ?
         logger.info(
-            "No columns fit the cat: attributes of the input dataset. Returning None."
+            f"No columns fit the 'cat:' attributes of the input dataset ({info_ds}). Returning None."
         )
         return None
 
