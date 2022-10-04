@@ -539,7 +539,8 @@ def produce_warming_level(
     tas_csv: str
       Path to a csv of annual global mean temperature.
       If None, it will default to data/IPCC_annual_global_tas.csv which was built from
-      the IPCC atlas data found here: https://github.com/IPCC-WG1/Atlas/tree/main/datasets-aggregated-regionally/data.
+      the IPCC atlas data ( https://github.com/IPCC-WG1/Atlas/tree/main/datasets-aggregated-regionally/data )
+      and extra data from pilot models of MRCC5 and ClimEx.
     to_level:
       The processing level to assign to the output.
       Use "{wl}" in the string to dynamically include the warming level.
