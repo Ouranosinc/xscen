@@ -12,7 +12,7 @@ New features and enhancements
 
 Internal changes
 ^^^^^^^^^^^^^^^^
-* ``compute_deltas`` skips the unstacking step if there is no time dimension and cast object dimensions to string.  (:pull:`93`)
+* ``compute_deltas`` skips the unstacking step if there is no time dimension and cast object dimensions to string.  (:pull:`9`)
 
 v0.4.0 (2022-09-28)
 -------------------
