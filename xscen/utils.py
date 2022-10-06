@@ -445,6 +445,7 @@ def clean_up(
     convert_calendar_kwargs: Optional[dict] = None,
     missing_by_var: Optional[dict] = None,
     maybe_unstack_dict: Optional[dict] = None,
+    round_var: Optional[dict] = None,
     common_attrs_only: Union[dict, list] = None,
     common_attrs_open_kwargs: dict = None,
     attrs_to_remove: Optional[dict] = None,
@@ -483,6 +484,8 @@ def clean_up(
     maybe_unstack_dict: dict
         Dictionary to pass to xscen.common.maybe_unstack function.
         The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
+    round_var: dict
+        Dictionary where the keys are the variables of the dataset and the values are the number of decimal places to round to
     common_attrs_only: dict, list
         Dictionnary of datasets or list of datasets, or path to NetCDF or Zarr files.
         Keeps only the global attributes that are the same for all datasets and generates a new id.
@@ -570,6 +573,10 @@ def clean_up(
     # unstack nans
     if maybe_unstack_dict:
         ds = maybe_unstack(ds, **maybe_unstack_dict)
+
+    if round_var:
+        for var, n in round_var.items():
+            ds[var] = ds[var].round(n)
 
     def _search(a, b):
         if a[-1] == "*":  # check if a is contained in b

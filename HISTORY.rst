@@ -9,6 +9,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliet
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New functions ``aggregate.produce_warming_level`` and ``aggregate.produce_horizon``. (:pull:`93`)
+* add `round_var` to `xs.clean_up`. (:pull:`93`)
 
 Internal changes
 ^^^^^^^^^^^^^^^^
