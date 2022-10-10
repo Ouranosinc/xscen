@@ -498,8 +498,8 @@ def produce_warming_level(
         str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
     ],
     window: int = 20,
-    min_window: int = None,
-    tas_base_period: list = ["1850", "1900"],
+    min_periods: int = None,
+    tas_baseline_period: list = None,
     ignore_member: bool = False,
     tas_csv: str = None,
     to_level: str = "climatology-warminglevels-{wl}",
@@ -526,13 +526,13 @@ def produce_warming_level(
     window: int
       Size of the window over which the mean tempearture reaches wl and for over which
       to calculate the climatological mean of the indicators.
-    min_window: int
+    min_periods: int
       Minimum number of years required for climatological mean to be computed.
       If left at None, it will be window-2. This is to get a non-nan value for periods
       that go from december to january (ex. DJF in QS-DEC indicators) because they will have
       less occurrences than the window size because nans are dropped.
-    tas_base_period: list
-      Base period. The warming is calculated with respect to this period.
+    tas_baseline_period: list
+      Base period. The warming is calculated with respect to this period. The default is ["1850", "1900"].
     ignore_member: bool
       Whether to use the row of the warming_level_csv, even if the member is wrong.
     tas_csv: str
@@ -549,8 +549,11 @@ def produce_warming_level(
     xr.Dataset
         Warming level dataset
     """
-    if min_window is None:
-        min_window = window - 2
+    if min_periods is None:
+        min_periods = window - 2
+
+    if tas_baseline_period is None:
+        tas_baseline_period = ["1850", "1900"]
 
     if tas_csv is None:
         tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
@@ -591,7 +594,7 @@ def produce_warming_level(
     )
 
     # compute reference temperature for the warming
-    mean_base = right_column.loc[tas_base_period[0] : tas_base_period[1]].mean()
+    mean_base = right_column.loc[tas_baseline_period[0] : tas_baseline_period[1]].mean()
 
     yearly_diff = right_column - mean_base  # difference from reference
     last_year = right_column.iloc[-1].name  # last available year
@@ -632,7 +635,7 @@ def produce_warming_level(
                 dim="time", how="all"
             ),  # to drop first and last nan DJF, if not we start a year too early
             window=window,
-            min_periods=min_window,
+            min_periods=min_periods,
             to_level=to_level.format(wl=wl),
         )
 
