@@ -16,7 +16,7 @@ from xclim.core.indicator import Indicator
 from .config import parse_config
 from .extract import clisops_subset
 from .indicators import compute_indicators
-from .utils import unstack_dates
+from .utils import unstack_dates, get_cat_attrs
 
 logger = logging.getLogger(__name__)
 
@@ -519,7 +519,7 @@ def produce_warming_level(
     ds: xr.Dataset
       Input dataset.
       The dataset should include attributes to help recognize it and find its warming levels - 'cat:mip_era', 'cat:experiment', 'cat:member', and either 'cat:source' for global models or 'cat:driving_model' for regional models.
-    wl: int
+    wl: float
       Warming level.
       eg. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_ref_period`.
     indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
@@ -535,7 +535,7 @@ def produce_warming_level(
     tas_baseline_period: list
       Base period. The warming is calculated with respect to this period. The default is ["1850", "1900"].
     ignore_member: bool
-      Whether to use the row of the warming_level_csv, even if the member is wrong.
+      Whether to ignore the member when searching for the model run in tas_csv.
     tas_csv: str
       Path to a csv of annual global mean temperature.
       If None, it will default to data/IPCC_annual_global_tas.csv which was built from
@@ -580,7 +580,7 @@ def produce_warming_level(
 
     if len(right_column.columns) > 1:
         logger.info(
-            "More than one column of the csv was selected. Choosing the first one."
+            "More than one column of the csv fits the dataset metadata. Choosing the first one."
         )
         right_column = pd.DataFrame(right_column.iloc[:, 0])
     elif len(right_column.columns) == 0:
@@ -600,7 +600,7 @@ def produce_warming_level(
     yearly_diff = right_column - mean_base  # difference from reference
     last_year = right_column.iloc[-1].name  # last available year
 
-    # get the star and end date of the window when the warming level is first reached
+    # get the start and end date of the window when the warming level is first reached
     for year in np.arange(1850, 2101):
         start_yr = int(year - (window / 2 - 1))
         end_yr = int(year + window / 2)
@@ -617,7 +617,7 @@ def produce_warming_level(
 
     if np.isnan(start_yr):
         logger.info(
-            f"Global warming level of +{str(wl)}C is never reached for {id_ds}."
+            f"Global warming level of +{wl}C is never reached for {id_ds}."
         )
         return None
 
@@ -668,7 +668,7 @@ def produce_warming_level(
         else:
             ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
 
-        ds_mean["horizon"] = [f"+{str(wl)}C"]
+        ds_mean["horizon"] = [f"+{wl}C_vs_{tas_base_period[0]}-{tas_base_period[1]}"]
         concats.append(ds_mean)
 
         # put all indicators in one dataset
