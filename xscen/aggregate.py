@@ -517,7 +517,8 @@ def produce_warming_level(
     Parameters
     ----------
     ds: xr.Dataset
-      Input dataset with a time dimension and "cat:" attributes.
+      Input dataset.
+      The dataset should include attributes to help recognize it and find its warming levels - 'cat:mip_era', 'cat:experiment', 'cat:member', and either 'cat:source' for global models or 'cat:driving_model' for regional models.
     wl: int
       Warming level.
       eg. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_ref_period`.
