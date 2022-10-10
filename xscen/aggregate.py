@@ -571,7 +571,7 @@ def produce_warming_level(
     mip_era_ds = ds.attrs["cat:mip_era"]
 
     info_ds = (
-        f"{mip_era_ds}_{source_ds}_{exp_ds}_*"
+        f"{mip_era_ds}_{source_ds}_{exp_ds}_.*"
         if ignore_member
         else f"{mip_era_ds}_{source_ds}_{exp_ds}_{member_ds}"
     )
