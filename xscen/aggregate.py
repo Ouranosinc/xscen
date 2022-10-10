@@ -16,7 +16,7 @@ from xclim.core.indicator import Indicator
 from .config import parse_config
 from .extract import clisops_subset
 from .indicators import compute_indicators
-from .utils import unstack_dates, get_cat_attrs
+from .utils import get_cat_attrs, unstack_dates
 
 logger = logging.getLogger(__name__)
 
@@ -616,9 +616,7 @@ def produce_warming_level(
             end_yr = np.nan
 
     if np.isnan(start_yr):
-        logger.info(
-            f"Global warming level of +{wl}C is never reached for {id_ds}."
-        )
+        logger.info(f"Global warming level of +{wl}C is never reached for {id_ds}.")
         return None
 
     # cut the window selected above
