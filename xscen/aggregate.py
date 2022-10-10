@@ -510,7 +510,7 @@ def produce_warming_level(
     First, this function calculates the start and end year of a window when the given
     global warming level is reached from a csv of yearly global mean temperature. Second,
     the function computes indicators and interrannual mean on this same window. Third,
-    it stack the season and month in different dimensions and adds a dimension horizon for the warming level.
+    it unstacks the season and month to different dimensions and adds a dimension 'horizon' for the warming level.
     The 'horizon' dimension is added in order to facilicate the concatenation with a
     reference climatological mean before calculating the deltas.
 
