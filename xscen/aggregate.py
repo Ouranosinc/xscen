@@ -562,9 +562,9 @@ def produce_warming_level(
     # get info on ds
     id_ds = ds.attrs["cat:id"]
     source_ds = (
-        ds.attrs["source"]
-        if ds.attrs["driving_model"] is None
-        else ds.attrs["driving_model"]
+        ds.attrs["cat:source"]
+        if "cat:driving_model" not in ds.attrs
+        else ds.attrs["cat:driving_model"]
     )
     exp_ds = ds.attrs["cat:experiment"]
     member_ds = ds.attrs["cat:member"]
@@ -671,7 +671,7 @@ def produce_warming_level(
             ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
 
         ds_mean["horizon"] = [
-            f"+{wl}C_vs_{tas_baseline_period[0]}-{tas_baseline_period[1]}"
+            f"+{wl}Cvs{tas_baseline_period[0]}-{tas_baseline_period[1]}"
         ]
         concats.append(ds_mean)
 
