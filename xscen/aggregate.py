@@ -561,7 +561,11 @@ def produce_warming_level(
 
     # get info on ds
     id_ds = ds.attrs["cat:id"]
-    source_ds = info["source"] if info["driving_model"] is None else info["driving_model"]
+    source_ds = (
+        ds.attrs["source"]
+        if ds.attrs["driving_model"] is None
+        else ds.attrs["driving_model"]
+    )
     exp_ds = ds.attrs["cat:experiment"]
     member_ds = ds.attrs["cat:member"]
     mip_era_ds = ds.attrs["cat:mip_era"]
@@ -666,7 +670,9 @@ def produce_warming_level(
         else:
             ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
 
-        ds_mean["horizon"] = [f"+{wl}C_vs_{tas_base_period[0]}-{tas_base_period[1]}"]
+        ds_mean["horizon"] = [
+            f"+{wl}C_vs_{tas_baseline_period[0]}-{tas_baseline_period[1]}"
+        ]
         concats.append(ds_mean)
 
         # put all indicators in one dataset
