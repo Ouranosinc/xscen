@@ -1,8 +1,9 @@
 import datetime
 import logging
 import warnings
-from pathlib import Path
-from typing import Union
+from pathlib import Path, PosixPath
+from types import ModuleType
+from typing import Sequence, Tuple, Union
 
 import geopandas as gpd
 import numpy as np
@@ -10,6 +11,7 @@ import pandas as pd
 import xarray as xr
 import xesmf as xe
 from shapely.geometry import Polygon
+from xclim.core.indicator import Indicator
 
 from .config import parse_config
 from .extract import clisops_subset
@@ -490,15 +492,17 @@ def spatial_mean(
 
 @parse_config
 def produce_warming_level(
-    ds,
-    wl,
-    indicators,
-    window=20,
-    min_window=None,
-    tas_base_period=["1850", "1900"],
-    ignore_member=False,
-    tas_csv=None,
-    to_level="climatology-warminglevels-{wl}",
+    ds: xr.Dataset,
+    wl: float,
+    indicators: Union[
+        str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
+    ],
+    window: int = 20,
+    min_window: int = None,
+    tas_base_period: list = ["1850", "1900"],
+    ignore_member: bool = False,
+    tas_csv: str = None,
+    to_level: str = "climatology-warminglevels-{wl}",
 ):
     """
     Compute the climatology of indicators for a given warming level.
@@ -678,10 +682,12 @@ def produce_warming_level(
 
 @parse_config
 def produce_horizon(
-    ds,
-    period,
-    indicators,
-    to_level="climatology-reference-{period0}-{period1}",
+    ds: xr.Dataset,
+    period: list,
+    indicators: Union[
+        str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
+    ],
+    to_level: str = "climatology-reference-{period0}-{period1}",
 ):
     """
     Compute the climatology of indicators for a given period.
