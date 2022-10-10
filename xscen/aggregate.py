@@ -259,11 +259,6 @@ def compute_deltas(
     if to_level is not None:
         deltas.attrs["cat:processing_level"] = to_level
 
-    # cast object dimension to string for easier saving to file
-    for dim in deltas.dims:
-        if deltas[dim].dtype == "object":
-            deltas[dim] = deltas[dim].astype(str)
-
     return deltas
 
 
@@ -653,6 +648,7 @@ def produce_warming_level(
                 # seasons = seasons,
                 new_dim=new_dim,
             )
+            ds_mean[new_dim] = ds_mean[new_dim].astype(str)
             horizon = ds_mean.horizon.values[0, 0]
             ds_mean = (
                 ds_mean.drop_vars("horizon")
