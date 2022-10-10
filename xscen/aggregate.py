@@ -561,7 +561,9 @@ def produce_warming_level(
 
     # get info on ds
     id_ds = ds.attrs["cat:id"]
-    source_ds = info["source"] if info["driving_model"] is None else info["driving_model"]
+    source_ds = (
+        info["source"] if info["driving_model"] is None else info["driving_model"]
+    )
     exp_ds = ds.attrs["cat:experiment"]
     member_ds = ds.attrs["cat:member"]
     mip_era_ds = ds.attrs["cat:mip_era"]
