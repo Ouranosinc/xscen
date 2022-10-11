@@ -564,7 +564,7 @@ def produce_warming_level(
     id_ds = ds.attrs["cat:id"]
     source_ds = (
         ds.attrs["cat:source"]
-        if "cat:driving_model" not in ds.attrs
+        if pd.isna(ds.attrs.get("cat:driving_model", None))
         else ds.attrs["cat:driving_model"]
     )
     exp_ds = ds.attrs["cat:experiment"]
