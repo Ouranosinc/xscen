@@ -9,7 +9,6 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliet
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
 Breaking changes
 ^^^^^^^^^^^^^^^^
 
@@ -20,7 +19,6 @@ Hence, when it is a conversion from a 360_day calendar, the random date are the 
 
 Internal changes
 ^^^^^^^^^^^^^^^^
-
 
 v0.4.0 (2022-09-28)
 -------------------
