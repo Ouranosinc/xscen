@@ -539,7 +539,7 @@ def produce_warming_level(
     tas_csv: str
       Path to a csv of annual global mean temperature.
       If None, it will default to data/IPCC_annual_global_tas.csv which was built from
-      the IPCC atlas data ( https://github.com/IPCC-WG1/Atlas/tree/main/datasets-aggregated-regionally/data )
+      the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
       and extra data from pilot models of MRCC5 and ClimEx.
     to_level:
       The processing level to assign to the output.
@@ -549,6 +549,7 @@ def produce_warming_level(
     -------
     xr.Dataset
         Warming level dataset
+
     """
     if min_periods is None:
         min_periods = window - 2
@@ -683,9 +684,6 @@ def produce_warming_level(
     ds_merge.attrs["cat:xrfreq"] = "fx"
     ds_merge.attrs["cat:frequency"] = "fx"
     return ds_merge
-
-
-# TODO: include chris' data
 
 
 @parse_config
