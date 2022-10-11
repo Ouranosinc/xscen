@@ -2,6 +2,26 @@
 History
 =======
 
+v0.5.0 (unreleased)
+-------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+
+Bug fixes
+^^^^^^^^^
+* ``clean_up`` now converts the calendar of variables that use "interpolate" in "missinge_by_var" at the same time.
+Hence, when it is a conversion from a 360_day calendar, the random date are the same of the these variables. (:issue:`102`, :pull:`104`)
+
+Internal changes
+^^^^^^^^^^^^^^^^
+
+
 v0.4.0 (2022-09-28)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
