@@ -554,12 +554,7 @@ def clean_up(
             for var, missing in missing_by_var.items():
                 logging.info(f"Filling missing {var} with {missing}")
                 if missing == "interpolate":
-                    converted_var = convert_calendar(
-                        ds_copy[var], **convert_calendar_kwargs, missing=np.nan
-                    )
-                    converted_var = converted_var.interpolate_na(
-                        "time", method="linear"
-                    )
+                    converted_var = ds[var].interpolate_na("time", method="linear")
                 else:
                     ocean_var = ds_copy[var].isnull().all("time")
                     converted_var = convert_calendar(
