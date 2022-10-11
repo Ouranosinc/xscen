@@ -15,7 +15,7 @@ Breaking changes
 Bug fixes
 ^^^^^^^^^
 * ``clean_up`` now converts the calendar of variables that use "interpolate" in "missing_by_var" at the same time.
-Hence, when it is a conversion from a 360_day calendar, the random date are the same of the these variables. (:issue:`102`, :pull:`104`)
+Hence, when it is a conversion from a 360_day calendar, the random dates are the same for all of the these variables. (:issue:`102`, :pull:`104`)
 
 Internal changes
 ^^^^^^^^^^^^^^^^
