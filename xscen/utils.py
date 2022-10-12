@@ -538,7 +538,9 @@ def clean_up(
 
         # if missing_by_var exist make sure missing data are added to time axis
         if missing_by_var:
-            convert_calendar_kwargs.setdefault("missing", -9999)
+            if not all(k in missing_by_var.keys() for k in ds.data_vars):
+                raise ValueError("All variables must be in 'missing_by_var' if using this option.")
+            convert_calendar_kwargs["missing"] = -9999
 
         # make default `align_on`='`random` when the initial calendar is 360day
         if get_calendar(ds) == "360_day" and "align_on" not in convert_calendar_kwargs:
