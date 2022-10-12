@@ -557,7 +557,9 @@ def clean_up(
                     ds_with_nan = ds[var].where(ds[var] != -9999)
                     converted_var = ds_with_nan.interpolate_na("time", method="linear")
                 else:
-                    converted_var = xr.where(ds[var] == -9999, missing, ds[var])
+                    converted_var = xr.where(
+                        ds[var] != -9999, ds[var], missing, keep_attrs=True
+                    )
                 ds[var] = converted_var
 
     # unstack nans
