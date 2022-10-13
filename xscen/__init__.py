@@ -41,7 +41,7 @@ from .utils import clean_up
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.4.0"
+__version__ = "0.4.1-beta"
 
 
 # monkeypatch so that warnings.warn() doesn't mention itself
