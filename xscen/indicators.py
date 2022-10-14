@@ -142,6 +142,13 @@ def compute_indicators(
                 concats.extend(tmp)
             out = xr.concat(concats, dim="time")
 
+        # cut the time axis to be within the same years as the input
+        # for QS-DEC, xclim starts on DJF with time previous_year-12-01 with a nan as values. We want to cut this.
+        # this should have no effect on YS and MS indicators
+        out = out.sel(
+            time=slice(str(ds.time[0].dt.year.values), str(ds.time[-1].dt.year.values))
+        )
+
         # Create the dictionary key
         key = freq
         if key not in out_dict:
