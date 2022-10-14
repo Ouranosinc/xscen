@@ -24,7 +24,7 @@ __all__ = [
     "climatological_mean",
     "compute_deltas",
     "spatial_mean",
-    "produce_warming_level",
+    "prepare_warming_level",
     "produce_horizon",
 ]
 
@@ -491,7 +491,7 @@ def spatial_mean(
 
 
 @parse_config
-def produce_warming_level(
+def prepare_warming_level(
     ds: xr.Dataset,
     wl: float,
     indicators: Union[
@@ -502,7 +502,8 @@ def produce_warming_level(
     tas_baseline_period: list = None,
     ignore_member: bool = False,
     tas_csv: str = None,
-    to_level: str = "climatology-warminglevels-{wl}",
+    to_level: str = "warminglevel-{wl}",
+    horizon_name: str = "+{wl}C",
 ):
     """
     Compute the climatology of indicators for a given warming level.
@@ -603,22 +604,24 @@ def produce_warming_level(
     mean_base = right_column.loc[tas_baseline_period[0] : tas_baseline_period[1]].mean()
 
     yearly_diff = right_column - mean_base  # difference from reference
-    last_year = right_column.iloc[-1].name  # last available year
 
     # get the start and end date of the window when the warming level is first reached
-    for year in np.arange(1850, 2101):
-        start_yr = int(year - (window / 2 - 1))
-        end_yr = int(year + window / 2)
-        if end_yr > last_year:  # put nan if end_yr is not available in the data
-            start_yr = np.nan
-            end_yr = np.nan
-            break
-        rolling_mean = yearly_diff.loc[start_yr:end_yr].mean().values
-        if rolling_mean >= wl:
-            break
-        else:  # if it never goes above wl
-            start_yr = np.nan
-            end_yr = np.nan
+
+    # shift(-1) is needed to reproduce IPCC results.
+    # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
+    print("rolling")
+    rolling_diff = (
+        yearly_diff.rolling(window=window, min_periods=min_periods, center=True)
+        .mean()
+        .shift(-1)
+    )
+    yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
+    if yr is None:
+        start_yr = np.nan
+        end_yr = np.nan
+    else:
+        start_yr = int(yr - window / 2 + 1)
+        end_yr = int(yr + window / 2)
 
     if np.isnan(start_yr):
         logger.info(f"Global warming level of +{wl}C is never reached for {id_ds}.")
@@ -627,72 +630,34 @@ def produce_warming_level(
     # cut the window selected above
     ds_wl = ds.sel(time=slice(str(start_yr), str(end_yr))).load()
 
-    # compute indicators
-    ind_dict = compute_indicators(ds=ds_wl, indicators=indicators)
+    ds_wl = ds_wl.expand_dims(
+        dim={
+            "warminglevel": [
+                horizon_name.format(
+                    wl=wl,
+                    period0=tas_baseline_period[0],
+                    period1=tas_baseline_period[1],
+                )
+            ]
+        },
+        axis=0,
+    )
 
-    # Compute the window-year mean
-    ds_merge = xr.Dataset()
-    concats = []
-    for freq, ds_ind in ind_dict.items():
-        ds_mean = climatological_mean(
-            ds_ind.dropna(
-                dim="time", how="all"
-            ),  # to drop first and last nan DJF, if not we start a year too early
-            window=window,
-            min_periods=min_periods,
-            to_level=to_level.format(wl=wl),
+    if to_level is not None:
+        ds_wl.attrs["cat:processing_level"] = to_level.format(
+            wl=wl, period0=tas_baseline_period[0], period1=tas_baseline_period[1]
         )
 
-        if "AS" not in freq:  # there is only one time, can't infer_freq
-            # name new_dim
-            if "QS" in freq:
-                new_dim = "season"
-            elif "MS" in freq:
-                new_dim = "month"
-            else:
-                new_dim = "period"
-                warnings.warn(
-                    f"Frequency {freq} is not supported. Setting name of the new dimension to 'period'."
-                )
-            ds_mean = unstack_dates(
-                ds_mean,
-                # seasons = seasons,
-                new_dim=new_dim,
-            )
-            ds_mean[new_dim] = ds_mean[new_dim].astype(str)
-            horizon = ds_mean.horizon.values[0, 0]
-            ds_mean = (
-                ds_mean.drop_vars("horizon")
-                .assign_coords(horizon=("time", [horizon]))
-                .swap_dims({"time": "horizon"})
-                .drop_vars("time")
-            )
-
-        else:
-            ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
-
-        ds_mean["horizon"] = [
-            f"+{wl}Cvs{tas_baseline_period[0]}-{tas_baseline_period[1]}"
-        ]
-        concats.append(ds_mean)
-
-        # put all indicators in one dataset
-        for var in ds_mean.data_vars:
-            ds_merge[var] = ds_mean[var]
-        ds_merge.attrs.update(ds_mean.attrs)
-
-    ds_merge.attrs["cat:xrfreq"] = "fx"
-    ds_merge.attrs["cat:frequency"] = "fx"
-    return ds_merge
+    return ds_wl
 
 
 @parse_config
 def produce_horizon(
     ds: xr.Dataset,
-    period: list,
     indicators: Union[
         str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
     ],
+    period: list = None,
     to_level: str = "climatology-reference-{period0}-{period1}",
 ):
     """
@@ -720,15 +685,18 @@ def produce_horizon(
         Horizon dataset.
     """
 
-    ds_hor = ds.sel(time=slice(period[0], period[1])).load()
-
-    # compute indicators
-    ind_dict = compute_indicators(ds=ds_hor, indicators=indicators)
-
-    window = int(period[1]) - int(period[0]) + 1
+    if period:
+        ds = ds.sel(time=slice(period[0], period[1])).load()
+        window = int(period[1]) - int(period[0]) + 1
+        to_level = to_level.format(period0=period[0], period1=period[1])
+    else:
+        window = ds.time[-1].dt.year.values - ds.time[0].dt.year.values + 1
     min_periods = (
         window - 2
     )  # to get a non-nan value for periods that go from DEC yo JAN
+
+    # compute indicators
+    ind_dict = compute_indicators(ds=ds, indicators=indicators)
 
     # Compute the window-year mean
     ds_merge = xr.Dataset()
@@ -739,7 +707,7 @@ def produce_horizon(
             ),  # to drop first and last nan DJF, if not we start a year too early
             window=window,
             min_periods=min_periods,
-            to_level=to_level.format(period0=period[0], period1=period[1]),
+            to_level=to_level,
         )
 
         if "AS" not in freq:  # there is only one time, can't infer_freq
@@ -764,11 +732,18 @@ def produce_horizon(
                 .swap_dims({"time": "horizon"})
                 .drop_vars("time")
             )
+            # display(ds_mean)
 
         else:
             ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
 
-        ds_mean["horizon"] = [f"{period[0]}-{period[1]}"]
+        if "warminglevel" in ds_mean.dims:
+            wl = ds_mean["warminglevel"].values
+            ds_mean = ds_mean.squeeze(dim="warminglevel", drop=True)
+            ds_mean["horizon"] = wl
+
+        elif period:
+            ds_mean["horizon"] = [f"{period[0]}-{period[1]}"]
 
         # put all indicators in one dataset
         for var in ds_mean.data_vars:
