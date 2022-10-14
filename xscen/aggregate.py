@@ -686,7 +686,7 @@ def produce_horizon(
             to_level = to_level.format(period0=period[0], period1=period[1])
     else:
         window = int(ds.time.dt.year[-1] - ds.time.dt.year[0]) + 1
-        if to_level and "{warminglevel}" not in to_level:
+        if to_level and "{wl}" not in to_level:
             to_level = to_level.format(
                 period0=ds.time.dt.year[0], period1=ds.time.dt.year[-1]
             )
