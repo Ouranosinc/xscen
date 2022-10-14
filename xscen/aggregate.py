@@ -72,8 +72,14 @@ def climatological_mean(
 
     window = window or int(ds.time.dt.year[-1] - ds.time.dt.year[0])
 
-    # by definition there is always one less occurrence when the period goes over 2 years
-    if ds.attrs.get("cat:xrfreq") in ["QS-DEC", "AS-JUL"] and min_periods is None:
+    # there is one less occurrence when a period crosses years
+    freq_across_year = [
+        f"{f}-{mon}"
+        for mon in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values()
+        for f in ["AS", "QS"]
+        if mon != "JAN"
+    ]
+    if ds.attrs.get("cat:xrfreq") in freq_across_year and min_periods is None:
         min_periods = window - 1
     min_periods = min_periods or window
 
