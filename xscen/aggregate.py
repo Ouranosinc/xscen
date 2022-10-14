@@ -51,7 +51,9 @@ def climatological_mean(
       If left at None, all years will be used.
     min_periods: int
       For the rolling operation, minimum number of years required for a value to be computed.
-      If left at None, it will be deemed the same as 'window'
+      If left at None and the xrfreq is QS-DEC or AS-JUL, min_periods will be one less than window.
+      If left at None, it will be deemed the same as 'window'.
+
     interval: int
       Interval (in years) at which to provide an output.
     periods: list
@@ -498,45 +500,30 @@ def spatial_mean(
 def prepare_warming_level(
     ds: xr.Dataset,
     wl: float,
-    indicators: Union[
-        str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
-    ],
     window: int = 20,
-    min_periods: int = None,
     tas_baseline_period: list = None,
     ignore_member: bool = False,
     tas_csv: str = None,
     to_level: str = "warminglevel-{wl}",
-    horizon_name: str = "+{wl}C",
+    wl_dim: str = "+{wl}C",
 ):
     """
-    Compute the climatology of indicators for a given warming level.
+    Returns the input dataset with only the window of time over which the given level of
+    global warming is first reached using the IPCC Atlas method.
 
-    First, this function calculates the start and end year of a window when the given
-    global warming level is reached from a csv of yearly global mean temperature. Second,
-    the function computes indicators and interrannual mean on this same window. Third,
-    it unstacks the season and month to different dimensions and adds a dimension 'horizon' for the warming level.
-    The 'horizon' dimension is added in order to facilicate the concatenation with a
-    reference climatological mean before calculating the deltas.
 
     Parameters
     ----------
     ds: xr.Dataset
       Input dataset.
-      The dataset should include attributes to help recognize it and find its warming levels - 'cat:mip_era', 'cat:experiment', 'cat:member', and either 'cat:source' for global models or 'cat:driving_model' for regional models.
+      The dataset should include attributes to help recognize it and find its
+      warming levels - 'cat:mip_era', 'cat:experiment', 'cat:member', and either
+      'cat:source' for global models or 'cat:driving_model' for regional models.
     wl: float
       Warming level.
-      eg. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_ref_period`.
-    indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
-      Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
+      eg. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
     window: int
-      Size of the window over which to compute both the warming levels and the
-      climatological mean of the indicators. The rolling operation is centered.
-    min_periods: int
-      Minimum number of years required for climatological mean to be computed.
-      If left at None, it will be window-2. This is to get a non-nan value for periods
-      that go from december to january (ex. DJF in QS-DEC indicators) because they will have
-      less occurrences than the window size because nans are dropped.
+      Size of the rolling window in years over which to compute the warming level.
     tas_baseline_period: list
       Base period. The warming is calculated with respect to this period. The default is ["1850", "1900"].
     ignore_member: bool
@@ -548,16 +535,20 @@ def prepare_warming_level(
       and extra data from pilot models of MRCC5 and ClimEx.
     to_level:
       The processing level to assign to the output.
-      Use "{wl}" in the string to dynamically include the warming level.
+      Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
+      `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
+    wl_coord: str
+      The value to use to fill the new `warminglevel` dimension.
+      Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
+      `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
+      If None, no new dimensions will be added.
 
     Returns
     -------
     xr.Dataset
-        Warming level dataset
+        Warming level dataset.
 
     """
-    if min_periods is None:
-        min_periods = window - 2
 
     if tas_baseline_period is None:
         tas_baseline_period = ["1850", "1900"]
@@ -594,11 +585,9 @@ def prepare_warming_level(
         )
         right_column = pd.DataFrame(right_column.iloc[:, 0])
     elif len(right_column.columns) == 0:
-        # TODO: should this fail ?
-        logger.info(
-            f"No columns fit the 'cat:' attributes of the input dataset ({info_ds}). Returning None."
+        raise ValueError(
+            f"No columns fit the 'cat:' attributes of the input dataset ({info_ds})."
         )
-        return None
 
     logger.info(
         f"Computing warming level +{wl}C for id: {id_ds} from column: {right_column.columns[0]}."
@@ -613,9 +602,8 @@ def prepare_warming_level(
 
     # shift(-1) is needed to reproduce IPCC results.
     # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
-    print("rolling")
     rolling_diff = (
-        yearly_diff.rolling(window=window, min_periods=min_periods, center=True)
+        yearly_diff.rolling(window=window, min_periods=window, center=True)
         .mean()
         .shift(-1)
     )
@@ -634,18 +622,19 @@ def prepare_warming_level(
     # cut the window selected above
     ds_wl = ds.sel(time=slice(str(start_yr), str(end_yr)))
 
-    ds_wl = ds_wl.expand_dims(
-        dim={
-            "warminglevel": [
-                horizon_name.format(
-                    wl=wl,
-                    period0=tas_baseline_period[0],
-                    period1=tas_baseline_period[1],
-                )
-            ]
-        },
-        axis=0,
-    )
+    if wl_dim:
+        ds_wl = ds_wl.expand_dims(
+            dim={
+                "warminglevel": [
+                    wl_dim.format(
+                        wl=wl,
+                        period0=tas_baseline_period[0],
+                        period1=tas_baseline_period[1],
+                    )
+                ]
+            },
+            axis=0,
+        )
 
     if to_level is not None:
         ds_wl.attrs["cat:processing_level"] = to_level.format(
@@ -662,26 +651,27 @@ def produce_horizon(
         str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
     ],
     period: list = None,
-    to_level: str = "climatology-reference-{period0}-{period1}",
+    to_level: str = "climatology{period0}-{period1}",
 ):
     """
-    Compute the climatology of indicators for a given period.
+    Compute the climatology of indicators and unstack dates in order to have a single dataset with indicators of different frequencies.
 
-    This function cuts the dataset to the given period.
-    Then, it compute the indicators and does a interannual mean. It stack the season and month in different dimensions and adds a dimension `horizon` for the period.
-    The output is formatted to facilitate the concatenation with the climatology of a warming level before calculating the deltas.
+    This function computes the indicators and does a interannual mean.
+     It stack the season and month in different dimensions and adds a dimension `horizon` for the period or the warming level if given.
 
     Parameters
     ----------
     ds: xr.Dataset
       Input dataset with a time dimension.
-    period: list
-      List of strings of format [start_year, end_year]
     indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
       Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
+    period: list
+      List of strings of format [start_year, end_year].
+      If None, the whole time coordinate is used.
     to_level:
       The processing level to assign to the output.
-      Use "{period0}" and "{period1}" in the string to dynamically include the period values.
+      Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
+      the first value of the `warminglevel` coord of ds if it exists, 'period[0]' and 'period[1]'.
 
     Returns
     -------
@@ -692,9 +682,14 @@ def produce_horizon(
     if period:
         ds = ds.sel(time=slice(period[0], period[1])).load()
         window = int(period[1]) - int(period[0]) + 1
-        to_level = to_level.format(period0=period[0], period1=period[1])
+        if to_level:
+            to_level = to_level.format(period0=period[0], period1=period[1])
     else:
         window = int(ds.time.dt.year[-1] - ds.time.dt.year[0]) + 1
+        if to_level and "{warminglevel}" not in to_level:
+            to_level = to_level.format(
+                period0=ds.time.dt.year[0], period1=ds.time.dt.year[-1]
+            )
 
     # compute indicators
     ind_dict = compute_indicators(ds=ds, indicators=indicators)
@@ -705,7 +700,6 @@ def produce_horizon(
         ds_mean = climatological_mean(
             ds_ind,
             window=window,
-            to_level=to_level,
         )
 
         if "AS" not in freq:  # there is only one time, can't infer_freq
@@ -738,9 +732,8 @@ def produce_horizon(
             wl = ds_mean["warminglevel"].values
             ds_mean = ds_mean.squeeze(dim="warminglevel", drop=True)
             ds_mean["horizon"] = wl
-
-        elif period:
-            ds_mean["horizon"] = [f"{period[0]}-{period[1]}"]
+            if to_level:
+                to_level = to_level.format(wl=wl[0])
 
         # put all indicators in one dataset
         for var in ds_mean.data_vars:
@@ -749,4 +742,6 @@ def produce_horizon(
 
     ds_merge.attrs["cat:xrfreq"] = "fx"
     ds_merge.attrs["cat:frequency"] = "fx"
+    if to_level:
+        ds_merge.attrs["cat:processing_level"] = to_level
     return ds_merge

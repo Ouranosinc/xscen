@@ -68,6 +68,10 @@ def compute_indicators(
     """
     Calculates variables and indicators based on a YAML call to xclim.
 
+    The function cuts the output to be the same years as the outputs.
+    Hence, if an indicators creates a timestep outside of the original year range (eg. the first DJF for QS-DEC).
+    It will not appear in the output.
+
     Parameters
     ----------
     ds : xr.Dataset
