@@ -69,6 +69,10 @@ def climatological_mean(
     """
 
     window = window or int(ds.time.dt.year[-1] - ds.time.dt.year[0])
+
+    # by definition there is always one less occurrence when the period goes over 2 years
+    if ds.attrs.get("cat:xrfreq") in ["QS-DEC", "AS-JUL"] and min_periods is None:
+        min_periods = window - 1
     min_periods = min_periods or window
 
     # separate 1d time in coords (day, month, and year) to make climatological mean faster
@@ -628,7 +632,7 @@ def prepare_warming_level(
         return None
 
     # cut the window selected above
-    ds_wl = ds.sel(time=slice(str(start_yr), str(end_yr))).load()
+    ds_wl = ds.sel(time=slice(str(start_yr), str(end_yr)))
 
     ds_wl = ds_wl.expand_dims(
         dim={
@@ -690,10 +694,7 @@ def produce_horizon(
         window = int(period[1]) - int(period[0]) + 1
         to_level = to_level.format(period0=period[0], period1=period[1])
     else:
-        window = ds.time[-1].dt.year.values - ds.time[0].dt.year.values + 1
-    min_periods = (
-        window - 2
-    )  # to get a non-nan value for periods that go from DEC yo JAN
+        window = int(ds.time.dt.year[-1] - ds.time.dt.year[0]) + 1
 
     # compute indicators
     ind_dict = compute_indicators(ds=ds, indicators=indicators)
@@ -702,11 +703,8 @@ def produce_horizon(
     ds_merge = xr.Dataset()
     for freq, ds_ind in ind_dict.items():
         ds_mean = climatological_mean(
-            ds_ind.dropna(
-                dim="time", how="all"
-            ),  # to drop first and last nan DJF, if not we start a year too early
+            ds_ind,
             window=window,
-            min_periods=min_periods,
             to_level=to_level,
         )
 
@@ -732,7 +730,6 @@ def produce_horizon(
                 .swap_dims({"time": "horizon"})
                 .drop_vars("time")
             )
-            # display(ds_mean)
 
         else:
             ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
