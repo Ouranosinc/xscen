@@ -156,12 +156,12 @@ def parse_config(func_or_cls):
         sig = inspect.signature(func)
         if CONFIG.get("print_it_all"):
             logger.debug(f"For func {func}, found config {from_config}.")
-            logger.debug("Original kwargs :", kwargs)
+            logger.debug(f"Original kwargs : {kwargs}")
         for k, v in from_config.items():
             if k in sig.parameters:
                 kwargs.setdefault(k, v)
         if CONFIG.get("print_it_all"):
-            logger.debug("Modified kwargs :", kwargs)
+            logger.debug(f"Modified kwargs : {kwargs}")
 
         return func(*args, **kwargs)
 

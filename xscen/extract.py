@@ -527,7 +527,7 @@ def search_data_catalogs(
     match_hist_and_fut: bool, optional
       If True, historical and future simulations will be combined into the same line, and search results lacking one of them will be rejected.
     periods : list
-      [start, end] of the period to be evaluated (or a list of lists)
+      [start, end] of the period to be evaluated (or a list of lists).
     id_columns : list, optional
       List of columns used to create a id column. If None is given, the original
       "id" is left.
@@ -1062,14 +1062,15 @@ def _subset_file_coverage(
         else:
             guessed_nb_hrs_sum = period_nb_hrs
 
-        # 'coverage' adds some leeway, for example to take different calendars into account or missing 2100-12-31
         if (
             guessed_nb_hrs / period_nb_hrs < coverage
             or len(df[files_in_range]) == 0
             or guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos < coverage
         ):
             logging.warning(
-                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage."
+                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage "
+                f"({guessed_nb_hrs / period_nb_hrs}, {len(df[files_in_range])}, "
+                f"{guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos}."
             )
             return pd.DataFrame(columns=df.columns)
 
