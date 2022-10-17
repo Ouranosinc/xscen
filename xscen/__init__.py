@@ -25,7 +25,11 @@ from .catalog import DataCatalog, ProjectCatalog  # noqa
 from .config import CONFIG, load_config  # noqa
 from .diagnostics import properties_and_measures
 from .ensembles import *
-from .extract import extract_dataset, search_data_catalogs  # noqa
+from .extract import (  # noqa
+    extract_dataset,
+    prepare_warming_level,
+    search_data_catalogs,
+)
 from .indicators import compute_indicators  # noqa
 from .io import save_to_netcdf, save_to_zarr  # noqa
 from .reduce import build_reduction_data, reduce_ensemble
