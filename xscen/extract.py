@@ -1095,7 +1095,7 @@ def prepare_warming_level(
     ignore_member: bool = False,
     tas_csv: str = None,
     to_level: str = "warminglevel-{wl}",
-    wl_dim: str = "+{wl}C",
+    wl_dim: str = "+{wl}Cvs{period0}-{period1}",
 ):
     """
     Returns the input dataset with only the window of time over which the given level of
@@ -1119,7 +1119,7 @@ def prepare_warming_level(
     ignore_member: bool
       Whether to ignore the member when searching for the model run in tas_csv.
     tas_csv: str
-      Path to a csv of annual global mean temperature.
+      Path to a csv of annual global mean temperature with a row for each year and a column for each dataset.
       If None, it will default to data/IPCC_annual_global_tas.csv which was built from
       the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
       and extra data from pilot models of MRCC5 and ClimEx.
