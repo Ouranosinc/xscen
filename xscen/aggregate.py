@@ -513,8 +513,8 @@ def produce_horizon(
     """
     Computes indicators, then the climatological mean, and finally unstack dates in order to have a single dataset with all indicators of different frequencies. Once this is done, the function drops 'time' in favor of 'horizon'.
 
-    This function computes the indicators and does a interannual mean.
-     It stack the season and month in different dimensions and adds a dimension `horizon` for the period or the warming level if given.
+    This function computes the indicators and does an interannual mean.
+     It stacks the season and month in different dimensions and adds a dimension `horizon` for the period or the warming level, if given.
 
     Parameters
     ----------
@@ -523,7 +523,7 @@ def produce_horizon(
     indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
       Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     period: list
-      List of strings of format [start_year, end_year].
+      List of strings of format ['start_year', 'end_year'].
       If None, the whole time coordinate is used.
     to_level:
       The processing level to assign to the output.

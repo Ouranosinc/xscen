@@ -1098,8 +1098,8 @@ def prepare_warming_level(
     wl_dim: str = "+{wl}Cvs{period0}-{period1}",
 ):
     """
-    Returns the input dataset with only the window of time over which the given level of
-    global warming is first reached using the IPCC Atlas method.
+    Subsets the input dataset with only the window of time over which the requested level of
+    global warming is first reached, using the IPCC Atlas method.
 
 
     Parameters
