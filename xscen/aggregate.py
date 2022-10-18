@@ -511,7 +511,7 @@ def produce_horizon(
     to_level: str = "climatology{period0}-{period1}",
 ):
     """
-    Compute the climatology of indicators and unstack dates in order to have a single dataset with indicators of different frequencies.
+    Computes indicators, then the climatological mean, and finally unstack dates in order to have a single dataset with all indicators of different frequencies. Once this is done, the function drops 'time' in favor of 'horizon'.
 
     This function computes the indicators and does a interannual mean.
      It stack the season and month in different dimensions and adds a dimension `horizon` for the period or the warming level if given.
