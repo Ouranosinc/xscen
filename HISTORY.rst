@@ -8,6 +8,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliet
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Possibility of excluding variables read from file from the catalog produced by ``parse_directory``. (:pull:`107`).
 * New "timeout_cleanup" option for ``save_to_zarr``, which removes variables that were in the process of being written when receiving a ``TimeoutException``. (:pull:`106`).
 * New ``scripting.skippable`` context, allowing the use of CTRL-C to skip code sections. (:pull:`106`)
 
