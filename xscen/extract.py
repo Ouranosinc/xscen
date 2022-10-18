@@ -1070,9 +1070,10 @@ def _subset_file_coverage(
             or guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos < coverage
         ):
             logging.warning(
-                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage "
-                f"({guessed_nb_hrs / period_nb_hrs}, {len(df[files_in_range])}, "
-                f"{guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos}."
+                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage."
+                f"% covered, min to max : {guessed_nb_hrs / period_nb_hrs:.1%}, "
+                f"% covered, sum of hours : {guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos:.1%}, "
+                f"number of files in range : {len(df[files_in_range])}."
             )
             return pd.DataFrame(columns=df.columns)
 

@@ -13,7 +13,7 @@ from rechunker import rechunk as _rechunk
 from xclim.core.calendar import get_calendar
 
 from .config import parse_config
-from .scripting import TimeoutException, timeout
+from .scripting import TimeoutException
 from .utils import translate_time_chunk
 
 logger = logging.getLogger(__name__)
@@ -359,7 +359,7 @@ def save_to_zarr(
     encoding: dict = None,
     mode: str = "f",
     itervar: bool = False,
-    timeout_cleanup: bool = False,
+    timeout_cleanup: bool = True,
 ) -> None:
     """
     Saves a Dataset to Zarr, rechunking if requested.
@@ -388,7 +388,7 @@ def save_to_zarr(
       If True, (data) variables are written one at a time, appending to the zarr.
       If False, this function computes, no matter what was passed to kwargs.
     timeout_cleanup : bool
-      If True and a :py:class:`xscen.scripting.TimeoutException` is raised during the writing,
+      If True (default) and a :py:class:`xscen.scripting.TimeoutException` is raised during the writing,
       the variable being written is removed from the dataset as it is incomplete.
       This does nothing if `compute` is False.
 
