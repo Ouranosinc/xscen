@@ -50,7 +50,7 @@ def climatological_mean(
       If left at None, all years will be used.
     min_periods: int
       For the rolling operation, minimum number of years required for a value to be computed.
-      If left at None and the xrfreq is QS-DEC or AS-JUL, min_periods will be one less than window.
+      If left at None and the xrfreq is either QS or AS and doesn't start in January, min_periods will be one less than window.
       If left at None, it will be deemed the same as 'window'.
 
     interval: int
