@@ -8,6 +8,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliet
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Possibility of excluding variables read from file from the catalog produced by ``parse_directory``. (:pull:`107`).
 * New functions ``extract.subset_warming_level`` and ``aggregate.produce_horizon``. (:pull:`93`)
 * add `round_var` to `xs.clean_up`. (:pull:`93`)
 
