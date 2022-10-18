@@ -883,6 +883,7 @@ def parse_directory(
         Dictionary with mapping from parsed name to controlled names for each column.
         May have an additionnal "attributes" entry which maps from attribute names in the files to
         official column names. The attribute translation is done before the rest.
+        In the "variable" entry, if a name is mapped to None (null), that variable will not be listed in the catalog.
     xr_open_kwargs: dict
         If needed, arguments to send xr.open_dataset() when opening the file to read the attributes.
     parallel_depth: int
@@ -1014,8 +1015,12 @@ def parse_directory(
             # Variable can be a tuple, we still want to replace individual names through the cvs
             df["variable"] = df.variable.apply(
                 lambda vs: vs
-                if isinstance(vs, str)
-                else tuple(cvs["variable"].get(v, v) for v in vs)
+                if isinstance(vs, str) or pd.isnull(vs)
+                else tuple(
+                    cvs["variable"].get(v, v)
+                    for v in vs
+                    if cvs["variable"].get(v, v) is not None
+                )
             )
 
     # translate xrfreq into frequencies and vice-versa
