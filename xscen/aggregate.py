@@ -536,6 +536,10 @@ def produce_horizon(
         Horizon dataset.
     """
 
+    if "warminglevel" in ds and len(ds.warminglevel) != 1:
+        warnings.warn(
+            "Input dataset should only have `warminglevel` coordinate of length 1."
+        )
     if period:
         ds = ds.sel(time=slice(period[0], period[1])).load()
         window = int(period[1]) - int(period[0]) + 1
@@ -587,8 +591,11 @@ def produce_horizon(
 
         if "warminglevel" in ds_mean.dims:
             wl = ds_mean["warminglevel"].values
+            wl_attrs = ds_mean["warminglevel"].attrs
             ds_mean = ds_mean.squeeze(dim="warminglevel", drop=True)
             ds_mean["horizon"] = wl
+            ds_mean["horizon"].attrs.update(wl_attrs)
+
             if to_level:
                 to_level = to_level.format(wl=wl[0])
 

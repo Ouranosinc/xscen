@@ -32,7 +32,7 @@ __all__ = [
     "extract_dataset",
     "resample",
     "search_data_catalogs",
-    "prepare_warming_level",
+    "subset_warming_level",
 ]
 
 
@@ -1087,14 +1087,14 @@ def _subset_file_coverage(
 
 
 @parse_config
-def prepare_warming_level(
+def subset_warming_level(
     ds: xr.Dataset,
     wl: float,
     window: int = 20,
     tas_baseline_period: list = None,
     ignore_member: bool = False,
     tas_csv: str = None,
-    to_level: str = "warminglevel-{wl}",
+    to_level: str = "warminglevel-{wl}vs{period0}-{period1}",
     wl_dim: str = "+{wl}Cvs{period0}-{period1}",
 ):
     """
@@ -1127,7 +1127,7 @@ def prepare_warming_level(
       The processing level to assign to the output.
       Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
       `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
-    wl_coord: str
+    wl_dim: str
       The value to use to fill the new `warminglevel` dimension.
       Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
       `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
@@ -1225,6 +1225,9 @@ def prepare_warming_level(
             },
             axis=0,
         )
+        ds_wl.warminglevel.attrs[
+            "baseline"
+        ] = f"{tas_baseline_period[0]}-{tas_baseline_period[1]}"
 
     if to_level is not None:
         ds_wl.attrs["cat:processing_level"] = to_level.format(
