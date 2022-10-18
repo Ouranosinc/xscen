@@ -11,6 +11,14 @@ New features and enhancements
 * New functions ``aggregate.produce_warming_level`` and ``aggregate.produce_horizon``. (:pull:`93`)
 * add `round_var` to `xs.clean_up`. (:pull:`93`)
 
+Breaking changes
+^^^^^^^^^^^^^^^^
+
+Bug fixes
+^^^^^^^^^
+* ``clean_up`` now converts the calendar of variables that use "interpolate" in "missing_by_var" at the same time.
+Hence, when it is a conversion from a 360_day calendar, the random dates are the same for all of the these variables. (:issue:`102`, :pull:`104`)
+
 Internal changes
 ^^^^^^^^^^^^^^^^
 * ``compute_deltas`` skips the unstacking step if there is no time dimension and cast object dimensions to string.  (:pull:`9`)
