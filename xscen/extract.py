@@ -611,6 +611,10 @@ def search_data_catalogs(
         raise ValueError("Catalogs type not recognized.")
     logger.info(f"Catalog opened: {catalog} from {len(data_catalogs)} files.")
 
+    if match_hist_and_fut:
+        logger.info("Dispatching historical dataset to future experiments.")
+        catalog = _dispatch_historical_to_future(catalog, id_columns)
+
     # Cut entries that do not match search criteria
     if other_search_criteria:
         catalog = catalog.search(**other_search_criteria)
@@ -623,10 +627,6 @@ def search_data_catalogs(
         logger.info(
             f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
         )
-
-    if match_hist_and_fut:
-        logger.info("Dispatching historical dataset to future experiments.")
-        catalog = _dispatch_historical_to_future(catalog, id_columns)
 
     ids = generate_id(catalog.df, id_columns)
     if id_columns is not None:
