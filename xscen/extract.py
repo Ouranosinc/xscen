@@ -1199,10 +1199,9 @@ def subset_warming_level(
             .shift(-1)
         )
     elif window % 2 == 1:  # Odd windows do not require the shift
-        rolling_diff = (
-            yearly_diff.rolling(window=window, min_periods=window, center=True)
-            .mean()
-        )
+        rolling_diff = yearly_diff.rolling(
+            window=window, min_periods=window, center=True
+        ).mean()
     else:
         raise ValueError(f"window should be an integer, received {window}")
     yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
