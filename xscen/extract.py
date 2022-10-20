@@ -1167,7 +1167,7 @@ def subset_warming_level(
     annual_tas = pd.read_csv(tas_csv, index_col="year")
 
     # choose colum based in ds cat attrs
-    right_column = annual_tas.filter(regex=info_ds, axis=1)
+    right_column = annual_tas.filter(regex=re.compile(info_ds, re.IGNORECASE), axis=1)
 
     if len(right_column.columns) > 1:
         logger.info(
