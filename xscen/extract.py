@@ -1192,11 +1192,19 @@ def subset_warming_level(
 
     # shift(-1) is needed to reproduce IPCC results.
     # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
-    rolling_diff = (
-        yearly_diff.rolling(window=window, min_periods=window, center=True)
-        .mean()
-        .shift(-1)
-    )
+    if window % 2 == 0:  # Even window
+        rolling_diff = (
+            yearly_diff.rolling(window=window, min_periods=window, center=True)
+            .mean()
+            .shift(-1)
+        )
+    elif window % 2 == 1:  # Odd windows do not require the shift
+        rolling_diff = (
+            yearly_diff.rolling(window=window, min_periods=window, center=True)
+            .mean()
+        )
+    else:
+        raise ValueError(f"window should be an integer, received {window}")
     yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
     if yr is None:
         start_yr = np.nan
