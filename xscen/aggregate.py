@@ -210,9 +210,7 @@ def compute_deltas(
         other_hz = ds.assign(time=ind).unstack("time")
 
     else:
-        other_hz = ds.sel(
-            horizon=[h for h in ds.horizon.values if h != reference_horizon]
-        )
+        other_hz = ds
         ref = ref.squeeze("horizon")
     deltas = xr.Dataset(coords=other_hz.coords, attrs=other_hz.attrs)
     # Calculate deltas
