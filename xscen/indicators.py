@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 __all__ = ["compute_indicators"]
 
 
+@parse_config
 def load_xclim_module(filename, reload=False) -> ModuleType:
     """Return the xclim module described by the yaml file (or group of yaml, jsons and py).
 
