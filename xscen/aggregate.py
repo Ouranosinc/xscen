@@ -93,7 +93,6 @@ def climatological_mean(
     periods = periods or [[int(ds_unstack.year[0]), int(ds_unstack.year[-1])]]
 
     window = window or int(periods[0][1]) - int(periods[0][0]) + 1
-    print(window)
 
     if ds.attrs.get("cat:xrfreq") in freq_across_year and min_periods is None:
         min_periods = window - 1
