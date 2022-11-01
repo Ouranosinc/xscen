@@ -703,14 +703,22 @@ def _get_asset_list(root_paths, globpat="*.nc", parallel_depth=1, compute=True):
                 for folder in folders:
                     output.extend(
                         subprocess.run(
-                            ["find", "-L", folder, "-name", extension],
+                            ["find", "-L", folder, "-perm", "-o+r", "-name", extension],
                             capture_output=True,
                             encoding="utf-8",
                         ).stdout.split()
                     )
             else:
                 output = subprocess.run(
-                    ["find", "-L", directory.as_posix(), "-name", pattern],
+                    [
+                        "find",
+                        "-L",
+                        directory.as_posix(),
+                        "-perm",
+                        "-o+r",
+                        "-name",
+                        pattern,
+                    ],
                     capture_output=True,
                     encoding="utf-8",
                 ).stdout.split()
@@ -761,7 +769,8 @@ def _name_parser(
     path : str
       Full file path.
     patterns : list or str
-      List of patterns to try in `reverse_format`
+      List of patterns to try in `reverse_format`, special wildcards to manage underscores are added.
+      See :py:func:`parse_directory`.
     columns : list of string, optional
       If given, the metadata is restricted to fields from this list.
     read_from_file : list of string or dict, optional
@@ -786,11 +795,12 @@ def _name_parser(
         if len(Path(pattern).parts) != len(path.parts):
             continue
         try:
-            d = reverse_format(pattern, str(path))
+            patt = pattern.replace("*", "_?")
+            d = reverse_format(patt, str(path))
             fields_with_illegal = {
                 k: v
                 for k, v in d.items()
-                if ("_" in v and not k.startswith("*")) or "/" in v
+                if ("_" in v and not k.startswith("_")) or "/" in v
             }
             if d and not fields_with_illegal:
                 break
@@ -827,9 +837,9 @@ def _name_parser(
     # strip to clean off lost spaces and line jumps
     # do not include wildcarded fields
     return {
-        k: v.strip() if isinstance(v, str) else v
+        k if not k.startswith("_") else k[1:]: v.strip() if isinstance(v, str) else v
         for k, v in d.items()
-        if not k.startswith("*") and not k.startswith("?")
+        if "?" not in k
     }
 
 
@@ -903,11 +913,15 @@ def parse_directory(
     - Not all column names have to be present, but "xrfreq" (obtainable through "frequency"), "variable",
         "date_start" and "processing_level" are necessary for a workable catalog.
     - 'patterns' should highlight the columns with braces.
-        Wildcards (*, ?) can be used for irrelevant parts of a path.
-        "*" will match everything, with the exception of "/".
-        "?" behaves similarly to a wildcard, but will also exclude the "_" character.
-        Note: In order to have human readable placeholders, all the words following a wildcard within a bracket will be ignored.
-        Example: `"{?ignored project name}_{?}_{domain}_{?}_{variable}_{date_start}_{activity}_{experiment}_{processing_level}_{*gibberish}.nc"`
+        This acts like the reverse operation of `format()`. Fields will match alphanumeric parts of the path,
+        excluding the "_" and "/" characters. Prefix tokens can be used to change the behaviour:
+        "_" will also match underscores.
+        "?" will match normally, but will not be included in the output.
+        "\*" is the equivalent of "_?", it will match underscores and be excluded from the output.
+        Due to the limited implementation of this mini syntax, "\*" elements should only appear at the end of a file or folder name .
+        Example: `"{_source}/{?ignored project name}_{?}_{domain}_{variable}_{date_start}_{activity}_{experiment}_{processing_level}_{\*gibberish}.nc"`
+        Here, "source" will be the full folder name, even if it includes underscores. The two first sections of the filename will be excluded from the output,
+        the first one was given a name (ignore project name) to make the pattern readable. The last sections of the filenames ("\*gibberish") will be excluded.
 
     Returns
     -------
@@ -916,9 +930,10 @@ def parse_directory(
     """
     homogenous_info = homogenous_info or {}
     xr_open_kwargs = xr_open_kwargs or {}
-    pattern_fields = set.union(
-        *map(lambda p: set(re.findall(r"{([\w]*)}", p)), patterns)
-    )
+    pattern_fields = {
+        f if not f.startswith("_") else f[1:]
+        for f in set.union(*map(lambda p: set(re.findall(r"{([\w]*)}", p)), patterns))
+    }
     if only_official_columns:
         columns = set(COLUMNS) - homogenous_info.keys()
         unrecognized = pattern_fields - set(COLUMNS)

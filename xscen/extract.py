@@ -985,7 +985,7 @@ def _restrict_multimembers(catalogs: dict, id_columns: list, restrictions: dict)
 
 
 def _subset_file_coverage(
-    df: pd.DataFrame, periods: list, *, coverage: float = 0.99
+    df: pd.DataFrame, periods: list, *, coverage: float = 0.95
 ) -> pd.DataFrame:
     """
     Returns a subset of files that overlap with the target period(s),
