@@ -9,6 +9,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliet
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Possibility of excluding variables read from file from the catalog produced by ``parse_directory``. (:pull:`107`).
+* Possibility of fields with underscores in the patterns of ``parse_directory``. (:pull:`111`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -20,6 +21,9 @@ Hence, when it is a conversion from a 360_day calendar, the random dates are the
 
 Internal changes
 ^^^^^^^^^^^^^^^^
+* Added the "2sem" frequency to the translations CVs. (:pull:`111`).
+* Relax default coverage of ``_subset_file_coverage(`` to 0.95. (:pull:`111`).
+* Skip files we can't read in ``parse_directory``. (:pull:`111`).
 
 v0.4.0 (2022-09-28)
 -------------------
