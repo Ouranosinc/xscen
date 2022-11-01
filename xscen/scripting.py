@@ -28,6 +28,7 @@ __all__ = [
     "measure_time",
     "timeout",
     "TimeoutException",
+    "skippable",
 ]
 
 
@@ -281,17 +282,59 @@ def timeout(seconds: int, task: str = ""):
     ----------
     seconds : int
       Number of seconds after which the context exits with a TimeoutException.
+      If None or negative, no timeout is set and this context does nothing.
     task : str, optional
       A name to give to the task, allowing a more meaningful exception.
     """
+    if seconds is None or seconds <= 0:
+        yield
+    else:
 
-    def _timeout_handler(signum, frame):
-        raise TimeoutException(seconds, task)
+        def _timeout_handler(signum, frame):
+            raise TimeoutException(seconds, task)
 
-    old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
-    signal.alarm(seconds)
+        old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
+
+
+@contextmanager
+def skippable(seconds: int = 2, task: str = "", logger: logging.Logger = None):
+    """Skippable context manager.
+
+    When CTRL-C (SIGINT, KeyboardInterrupt) is sent within the context,
+    this catches it, prints to the log and gives a timeout during which a subsequent
+    interruption will stop the script. Otherwise, the context exits normally.
+
+    This is meant to be used within a loop so we can skip some iterations:
+
+    >>> for i in iterable:
+    >>>    with skippable(2, i):
+    >>>         ... skippable code ...
+
+    Parameters
+    ----------
+    seconds: int
+      Number of seconds to wait for a second CTRL-C.
+    task : str
+      A name for the skippable task, to have an explicit script.
+    logger : logging.Logger, optional
+      The logger to use when printing the messages. The interruption signal is
+      notified with ERROR, while the skipping is notified with INFO.
+      If not given (default), a brutal print is used.
+    """
+    if logger:
+        err = logger.error
+        inf = logger.info
+    else:
+        err = inf = print
     try:
         yield
-    finally:
-        signal.alarm(0)
-        signal.signal(signal.SIGALRM, old_handler)
+    except KeyboardInterrupt:
+        err("Received SIGINT. Do it again to stop the script.")
+        time.sleep(seconds)
+        inf(f"Skipping {task}.")
