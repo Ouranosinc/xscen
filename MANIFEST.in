@@ -11,7 +11,7 @@ recursive-exclude * *.py[co]
 
 recursive-exclude docs notebooks *.rst conf.py Makefile make.bat *.jpg *.png *.gif *.ipynb *.csv *.json *.yml
 recursive-exclude templates *.csv *.json *.py *.yml
-recursive-include xscen *.json *.yml *.py
+recursive-include xscen *.json *.yml *.py *.csv
 
 exclude .cruft.json
 exclude .editorconfig
