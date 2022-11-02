@@ -563,7 +563,7 @@ def produce_horizon(
             window=window,
         )
 
-        if "AS" not in freq:  # there is only one time, can't infer_freq
+        if "AS" not in freq:  # if not annual, need to stack dates
             # name new_dim
             if "QS" in freq:
                 new_dim = "season"
