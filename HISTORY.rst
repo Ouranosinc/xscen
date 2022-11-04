@@ -9,6 +9,8 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliet
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Possibility of excluding variables read from file from the catalog produced by ``parse_directory``. (:pull:`107`).
+* New functions ``extract.subset_warming_level`` and ``aggregate.produce_horizon``. (:pull:`93`)
+* add `round_var` to `xs.clean_up`. (:pull:`93`)
 * New "timeout_cleanup" option for ``save_to_zarr``, which removes variables that were in the process of being written when receiving a ``TimeoutException``. (:pull:`106`).
 * New ``scripting.skippable`` context, allowing the use of CTRL-C to skip code sections. (:pull:`106`)
 
@@ -23,6 +25,7 @@ Hence, when it is a conversion from a 360_day calendar, the random dates are the
 
 Internal changes
 ^^^^^^^^^^^^^^^^
+* ``compute_deltas`` skips the unstacking step if there is no time dimension and cast object dimensions to string.  (:pull:`9`)
 
 v0.4.0 (2022-09-28)
 -------------------
@@ -54,7 +57,7 @@ New features and enhancements
 * `generate_id` now accepts Datasets. (:pull:`63`).
 * Add `rechunk` option to `properties_and_measures` (:pull:`76`).
 * Add `create` argument to `ProjectCatalog` (:issue:`11`, :pull:`77`).
-# Add percentage deltas to `compute_deltas` (:issue:`82`, :pull:`90`).
+* Add percentage deltas to `compute_deltas` (:issue:`82`, :pull:`90`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^

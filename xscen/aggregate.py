@@ -1,7 +1,9 @@
 import datetime
 import logging
-from pathlib import Path
-from typing import Union
+import warnings
+from pathlib import Path, PosixPath
+from types import ModuleType
+from typing import Sequence, Tuple, Union
 
 import geopandas as gpd
 import numpy as np
@@ -9,13 +11,21 @@ import pandas as pd
 import xarray as xr
 import xesmf as xe
 from shapely.geometry import Polygon
+from xclim.core.indicator import Indicator
 
 from .config import parse_config
 from .extract import clisops_subset
+from .indicators import compute_indicators
+from .utils import get_cat_attrs, unstack_dates
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["climatological_mean", "compute_deltas", "spatial_mean"]
+__all__ = [
+    "climatological_mean",
+    "compute_deltas",
+    "spatial_mean",
+    "produce_horizon",
+]
 
 
 @parse_config
@@ -37,10 +47,12 @@ def climatological_mean(
       Dataset to use for the computation.
     window: int
       Number of years to use for the time periods.
-      If left at None, all years will be used.
+      If left at None and periods is given, window will be the size of the first period.
+      If left at None and periods is not given, the window will be the size of the input dataset.
     min_periods: int
       For the rolling operation, minimum number of years required for a value to be computed.
-      If left at None, it will be deemed the same as 'window'
+      If left at None and the xrfreq is either QS or AS and doesn't start in January, min_periods will be one less than window.
+      If left at None, it will be deemed the same as 'window'.
     interval: int
       Interval (in years) at which to provide an output.
     periods: list
@@ -57,8 +69,13 @@ def climatological_mean(
 
     """
 
-    window = window or int(ds.time.dt.year[-1] - ds.time.dt.year[0])
-    min_periods = min_periods or window
+    # there is one less occurrence when a period crosses years
+    freq_across_year = [
+        f"{f}-{mon}"
+        for mon in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values()
+        for f in ["AS", "QS"]
+        if mon != "JAN"
+    ]
 
     # separate 1d time in coords (day, month, and year) to make climatological mean faster
     ind = pd.MultiIndex.from_arrays(
@@ -74,6 +91,13 @@ def climatological_mean(
     # Compute temporal means
     concats = []
     periods = periods or [[int(ds_unstack.year[0]), int(ds_unstack.year[-1])]]
+
+    window = window or int(periods[0][1]) - int(periods[0][0]) + 1
+
+    if ds.attrs.get("cat:xrfreq") in freq_across_year and min_periods is None:
+        min_periods = window - 1
+    min_periods = min_periods or window
+
     for period in periods:
         # Rolling average
         ds_rolling = (
@@ -169,22 +193,27 @@ def compute_deltas(
 
     # Separate the reference from the other horizons
     ref = ds.where(ds.horizon == reference_horizon, drop=True)
-    # Remove references to 'year' in REF
-    ind = pd.MultiIndex.from_arrays(
-        [ref.time.dt.month.values, ref.time.dt.day.values], names=["month", "day"]
-    )
-    ref = ref.assign(time=ind).unstack("time")
 
-    ind = pd.MultiIndex.from_arrays(
-        [
-            ds.time.dt.year.values,
-            ds.time.dt.month.values,
-            ds.time.dt.day.values,
-        ],
-        names=["year", "month", "day"],
-    )
-    other_hz = ds.assign(time=ind).unstack("time")
+    if "time" in ds:
+        # Remove references to 'year' in REF
+        ind = pd.MultiIndex.from_arrays(
+            [ref.time.dt.month.values, ref.time.dt.day.values], names=["month", "day"]
+        )
+        ref = ref.assign(time=ind).unstack("time")
 
+        ind = pd.MultiIndex.from_arrays(
+            [
+                ds.time.dt.year.values,
+                ds.time.dt.month.values,
+                ds.time.dt.day.values,
+            ],
+            names=["year", "month", "day"],
+        )
+        other_hz = ds.assign(time=ind).unstack("time")
+
+    else:
+        other_hz = ds
+        ref = ref.squeeze("horizon")
     deltas = xr.Dataset(coords=other_hz.coords, attrs=other_hz.attrs)
     # Calculate deltas
     for vv in list(ds.data_vars):
@@ -227,15 +256,18 @@ def compute_deltas(
         )
         deltas[v_name].attrs["history"] = history
 
-    # get back to 1D time
-    deltas = deltas.stack(time=("year", "month", "day"))
-    # rebuild time coord
-    time_coord = [
-        pd.to_datetime(f"{y}, {m}, {d}")
-        for y, m, d in zip(deltas.year.values, deltas.month.values, deltas.day.values)
-    ]
-    deltas = deltas.assign(time=time_coord).transpose("time", ...)
-    deltas = deltas.reindex_like(ds)
+    if "time" in ds:
+        # get back to 1D time
+        deltas = deltas.stack(time=("year", "month", "day"))
+        # rebuild time coord
+        time_coord = [
+            pd.to_datetime(f"{y}, {m}, {d}")
+            for y, m, d in zip(
+                deltas.year.values, deltas.month.values, deltas.day.values
+            )
+        ]
+        deltas = deltas.assign(time=time_coord).transpose("time", ...)
+        deltas = deltas.reindex_like(ds)
 
     if to_level is not None:
         deltas.attrs["cat:processing_level"] = to_level
@@ -467,3 +499,113 @@ def spatial_mean(
         ds_agg.attrs["cat:processing_level"] = to_level
 
     return ds_agg
+
+
+@parse_config
+def produce_horizon(
+    ds: xr.Dataset,
+    indicators: Union[
+        str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
+    ],
+    period: list = None,
+    to_level: str = "climatology{period0}-{period1}",
+):
+    """
+    Computes indicators, then the climatological mean, and finally unstack dates in order to have a single dataset with all indicators of different frequencies. Once this is done, the function drops 'time' in favor of 'horizon'.
+
+    This function computes the indicators and does an interannual mean.
+     It stacks the season and month in different dimensions and adds a dimension `horizon` for the period or the warming level, if given.
+
+    Parameters
+    ----------
+    ds: xr.Dataset
+      Input dataset with a time dimension.
+    indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+      Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
+    period: list
+      List of strings of format ['start_year', 'end_year'].
+      If None, the whole time coordinate is used.
+    to_level:
+      The processing level to assign to the output.
+      Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
+      the first value of the `warminglevel` coord of ds if it exists, 'period[0]' and 'period[1]'.
+
+    Returns
+    -------
+    xr.Dataset
+        Horizon dataset.
+    """
+
+    if "warminglevel" in ds and len(ds.warminglevel) != 1:
+        warnings.warn(
+            "Input dataset should only have `warminglevel` coordinate of length 1."
+        )
+    if period:
+        ds = ds.sel(time=slice(period[0], period[1])).load()
+        window = int(period[1]) - int(period[0]) + 1
+        if to_level:
+            to_level = to_level.format(period0=period[0], period1=period[1])
+    else:
+        window = int(ds.time.dt.year[-1] - ds.time.dt.year[0]) + 1
+        if to_level and "{wl}" not in to_level:
+            to_level = to_level.format(
+                period0=ds.time.dt.year[0], period1=ds.time.dt.year[-1]
+            )
+
+    # compute indicators
+    ind_dict = compute_indicators(ds=ds, indicators=indicators)
+
+    # Compute the window-year mean
+    ds_merge = xr.Dataset()
+    for freq, ds_ind in ind_dict.items():
+        ds_mean = climatological_mean(
+            ds_ind,
+            window=window,
+        )
+
+        if "AS" not in freq:  # if not annual, need to stack dates
+            # name new_dim
+            if "QS" in freq:
+                new_dim = "season"
+            elif "MS" in freq:
+                new_dim = "month"
+            else:
+                new_dim = "period"
+                warnings.warn(
+                    f"Frequency {freq} is not supported. Setting name of the new dimension to 'period'."
+                )
+            ds_mean = unstack_dates(
+                ds_mean,
+                new_dim=new_dim,
+            )
+            horizon = ds_mean.horizon.values[0, 0]
+            ds_mean = (
+                ds_mean.drop_vars("horizon")
+                .assign_coords(horizon=("time", [horizon]))
+                .swap_dims({"time": "horizon"})
+                .drop_vars("time")
+            )
+
+        else:
+            ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
+
+        if "warminglevel" in ds_mean.dims:
+            wl = ds_mean["warminglevel"].values
+            wl_attrs = ds_mean["warminglevel"].attrs
+            ds_mean = ds_mean.squeeze(dim="warminglevel", drop=True)
+            ds_mean["horizon"] = wl
+            ds_mean["horizon"].attrs.update(wl_attrs)
+
+            if to_level:
+                to_level = to_level.format(wl=wl[0])
+
+        # put all indicators in one dataset
+        for var in ds_mean.data_vars:
+            ds_merge[var] = ds_mean[var]
+        ds_merge.attrs.update(ds_mean.attrs)
+
+    ds_merge.attrs["cat:xrfreq"] = "fx"
+    ds_merge.attrs["cat:frequency"] = "fx"
+    if to_level:
+        ds_merge.attrs["cat:processing_level"] = to_level
+    return ds_merge

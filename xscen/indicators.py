@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 __all__ = ["compute_indicators"]
 
 
+@parse_config
 def load_xclim_module(filename, reload=False) -> ModuleType:
     """Return the xclim module described by the yaml file (or group of yaml, jsons and py).
 
@@ -67,6 +68,10 @@ def compute_indicators(
 ) -> Union[dict, xr.Dataset]:
     """
     Calculates variables and indicators based on a YAML call to xclim.
+
+    The function cuts the output to be the same years as the inputs.
+    Hence, if an indicator creates a timestep outside of the original year range (eg. the first DJF for QS-DEC),
+    it will not appear in the output.
 
     Parameters
     ----------
@@ -141,6 +146,13 @@ def compute_indicators(
 
                 concats.extend(tmp)
             out = xr.concat(concats, dim="time")
+
+        # cut the time axis to be within the same years as the input
+        # for QS-DEC, xclim starts on DJF with time previous_year-12-01 with a nan as values. We want to cut this.
+        # this should have no effect on YS and MS indicators
+        out = out.sel(
+            time=slice(str(ds.time[0].dt.year.values), str(ds.time[-1].dt.year.values))
+        )
 
         # Create the dictionary key
         key = freq

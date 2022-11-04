@@ -32,6 +32,7 @@ Features
     notebooks/config_usage
     notebooks/diagnostics
     notebooks/ensemble_reduction
+    notebooks/warminglevels
     columns
     api
     contributing
