@@ -401,6 +401,11 @@ def save_to_zarr(
     xarray.Dataset.to_zarr
     """
 
+    # to address this issue https://github.com/pydata/xarray/issues/3476
+    for v in list(ds.coords.keys()):
+        if ds.coords[v].dtype == object:
+            ds[v].encoding.clear()
+
     if rechunk:
         for rechunk_var in ds.data_vars:
             # Support for chunks varying per variable

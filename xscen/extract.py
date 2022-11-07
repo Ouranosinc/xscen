@@ -27,7 +27,13 @@ from .utils import CV, natural_sort
 logger = logging.getLogger(__name__)
 
 
-__all__ = ["clisops_subset", "extract_dataset", "resample", "search_data_catalogs"]
+__all__ = [
+    "clisops_subset",
+    "extract_dataset",
+    "resample",
+    "search_data_catalogs",
+    "subset_warming_level",
+]
 
 
 def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
@@ -1080,3 +1086,161 @@ def _subset_file_coverage(
         files_to_keep = files_to_keep | files_in_range
 
     return df[files_to_keep]
+
+
+@parse_config
+def subset_warming_level(
+    ds: xr.Dataset,
+    wl: float,
+    window: int = 20,
+    tas_baseline_period: list = None,
+    ignore_member: bool = False,
+    tas_csv: str = None,
+    to_level: str = "warminglevel-{wl}vs{period0}-{period1}",
+    wl_dim: str = "+{wl}Cvs{period0}-{period1}",
+):
+    """
+    Subsets the input dataset with only the window of time over which the requested level of
+    global warming is first reached, using the IPCC Atlas method.
+
+
+    Parameters
+    ----------
+    ds: xr.Dataset
+      Input dataset.
+      The dataset should include attributes to help recognize it and find its
+      warming levels - 'cat:mip_era', 'cat:experiment', 'cat:member', and either
+      'cat:source' for global models or 'cat:driving_model' for regional models.
+    wl: float
+      Warming level.
+      eg. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
+    window: int
+      Size of the rolling window in years over which to compute the warming level.
+    tas_baseline_period: list
+      Base period. The warming is calculated with respect to this period. The default is ["1850", "1900"].
+    ignore_member: bool
+      Whether to ignore the member when searching for the model run in tas_csv.
+    tas_csv: str
+      Path to a csv of annual global mean temperature with a row for each year and a column for each dataset.
+      If None, it will default to data/IPCC_annual_global_tas.csv which was built from
+      the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
+      and extra data from pilot models of MRCC5 and ClimEx.
+    to_level:
+      The processing level to assign to the output.
+      Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
+      `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
+    wl_dim: str
+      The value to use to fill the new `warminglevel` dimension.
+      Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
+      `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
+      If None, no new dimensions will be added.
+
+    Returns
+    -------
+    xr.Dataset
+        Warming level dataset.
+
+    """
+
+    if tas_baseline_period is None:
+        tas_baseline_period = ["1850", "1900"]
+
+    if tas_csv is None:
+        tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
+
+    # get info on ds
+    id_ds = ds.attrs["cat:id"]
+    source_ds = (
+        ds.attrs["cat:source"]
+        if pd.isna(ds.attrs.get("cat:driving_model", None))
+        else ds.attrs["cat:driving_model"]
+    )
+    exp_ds = ds.attrs["cat:experiment"]
+    member_ds = ds.attrs["cat:member"]
+    mip_era_ds = ds.attrs["cat:mip_era"]
+
+    info_ds = (
+        f"{mip_era_ds}_{source_ds}_{exp_ds}_.*"
+        if ignore_member
+        else f"{mip_era_ds}_{source_ds}_{exp_ds}_{member_ds}"
+    )
+
+    # open csv
+    annual_tas = pd.read_csv(tas_csv, index_col="year")
+
+    # choose colum based in ds cat attrs
+    right_column = annual_tas.filter(regex=re.compile(info_ds, re.IGNORECASE), axis=1)
+
+    if len(right_column.columns) > 1:
+        logger.info(
+            "More than one column of the csv fits the dataset metadata. Choosing the first one."
+        )
+        right_column = pd.DataFrame(right_column.iloc[:, 0])
+    elif len(right_column.columns) == 0:
+        raise ValueError(
+            f"No columns fit the 'cat:' attributes of the input dataset ({info_ds})."
+        )
+
+    logger.info(
+        f"Computing warming level +{wl}C for id: {id_ds} from column: {right_column.columns[0]}."
+    )
+
+    # compute reference temperature for the warming
+    mean_base = right_column.loc[tas_baseline_period[0] : tas_baseline_period[1]].mean()
+
+    yearly_diff = right_column - mean_base  # difference from reference
+
+    # get the start and end date of the window when the warming level is first reached
+
+    # shift(-1) is needed to reproduce IPCC results.
+    # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
+    if window % 2 == 0:  # Even window
+        rolling_diff = (
+            yearly_diff.rolling(window=window, min_periods=window, center=True)
+            .mean()
+            .shift(-1)
+        )
+    elif window % 2 == 1:  # Odd windows do not require the shift
+        rolling_diff = yearly_diff.rolling(
+            window=window, min_periods=window, center=True
+        ).mean()
+    else:
+        raise ValueError(f"window should be an integer, received {window}")
+    yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
+    if yr is None:
+        start_yr = np.nan
+        end_yr = np.nan
+    else:
+        start_yr = int(yr - window / 2 + 1)
+        end_yr = int(yr + window / 2)
+
+    if np.isnan(start_yr):
+        logger.info(f"Global warming level of +{wl}C is never reached for {id_ds}.")
+        return None
+
+    # cut the window selected above
+    ds_wl = ds.sel(time=slice(str(start_yr), str(end_yr)))
+
+    if wl_dim:
+        ds_wl = ds_wl.expand_dims(
+            dim={
+                "warminglevel": [
+                    wl_dim.format(
+                        wl=wl,
+                        period0=tas_baseline_period[0],
+                        period1=tas_baseline_period[1],
+                    )
+                ]
+            },
+            axis=0,
+        )
+        ds_wl.warminglevel.attrs[
+            "baseline"
+        ] = f"{tas_baseline_period[0]}-{tas_baseline_period[1]}"
+
+    if to_level is not None:
+        ds_wl.attrs["cat:processing_level"] = to_level.format(
+            wl=wl, period0=tas_baseline_period[0], period1=tas_baseline_period[1]
+        )
+
+    return ds_wl
