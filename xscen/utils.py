@@ -445,6 +445,7 @@ def clean_up(
     convert_calendar_kwargs: Optional[dict] = None,
     missing_by_var: Optional[dict] = None,
     maybe_unstack_dict: Optional[dict] = None,
+    round_var: Optional[dict] = None,
     common_attrs_only: Union[dict, list] = None,
     common_attrs_open_kwargs: dict = None,
     attrs_to_remove: Optional[dict] = None,
@@ -483,6 +484,8 @@ def clean_up(
     maybe_unstack_dict: dict
         Dictionary to pass to xscen.common.maybe_unstack function.
         The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
+    round_var: dict
+        Dictionary where the keys are the variables of the dataset and the values are the number of decimal places to round to
     common_attrs_only: dict, list
         Dictionnary of datasets or list of datasets, or path to NetCDF or Zarr files.
         Keeps only the global attributes that are the same for all datasets and generates a new id.
@@ -538,7 +541,11 @@ def clean_up(
 
         # if missing_by_var exist make sure missing data are added to time axis
         if missing_by_var:
-            convert_calendar_kwargs.setdefault("missing", np.nan)
+            if not all(k in missing_by_var.keys() for k in ds.data_vars):
+                raise ValueError(
+                    "All variables must be in 'missing_by_var' if using this option."
+                )
+            convert_calendar_kwargs["missing"] = -9999
 
         # make default `align_on`='`random` when the initial calendar is 360day
         if get_calendar(ds) == "360_day" and "align_on" not in convert_calendar_kwargs:
@@ -554,22 +561,21 @@ def clean_up(
             for var, missing in missing_by_var.items():
                 logging.info(f"Filling missing {var} with {missing}")
                 if missing == "interpolate":
-                    converted_var = convert_calendar(
-                        ds_copy[var], **convert_calendar_kwargs, missing=np.nan
-                    )
-                    converted_var = converted_var.interpolate_na(
-                        "time", method="linear"
-                    )
+                    ds_with_nan = ds[var].where(ds[var] != -9999)
+                    converted_var = ds_with_nan.interpolate_na("time", method="linear")
                 else:
-                    ocean_var = ds_copy[var].isnull().all("time")
-                    converted_var = convert_calendar(
-                        ds_copy[var], **convert_calendar_kwargs, missing=missing
-                    ).where(~ocean_var)
+                    var_attrs = ds[var].attrs
+                    converted_var = xr.where(ds[var] == -9999, missing, ds[var])
+                    converted_var.attrs = var_attrs
                 ds[var] = converted_var
 
     # unstack nans
     if maybe_unstack_dict:
         ds = maybe_unstack(ds, **maybe_unstack_dict)
+
+    if round_var:
+        for var, n in round_var.items():
+            ds[var] = ds[var].round(n)
 
     def _search(a, b):
         if a[-1] == "*":  # check if a is contained in b

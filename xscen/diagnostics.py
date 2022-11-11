@@ -244,8 +244,6 @@ def properties_and_measures(
         # to be able to save in zarr, convert object to string
         if "season" in ds1:
             ds1["season"] = ds1.season.astype("str")
-        if "month" in ds1:
-            ds1["month"] = ds1.month.astype("str")
 
     prop.attrs["cat:processing_level"] = to_level_prop
     meas.attrs["cat:processing_level"] = to_level_meas

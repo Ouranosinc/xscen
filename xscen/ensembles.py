@@ -133,6 +133,7 @@ def ensemble_stats(
         )
 
     ens_stats.attrs["cat:processing_level"] = to_level
+    ens_stats.attrs["ensemble_size"] = len(datasets)
 
     return ens_stats
 

@@ -4,24 +4,30 @@ History
 
 v0.5.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* N/A.
+* Possibility of excluding variables read from file from the catalog produced by ``parse_directory``. (:pull:`107`).
+* New functions ``extract.subset_warming_level`` and ``aggregate.produce_horizon``. (:pull:`93`)
+* add `round_var` to `xs.clean_up`. (:pull:`93`)
+* New "timeout_cleanup" option for ``save_to_zarr``, which removes variables that were in the process of being written when receiving a ``TimeoutException``. (:pull:`106`).
+* New ``scripting.skippable`` context, allowing the use of CTRL-C to skip code sections. (:pull:`106`)
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* N/A.
 
 Bug fixes
 ^^^^^^^^^
+* ``clean_up`` now converts the calendar of variables that use "interpolate" in "missing_by_var" at the same time.
+Hence, when it is a conversion from a 360_day calendar, the random dates are the same for all of the these variables. (:issue:`102`, :pull:`104`)
+* ``properties_and_measures`` no longer casts month coordinates to string (:pull:`106`).
 * `search_data_catalogs` no longer crashes if it finds nothing. (:issue:`42`, :pull:`92`).
 * Prevented fixed fields from being duplicated during `_dispatch_historical_to_future` (:issue:`81`, :pull:`92`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
-* N/A.
+* ``compute_deltas`` skips the unstacking step if there is no time dimension and cast object dimensions to string.  (:pull:`9`)
 
 v0.4.0 (2022-09-28)
 -------------------
@@ -53,7 +59,7 @@ New features and enhancements
 * `generate_id` now accepts Datasets. (:pull:`63`).
 * Add `rechunk` option to `properties_and_measures` (:pull:`76`).
 * Add `create` argument to `ProjectCatalog` (:issue:`11`, :pull:`77`).
-# Add percentage deltas to `compute_deltas` (:issue:`82`, :pull:`90`).
+* Add percentage deltas to `compute_deltas` (:issue:`82`, :pull:`90`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^

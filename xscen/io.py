@@ -13,6 +13,7 @@ from rechunker import rechunk as _rechunk
 from xclim.core.calendar import get_calendar
 
 from .config import parse_config
+from .scripting import TimeoutException
 from .utils import translate_time_chunk
 
 logger = logging.getLogger(__name__)
@@ -358,6 +359,7 @@ def save_to_zarr(
     encoding: dict = None,
     mode: str = "f",
     itervar: bool = False,
+    timeout_cleanup: bool = True,
 ) -> None:
     """
     Saves a Dataset to Zarr, rechunking if requested.
@@ -385,6 +387,10 @@ def save_to_zarr(
     itervar : bool
       If True, (data) variables are written one at a time, appending to the zarr.
       If False, this function computes, no matter what was passed to kwargs.
+    timeout_cleanup : bool
+      If True (default) and a :py:class:`xscen.scripting.TimeoutException` is raised during the writing,
+      the variable being written is removed from the dataset as it is incomplete.
+      This does nothing if `compute` is False.
 
     Returns
     -------
@@ -394,6 +400,11 @@ def save_to_zarr(
     ________
     xarray.Dataset.to_zarr
     """
+
+    # to address this issue https://github.com/pydata/xarray/issues/3476
+    for v in list(ds.coords.keys()):
+        if ds.coords[v].dtype == object:
+            ds[v].encoding.clear()
 
     if rechunk:
         for rechunk_var in ds.data_vars:
@@ -481,17 +492,33 @@ def save_to_zarr(
         for i, (name, var) in enumerate(ds.data_vars.items()):
             logger.debug(f"Writing {name} ({i + 1} of {len(ds.data_vars)}) to {path}")
             dsvar = ds.drop_vars(allvars - {name})
-            dsvar.to_zarr(
-                path,
-                mode="a",
-                encoding={k: v for k, v in (encoding or {}).items() if k in dsvar},
-                **zarr_kwargs,
-            )
+            try:
+                dsvar.to_zarr(
+                    path,
+                    mode="a",
+                    encoding={k: v for k, v in (encoding or {}).items() if k in dsvar},
+                    **zarr_kwargs,
+                )
+            except TimeoutException:
+                if timeout_cleanup:
+                    logger.info(f"Removing incomplete {name}.")
+                    sh.rmtree(path / name)
+                raise
+
     else:
         logger.debug(f"Writing {list(ds.data_vars.keys())} for {filename}.")
-        return ds.to_zarr(
-            filename, compute=compute, mode="a", encoding=encoding, **zarr_kwargs
-        )
+        try:
+            return ds.to_zarr(
+                filename, compute=compute, mode="a", encoding=encoding, **zarr_kwargs
+            )
+        except TimeoutException:
+            if timeout_cleanup:
+                logger.info(
+                    f"Removing incomplete {list(ds.data_vars.keys())} for {filename}."
+                )
+                for name in ds.data_vars:
+                    sh.rmtree(path / name)
+            raise
 
 
 @parse_config
