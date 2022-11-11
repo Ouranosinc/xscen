@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 __all__ = ["compute_indicators"]
 
 
+@parse_config
 def load_xclim_module(filename, reload=False) -> ModuleType:
     """Return the xclim module described by the yaml file (or group of yaml, jsons and py).
 
@@ -69,7 +70,7 @@ def compute_indicators(
     Calculates variables and indicators based on a YAML call to xclim.
 
     The function cuts the output to be the same years as the inputs.
-    Hence, if an indicators creates a timestep outside of the original year range (eg. the first DJF for QS-DEC),
+    Hence, if an indicator creates a timestep outside of the original year range (eg. the first DJF for QS-DEC),
     it will not appear in the output.
 
     Parameters

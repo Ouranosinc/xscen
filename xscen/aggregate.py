@@ -48,12 +48,12 @@ def climatological_mean(
       Dataset to use for the computation.
     window: int
       Number of years to use for the time periods.
-      If left at None, all years will be used.
+      If left at None and periods is given, window will be the size of the first period.
+      If left at None and periods is not given, the window will be the size of the input dataset.
     min_periods: int
       For the rolling operation, minimum number of years required for a value to be computed.
       If left at None and the xrfreq is either QS or AS and doesn't start in January, min_periods will be one less than window.
       If left at None, it will be deemed the same as 'window'.
-
     interval: int
       Interval (in years) at which to provide an output.
     periods: list
@@ -70,8 +70,6 @@ def climatological_mean(
 
     """
 
-    window = window or int(ds.time.dt.year[-1] - ds.time.dt.year[0])
-
     # there is one less occurrence when a period crosses years
     freq_across_year = [
         f"{f}-{mon}"
@@ -79,9 +77,6 @@ def climatological_mean(
         for f in ["AS", "QS"]
         if mon != "JAN"
     ]
-    if ds.attrs.get("cat:xrfreq") in freq_across_year and min_periods is None:
-        min_periods = window - 1
-    min_periods = min_periods or window
 
     # separate 1d time in coords (day, month, and year) to make climatological mean faster
     ind = pd.MultiIndex.from_arrays(
@@ -97,6 +92,13 @@ def climatological_mean(
     # Compute temporal means
     concats = []
     periods = periods or [[int(ds_unstack.year[0]), int(ds_unstack.year[-1])]]
+
+    window = window or int(periods[0][1]) - int(periods[0][0]) + 1
+
+    if ds.attrs.get("cat:xrfreq") in freq_across_year and min_periods is None:
+        min_periods = window - 1
+    min_periods = min_periods or window
+
     for period in periods:
         # Rolling average
         ds_rolling = (
@@ -211,9 +213,7 @@ def compute_deltas(
         other_hz = ds.assign(time=ind).unstack("time")
 
     else:
-        other_hz = ds.sel(
-            horizon=[h for h in ds.horizon.values if h != reference_horizon]
-        )
+        other_hz = ds
         ref = ref.squeeze("horizon")
     deltas = xr.Dataset(coords=other_hz.coords, attrs=other_hz.attrs)
     # Calculate deltas
@@ -565,7 +565,7 @@ def produce_horizon(
             window=window,
         )
 
-        if "AS" not in freq:  # there is only one time, can't infer_freq
+        if "AS" not in freq:  # if not annual, need to stack dates
             # name new_dim
             if "QS" in freq:
                 new_dim = "season"
