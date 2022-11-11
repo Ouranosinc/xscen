@@ -15,8 +15,9 @@ import pandas as pd
 import xarray as xr
 from xclim.core import units
 from xclim.core.calendar import convert_calendar, get_calendar, parse_offset
+from xclim.testing.utils import show_versions as _show_versions
 
-from .config import parse_config
+from xscen.config import parse_config
 
 logger = logging.getLogger(__name__)
 
@@ -804,3 +805,54 @@ def unstack_dates(
     # Sort new coord
     inverted = dict(zip(seasons.values(), seasons.keys()))
     return ds.sortby(ds[new_dim].copy(data=[inverted[s] for s in ds[new_dim].values]))
+
+
+def show_versions(
+    file: Optional[Union[os.PathLike, StringIO, TextIO]] = None,
+    deps: Optional[list] = None,
+) -> Optional[str]:
+    """Print the versions of xscen and its dependencies.
+
+    Parameters
+    ----------
+    file : {os.PathLike, StringIO, TextIO}, optional
+        If provided, prints to the given file-like object. Otherwise, returns a string.
+    deps : list, optional
+        A list of dependencies to gather and print version information from. Otherwise, prints `xclim` dependencies.
+
+    Returns
+    -------
+    str or None
+    """
+
+    if deps is None:
+        deps = [
+            "zarr",
+            "yaml",
+            "xesmf",
+            "xcollection",
+            "xclim",
+            "xarray",
+            "shapely",
+            "requests",
+            "rechunker",
+            "pydantic",
+            "pyarrow",
+            "pandas",
+            "netCDF4",
+            "nc_time_axis",
+            "matplotlib",
+            "intake_esm",
+            "intake",
+            "h5py",
+            "geopandas",
+            "fsspec",
+            "fastprogress",
+            "dask",
+            "clisops",
+            "cftime",
+            "cartopy",
+            "xscen",
+        ]
+
+    return _show_versions(file=file, deps=deps)
