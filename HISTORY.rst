@@ -24,6 +24,8 @@ Hence, when it is a conversion from a 360_day calendar, the random dates are the
 * ``properties_and_measures`` no longer casts month coordinates to string (:pull:`106`).
 * `search_data_catalogs` no longer crashes if it finds nothing. (:issue:`42`, :pull:`92`).
 * Prevented fixed fields from being duplicated during `_dispatch_historical_to_future` (:issue:`81`, :pull:`92`).
+* Added missing `parse_config` to functions in `reduce.py` (:pull:`92`).
+* Added deepcopy before `skipna` is popped in `spatial_mean` (:pull:`92`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
