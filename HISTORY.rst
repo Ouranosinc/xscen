@@ -13,7 +13,7 @@ New features and enhancements
 * add `round_var` to `xs.clean_up`. (:pull:`93`).
 * New "timeout_cleanup" option for ``save_to_zarr``, which removes variables that were in the process of being written when receiving a ``TimeoutException``. (:pull:`106`).
 * New ``scripting.skippable`` context, allowing the use of CTRL-C to skip code sections. (:pull:`106`).
-* New ``utils.show_versions`` function for printing or writing to file the dependency versions of `xscen`. (:pull:`112`).
+* New ``utils.show_versions`` function for printing or writing to file the dependency versions of `xscen`. (:issue:`109`, :pull:`112`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
