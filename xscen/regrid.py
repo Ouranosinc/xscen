@@ -24,9 +24,9 @@ __all__ = ["regrid_dataset", "create_mask"]
 @parse_config
 def regrid_dataset(
     ds: xr.Dataset,
-    weights_location: Union[str, PosixPath],
     ds_grid: xr.Dataset,
     *,
+    weights_location: Union[str, PosixPath],
     regridder_kwargs: Optional[dict] = None,
     intermediate_grids: Optional[dict] = None,
     to_level: str = "regridded",
