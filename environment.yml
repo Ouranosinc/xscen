@@ -18,6 +18,7 @@ dependencies:
   - xclim>=0.37
   - xesmf>=0.6.2
   - pyyaml
+  - intake-esm>=2022.9.18
   # Plotting
   - cartopy
   - matplotlib
@@ -27,13 +28,4 @@ dependencies:
   - netCDF4
   - pyarrow
   - zarr
-  # For intake-esm (so that conda installs the dependencies and not pip)
-  - fastprogress
-  - fsspec
-  - intake
-  - pydantic
-  - requests
-  - xcollection
   - pip
-  - pip:
-    - git+https://github.com/intake/intake-esm.git#egg=intake-esm
