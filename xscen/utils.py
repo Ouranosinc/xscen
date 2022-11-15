@@ -818,7 +818,7 @@ def show_versions(
     file : {os.PathLike, StringIO, TextIO}, optional
         If provided, prints to the given file-like object. Otherwise, returns a string.
     deps : list, optional
-        A list of dependencies to gather and print version information from. Otherwise, prints `xclim` dependencies.
+        A list of dependencies to gather and print version information from. Otherwise, prints `xscen` dependencies.
 
     Returns
     -------
