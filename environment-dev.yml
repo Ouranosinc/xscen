@@ -16,6 +16,7 @@ dependencies:
   - rechunker
   - shapely
   - pyyaml
+  - intake-esm>=2022.9.18
   # This ensures that the correct numpy is installed as of 2022-07-15.
   - numba>=0.55.2
   # Plotting
@@ -27,13 +28,6 @@ dependencies:
   - netCDF4
   - pyarrow>=1.0.0  # For lighter in-memory catalogs
   - zarr
-  # For intake-esm (so that conda installs the dependencies and not pip)
-  - fastprogress
-  - fsspec
-  - intake
-  - pydantic
-  - requests
-  - xcollection
   # Dev
   - bumpversion
   - ipykernel
@@ -49,8 +43,6 @@ dependencies:
   - sphinx_rtd_theme
   - sphinxcontrib-napoleon
   - pip
-  - pip:
-    - git+https://github.com/intake/intake-esm.git#egg=intake-esm
   # Testing
   - tox
   - tox-conda
