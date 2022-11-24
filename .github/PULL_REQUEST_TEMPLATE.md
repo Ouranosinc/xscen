@@ -5,7 +5,6 @@
 - [ ] This PR addresses an already opened issue (for bug fixes / features)
     - This PR fixes #xyz
 - [ ] (If applicable) Documentation has been added / updated (for bug fixes / features)
-- [ ] If a merge request has been made in parallel to this PR in xscen-notebooks, it is merged and the submodules have been updated.
 - [ ] HISTORY.rst has been updated (with summary of main changes)
   - [ ] Link to issue (:issue:`number`) and pull request (:pull:`number`) has been added
 
