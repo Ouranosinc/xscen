@@ -38,6 +38,7 @@ dependencies:
   - pooch
   - pre-commit
   - pytest
+  - pytest-cov
   - sphinx
   - sphinx-autoapi
   - sphinx_rtd_theme

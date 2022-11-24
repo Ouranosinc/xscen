@@ -47,7 +47,7 @@ __version__ = "0.4.6-beta"
 # monkeypatch so that warnings.warn() doesn't mention itself
 def warning_on_one_line(
     message: str, category: Warning, filename: str, lineno: int, file=None, line=None
-):
+):  # noqa: D103
     return f"{filename}:{lineno}: {category.__name__}: {message}\n"
 
 

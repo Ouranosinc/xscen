@@ -1,3 +1,4 @@
+# noqa: D100
 import datetime
 import logging
 import warnings
@@ -38,37 +39,35 @@ def climatological_mean(
     periods: list = None,
     to_level: str = "climatology",
 ) -> xr.Dataset:
-    """
-    Computes the mean over 'year' for given time periods, respecting the temporal resolution of ds.
+    """Compute the mean over 'year' for given time periods, respecting the temporal resolution of ds.
 
     Parameters
     ----------
     ds : xr.Dataset
-      Dataset to use for the computation.
-    window: int
-      Number of years to use for the time periods.
-      If left at None and periods is given, window will be the size of the first period.
-      If left at None and periods is not given, the window will be the size of the input dataset.
-    min_periods: int
-      For the rolling operation, minimum number of years required for a value to be computed.
-      If left at None and the xrfreq is either QS or AS and doesn't start in January, min_periods will be one less than window.
-      If left at None, it will be deemed the same as 'window'.
-    interval: int
-      Interval (in years) at which to provide an output.
-    periods: list
-      list of [start, end] of continuous periods to be considered. This is needed when the time axis of ds contains some jumps in time.
-      If None, the dataset will be considered continuous.
+        Dataset to use for the computation.
+    window : int
+        Number of years to use for the time periods.
+        If left at None and periods is given, window will be the size of the first period.
+        If left at None and periods is not given, the window will be the size of the input dataset.
+    min_periods : int
+        For the rolling operation, minimum number of years required for a value to be computed.
+        If left at None and the xrfreq is either QS or AS and doesn't start in January, min_periods will be one less than window.
+        If left at None, it will be deemed the same as 'window'.
+    interval : int
+        Interval (in years) at which to provide an output.
+    periods : list
+        list of [start, end] of continuous periods to be considered. This is needed when the time axis of ds contains some jumps in time.
+        If None, the dataset will be considered continuous.
     to_level : str, optional
-      The processing level to assign to the output.
-      If None, the processing level of the inputs is preserved.
+        The processing level to assign to the output.
+        If None, the processing level of the inputs is preserved.
 
     Returns
     -------
     xr.Dataset
-      Returns a Dataset of the climatological mean
+        Returns a Dataset of the climatological mean
 
     """
-
     # there is one less occurrence when a period crosses years
     freq_across_year = [
         f"{f}-{mon}"
@@ -166,31 +165,28 @@ def compute_deltas(
     rename_variables: bool = True,
     to_level: str = "delta_climatology",
 ) -> xr.Dataset:
-    """
-    Computes deltas in comparison to a reference time period, respecting the temporal resolution of ds.
+    """Compute deltas in comparison to a reference time period, respecting the temporal resolution of ds.
 
     Parameters
     ----------
     ds : xr.Dataset
-      Dataset to use for the computation.
-    reference_horizon: str
-      YYYY-YYYY string corresponding to the 'horizon' coordinate of the reference period.
-    kind: str
-      ['+', '/', '%'] Whether to provide absolute, relative, or percentage deltas.
-      Can also be a dictionary separated per variable name.
-    rename_variables: bool
-      If True, '_delta_YYYY-YYYY' will be added to variable names.
+        Dataset to use for the computation.
+    reference_horizon : str
+        YYYY-YYYY string corresponding to the 'horizon' coordinate of the reference period.
+    kind : str
+        ['+', '/', '%'] Whether to provide absolute, relative, or percentage deltas.
+        Can also be a dictionary separated per variable name.
+    rename_variables : bool
+        If True, '_delta_YYYY-YYYY' will be added to variable names.
     to_level : str, optional
-      The processing level to assign to the output.
-      If None, the processing level of the inputs is preserved.
+        The processing level to assign to the output.
+        If None, the processing level of the inputs is preserved.
 
     Returns
     -------
     xr.Dataset
-      Returns a Dataset with the requested deltas.
-
+        Returns a Dataset with the requested deltas.
     """
-
     # Separate the reference from the other horizons
     ref = ds.where(ds.horizon == reference_horizon, drop=True)
 
@@ -287,42 +283,40 @@ def spatial_mean(
     to_domain: str = None,
     to_level: str = None,
 ) -> xr.Dataset:
-    """
-    Computes the spatial mean using a variety of available methods.
+    """Compute the spatial mean using a variety of available methods.
 
     Parameters
     ----------
-    ds: xr.Dataset
-      Dataset to use for the computation.
-    method: str
-      'mean' will perform a .mean() over the spatial dimensions of the Dataset.
-      'interp_coord' will find the region's centroid (if coordinates are not fed through kwargs), then perform a .interp() over the spatial dimensions of the Dataset.
-      The coordinate can also be directly fed to .interp() through the 'kwargs' argument below.
-      'xesmf' will make use of xESMF's SpatialAverager. This will typically be more precise, especially for irregular regions, but can be much slower than other methods.
-    call_clisops: bool
-      If True, xscen.extraction.clisops_subset will be called prior to the other operations. This requires the 'region' argument.
-    region: dict
-      Description of the region and the subsetting method (required fields listed in the Notes).
-      If method=='interp_coord', this is used to find the region's centroid.
-      If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
-    kwargs: dict
-      Arguments to send to either mean(), interp() or SpatialAverager().
-      For SpatialAverager, one can give `skipna` here, to be passed to the averager call itself.
-    simplify_tolerance: float
-      Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
-      The simpler the polygons, the faster the averaging, but it will lose some precision.
+    ds : xr.Dataset
+        Dataset to use for the computation.
+    method : str
+        'mean' will perform a .mean() over the spatial dimensions of the Dataset.
+        'interp_coord' will find the region's centroid (if coordinates are not fed through kwargs), then perform a .interp() over the spatial dimensions of the Dataset.
+        The coordinate can also be directly fed to .interp() through the 'kwargs' argument below.
+        'xesmf' will make use of xESMF's SpatialAverager. This will typically be more precise, especially for irregular regions, but can be much slower than other methods.
+    call_clisops : bool
+        If True, xscen.extraction.clisops_subset will be called prior to the other operations. This requires the 'region' argument.
+    region : dict
+        Description of the region and the subsetting method (required fields listed in the Notes).
+        If method=='interp_coord', this is used to find the region's centroid.
+        If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
+    kwargs : dict
+        Arguments to send to either mean(), interp() or SpatialAverager().
+        For SpatialAverager, one can give `skipna` here, to be passed to the averager call itself.
+    simplify_tolerance : float
+        Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
+        The simpler the polygons, the faster the averaging, but it will lose some precision.
     to_domain : str, optional
-      The domain to assign to the output.
-      If None, the domain of the inputs is preserved.
+        The domain to assign to the output.
+        If None, the domain of the inputs is preserved.
     to_level : str, optional
-      The processing level to assign to the output.
-      If None, the processing level of the inputs is preserved.
+        The processing level to assign to the output.
+        If None, the processing level of the inputs is preserved.
 
     Returns
     -------
     xr.Dataset
-      Returns a Dataset with the spatial dimensions averaged.
-
+        Returns a Dataset with the spatial dimensions averaged.
 
     Notes
     -----
@@ -335,11 +329,9 @@ def spatial_mean(
             Multiplier to apply to the model resolution. Only used if call_clisops==True.
 
     See Also
-    ________
+    --------
     xarray.Dataset.mean, xarray.Dataset.interp, xesmf.SpatialAverager
-
     """
-
     kwargs = kwargs or {}
 
     # If requested, call xscen.extraction.clisops_subset prior to averaging
@@ -510,11 +502,11 @@ def produce_horizon(
     period: list = None,
     to_level: str = "climatology{period0}-{period1}",
 ):
-    """
-    Computes indicators, then the climatological mean, and finally unstack dates in order to have a single dataset with all indicators of different frequencies. Once this is done, the function drops 'time' in favor of 'horizon'.
+    """Compute indicators, then the climatological mean, and finally unstack dates in order to have a single dataset with all indicators of different frequencies.
 
+    Once this is done, the function drops 'time' in favor of 'horizon'.
     This function computes the indicators and does an interannual mean.
-     It stacks the season and month in different dimensions and adds a dimension `horizon` for the period or the warming level, if given.
+    It stacks the season and month in different dimensions and adds a dimension `horizon` for the period or the warming level, if given.
 
     Parameters
     ----------
@@ -535,7 +527,6 @@ def produce_horizon(
     xr.Dataset
         Horizon dataset.
     """
-
     if "warminglevel" in ds and len(ds.warminglevel) != 1:
         warnings.warn(
             "Input dataset should only have `warminglevel` coordinate of length 1."

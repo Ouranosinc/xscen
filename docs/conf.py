@@ -1,3 +1,4 @@
+# noqa: D100
 #!/usr/bin/env python
 #
 # xscen documentation build configuration file, created by

@@ -1,6 +1,4 @@
-"""
-Common things to be used at many places
-"""
+"""Common utilities to be used in many places."""
 import json
 import logging
 import os
@@ -113,11 +111,10 @@ def stack_drop_nans(
       Same as `ds`, but all dimensions of mask have been stacked to a single `new_dim`.
       Indexes where mask is False have been dropped.
 
-    See also
+    See Also
     --------
     unstack_fill_nan : The inverse operation.
     """
-
     original_shape = "x".join(map(str, mask.shape))
 
     mask_1d = mask.stack({new_dim: mask.dims})
@@ -393,24 +390,23 @@ for cvfile in (Path(__file__).parent / "CVs").glob("*.json"):
 
 @parse_config
 def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
-    """Changes units of Datasets to non-CF units.
+    """Change units of Datasets to non-CF units.
 
     Parameters
     ----------
     ds : xr.Dataset
-      Dataset to use
+        Dataset to use
     variables_and_units : dict
-      Description of the variables and units to output
+        Description of the variables and units to output
 
     Returns
     -------
     xr.Dataset
 
     See Also
-    ________
+    --------
     xclim.core.units.convert_units_to, xclim.core.units.rate2amount
     """
-
     with xr.set_options(keep_attrs=True):
         for v in variables_and_units:
             if (v in ds) and (
@@ -465,33 +461,33 @@ def clean_up(
      - add attributes
      - change the prefix of the catalog attrs
 
-     in that order.
+    in that order.
 
     Parameters
     ----------
-    ds: xr.Dataset
+    ds : xr.Dataset
         Input dataset to clean up
-    variables_and_units: dict
+    variables_and_units : dict
         Dictionary of variable to convert. eg. {'tasmax': 'degC', 'pr': 'mm d-1'}
-    convert_calendar_kwargs: dict
+    convert_calendar_kwargs : dict
         Dictionary of arguments to feed to xclim.core.calendar.convert_calendar. This will be the same for all variables.
         If missing_by_vars is given, it will override the 'missing' argument given here.
         Eg. {target': default, 'align_on': 'random'}
-    missing_by_var: list
+    missing_by_var : list
         Dictionary where the keys are the variables and the values are the argument to feed the `missing`
         parameters of the xclim.core.calendar.convert_calendar for the given variable with the `convert_calendar_kwargs`.
         If missing_by_var == 'interpolate', the missing will be filled with NaNs, then linearly interpolated over time.
-    maybe_unstack_dict: dict
+    maybe_unstack_dict : dict
         Dictionary to pass to xscen.common.maybe_unstack function.
         The format should be: {'coords': path_to_coord_file, 'rechunk': {'time': -1 }, 'stack_drop_nans': True}.
-    round_var: dict
+    round_var : dict
         Dictionary where the keys are the variables of the dataset and the values are the number of decimal places to round to
-    common_attrs_only: dict, list
+    common_attrs_only : dict, list
         Dictionnary of datasets or list of datasets, or path to NetCDF or Zarr files.
         Keeps only the global attributes that are the same for all datasets and generates a new id.
-    common_attrs_open_kwargs: dict
+    common_attrs_open_kwargs : dict
         Dictionary of arguments for xarray.open_dataset(). Used with common_attrs_only if given paths.
-    attrs_to_remove: dict
+    attrs_to_remove : dict
         Dictionary where the keys are the variables and the values are a list of the attrs that should be removed.
         For global attrs, use the key 'global'.
         The element of the list can be exact matches for the attributes name
@@ -499,7 +495,7 @@ def clean_up(
         - ending with a '*' means checks if the substring is contained in the string
         - starting with a '^' means check if the string starts with the substring.
         eg. {'global': ['unnecessary note', 'cell*'], 'tasmax': 'old_name'}
-    remove_all_attrs_except: dict
+    remove_all_attrs_except : dict
         Dictionary where the keys are the variables and the values are a list of the attrs that should NOT be removed,
         all other attributes will be deleted. If None (default), nothing will be deleted.
         For global attrs, use the key 'global'.
@@ -508,13 +504,13 @@ def clean_up(
         - ending with a '*' means checks if the substring is contained in the string
         - starting with a '^' means check if the string starts with the substring.
         eg. {'global': ['necessary note', '^cat:'], 'tasmax': 'new_name'}
-    add_attrs: dict
+    add_attrs : dict
         Dictionary where the keys are the variables and the values are a another dictionary of attributes.
         For global attrs, use the key 'global'.
         eg. {'global': {'title': 'amazing new dataset'}, 'tasmax': {'note': 'important info about tasmax'}}
-    change_attr_prefix: str
+    change_attr_prefix : str
         Replace "cat:" in the catalog global attrs by this new string
-    to_level: str
+    to_level : str
         The processing level to assign to the output.
 
     Returns
@@ -525,9 +521,7 @@ def clean_up(
     See Also
     --------
     xclim.core.calendar.convert_calendar
-
     """
-
     if variables_and_units:
         logger.info(f"Converting units: {variables_and_units}")
         ds = change_units(ds=ds, variables_and_units=variables_and_units)
