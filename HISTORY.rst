@@ -15,6 +15,7 @@ New features and enhancements
 * New ``scripting.skippable`` context, allowing the use of CTRL-C to skip code sections. (:pull:`106`).
 * Possibility of fields with underscores in the patterns of ``parse_directory``. (:pull:`111`).
 * New ``utils.show_versions`` function for printing or writing to file the dependency versions of `xscen`. (:issue:`109`, :pull:`112`).
+* Added previously private notebooks to the documentation (:pull:`108`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -30,6 +31,7 @@ Internal changes
 * ``compute_deltas`` skips the unstacking step if there is no time dimension and cast object dimensions to string. (:pull:`9`)
 * Added the "2sem" frequency to the translations CVs. (:pull:`111`).
 * Skip files we can't read in ``parse_directory``. (:pull:`111`).
+* Fixed non-standard Docstrings (:pull:`108`).
 
 v0.4.0 (2022-09-28)
 -------------------
