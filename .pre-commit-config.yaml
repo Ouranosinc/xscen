@@ -53,6 +53,7 @@ repos:
     hooks:
       - id: detect-secrets
         args: [ '--baseline=.secrets.baseline', '--exclude-files=.cruft.json' ]
+#  Currently commented because Git need to be updated on Ouranos' computers
 #  - repo: https://github.com/mgedmin/check-manifest
 #    rev: "0.48"
 #    hooks:
