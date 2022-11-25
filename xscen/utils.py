@@ -818,7 +818,6 @@ def show_versions(
     -------
     str or None
     """
-
     if deps is None:
         deps = [
             "zarr",
