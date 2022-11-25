@@ -26,7 +26,6 @@ Features
 
     readme
     installation
-    usage
     notebooks/catalog
     notebooks/getting_started
     notebooks/diagnostics
