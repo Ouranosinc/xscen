@@ -1,13 +1,6 @@
 API
 ===
 
-Aggregation
------------
-
-.. automodule:: xscen.aggregate
-   :members:
-   :noindex:
-
 Catalog
 -------
 
@@ -19,20 +12,6 @@ Extraction
 ----------
 
 .. automodule:: xscen.extract
-   :members:
-   :noindex:
-
-Controlled Vocabulary and Mappings
-----------------------------------
-
-.. automodule:: xscen.utils.CV
-   :members:
-   :noindex:
-
-Reduction
-----------
-
-.. automodule:: xscen.reduce
    :members:
    :noindex:
 
@@ -64,6 +43,20 @@ Ensembles
    :members:
    :noindex:
 
+Aggregation
+-----------
+
+.. automodule:: xscen.aggregate
+   :members:
+   :noindex:
+
+Reduction
+----------
+
+.. automodule:: xscen.reduce
+   :members:
+   :noindex:
+
 Diagnostics and Quality Checks
 ------------------------------
 
@@ -75,6 +68,13 @@ Input / Output
 --------------
 
 .. automodule:: xscen.io
+   :members:
+   :noindex:
+
+Controlled Vocabulary and Mappings
+----------------------------------
+
+.. automodule:: xscen.utils.CV
    :members:
    :noindex:
 
