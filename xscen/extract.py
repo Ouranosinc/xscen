@@ -902,7 +902,8 @@ def subset_warming_level(
             window=window, min_periods=window, center=True
         ).mean()
     else:
-        raise ValueError(f"window should be an integer, received {window}")
+        raise ValueError(f"window should be an integer, received {type(window)}")
+
     yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
     if yr is None:
         start_yr = np.nan
@@ -912,7 +913,14 @@ def subset_warming_level(
         end_yr = int(yr + window / 2)
 
     if np.isnan(start_yr):
-        logger.info(f"Global warming level of +{wl}C is never reached for {id_ds}.")
+        logger.info(
+            f"Global warming level of +{wl}C is not reached by 2100 for {id_ds}."
+        )
+        return None
+    elif any(yr not in ds.time.dt.year for yr in range(start_yr, end_yr + 1)):
+        logger.info(
+            f"{id_ds} does not sufficiently cover the time interval for +{wl}C ({start_yr}, {end_yr})."
+        )
         return None
 
     # cut the window selected above
