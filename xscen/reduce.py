@@ -5,11 +5,14 @@ import numpy as np
 import xarray as xr
 import xclim.ensembles as xce
 
+from .config import parse_config
+
 logger = logging.getLogger(__name__)
 
 __all__ = ["build_reduction_data", "reduce_ensemble"]
 
 
+@parse_config
 def build_reduction_data(
     datasets: Union[dict, list], *, xrfreqs: list = None, horizons: list = None
 ) -> xr.DataArray:
@@ -72,6 +75,7 @@ def build_reduction_data(
     return criteria
 
 
+@parse_config
 def reduce_ensemble(data: xr.DataArray, method: str, kwargs: dict):
     """
     Wrapper for the ensemble reduction methods in xclim.ensembles
