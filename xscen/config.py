@@ -47,6 +47,7 @@ import warnings
 from copy import deepcopy
 from functools import wraps
 from pathlib import Path
+from typing import Any, Tuple
 
 import xarray as xr
 import xclim as xc
@@ -59,6 +60,7 @@ __all__ = [
     "CONFIG",
     "load_config",
     "parse_config",
+    "recursive_update",
 ]
 
 
@@ -106,6 +108,16 @@ def recursive_update(d, other):
         else:
             d[k] = v
     return d
+
+
+def args_as_str(*args: Tuple[Any, ...]) -> Tuple[str, ...]:
+    new_args = []
+    for i, arg in enumerate(args):
+        if isinstance(arg, Path):
+            new_args.append(str(arg))
+        else:
+            new_args.append(arg)
+    return tuple(new_args)
 
 
 def load_config(*files, reset=False, verbose=False):

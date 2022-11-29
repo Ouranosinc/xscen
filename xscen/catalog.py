@@ -25,9 +25,9 @@ from dask.diagnostics import ProgressBar
 from intake.source.utils import reverse_format
 from intake_esm.cat import ESMCatalogModel
 
-from .config import CONFIG, parse_config, recursive_update
+from .config import CONFIG, args_as_str, parse_config, recursive_update
 from .io import get_engine
-from .utils import CV
+from .utils import CV  # noqa
 
 logger = logging.getLogger(__name__)
 # Monkey patch for attribute names in the output of to_dataset_dict
@@ -161,6 +161,8 @@ class DataCatalog(intake_esm.esm_datastore):
         kwargs["read_csv_kwargs"] = recursive_update(
             csv_kwargs.copy(), kwargs.get("read_csv_kwargs", {})
         )
+        args = args_as_str(args)
+
         super().__init__(*args, **kwargs)
         if check_valid:
             self.check_valid()
@@ -440,8 +442,6 @@ class ProjectCatalog(DataCatalog):
         The dictionary in 'df' must have two keys: ‘esmcat’ and ‘df’.
         The ‘esmcat’ key must be a dict representation of the ESM catalog. This should follow the template used by xscen.catalog.esm_col_data.
         The ‘df’ key must be a Pandas DataFrame containing content that would otherwise be in the CSV file.
-
-
         """
         if create:
             if isinstance(df, (str, Path)) and (
