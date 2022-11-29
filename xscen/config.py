@@ -58,6 +58,7 @@ EXTERNAL_MODULES = ["logging", "xarray", "xclim", "warnings"]
 
 __all__ = [
     "CONFIG",
+    "args_as_str",
     "load_config",
     "parse_config",
     "recursive_update",
