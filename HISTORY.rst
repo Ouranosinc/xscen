@@ -28,6 +28,7 @@ Hence, when it is a conversion from a 360_day calendar, the random dates are the
 * Prevented fixed fields from being duplicated during `_dispatch_historical_to_future` (:issue:`81`, :pull:`92`).
 * Added missing `parse_config` to functions in `reduce.py` (:pull:`92`).
 * Added deepcopy before `skipna` is popped in `spatial_mean` (:pull:`92`).
+* `subset_warming_level` now validates that the data exists in the dataset provided (:issue:`117`, :pull:`119`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
