@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 import re
 from copy import deepcopy
 from pathlib import Path
@@ -504,7 +505,9 @@ def resample(
 
 @parse_config
 def search_data_catalogs(
-    data_catalogs: Union[list, DataCatalog],
+    data_catalogs: Union[
+        Union[str, os.PathLike], List[Union[str, os.PathLike]], DataCatalog
+    ],
     variables_and_freqs: dict,
     *,
     other_search_criteria: Optional[dict] = None,
@@ -523,7 +526,7 @@ def search_data_catalogs(
 
     Parameters
     ----------
-    data_catalogs : Union[list, DataCatalog]
+    data_catalogs : Union[Union[str, os.PathLike], List[Union[str, os.PathLike]], DataCatalog]
       DataCatalog (or multiple, in a list) or paths to JSON/CSV data catalogs. They must use the same columns and aggregation options.
     variables_and_freqs : dict
       Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format.
@@ -581,6 +584,10 @@ def search_data_catalogs(
         cat_kwargs = {
             "registry": registry_from_module(load_xclim_module(conversion_yaml))
         }
+
+    # Cast paths to single item list
+    if isinstance(data_catalogs, (str, Path)):
+        data_catalogs = [data_catalogs]
 
     # Prepare a unique catalog to search from, with the DerivedCat added if required
     if isinstance(data_catalogs, DataCatalog):
