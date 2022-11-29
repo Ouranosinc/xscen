@@ -113,7 +113,7 @@ def recursive_update(d, other):
 
 def args_as_str(*args: Tuple[Any, ...]) -> Tuple[str, ...]:
     new_args = []
-    for i, arg in enumerate(args):
+    for i, arg in enumerate(*args):
         if isinstance(arg, Path):
             new_args.append(str(arg))
         else:
