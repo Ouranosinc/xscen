@@ -914,7 +914,7 @@ def subset_warming_level(
 
     if np.isnan(start_yr):
         logger.info(
-            f"Global warming level of +{wl}C is not reached by 2100 for {id_ds}."
+            f"Global warming level of +{wl}C is not reached by the last year of the provided 'tas_csv' file for {id_ds}."
         )
         return None
     elif any(yr not in ds.time.dt.year for yr in range(start_yr, end_yr + 1)):
