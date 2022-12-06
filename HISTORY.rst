@@ -15,6 +15,7 @@ New features and enhancements
 * New ``scripting.skippable`` context, allowing the use of CTRL-C to skip code sections. (:pull:`106`).
 * Possibility of fields with underscores in the patterns of ``parse_directory``. (:pull:`111`).
 * New ``utils.show_versions`` function for printing or writing to file the dependency versions of `xscen`. (:issue:`109`, :pull:`112`).
+* New 'cos-lat' averaging in `spatial_mean` (:issue:`94`, :pull:`125`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -29,12 +30,14 @@ Hence, when it is a conversion from a 360_day calendar, the random dates are the
 * Added missing `parse_config` to functions in `reduce.py` (:pull:`92`).
 * Added deepcopy before `skipna` is popped in `spatial_mean` (:pull:`92`).
 * `subset_warming_level` now validates that the data exists in the dataset provided (:issue:`117`, :pull:`119`).
+* `compute_indicators` no longer crashes if less than 3 timesteps are produced (:pull:`125`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * ``compute_deltas`` skips the unstacking step if there is no time dimension and cast object dimensions to string. (:pull:`9`)
 * Added the "2sem" frequency to the translations CVs. (:pull:`111`).
 * Skip files we can't read in ``parse_directory``. (:pull:`111`).
+* Better warning messages in `_subset_file_coverage` when coverage is insufficient (:pull:`125`).
 
 v0.4.0 (2022-09-28)
 -------------------
