@@ -118,4 +118,5 @@ __pypackages__/
 *.nc
 *.zarr
 docs/notebooks/samples/example*
+docs/notebooks/samples/gs-weights/
 !docs/notebooks/samples/tutorial/*/*/*/*/*/*/*/*.nc
