@@ -52,7 +52,8 @@ repos:
     rev: v1.4.0
     hooks:
       - id: detect-secrets
-        args: [ '--baseline=.secrets.baseline', '--exclude-files=.cruft.json' ]
+        exclude: .cruft.json|docs/notebooks
+        args: [ '--baseline=.secrets.baseline' ]
 #  Currently commented because Git needs to be updated on our work environment.
 #  - repo: https://github.com/mgedmin/check-manifest
 #    rev: "0.48"
