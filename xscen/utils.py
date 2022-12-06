@@ -122,11 +122,7 @@ def stack_drop_nans(
     original_shape = "x".join(map(str, mask.shape))
 
     mask_1d = mask.stack({new_dim: mask.dims})
-    out = (
-        ds.stack({new_dim: mask.dims})
-        .where(mask_1d, drop=True)
-        .reset_index(new_dim, drop=True)
-    )
+    out = ds.stack({new_dim: mask.dims}).where(mask_1d, drop=True).reset_index(new_dim)
     for dim in mask.dims:
         out[dim].attrs.update(ds[dim].attrs)
 
