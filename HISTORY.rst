@@ -30,6 +30,7 @@ Hence, when it is a conversion from a 360_day calendar, the random dates are the
 * Added missing `parse_config` to functions in `reduce.py` (:pull:`92`).
 * Added deepcopy before `skipna` is popped in `spatial_mean` (:pull:`92`).
 * `subset_warming_level` now validates that the data exists in the dataset provided (:issue:`117`, :pull:`119`).
+* Adapt `stack_drop_nan` for the newest version of xarray (2022.12.0). (:issue:`122`, :pull:`126`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
