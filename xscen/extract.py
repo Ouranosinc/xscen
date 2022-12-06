@@ -1264,46 +1264,43 @@ def _subset_file_coverage(
         )
         files_in_range = file_intervals.apply(lambda r: period_interval.overlaps(r))
 
+        if len(df[files_in_range]) == 0:
+            logging.warning(
+                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage (no files in range)."
+            )
+            return pd.DataFrame(columns=df.columns)
+
         # Very rough guess of the coverage relative to the requested period,
         # without having to open the files or checking day-by-day
-        # This is only checking that you have the first and last time point, not that you have everything in between.
 
-        guessed_nb_hrs = np.min(
-            [
-                df[files_in_range]["date_end"].max(),
-                date_parser(str(period[1]), end_of_period=True, freq="H"),
-            ]
-        ) - np.max(
-            [
-                df[files_in_range]["date_start"].min(),
-                date_parser(str(period[0]), freq="H"),
-            ]
-        )
-
+        # Number of hours in the requested period
         period_nb_hrs = date_parser(
             str(period[1]), end_of_period=True, freq="H"
         ) - date_parser(str(period[0]), freq="H")
 
-        # This checks the sum of hours in all selected files
-        if len(df[files_in_range]) != 0:
-            guessed_nb_hrs_sum = (
-                df[files_in_range]["date_end"] - df[files_in_range]["date_start"]
-            ).sum()
-        # if no files are selected and guessed_nb_hrs_sum=0, the division breaks the code.
-        # The warming will be called anyway even without this test.
-        else:
-            guessed_nb_hrs_sum = period_nb_hrs
+        # Sum of hours in all selected files, restricted by the requested period
+        guessed_nb_hrs_sum = (
+            df[files_in_range].apply(
+                lambda x: np.min(
+                    [
+                        x["date_end"],
+                        date_parser(str(period[1]), end_of_period=True, freq="H"),
+                    ]
+                ),
+                axis=1,
+            )
+            - df[files_in_range].apply(
+                lambda x: np.max(
+                    [x["date_start"], date_parser(str(period[0]), freq="H")]
+                ),
+                axis=1,
+            )
+        ).sum()
 
-        if (
-            guessed_nb_hrs / period_nb_hrs < coverage
-            or len(df[files_in_range]) == 0
-            or guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos < coverage
-        ):
+        if guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos < coverage:
             logging.warning(
-                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage."
-                f"% covered, min to max : {guessed_nb_hrs / period_nb_hrs:.1%}, "
-                f"% covered, sum of hours : {guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos:.1%}, "
-                f"number of files in range : {len(df[files_in_range])}."
+                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage "
+                f"(guessed at {guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos:.1%})."
             )
             return pd.DataFrame(columns=df.columns)
 

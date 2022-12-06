@@ -127,7 +127,19 @@ def compute_indicators(
             out = ind(ds=ds)
 
             # Infer the indicator's frequency
-            freq = xr.infer_freq(out.time) if "time" in out.dims else "fx"
+            if "time" in out.dims:
+                if len(out.time) < 3:
+                    freq = (
+                        ind.injected_parameters["freq"]
+                        if "freq" in ind.injected_parameters
+                        else ind.parameters["freq"]["default"]
+                        if "freq" in ind.parameters
+                        else ind.src_freq
+                    )
+                else:
+                    freq = xr.infer_freq(out.time)
+            else:
+                freq = "fx"
 
         else:
             # Multiple time periods to concatenate
@@ -138,7 +150,19 @@ def compute_indicators(
                 tmp = ind(ds=ds_subset)
 
                 # Infer the indicator's frequency
-                freq = xr.infer_freq(tmp.time) if "time" in tmp.dims else "fx"
+                if "time" in tmp.dims:
+                    if len(tmp.time) < 3:
+                        freq = (
+                            ind.injected_parameters["freq"]
+                            if "freq" in ind.injected_parameters
+                            else ind.parameters["freq"]["default"]
+                            if "freq" in ind.parameters
+                            else ind.src_freq
+                        )
+                    else:
+                        freq = xr.infer_freq(tmp.time)
+                else:
+                    freq = "fx"
 
                 # In order to concatenate time periods, the indicator still needs a time dimension
                 if freq == "fx":

@@ -296,6 +296,7 @@ def spatial_mean(
     ds: xr.Dataset
       Dataset to use for the computation.
     method: str
+      'cos-lat' will weight the area covered by each pixel using an approximation based on latitude.
       'mean' will perform a .mean() over the spatial dimensions of the Dataset.
       'interp_coord' will find the region's centroid (if coordinates are not fed through kwargs), then perform a .interp() over the spatial dimensions of the Dataset.
       The coordinate can also be directly fed to .interp() through the 'kwargs' argument below.
@@ -341,32 +342,75 @@ def spatial_mean(
 
     """
 
+    def get_spatial_dims(ds):
+        # Determine the X and Y names
+        spatial_dims = {}
+        for d in ["X", "Y"]:
+            if d in ds.cf.axes:
+                spatial_dims[d] = ds.cf[d].name
+            elif (
+                (d == "X")
+                and ("longitude" in ds.cf.coordinates)
+                and (len(ds[ds.cf.coordinates["longitude"][0]].dims) == 1)
+            ):
+                spatial_dims[d] = ds.cf.coordinates["longitude"]
+            elif (
+                (d == "Y")
+                and ("latitude" in ds.cf.coordinates)
+                and (len(ds[ds.cf.coordinates["latitude"][0]].dims) == 1)
+            ):
+                spatial_dims[d] = ds.cf.coordinates["latitude"]
+
+        return spatial_dims
+
     kwargs = kwargs or {}
 
     # If requested, call xscen.extraction.clisops_subset prior to averaging
     if call_clisops:
         ds = clisops_subset(ds, region)
 
+    if method == "cos-lat":
+        # Determine the latitude name
+        spatial_dims = get_spatial_dims(ds)
+        if ("latitude" in ds.cf.coordinates) and (
+            len(ds[ds.cf.coordinates["latitude"][0]].dims) > 1
+        ):
+            raise NotImplementedError(
+                "cos-lat averaging is not yet supported for 2D grids."
+            )
+        if spatial_dims.get("Y") is None:
+            raise ValueError(
+                "Could not determine the latitude name using CF conventions. "
+                "Use kwargs = {lat: str} to specify on which dimension to perform the averaging."
+            )
+
+        if "units" not in ds[spatial_dims["Y"]].attrs:
+            logger.warning(
+                f"{ds.attrs.get('cat:id', '')}: Latitude does not appear to have units. Make sure that the computation is right."
+            )
+        elif ds[spatial_dims["Y"]].attrs["units"] != "degrees_north":
+            logger.warning(
+                f"{ds.attrs.get('cat:id', '')}: Latitude units is '{ds[spatial_dims['Y']].attrs['units']}', expected 'degrees_north'. "
+                f"Make sure that the computation is right."
+            )
+
+        weight = np.cos(np.deg2rad(ds[spatial_dims["Y"]]))
+        weight = weight / weight.sum()
+        ds_agg = ds.weighted(weight).mean(
+            [d for d in spatial_dims.values()], keep_attrs=True
+        )
+
+        # Prepare the History field
+        new_history = (
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+            f"weighted mean(dim={[d for d in spatial_dims.values()]}) using a 'cos-lat' approximation - xarray v{xr.__version__}"
+        )
+
     # This simply calls .mean() over the spatial dimensions
-    if method == "mean":
+    elif method == "mean":
         if "dim" not in kwargs:
             # Determine the X and Y names
-            spatial_dims = []
-            for d in ["X", "Y"]:
-                if d in ds.cf.axes:
-                    spatial_dims.extend([ds.cf[d].name])
-                elif (
-                    (d == "X")
-                    and ("longitude" in ds.cf.coordinates)
-                    and (len(ds[ds.cf.coordinates["longitude"][0]].dims) == 1)
-                ):
-                    spatial_dims.extend(ds.cf.coordinates["longitude"])
-                elif (
-                    (d == "Y")
-                    and ("latitude" in ds.cf.coordinates)
-                    and (len(ds[ds.cf.coordinates["latitude"][0]].dims) == 1)
-                ):
-                    spatial_dims.extend(ds.cf.coordinates["latitude"])
+            spatial_dims = get_spatial_dims(ds)
             if len(spatial_dims) == 0:
                 raise ValueError(
                     "Could not determine the spatial dimension(s) using CF conventions. Use kwargs = {dim: list} to specify on which dimension to perform the averaging."
@@ -437,6 +481,14 @@ def spatial_mean(
                 region["bbox"]["lat_bnds"][1],
                 region["bbox"]["lat_bnds"][0],
             ]
+
+            if (region["bbox"]["lat_bnds"][1] - region["bbox"]["lat_bnds"][0] > 40) or (
+                region["bbox"]["lon_bnds"][1] - region["bbox"]["lon_bnds"][0] > 40
+            ):
+                logger.warning(
+                    "Given region appears to be very large; the SpatialAverager might not be adequate. "
+                    "Please use multiple smaller regions or check the results carefully."
+                )
 
             polygon_geom = Polygon(zip(lon_point_list, lat_point_list))
             polygon = gpd.GeoDataFrame(index=[0], geometry=[polygon_geom])
