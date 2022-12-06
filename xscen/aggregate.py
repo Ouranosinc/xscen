@@ -2,6 +2,7 @@
 import datetime
 import logging
 import warnings
+from copy import deepcopy
 from pathlib import Path, PosixPath
 from types import ModuleType
 from typing import Sequence, Tuple, Union
@@ -458,8 +459,9 @@ def spatial_mean(
         else:
             raise ValueError("'method' not understood.")
 
-        skipna = kwargs.pop("skipna", False)
-        savg = xe.SpatialAverager(ds, polygon.geometry, **kwargs)
+        kwargs_copy = deepcopy(kwargs)
+        skipna = kwargs_copy.pop("skipna", False)
+        savg = xe.SpatialAverager(ds, polygon.geometry, **kwargs_copy)
         ds_agg = savg(ds, keep_attrs=True, skipna=skipna)
         extra_coords = {
             col: xr.DataArray(polygon[col], dims=("geom",))

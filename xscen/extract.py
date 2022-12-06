@@ -642,108 +642,304 @@ def search_data_catalogs(
     # Loop on each dataset to assess whether they have all required variables
     # And select best freq/timedelta for each
     catalogs = {}
-    for (sim_id,), scat in catalog.iter_unique("id"):
-        # Find all the entries that match search parameters
-        varcats = []
-        for var_id, xrfreq in variables_and_freqs.items():
-            if xrfreq == "fx":
-                varcat = scat.search(
-                    xrfreq=xrfreq,
-                    variable=var_id,
-                    require_all_on=["id", "xrfreq"],
-                )
-                # TODO: Temporary fix until this is changed in intake_esm
-                varcat._requested_variables_true = [var_id]
-                varcat._dependent_variables = list(
-                    set(varcat._requested_variables).difference(
-                        varcat._requested_variables_true
+    if len(catalog) > 0:
+        for (sim_id,), scat in catalog.iter_unique("id"):
+            # Find all the entries that match search parameters
+            varcats = []
+            for var_id, xrfreq in variables_and_freqs.items():
+                if xrfreq == "fx":
+                    varcat = scat.search(
+                        xrfreq=xrfreq,
+                        variable=var_id,
+                        require_all_on=["id", "xrfreq"],
                     )
-                )
-            else:
-                # TODO: Add support for DerivedVariables that themselves require DerivedVariables
-                # TODO: Add support for DerivedVariables that exist on different frequencies (e.g. 1hr 'pr' & 3hr 'tas')
-                varcat = scat.search(variable=var_id, require_all_on=["id", "xrfreq"])
-                logger.debug(
-                    f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
-                )
-                # TODO: Temporary fix until this is changed in intake_esm
-                varcat._requested_variables_true = [var_id]
-                varcat._dependent_variables = list(
-                    set(varcat._requested_variables).difference(
-                        varcat._requested_variables_true
+                    if len(varcat) == 0:
+                        # Try searching in other experiments or members
+                        scat_id = {
+                            i: scat.df[i].iloc[0]
+                            for i in id_columns or ID_COLUMNS
+                            if i in scat.df.columns
+                        }
+                        scat_id.pop("experiment", None)
+                        scat_id.pop("member", None)
+                        varcat = catalog.search(
+                            **scat_id,
+                            xrfreq=xrfreq,
+                            variable=var_id,
+                            require_all_on=["id", "xrfreq"],
+                        )
+                        if len(varcat) > 1:
+                            varcat.esmcat._df = varcat.df.iloc[[0]]
+                        if len(varcat) == 1:
+                            logger.warning(
+                                f"Dataset {sim_id} doesn't have the fixed field {var_id}, but it can be acquired from {varcat.df['id'].iloc[0]}."
+                            )
+                            for i in {"member", "experiment", "id"}.intersection(
+                                varcat.df.columns
+                            ):
+                                varcat.df.loc[:, i] = scat.df[i].iloc[0]
+
+                    # TODO: Temporary fix until this is changed in intake_esm
+                    varcat._requested_variables_true = [var_id]
+                    varcat._dependent_variables = list(
+                        set(varcat._requested_variables).difference(
+                            varcat._requested_variables_true
+                        )
                     )
-                )
-
-                # We want to match lines with the correct freq,
-                # IF allow_resampling is True and xrfreq translates to a timedelta,
-                # we also want those with (stricyly) higher temporal resolution
-                same_frq = varcat.df.xrfreq == xrfreq
-                td = pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq))
-                varcat.df["timedelta"] = pd.to_timedelta(
-                    varcat.df.xrfreq.apply(CV.xrfreq_to_timedelta, default="NAN")
-                )
-                # else is joker (any timedelta)
-                lower_frq = (
-                    np.less(varcat.df.timedelta, td) if pd.notnull(td) else False
-                )
-                varcat.esmcat._df = varcat.df[same_frq | (lower_frq & allow_resampling)]
-
-                # For each dataset (id - xrfreq - processing_level - domain - variable), make sure that file availability covers the requested time periods
-                if periods is not None and len(varcat) > 0:
-                    valid_tp = []
-                    for var, group in varcat.df.groupby(
-                        varcat.esmcat.aggregation_control.groupby_attrs + ["variable"]
-                    ):
-                        valid_tp.append(
-                            _subset_file_coverage(group, periods)
-                        )  # If valid, this returns the subset of files that cover the time period
-                    varcat.esmcat._df = pd.concat(valid_tp)
-
-                # We now select the coarsest timedelta for each variable
-                # we need to re-iterate over variables in case we used the registry (and thus there are multiple variables in varcat)
-                rows = []
-                for var, group in varcat.df.groupby("variable"):
-                    rows.append(group[group.timedelta == group.timedelta.max()])
-                if rows:
-                    # check if the requested variable exists and if so, remove DeriveVariable references
-                    v_list = [rows[i]["variable"].iloc[0] for i in range(len(rows))]
-                    v_list_check = [
-                        var_id in v_list[i] for i in range(len(v_list))
-                    ]  # necessary in case a file has multiple variables
-                    if any(v_list_check):
-                        rows = [rows[v_list_check.index(True)]]
-                        varcat.derivedcat = DerivedVariableRegistry()
-                    varcat.esmcat._df = pd.concat(rows, ignore_index=True)
                 else:
-                    varcat.esmcat._df = pd.DataFrame()
+                    # TODO: Add support for DerivedVariables that themselves require DerivedVariables
+                    # TODO: Add support for DerivedVariables that exist on different frequencies (e.g. 1hr 'pr' & 3hr 'tas')
+                    varcat = scat.search(
+                        variable=var_id, require_all_on=["id", "xrfreq"]
+                    )
+                    logger.debug(
+                        f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
+                    )
+                    # TODO: Temporary fix until this is changed in intake_esm
+                    varcat._requested_variables_true = [var_id]
+                    varcat._dependent_variables = list(
+                        set(varcat._requested_variables).difference(
+                            varcat._requested_variables_true
+                        )
+                    )
 
-            if varcat.df.empty:
-                logger.debug(
-                    f"Dataset {sim_id} doesn't have all needed variables (missing at least {var_id})."
-                )
-                break
-            if "timedelta" in varcat.df.columns:
-                varcat.df.drop(columns=["timedelta"], inplace=True)
-            varcat._requested_variable_freqs = [xrfreq]
-            varcats.append(varcat)
-        else:
-            catalogs[sim_id] = concat_data_catalogs(*varcats)
-            if periods is not None:
-                if not isinstance(periods[0], list):
-                    periods = [periods]
-                catalogs[sim_id]._requested_periods = periods
+                    # We want to match lines with the correct freq,
+                    # IF allow_resampling is True and xrfreq translates to a timedelta,
+                    # we also want those with (stricyly) higher temporal resolution
+                    same_frq = varcat.df.xrfreq == xrfreq
+                    td = pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq))
+                    varcat.df["timedelta"] = pd.to_timedelta(
+                        varcat.df.xrfreq.apply(CV.xrfreq_to_timedelta, default="NAN")
+                    )
+                    # else is joker (any timedelta)
+                    lower_frq = (
+                        np.less(varcat.df.timedelta, td) if pd.notnull(td) else False
+                    )
+                    varcat.esmcat._df = varcat.df[
+                        same_frq | (lower_frq & allow_resampling)
+                    ]
 
-    logger.info(
-        f"Found {len(catalogs)} with all variables requested and corresponding to the criteria."
-    )
+                    # For each dataset (id - xrfreq - processing_level - domain - variable), make sure that file availability covers the requested time periods
+                    if periods is not None and len(varcat) > 0:
+                        valid_tp = []
+                        for var, group in varcat.df.groupby(
+                            varcat.esmcat.aggregation_control.groupby_attrs
+                            + ["variable"]
+                        ):
+                            valid_tp.append(
+                                _subset_file_coverage(group, periods)
+                            )  # If valid, this returns the subset of files that cover the time period
+                        varcat.esmcat._df = pd.concat(valid_tp)
 
-    if restrict_resolution is not None:
+                    # We now select the coarsest timedelta for each variable
+                    # we need to re-iterate over variables in case we used the registry (and thus there are multiple variables in varcat)
+                    rows = []
+                    for var, group in varcat.df.groupby("variable"):
+                        rows.append(group[group.timedelta == group.timedelta.max()])
+                    if rows:
+                        # check if the requested variable exists and if so, remove DeriveVariable references
+                        v_list = [rows[i]["variable"].iloc[0] for i in range(len(rows))]
+                        v_list_check = [
+                            var_id in v_list[i] for i in range(len(v_list))
+                        ]  # necessary in case a file has multiple variables
+                        if any(v_list_check):
+                            rows = [rows[v_list_check.index(True)]]
+                            varcat.derivedcat = DerivedVariableRegistry()
+                        varcat.esmcat._df = pd.concat(rows, ignore_index=True)
+                    else:
+                        varcat.esmcat._df = pd.DataFrame()
+
+                if varcat.df.empty:
+                    logger.debug(
+                        f"Dataset {sim_id} doesn't have all needed variables (missing at least {var_id})."
+                    )
+                    break
+                if "timedelta" in varcat.df.columns:
+                    varcat.df.drop(columns=["timedelta"], inplace=True)
+                varcat._requested_variable_freqs = [xrfreq]
+                varcats.append(varcat)
+            else:
+                catalogs[sim_id] = concat_data_catalogs(*varcats)
+                if periods is not None:
+                    if not isinstance(periods[0], list):
+                        periods = [periods]
+                    catalogs[sim_id]._requested_periods = periods
+
+    if len(catalogs) > 0:
+        logger.info(
+            f"Found {len(catalogs)} with all variables requested and corresponding to the criteria."
+        )
+    else:
+        logger.warning("Found no match corresponding to the search criteria.")
+
+    if restrict_resolution is not None and len(catalogs) > 0:
         catalogs = _restrict_by_resolution(catalogs, id_columns, restrict_resolution)
 
-    if restrict_members is not None:
+    if restrict_members is not None and len(catalogs) > 0:
         catalogs = _restrict_multimembers(catalogs, id_columns, restrict_members)
 
     return catalogs
+
+
+@parse_config
+def subset_warming_level(
+    ds: xr.Dataset,
+    wl: float,
+    window: int = 20,
+    tas_baseline_period: list = None,
+    ignore_member: bool = False,
+    tas_csv: str = None,
+    to_level: str = "warminglevel-{wl}vs{period0}-{period1}",
+    wl_dim: str = "+{wl}Cvs{period0}-{period1}",
+):
+    """Subsets the input dataset with only the window of time over which the requested level of global warming is first reached, using the IPCC Atlas method.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+       Input dataset.
+       The dataset should include attributes to help recognize it and find its
+       warming levels - 'cat:mip_era', 'cat:experiment', 'cat:member', and either
+       'cat:source' for global models or 'cat:driving_model' for regional models.
+    wl : float
+       Warming level.
+       eg. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
+    window : int
+       Size of the rolling window in years over which to compute the warming level.
+    tas_baseline_period : list
+       Base period. The warming is calculated with respect to this period. The default is ["1850", "1900"].
+    ignore_member : bool
+       Whether to ignore the member when searching for the model run in tas_csv.
+    tas_csv : str
+       Path to a csv of annual global mean temperature with a row for each year and a column for each dataset.
+       If None, it will default to data/IPCC_annual_global_tas.csv which was built from
+       the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
+       and extra data from pilot models of MRCC5 and ClimEx.
+    to_level :
+       The processing level to assign to the output.
+       Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
+       `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
+    wl_dim : str
+       The value to use to fill the new `warminglevel` dimension.
+       Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
+       `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
+       If None, no new dimensions will be added.
+
+    Returns
+    -------
+    xr.Dataset
+        Warming level dataset.
+    """
+    if tas_baseline_period is None:
+        tas_baseline_period = ["1850", "1900"]
+
+    if tas_csv is None:
+        tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
+
+    # get info on ds
+    id_ds = ds.attrs["cat:id"]
+    source_ds = (
+        ds.attrs["cat:source"]
+        if pd.isna(ds.attrs.get("cat:driving_model", None))
+        else ds.attrs["cat:driving_model"]
+    )
+    exp_ds = ds.attrs["cat:experiment"]
+    member_ds = ds.attrs["cat:member"]
+    mip_era_ds = ds.attrs["cat:mip_era"]
+
+    info_ds = (
+        f"{mip_era_ds}_{source_ds}_{exp_ds}_.*"
+        if ignore_member
+        else f"{mip_era_ds}_{source_ds}_{exp_ds}_{member_ds}"
+    )
+
+    # open csv
+    annual_tas = pd.read_csv(tas_csv, index_col="year")
+
+    # choose colum based in ds cat attrs
+    right_column = annual_tas.filter(regex=re.compile(info_ds, re.IGNORECASE), axis=1)
+
+    if len(right_column.columns) > 1:
+        logger.info(
+            "More than one column of the csv fits the dataset metadata. Choosing the first one."
+        )
+        right_column = pd.DataFrame(right_column.iloc[:, 0])
+    elif len(right_column.columns) == 0:
+        raise ValueError(
+            f"No columns fit the 'cat:' attributes of the input dataset ({info_ds})."
+        )
+
+    logger.info(
+        f"Computing warming level +{wl}C for id: {id_ds} from column: {right_column.columns[0]}."
+    )
+
+    # compute reference temperature for the warming
+    mean_base = right_column.loc[tas_baseline_period[0] : tas_baseline_period[1]].mean()
+
+    yearly_diff = right_column - mean_base  # difference from reference
+
+    # get the start and end date of the window when the warming level is first reached
+
+    # shift(-1) is needed to reproduce IPCC results.
+    # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
+    if window % 2 == 0:  # Even window
+        rolling_diff = (
+            yearly_diff.rolling(window=window, min_periods=window, center=True)
+            .mean()
+            .shift(-1)
+        )
+    elif window % 2 == 1:  # Odd windows do not require the shift
+        rolling_diff = yearly_diff.rolling(
+            window=window, min_periods=window, center=True
+        ).mean()
+    else:
+        raise ValueError(f"window should be an integer, received {type(window)}")
+
+    yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
+    if yr is None:
+        start_yr = np.nan
+        end_yr = np.nan
+    else:
+        start_yr = int(yr - window / 2 + 1)
+        end_yr = int(yr + window / 2)
+
+    if np.isnan(start_yr):
+        logger.info(
+            f"Global warming level of +{wl}C is not reached by the last year of the provided 'tas_csv' file for {id_ds}."
+        )
+        return None
+    elif any(yr not in ds.time.dt.year for yr in range(start_yr, end_yr + 1)):
+        logger.info(
+            f"{id_ds} does not sufficiently cover the time interval for +{wl}C ({start_yr}, {end_yr})."
+        )
+        return None
+
+    # cut the window selected above
+    ds_wl = ds.sel(time=slice(str(start_yr), str(end_yr)))
+
+    if wl_dim:
+        ds_wl = ds_wl.expand_dims(
+            dim={
+                "warminglevel": [
+                    wl_dim.format(
+                        wl=wl,
+                        period0=tas_baseline_period[0],
+                        period1=tas_baseline_period[1],
+                    )
+                ]
+            },
+            axis=0,
+        )
+        ds_wl.warminglevel.attrs[
+            "baseline"
+        ] = f"{tas_baseline_period[0]}-{tas_baseline_period[1]}"
+
+    if to_level is not None:
+        ds_wl.attrs["cat:processing_level"] = to_level.format(
+            wl=wl, period0=tas_baseline_period[0], period1=tas_baseline_period[1]
+        )
+
+    return ds_wl
 
 
 def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
@@ -802,6 +998,29 @@ def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
                         f"Got multiple dataset ids where we expected only one... : {sim_ids}"
                     )
                 exp_hist["id"] = sim_ids[0]
+
+                # Remove fixed fields that already exist in the future experiment
+                dupes = pd.concat(
+                    [
+                        exp_hist.loc[exp_hist["frequency"] == "fx"],
+                        sub_sdf.loc[
+                            (sub_sdf["frequency"] == "fx")
+                            & (sub_sdf["experiment"] == exp_id)
+                        ],
+                    ]
+                ).duplicated(
+                    subset=[
+                        "same_hist_member",
+                        "variable",
+                        "frequency",
+                        "experiment",
+                        "activity",
+                    ],
+                    keep=False,
+                )
+                dupes = dupes[dupes]  # Only keep the duplicated rows
+                exp_hist = exp_hist.loc[exp_hist.index.difference(dupes.index)]
+
                 new_lines.append(exp_hist)
 
     df = pd.concat([df] + new_lines, ignore_index=True).drop(
@@ -1080,156 +1299,3 @@ def _subset_file_coverage(
         files_to_keep = files_to_keep | files_in_range
 
     return df[files_to_keep]
-
-
-@parse_config
-def subset_warming_level(
-    ds: xr.Dataset,
-    wl: float,
-    window: int = 20,
-    tas_baseline_period: list = None,
-    ignore_member: bool = False,
-    tas_csv: str = None,
-    to_level: str = "warminglevel-{wl}vs{period0}-{period1}",
-    wl_dim: str = "+{wl}Cvs{period0}-{period1}",
-):
-    """Subset input dataset with only the window of time over which the requested level of global warming is first reached, using the IPCC Atlas method.
-
-    Parameters
-    ----------
-    ds : xr.Dataset
-        Input dataset.
-        The dataset should include attributes to help recognize it and find its
-        warming levels - 'cat:mip_era', 'cat:experiment', 'cat:member', and either
-        'cat:source' for global models or 'cat:driving_model' for regional models.
-    wl : float
-        Warming level.
-        e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
-    window : int
-        Size of the rolling window in years over which to compute the warming level.
-    tas_baseline_period : list
-        Base period. The warming is calculated with respect to this period. The default is ["1850", "1900"].
-    ignore_member : bool
-        Whether to ignore the member when searching for the model run in tas_csv.
-    tas_csv : str
-        Path to a csv of annual global mean temperature with a row for each year and a column for each dataset.
-        If None, it will default to data/IPCC_annual_global_tas.csv which was built from
-        the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
-        and extra data from pilot models of MRCC5 and ClimEx.
-    to_level : str
-        The processing level to assign to the output.
-        Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
-        `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
-    wl_dim : str
-        The value to use to fill the new `warminglevel` dimension.
-        Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
-        `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
-        If None, no new dimensions will be added.
-
-    Returns
-    -------
-    xr.Dataset
-        Warming level dataset.
-    """
-    if tas_baseline_period is None:
-        tas_baseline_period = ["1850", "1900"]
-
-    if tas_csv is None:
-        tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
-
-    # get info on ds
-    id_ds = ds.attrs["cat:id"]
-    source_ds = (
-        ds.attrs["cat:source"]
-        if pd.isna(ds.attrs.get("cat:driving_model", None))
-        else ds.attrs["cat:driving_model"]
-    )
-    exp_ds = ds.attrs["cat:experiment"]
-    member_ds = ds.attrs["cat:member"]
-    mip_era_ds = ds.attrs["cat:mip_era"]
-
-    info_ds = (
-        f"{mip_era_ds}_{source_ds}_{exp_ds}_.*"
-        if ignore_member
-        else f"{mip_era_ds}_{source_ds}_{exp_ds}_{member_ds}"
-    )
-
-    # open csv
-    annual_tas = pd.read_csv(tas_csv, index_col="year")
-
-    # choose colum based in ds cat attrs
-    right_column = annual_tas.filter(regex=re.compile(info_ds, re.IGNORECASE), axis=1)
-
-    if len(right_column.columns) > 1:
-        logger.info(
-            "More than one column of the csv fits the dataset metadata. Choosing the first one."
-        )
-        right_column = pd.DataFrame(right_column.iloc[:, 0])
-    elif len(right_column.columns) == 0:
-        raise ValueError(
-            f"No columns fit the 'cat:' attributes of the input dataset ({info_ds})."
-        )
-
-    logger.info(
-        f"Computing warming level +{wl}C for id: {id_ds} from column: {right_column.columns[0]}."
-    )
-
-    # compute reference temperature for the warming
-    mean_base = right_column.loc[tas_baseline_period[0] : tas_baseline_period[1]].mean()
-
-    yearly_diff = right_column - mean_base  # difference from reference
-
-    # get the start and end date of the window when the warming level is first reached
-
-    # shift(-1) is needed to reproduce IPCC results.
-    # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
-    if window % 2 == 0:  # Even window
-        rolling_diff = (
-            yearly_diff.rolling(window=window, min_periods=window, center=True)
-            .mean()
-            .shift(-1)
-        )
-    elif window % 2 == 1:  # Odd windows do not require the shift
-        rolling_diff = yearly_diff.rolling(
-            window=window, min_periods=window, center=True
-        ).mean()
-    else:
-        raise ValueError(f"window should be an integer, received {window}")
-    yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
-    if yr is None:
-        start_yr = np.nan
-        end_yr = np.nan
-    else:
-        start_yr = int(yr - window / 2 + 1)
-        end_yr = int(yr + window / 2)
-
-    if np.isnan(start_yr):
-        logger.info(f"Global warming level of +{wl}C is never reached for {id_ds}.")
-        return None
-
-    # cut the window selected above
-    ds_wl = ds.sel(time=slice(str(start_yr), str(end_yr)))
-
-    if wl_dim:
-        ds_wl = ds_wl.expand_dims(
-            dim={
-                "warminglevel": [
-                    wl_dim.format(
-                        wl=wl,
-                        period0=tas_baseline_period[0],
-                        period1=tas_baseline_period[1],
-                    )
-                ]
-            },
-            axis=0,
-        )
-        ds_wl.warminglevel.attrs[
-            "baseline"
-        ] = f"{tas_baseline_period[0]}-{tas_baseline_period[1]}"
-
-    if to_level is not None:
-        ds_wl.attrs["cat:processing_level"] = to_level.format(
-            wl=wl, period0=tas_baseline_period[0], period1=tas_baseline_period[1]
-        )
-
-    return ds_wl
