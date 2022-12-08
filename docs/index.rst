@@ -26,11 +26,11 @@ Features
 
     readme
     installation
-    notebooks/catalog
-    notebooks/getting_started
-    notebooks/diagnostics
-    notebooks/ensemble_reduction
-    notebooks/warminglevels
+    notebooks/1_catalog
+    notebooks/2_getting_started
+    notebooks/3_diagnostics
+    notebooks/4_ensemble_reduction
+    notebooks/5_warminglevels
     columns
     api
     contributing
