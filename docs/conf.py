@@ -110,6 +110,10 @@ extlinks = {
     "user": ("https://github.com/%s", "@%s"),
 }
 
+linkcheck_ignore = [
+    r"https://github.com/Ouranosinc/xscen/(pull|issue).*",  # too labourious to fully check
+]
+
 # Add any paths that contain templates here, relative to this directory.
 # templates_path = ['_templates']
 
