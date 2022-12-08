@@ -19,4 +19,4 @@ Contributors
 * Trevor James Smith <smith.trevorj@ouranos.ca> `@Zeitsperre <https://github.com/Zeitsperre>`_
 * Travis Logan <logan.travis@ouranos.ca> `@tlogan2000 <https://github.com/tlogan2000>`_
 * Louis-Philippe Caron <caron.louis-philippe@ouranos.ca>
-* Yannick Rousseau <rousseau.yannick@ouranos.ca> `@yrouranos <https://github.com/youranos>`_
+* Yannick Rousseau
