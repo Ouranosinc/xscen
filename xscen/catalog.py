@@ -225,7 +225,12 @@ class DataCatalog(intake_esm.esm_datastore):
         """
         if self.df.size == 0:
             raise ValueError("Catalog is empty.")
-        out = super().unique()
+        if isinstance(columns, str):
+            columns = [columns]
+
+        out = pd.Series(
+            {col: pd.unique(self.df[col]) for col in (columns or self.df.columns)}
+        )
         if columns is not None:
             out = out[columns]
         return out
@@ -548,6 +553,7 @@ class ProjectCatalog(DataCatalog):
         ds: xarray.Dataset,
         path: str,
         info_dict: Optional[dict] = None,
+        **info_kwargs,
     ):
         """Updates the catalog with new data and writes the new data to the csv file.
         We get the new data from the attributes of `ds`, the dictionary `info_dict` and `path`.
@@ -579,6 +585,8 @@ class ProjectCatalog(DataCatalog):
                 d[col] = ds.attrs[f"cat:{col}"]
         if info_dict:
             d.update(info_dict)
+        if info_kwargs:
+            d.update(info_kwargs)
 
         if "time" in ds:
             d["date_start"] = str(
@@ -588,7 +596,7 @@ class ProjectCatalog(DataCatalog):
                 ds.isel(time=-1).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
             )
 
-        d["path"] = path
+        d["path"] = str(path)
 
         # variable should be based on the Dataset
         d["variable"] = tuple(v for v in ds.data_vars if len(ds[v].dims) > 0)

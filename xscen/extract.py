@@ -634,15 +634,16 @@ def search_data_catalogs(
             f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
         )
 
-    ids = generate_id(catalog.df, id_columns)
-    if id_columns is not None:
-        # Recreate id from user specifications
-        catalog.df["id"] = ids
-    else:
-        # Only fill in the missing IDs
-        catalog.df["id"] = catalog.df["id"].fillna(ids)
+    if id_columns is not None or catalog.df["id"].isnull().any():
+        ids = generate_id(catalog.df, id_columns)
+        if id_columns is not None:
+            # Recreate id from user specifications
+            catalog.df["id"] = ids
+        else:
+            # Only fill in the missing IDs
+            catalog.df["id"] = catalog.df["id"].fillna(ids)
 
-    logger.info(f"Iterating over {catalog.nunique()['id']} potential datasets.")
+    logger.info(f"Iterating over {len(catalog.unique('id'))} potential datasets.")
     # Loop on each dataset to assess whether they have all required variables
     # And select best freq/timedelta for each
     catalogs = {}
