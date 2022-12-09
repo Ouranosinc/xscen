@@ -34,6 +34,7 @@ dependencies:
   - ipython
   - jupyter_client
   - nbsphinx
+  - nbval
   - pandoc
   - pooch
   - pre-commit
@@ -43,6 +44,7 @@ dependencies:
   - sphinx-autoapi
   - sphinx_rtd_theme
   - sphinxcontrib-napoleon
+  - xdoctest
   - pip
   # Testing
   - tox
