@@ -643,6 +643,10 @@ def search_data_catalogs(
             # Only fill in the missing IDs
             catalog.df["id"] = catalog.df["id"].fillna(ids)
 
+    if catalog.df.empty:
+        logger.warning("Found no match corresponding to the 'other' search criteria.")
+        return {}
+
     logger.info(f"Iterating over {len(catalog.unique('id'))} potential datasets.")
     # Loop on each dataset to assess whether they have all required variables
     # And select best freq/timedelta for each

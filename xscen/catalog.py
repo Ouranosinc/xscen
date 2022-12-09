@@ -229,7 +229,7 @@ class DataCatalog(intake_esm.esm_datastore):
             columns = [columns]
 
         out = pd.Series(
-            {col: pd.unique(self.df[col]) for col in (columns or self.df.columns)}
+            {col: list(pd.unique(self.df[col])) for col in (columns or self.df.columns)}
         )
         if columns is not None:
             out = out[columns]
@@ -241,7 +241,7 @@ class DataCatalog(intake_esm.esm_datastore):
         This is a generator that yields a tuple of the unique values of the current
         group, in the same order as the arguments, and the sub-catalog.
         """
-        for values in itertools.product(*map(self.unique, columns)):
+        for values in itertools.product(self.unique(columns)):
             sim = self.search(**dict(zip(columns, values)))
             if sim:  # So we never yield empty catalogs
                 yield values, sim
