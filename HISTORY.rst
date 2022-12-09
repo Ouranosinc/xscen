@@ -35,6 +35,7 @@ Internal changes
 * ``compute_deltas`` skips the unstacking step if there is no time dimension and cast object dimensions to string. (:pull:`9`)
 * Added the "2sem" frequency to the translations CVs. (:pull:`111`).
 * Skip files we can't read in ``parse_directory``. (:pull:`111`).
+* Faster ``search_data_catalogs`` and ``extract_dataset`` through a faster ``DataCatalog.unique``, date parsing and a rewrite of the ``ensure_correct_time`` logic. (:pull:`127`).
 
 v0.4.0 (2022-09-28)
 -------------------

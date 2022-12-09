@@ -10,7 +10,7 @@ from copy import deepcopy
 from datetime import datetime
 from glob import glob
 from pathlib import Path, PosixPath
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import cftime
 import dask
@@ -18,6 +18,7 @@ import fsspec as fs
 import intake_esm
 import netCDF4
 import pandas as pd
+import tlz
 import xarray
 import xarray as xr
 import yaml
@@ -118,18 +119,28 @@ def _parse_list_of_strings(elem):
     return (elem,)
 
 
+# def _parse_dates(elem):
+#     try:
+#         if isinstance(elem, str):
+#             return pd.Timestamp(elem).to_period("H")
+#         return pd.DatetimeIndex(elem).to_period("H")
+#     except pd.errors.OutOfBoundsDatetime:
+#         warnings.warn(
+#             "Somes dates are out of the datetime64[ns] range, switching to slower direct period parsing."
+#         )
+#         if isinstance(elem, str):
+#             return pd.Period(elem, freq="H")
+#         return pd.PeriodIndex(elem, freq="H")
 def _parse_dates(elem):
-    try:
-        if isinstance(elem, str):
-            return pd.Timestamp(elem).to_period("H")
-        return pd.DatetimeIndex(elem).to_period("H")
-    except pd.errors.OutOfBoundsDatetime:
-        warnings.warn(
-            "Somes dates are out of the datetime64[ns] range, switching to slower direct period parsing."
-        )
-        if isinstance(elem, str):
-            return pd.Period(elem, freq="H")
-        return pd.PeriodIndex(elem, freq="H")
+    """Parse an array of dates (strings) into a PeriodIndex of hourly frequency."""
+    # Cast to normal datetime as this is much faster than to period for in-bounds dates
+    # errors are coerced to NaT, we convert to a PeriodIndex and then to a (mutable) series
+    time = pd.to_datetime(elem, errors="coerce").astype(pd.PeriodDtype("H")).to_series()
+    nat = time.isnull()
+    # Only where we have NaT (parser errors and empty fields), parse into a Period
+    # This will raise DateParseError as expected if the string is not parsable.
+    time[nat] = pd.PeriodIndex(elem[nat], freq="H")
+    return pd.PeriodIndex(time)
 
 
 csv_kwargs = {
@@ -219,21 +230,29 @@ class DataCatalog(intake_esm.esm_datastore):
         rv = ["iter_unique", "drop_duplicates", "check_valid"]
         return super().__dir__() + rv
 
+    def _unique(self, columns) -> Dict:
+        def _find_unique(series):
+            values = series.dropna()
+            if series.name in self.esmcat.columns_with_iterables:
+                values = tlz.concat(values)
+            return list(tlz.unique(values))
+
+        data = self.df[columns]
+        if data.empty:
+            return {col: [] for col in self.df.columns}
+        else:
+            return data.apply(_find_unique, result_type="reduce").to_dict()
+
     def unique(self, columns: Union[str, list] = None):
+        """Return a series of unique values in the catalog.
+
+        Subsets on a columns list if specified.
         """
-        Simpler way to get unique elements from a column in the catalog.
-        """
-        if self.df.size == 0:
-            raise ValueError("Catalog is empty.")
         if isinstance(columns, str):
             columns = [columns]
-
-        out = pd.Series(
-            {col: list(pd.unique(self.df[col])) for col in (columns or self.df.columns)}
-        )
-        if columns is not None:
-            out = out[columns]
-        return out
+        elif columns is None:
+            columns = self.df.columns
+        return pd.Series(self._unique(list(columns)))
 
     def iter_unique(self, *columns):
         """Iterate over sub-catalogs for each group of unique values for all specified columns.
@@ -241,7 +260,7 @@ class DataCatalog(intake_esm.esm_datastore):
         This is a generator that yields a tuple of the unique values of the current
         group, in the same order as the arguments, and the sub-catalog.
         """
-        for values in itertools.product(self.unique(columns)):
+        for values in itertools.product(*self.unique(columns)):
             sim = self.search(**dict(zip(columns, values)))
             if sim:  # So we never yield empty catalogs
                 yield values, sim
