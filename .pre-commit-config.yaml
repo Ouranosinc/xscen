@@ -36,7 +36,7 @@ repos:
     rev: 5.10.1
     hooks:
       - id: isort
-        args: [ '--profile=black', '--filter-files' ]
+        args: [ '--settings-file=setup.cfg' ]
         exclude: ^docs/
   - repo: https://github.com/pycqa/pydocstyle
     rev: 6.1.1
@@ -48,6 +48,20 @@ repos:
     hooks:
       - id: yamllint
         args: [ '--config-file=.yamllint.yaml' ]
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.5.3
+    hooks:
+      - id: nbqa-pyupgrade
+        args: [ '--py38-plus' ]
+      - id: nbqa-black
+        args: [ '--target-version=py38' ]
+      - id: nbqa-isort
+        args: [ "--settings-file=setup.cfg" ]
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.6.1
+    hooks:
+      - id: nbstripout
+        files: ".ipynb"
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
     hooks:
