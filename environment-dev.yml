@@ -47,5 +47,5 @@ dependencies:
   - xdoctest
   - pip
   # Testing
-  - tox
+  - tox <4.0 # 2022-12-12: tox v4.0 is incompatible with tox-conda plugin
   - tox-conda
