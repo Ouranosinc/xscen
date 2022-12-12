@@ -27,7 +27,7 @@ jobs:
       - name: Install tox
         shell: bash -l {0}
         run: |
-          pip install tox<4.0
+          pip install "tox<4.0"
       - name: Run linting suite
         shell: bash -l {0}
         run: |
@@ -54,7 +54,7 @@ jobs:
       - name: Install tox
         shell: bash -l {0}
         run: |
-          mamba install -n xscen tox<4.0
+          mamba install -n xscen "tox<4.0"
       - name: Test with tox
         shell: bash -l {0}
         run: |
@@ -85,7 +85,7 @@ jobs:
       - name: Install tox
         shell: bash -l {0}
         run: |
-          mamba install -n xscen tox<4.0
+          mamba install -n xscen "tox<4.0"
       - name: Doctests with tox
         shell: bash -l {0}
         run: |
