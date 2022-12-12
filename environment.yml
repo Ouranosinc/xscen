@@ -10,7 +10,7 @@ dependencies:
   - cftime
   - clisops
   - dask
-  - ESMpy <8.4
+  - esmpy <8.4
   - geopandas
   - pandas
   - rechunker
