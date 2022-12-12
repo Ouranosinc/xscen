@@ -20,6 +20,7 @@ dependencies:
   - xclim >=0.37
   - xesmf >=0.6.2
   - pyyaml
+  - intake
   - intake-esm >=2022.9.18
   # Plotting
   - cartopy
