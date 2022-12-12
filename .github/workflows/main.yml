@@ -27,7 +27,7 @@ jobs:
       - name: Install tox
         shell: bash -l {0}
         run: |
-          pip install "tox<4.0"
+          pip install tox~=3.0
       - name: Run linting suite
         shell: bash -l {0}
         run: |
