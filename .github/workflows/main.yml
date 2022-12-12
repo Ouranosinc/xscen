@@ -32,8 +32,7 @@ jobs:
         shell: bash -l {0}
         run: |
           tox -e black
-        env:
-          CONDA_EXE: mamba
+
 
   test:
     name: Smoke Test
