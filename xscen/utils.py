@@ -132,7 +132,7 @@ def stack_drop_nans(
         domain = ds.attrs.get("cat:domain", "unknown")
         to_file = to_file.format(domain=domain, shape=original_shape)
         if not Path(to_file).parent.exists():
-            os.mkdir(Path(to_file).parent)
+            os.makedirs(Path(to_file).parent,exist_ok=True)
         mask.coords.to_dataset().to_netcdf(to_file)
 
     # carry information about original shape to be able to unstack properly
