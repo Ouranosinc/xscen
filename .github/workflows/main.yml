@@ -50,7 +50,7 @@ jobs:
       - name: Install tox
         shell: bash -l {0}
         run: |
-          mamba install -n xscen tox tox-conda
+          mamba install -n xscen tox<4.0
       - name: Test with tox
         shell: bash -l {0}
         run: |
@@ -81,7 +81,7 @@ jobs:
       - name: Install tox
         shell: bash -l {0}
         run: |
-          mamba install -n xscen tox
+          mamba install -n xscen tox<4.0
       - name: Doctests with tox
         shell: bash -l {0}
         run: |
