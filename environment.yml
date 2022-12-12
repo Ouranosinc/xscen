@@ -10,7 +10,8 @@ dependencies:
   - cftime
   - clisops
   - dask
-  - esmpy <8.4
+  # 2022-12-12: ESMpy 8.3.1 and 8.4.0 are incompatible with newest xesmf
+  - esmpy <=8.2
   - geopandas
   - pandas
   - rechunker
