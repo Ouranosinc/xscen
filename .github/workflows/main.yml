@@ -50,7 +50,7 @@ jobs:
       - name: Install tox
         shell: bash -l {0}
         run: |
-          mamba install -n xscen tox
+          mamba install -n xscen tox tox-conda
       - name: Test with tox
         shell: bash -l {0}
         run: |
