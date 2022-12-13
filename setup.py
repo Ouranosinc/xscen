@@ -33,7 +33,7 @@ requirements = [
     "geopandas",
     "h5py",
     "intake",
-    "intake_esm>=2021.8.17",
+    "intake_esm>=2022.9.18",
     "matplotlib",
     "netCDF4",
     "numpy",
