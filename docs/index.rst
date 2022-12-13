@@ -38,12 +38,6 @@ Features
     history
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Public Modules
-
-   xscen
-
-.. toctree::
    :maxdepth: 2
    :caption: Package Structure
 
