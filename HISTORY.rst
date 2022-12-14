@@ -38,7 +38,8 @@ Internal changes
 * ``compute_deltas`` skips the unstacking step if there is no time dimension and cast object dimensions to string. (:pull:`9`)
 * Added the "2sem" frequency to the translations CVs. (:pull:`111`).
 * Skip files we can't read in ``parse_directory``. (:pull:`111`).
-* Fixed non-standard Docstrings (:pull:`108`).
+* Fixed non-numpy-standard Docstrings. (:pull:`108`).
+* Added more metadata to package description on PyPI. (:pull:`108`).
 
 v0.4.0 (2022-09-28)
 -------------------
