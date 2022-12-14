@@ -15,7 +15,8 @@ New features and enhancements
 * New ``scripting.skippable`` context, allowing the use of CTRL-C to skip code sections. (:pull:`106`).
 * Possibility of fields with underscores in the patterns of ``parse_directory``. (:pull:`111`).
 * New ``utils.show_versions`` function for printing or writing to file the dependency versions of `xscen`. (:issue:`109`, :pull:`112`).
-* Added previously private notebooks to the documentation (:pull:`108`).
+* Added previously private notebooks to the documentation. (:pull:`108`).
+* Notebooks are now tested using `pytest` with `nbval`. (:pull:`108`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
