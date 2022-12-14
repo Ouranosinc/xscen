@@ -74,20 +74,20 @@ else:
     nbsphinx_execute = "auto"
 
 # To avoid having to install these and burst memory limit on ReadTheDocs.
-autodoc_mock_imports = [
-    "cartopy",
-    "clisops",
-    "dask",
-    "h5py",
-    "intake",
-    "intake_esm",
-    "pandas",
-    "rechunker"
-    "xarray",
-    "xclim",
-    "xesmf",
-    "zarr",
-]
+# autodoc_mock_imports = [
+#     "cartopy",
+#     "clisops",
+#     "dask",
+#     "h5py",
+#     "intake",
+#     "intake_esm",
+#     "pandas",
+#     "rechunker"
+#     "xarray",
+#     "xclim",
+#     "xesmf",
+#     "zarr",
+# ]
 
 napoleon_numpy_docstring = True
 napoleon_use_rtype = False
