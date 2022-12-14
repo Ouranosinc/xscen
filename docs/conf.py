@@ -1,3 +1,4 @@
+# noqa: D100
 #!/usr/bin/env python
 #
 # xscen documentation build configuration file, created by
@@ -18,7 +19,9 @@
 # absolute, like shown here.
 #
 import os
+import warnings
 import sys
+
 sys.path.insert(0, os.path.abspath('..'))
 
 import xscen  # noqa
@@ -57,7 +60,18 @@ autosectionlabel_prefix_document = True
 autosectionlabel_maxdepth = 2
 
 autosummary_generate = True
-nbsphinx_execute = "auto"
+skip_notebooks = os.getenv("SKIP_NOTEBOOKS")
+if skip_notebooks or os.getenv("READTHEDOCS_VERSION_TYPE") in [
+    "branch",
+    "external",
+]:
+    if skip_notebooks:
+        warnings.warn("Not executing notebooks.")
+    nbsphinx_execute = "never"
+elif os.getenv("READTHEDOCS_VERSION_NAME") in ["latest", "stable"]:
+    nbsphinx_execute = "always"
+else:
+    nbsphinx_execute = "auto"
 
 # To avoid having to install these and burst memory limit on ReadTheDocs.
 autodoc_mock_imports = [
@@ -95,6 +109,10 @@ extlinks = {
     "pull": ("https://github.com/Ouranosinc/xscen/pull/%s", "PR/%s"),
     "user": ("https://github.com/%s", "@%s"),
 }
+
+linkcheck_ignore = [
+    r"https://github.com/Ouranosinc/xscen/(pull|issue).*",  # too labourious to fully check
+]
 
 # Add any paths that contain templates here, relative to this directory.
 # templates_path = ['_templates']

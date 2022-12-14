@@ -1,3 +1,4 @@
+# noqa: D100
 import datetime
 import operator
 import os
@@ -31,48 +32,48 @@ def regrid_dataset(
     intermediate_grids: Optional[dict] = None,
     to_level: str = "regridded",
 ) -> xr.Dataset:
-    """
-    Based on an intake_esm catalog, this function regrids Zarr files.
+    """Regrid a dataset according to weights and a reference grid.
+
+    Based on an intake_esm catalog, this function performs regridding on Zarr files.
 
     Parameters
     ----------
     ds : xarray.Dataset
-      Dataset to regrid. The Dataset needs to have lat/lon coordinates.
-      Supports a 'mask' variable compatible with ESMF standards.
+        Dataset to regrid. The Dataset needs to have lat/lon coordinates.
+        Supports a 'mask' variable compatible with ESMF standards.
     weights_location : Union[str, PosixPath]
-      Path to the folder where weight file is saved.
+        Path to the folder where weight file is saved.
     ds_grid : xr.Dataset
-      Destination grid. The Dataset needs to have lat/lon coordinates.
-      Supports a 'mask' variable compatible with ESMF standards.
+        Destination grid. The Dataset needs to have lat/lon coordinates.
+        Supports a 'mask' variable compatible with ESMF standards.
     regridder_kwargs : dict
-      Arguments to send xe.Regridder(). If it contains `skipna`, that
-      one is passed to the regridder call directly.
-    intermediate_grids: dict
+        Arguments to send xe.Regridder(). If it contains `skipna`, that
+        one is passed to the regridder call directly.
+    intermediate_grids : dict
         This argument is used to do a regridding in many steps, regridding to regular
         grids before regridding to the final ds_grid.
         This is useful when there is a large jump in resolution between ds and ds grid.
         The format is a nested dictionary shown in Notes.
         If None, no intermediary grid is used, there is only a regrid from ds to ds_grid.
-    to_level: str
-      The processing level to assign to the output.
-      Defaults to 'regridded'
+    to_level : str
+        The processing level to assign to the output.
+        Defaults to 'regridded'
 
     Returns
     -------
     xarray.Dataset
-      Regridded dataset
+        Regridded dataset
 
     Notes
-    _____
+    -----
     intermediate_grids =
       {'name_of_inter_grid_1': {'cf_grid_2d': {arguments for util.cf_grid_2d },'regridder_kwargs':{arguments for xe.Regridder}},
         'name_of_inter_grid_2': dictionary_as_above}
 
     See Also
-    ________
-    xesmf.regridder,xesmf.util.cf_grid_2d
+    --------
+    xesmf.regridder, xesmf.util.cf_grid_2d
     """
-
     regridder_kwargs = regridder_kwargs or {}
 
     ds_grids = []  # list of target grids
@@ -208,15 +209,14 @@ def regrid_dataset(
 
 @parse_config
 def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.DataArray:
-    """
-    Creates a 0-1 mask based on incoming arguments.
+    """Create a 0-1 mask based on incoming arguments.
 
     Parameters
     ----------
     ds : xr.Dataset or xr.DataArray
-      Dataset or DataArray to be evaluated
+        Dataset or DataArray to be evaluated
     mask_args : dict
-      Instructions to build the mask (required fields listed in the Notes).
+        Instructions to build the mask (required fields listed in the Notes).
 
     Note
     ----
@@ -233,10 +233,8 @@ def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.Data
     Returns
     -------
     xr.DataArray
-      Mask array.
-
+        Mask array.
     """
-
     # Prepare the mask for the destination grid
     ops = {
         "<": operator.lt,
@@ -290,29 +288,28 @@ def _regridder(
     unmapped_to_nan: Optional[bool] = True,
     **kwargs,
 ) -> xe.frontend.Regridder:
-    """
-    Simple call to xe.Regridder with a few default arguments
+    """Call to xesmf Regridder with a few default arguments.
 
     Parameters
     ----------
     ds_in : xr.Dataset
-      Incoming grid. The Dataset needs to have lat/lon coordinates.
+        Incoming grid. The Dataset needs to have lat/lon coordinates.
     ds_grid : xr.Dataset
-      Destination grid. The Dataset needs to have lat/lon coordinates.
+        Destination grid. The Dataset needs to have lat/lon coordinates.
     filename : str
-      Path to the NetCDF file with weights information.
-    method, unmapped_to_nan
-      Arguments to send xe.Regridder().
+        Path to the NetCDF file with weights information.
+    method : str, optional
+        Interpolation method.
+    unmapped_to_nan : bool, optional
+        Arguments to send xe.Regridder().
     regridder_kwargs : dict
-      Arguments to send xe.Regridder().
+        Arguments to send xe.Regridder().
 
     Returns
     -------
     xe.frontend.Regridder
-      Regridder object
-
+        Regridder object
     """
-
     regridder = xe.Regridder(
         ds_in=ds_in,
         ds_out=ds_grid,

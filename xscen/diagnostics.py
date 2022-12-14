@@ -1,25 +1,19 @@
+# noqa: D100
 import logging
 import warnings
 from pathlib import Path, PosixPath
 from types import ModuleType
 from typing import Optional, Sequence, Tuple, Union
 
-import matplotlib as mpl
 import numpy as np
 import xarray as xr
-import xclim as xc
-from cartopy import crs
-from matplotlib import pyplot as plt
-from xclim import sdba
 from xclim.core.indicator import Indicator
-from xclim.core.units import convert_units_to
-from xclim.sdba import measures
 
 from .catalog import DataCatalog
 from .config import parse_config
 from .indicators import load_xclim_module
 from .io import save_to_zarr
-from .utils import change_units, maybe_unstack, unstack_fill_nan
+from .utils import change_units, unstack_fill_nan
 
 logger = logging.getLogger(__name__)
 
@@ -36,16 +30,13 @@ __all__ = [
 
 def fix_unphysical_values(
     catalog: DataCatalog,
-):
-    """
-    Basic checkups for impossible values such as tasmin > tasmax, or negative precipitation
+):  # noqa: D401
+    """Base checkups for impossible values such as tasmin > tasmax, or negative precipitation.
 
     Parameters
     ----------
     catalog : DataCatalog
-
     """
-
     if len(catalog.unique("processing_level")) > 1:
         raise NotImplementedError
 
@@ -128,50 +119,49 @@ def properties_and_measures(
     to_level_prop: str = "diag-properties",
     to_level_meas: str = "diag-measures",
 ):
-    """
-    Calculate properties and measures of a dataset.
+    """Calculate properties and measures of a dataset.
 
     Parameters
     ----------
-    ds: xr.Dataset
+    ds : xr.Dataset
         Input dataset.
-    properties: Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
-      Path to a YAML file that instructs on how to calculate properties.
-      Can be the indicator module directly, or a sequence of indicators or a sequence of
-      tuples (indicator name, indicator) as returned by `iter_indicators()`.
-    period: lst
+    properties : Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+        Path to a YAML file that instructs on how to calculate properties.
+        Can be the indicator module directly, or a sequence of indicators or a sequence of
+        tuples (indicator name, indicator) as returned by `iter_indicators()`.
+    period : lst
         [start, end] of the period to be evaluated. The period will be selected on ds
         and dref_for_measure if it is given.
-    unstack: bool
+    unstack : bool
         Whether to unstack ds before computing the properties.
-    rechunk: dict
+    rechunk : dict
         Dictionary of chunks to use for a rechunk before computing the properties.
-    dref_for_measure: xr.Dataset
+    dref_for_measure : xr.Dataset
         Dataset of properties to be used as the ref argument in the computation of the measure.
         Ideally, this is the first output (prop) of a previous call to this function.
         Only measures on properties that are provided both in this dataset and in the properties list will be computed.
         If None, the second output of the function (meas) will be an empty Dataset.
-    change_units_arg: dict
-        If not None, calls `xscen.utils.change_units` on ds before computing properties using this dictionary for the `variables_and_units` argument.
-        It can be useful to convert units before computing the properties, because it is sometimes easier to convert the units of the variables than the units of the properties (eg. variance).
-    to_level_prop: str
+    change_units_arg : dict
+        If not None, calls `xscen.utils.change_units` on ds before computing properties using
+        this dictionary for the `variables_and_units` argument.
+        It can be useful to convert units before computing the properties, because it is sometimes
+        easier to convert the units of the variables than the units of the properties (eg. variance).
+    to_level_prop : str
         processing_level to give the first output (prop)
-    to_level_meas: str
+    to_level_meas : str
         processing_level to give the second output (meas)
 
     Returns
     -------
-    prop: xr.Dataset
+    prop : xr.Dataset
         Dataset of properties of ds
-    meas: xr.Dataset
+    meas : xr.Dataset
         Dataset of measures between prop and dref_for_meas
 
     See Also
     --------
     xclim.sdba.properties, xclim.sdba.measures, xclim.core.indicator.build_indicator_module_from_yaml
-
     """
-
     if isinstance(properties, (str, Path)):
         logger.debug("Loading properties module.")
         module = load_xclim_module(properties)
@@ -252,27 +242,25 @@ def properties_and_measures(
 
 
 def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-heatmap"):
-    """
-    Creates a heatmap to compare the performance of the different datasets.
+    """Create a heatmap to compare the performance of the different datasets.
+
     The columns are properties and the rows are datasets.
     Each point is the absolute value of the mean of the measure over the whole domain.
     Each column is normalized from 0 (best) to 1 (worst).
 
     Parameters
     ----------
-    meas_datasets: list|dict
+    meas_datasets : list or dict
         List or dictionary of datasets of measures of properties.
         If it is a dictionary, the keys will be used to name the rows.
         If it is a list, the rows will be given a number.
-
     to_level: str
         processing_level to assign to the output
 
     Returns
     -------
-        xr.DataArray
+    xr.DataArray
     """
-
     name_of_datasets = None
     if isinstance(meas_datasets, dict):
         name_of_datasets = list(meas_datasets.keys())

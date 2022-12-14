@@ -1,4 +1,0 @@
-
-[submodule "docs/notebooks"]
-  path = docs/notebooks
-  url = https://gitlab.ouranos.ca/scenario/xscen-notebooks.git

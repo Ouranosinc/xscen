@@ -1,0 +1,28 @@
+{
+  "esmcat_version": "0.1.0",
+  "id": "pangeo-cmip6",
+  "description": "This is an ESM collection for CMIP6 Zarr data residing in Pangeo's Google Storage.",
+  "feedback_url": "https://docs.google.com/forms/d/e/1FAIpQLSeISi54dqekkknPp8IrBr-uioM2TGGiW7xGpW6Q_9-9WFlWTQ/viewform",
+  "request_url": "https://docs.google.com/forms/d/e/1FAIpQLScFjA5IddqBs2Rc0xGbzn32NPq12TKr-b-8KGtXWyNDK5sJCg/viewform",
+  "catalog_file": "pangeo-cmip6.csv",
+  "attributes": [],
+  "assets": {
+    "column_name": "path",
+    "format": "zarr"
+  },
+  "aggregation_control": {
+    "variable_column_name": "variable",
+    "groupby_attrs": [
+      "id",
+      "domain",
+      "xrfreq",
+      "processing_level"
+    ],
+    "aggregations": [
+      {
+        "type": "union",
+        "attribute_name": "variable"
+      }
+    ]
+  }
+}
