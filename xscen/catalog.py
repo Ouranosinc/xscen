@@ -875,7 +875,7 @@ def parse_directory(
     read_from_file : boolean or set of strings or tuple of 2 sets of strings.
         If True, if some fields were not parsed from their path, files are opened and
         missing fields are parsed from their metadata, if found.
-        If a set of column names, only those fields are parsed from the file, if missing.
+        If a sequence of column names, only those fields are parsed from the file, if missing.
         If False (default), files are never opened.
         If a tuple of 2 lists of strings, only the first file of groups defined by the
         first list of columns is read and the second list of columns is parsed from the
