@@ -75,6 +75,7 @@ def translate_time_chunk(chunks: dict, calendar: str, timesize) -> dict:
     return chunks
 
 
+@parse_config
 def stack_drop_nans(
     ds: xr.Dataset,
     mask: xr.DataArray,
@@ -153,6 +154,7 @@ def stack_drop_nans(
     return out
 
 
+@parse_config
 def unstack_fill_nan(
     ds: xr.Dataset, *, dim: str = "loc", coords: Optional[Sequence[str]] = None
 ):
@@ -266,6 +268,7 @@ def get_cat_attrs(ds: Union[xr.Dataset, dict], prefix: str = "cat:") -> dict:
     return {k[len(prefix) :]: v for k, v in attrs.items() if k.startswith(f"{prefix}")}
 
 
+@parse_config
 def maybe_unstack(
     ds: xr.Dataset,
     coords: str = None,
