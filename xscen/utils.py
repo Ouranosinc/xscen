@@ -75,7 +75,6 @@ def translate_time_chunk(chunks: dict, calendar: str, timesize) -> dict:
     return chunks
 
 
-@parse_config
 def stack_drop_nans(
     ds: xr.Dataset,
     mask: xr.DataArray,
@@ -154,7 +153,6 @@ def stack_drop_nans(
     return out
 
 
-@parse_config
 def unstack_fill_nan(
     ds: xr.Dataset, *, dim: str = "loc", coords: Optional[Sequence[str]] = None
 ):
@@ -268,7 +266,6 @@ def get_cat_attrs(ds: Union[xr.Dataset, dict], prefix: str = "cat:") -> dict:
     return {k[len(prefix) :]: v for k, v in attrs.items() if k.startswith(f"{prefix}")}
 
 
-@parse_config
 def maybe_unstack(
     ds: xr.Dataset,
     coords: str = None,
@@ -392,7 +389,6 @@ for cvfile in (Path(__file__).parent / "CVs").glob("*.json"):
         raise ValueError(f"While reading {cvfile} got {err}")
 
 
-@parse_config
 def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     """Changes units of Datasets to non-CF units.
 
@@ -438,7 +434,6 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     return ds
 
 
-@parse_config
 def clean_up(
     ds: xr.Dataset,
     *,
@@ -726,7 +721,6 @@ def publish_release_notes(
     print(history, file=file)
 
 
-@parse_config
 def unstack_dates(
     ds: xr.Dataset,
     seasons: dict = None,

@@ -18,6 +18,7 @@ New features and enhancements
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
+* Functions that are called internally can no longuer parse the configuration. (:pull:`133`).
 
 Bug fixes
 ^^^^^^^^^
