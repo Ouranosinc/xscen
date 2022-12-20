@@ -338,21 +338,11 @@ def spatial_mean(
     def get_spatial_dims(ds):
         # Determine the X and Y names
         spatial_dims = {}
-        for d in ["X", "Y"]:
+        for d in ["longitude", "latitude"]:
             if d in ds.cf.axes:
                 spatial_dims[d] = ds.cf[d].name
-            elif (
-                (d == "X")
-                and ("longitude" in ds.cf.coordinates)
-                and (len(ds[ds.cf.coordinates["longitude"][0]].dims) == 1)
-            ):
-                spatial_dims[d] = ds.cf.coordinates["longitude"]
-            elif (
-                (d == "Y")
-                and ("latitude" in ds.cf.coordinates)
-                and (len(ds[ds.cf.coordinates["latitude"][0]].dims) == 1)
-            ):
-                spatial_dims[d] = ds.cf.coordinates["latitude"]
+            elif d in ds.cf.coordinates:
+                spatial_dims[d] = ds.cf.coordinates[d]
 
         return spatial_dims
 
@@ -363,40 +353,31 @@ def spatial_mean(
         ds = clisops_subset(ds, region)
 
     if method == "cos-lat":
-        # Determine the latitude name
-        spatial_dims = get_spatial_dims(ds)
-        if ("latitude" in ds.cf.coordinates) and (
-            len(ds[ds.cf.coordinates["latitude"][0]].dims) > 1
-        ):
-            raise NotImplementedError(
-                "cos-lat averaging is not yet supported for 2D grids."
-            )
-        if spatial_dims.get("Y") is None:
+        if "latitude" not in ds.cf.coordinates:
             raise ValueError(
                 "Could not determine the latitude name using CF conventions. "
                 "Use kwargs = {lat: str} to specify on which dimension to perform the averaging."
             )
 
-        if "units" not in ds[spatial_dims["Y"]].attrs:
+        if "units" not in ds.cf["latitude"].attrs:
             logger.warning(
                 f"{ds.attrs.get('cat:id', '')}: Latitude does not appear to have units. Make sure that the computation is right."
             )
-        elif ds[spatial_dims["Y"]].attrs["units"] != "degrees_north":
+        elif ds.cf["latitude"].attrs["units"] != "degrees_north":
             logger.warning(
-                f"{ds.attrs.get('cat:id', '')}: Latitude units is '{ds[spatial_dims['Y']].attrs['units']}', expected 'degrees_north'. "
+                f"{ds.attrs.get('cat:id', '')}: Latitude units is '{ds.cf['latitude'].attrs['units']}', expected 'degrees_north'. "
                 f"Make sure that the computation is right."
             )
 
-        weight = np.cos(np.deg2rad(ds[spatial_dims["Y"]]))
-        weight = weight / weight.sum()
+        weight = np.cos(np.deg2rad(ds.cf["latitude"]))
         ds_agg = ds.weighted(weight).mean(
-            [d for d in spatial_dims.values()], keep_attrs=True
+            [d for d in ds.cf.axes["X"] + ds.cf.axes["Y"]], keep_attrs=True
         )
 
         # Prepare the History field
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"weighted mean(dim={[d for d in spatial_dims.values()]}) using a 'cos-lat' approximation - xarray v{xr.__version__}"
+            f"weighted mean(dim={[d for d in ds.cf.axes['X'] + ds.cf.axes['Y']]}) using a 'cos-lat' approximation - xarray v{xr.__version__}"
         )
 
     # This simply calls .mean() over the spatial dimensions
