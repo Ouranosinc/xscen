@@ -26,24 +26,16 @@ Features
 
     readme
     installation
-    usage
-    notebooks/catalog
-    notebooks/getting_started
-    notebooks/config_usage
-    notebooks/diagnostics
-    notebooks/ensemble_reduction
-    notebooks/warminglevels
+    notebooks/1_catalog
+    notebooks/2_getting_started
+    notebooks/3_diagnostics
+    notebooks/4_ensemble_reduction
+    notebooks/5_warminglevels
     columns
     api
     contributing
     authors
     history
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Public Modules
-
-   xscen
 
 .. toctree::
    :maxdepth: 2

@@ -8,25 +8,28 @@ dependencies:
   - cftime
   - clisops
   - xarray
-  - xclim>=0.37
-  - xesmf>=0.6.3
+  - xclim >=0.37
+  - xesmf >=0.6.3
+  # 2022-12-12: ESMpy 8.3.1 and 8.4.0 are incompatible with newest xesmf
+  - esmpy <=8.2
   - dask
   - geopandas
   - pandas
   - rechunker
   - shapely
   - pyyaml
-  - intake-esm>=2022.9.18
+  - intake
+  - intake-esm >=2022.9.18
   # This ensures that the correct numpy is installed as of 2022-07-15.
-  - numba>=0.55.2
+  - numba >=0.55.2
   # Plotting
   - cartopy
   - matplotlib
-  - nc-time-axis>=1.3.1
+  - nc-time-axis >=1.3.1
   # IO
   - h5netcdf
   - netCDF4
-  - pyarrow>=1.0.0  # For lighter in-memory catalogs
+  - pyarrow >=1.0.0  # For lighter in-memory catalogs
   - zarr
   # Dev
   - bumpversion
@@ -34,15 +37,18 @@ dependencies:
   - ipython
   - jupyter_client
   - nbsphinx
+  - nbval
   - pandoc
   - pooch
   - pre-commit
   - pytest
+  - pytest-cov
   - sphinx
   - sphinx-autoapi
   - sphinx_rtd_theme
   - sphinxcontrib-napoleon
+  - xdoctest
   - pip
   # Testing
-  - tox
+  - tox <4.0 # 2022-12-12: tox v4.0 is incompatible with tox-conda plugin
   - tox-conda
