@@ -1,3 +1,4 @@
+# noqa: D100
 import logging
 from copy import deepcopy
 from typing import Optional, Union

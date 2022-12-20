@@ -6,9 +6,7 @@ xscen |logo|
 
 A climate change scenario-building analysis framework, built with Intake-esm catalogs and xarray-based packages such as xclim and xESMF.
 
-For documentation concerning the public API of `xscen`, see: https://xscen.readthedocs.io/en/latest/
-
-For the full documentation with notebooks/examples, please consult: https://scenario.gitlab.ouranos.ca/xscen/ (available only via the Ouranos intranet)
+For documentation concerning `xscen`, see: https://xscen.readthedocs.io/en/latest/
 
 Features
 --------

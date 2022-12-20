@@ -1,0 +1,29 @@
+realm: generic
+indicators:
+  quantile_98_tas:
+    base: xclim.sdba.properties.quantile
+    cf_attrs:
+      long_name: 98th quantile of the mean temperature
+    input:
+      da: tas
+    parameters:
+      q: 0.98
+      group: time.season
+  maximum_length_of_warm_spell:
+    base: xclim.sdba.properties.spell_length_distribution
+    cf_attrs:
+      long_name: Maximum spell length distribution when the mean temperature is larger or equal to the 90th quantile.
+    input:
+      da: tas
+    parameters:
+      method: quantile
+      op: '>='
+      thresh: 0.9
+      stat: max
+  mean-tas:
+    base: xclim.sdba.properties.mean
+    cf_attrs:
+      long_name: Ratio of the mean temperature
+    input:
+      da: tas
+    measure: xclim.sdba.measures.RATIO

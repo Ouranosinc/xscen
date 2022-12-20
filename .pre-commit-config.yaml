@@ -3,7 +3,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.0
+    rev: v3.3.1
     hooks:
     -   id: pyupgrade
         args: [--py38-plus]
@@ -13,15 +13,16 @@ repos:
       - id: trailing-whitespace
         exclude: setup.cfg
       - id: end-of-file-fixer
+        exclude: setup.cfg
       - id: check-yaml
-        args: ['--allow-multiple-documents']
+        args: [ '--allow-multiple-documents' ]
       - id: debug-statements
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.9.0
     hooks:
       - id: rst-inline-touching-normal
   - repo: https://github.com/psf/black
-    rev: 22.10.0
+    rev: 22.12.0
     hooks:
       - id: black
         exclude: ^docs/
@@ -30,23 +31,44 @@ repos:
     hooks:
       - id: flake8
         additional_dependencies: [ 'flake8-rst-docstrings' ]
-        args: ['--config=setup.cfg']
+        args: [ '--config=setup.cfg' ]
   - repo: https://github.com/pycqa/isort
-    rev: 5.10.1
+    rev: 5.11.1
     hooks:
       - id: isort
-        args: ['--profile', 'black', '--filter-files']
+        args: [ '--settings-file=setup.cfg' ]
         exclude: ^docs/
   - repo: https://github.com/pycqa/pydocstyle
     rev: 6.1.1
     hooks:
       - id: pydocstyle
-        args: ['--convention=numpy', '--match="(?!test_).*\.py"']
+        args: [ '--config=setup.cfg' ]
   - repo: https://github.com/adrienverge/yamllint.git
     rev: v1.28.0
     hooks:
       - id: yamllint
-        args: ['--config-file', '.yamllint.yaml']
+        args: [ '--config-file=.yamllint.yaml' ]
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.5.3
+    hooks:
+      - id: nbqa-pyupgrade
+        args: [ '--py38-plus' ]
+      - id: nbqa-black
+        args: [ '--target-version=py38' ]
+      - id: nbqa-isort
+        args: [ "--settings-file=setup.cfg" ]
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.6.1
+    hooks:
+      - id: nbstripout
+        files: ".ipynb"
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        exclude: .cruft.json|docs/notebooks
+        args: [ '--baseline=.secrets.baseline' ]
+#  Currently commented because Git needs to be updated on our work environment.
 #  - repo: https://github.com/mgedmin/check-manifest
 #    rev: "0.48"
 #    hooks:

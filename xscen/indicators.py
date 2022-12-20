@@ -1,3 +1,4 @@
+# noqa: D100
 import logging
 from functools import partial
 from pathlib import Path, PosixPath
@@ -17,7 +18,7 @@ from .utils import CV
 logger = logging.getLogger(__name__)
 
 
-__all__ = ["compute_indicators"]
+__all__ = ["compute_indicators", "load_xclim_module"]
 
 
 def load_xclim_module(filename, reload=False) -> ModuleType:
@@ -65,39 +66,36 @@ def compute_indicators(
     periods: list = None,
     to_level: str = "indicators",
 ) -> Union[dict, xr.Dataset]:
-    """
-    Calculates variables and indicators based on a YAML call to xclim.
+    """Calculate variables and indicators based on a YAML call to xclim.
 
     The function cuts the output to be the same years as the inputs.
-    Hence, if an indicator creates a timestep outside of the original year range (eg. the first DJF for QS-DEC),
+    Hence, if an indicator creates a timestep outside the original year range (e.g. the first DJF for QS-DEC),
     it will not appear in the output.
 
     Parameters
     ----------
     ds : xr.Dataset
-      Dataset to use for the indicators.
+        Dataset to use for the indicators.
     indicators : Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
-      Path to a YAML file that instructs on how to calculate missing variables.
-      Can also be only the "stem", if translations and custom indices are implemented.
-      Can be the indicator module directly, or a sequence of indicators or a sequence of
-      tuples (indicator name, indicator) as returned by `iter_indicators()`.
+        Path to a YAML file that instructs on how to calculate missing variables.
+        Can also be only the "stem", if translations and custom indices are implemented.
+        Can be the indicator module directly, or a sequence of indicators or a sequence of
+        tuples (indicator name, indicator) as returned by `iter_indicators()`.
     periods : list
-      list of [start, end] of continuous periods over which to compute the indicators. This is needed when the time axis of ds contains some jumps in time.
-      If None, the dataset will be considered continuous.
+        list of [start, end] of continuous periods over which to compute the indicators. This is needed when the time axis of ds contains some jumps in time.
+        If None, the dataset will be considered continuous.
     to_level : str, optional
-      The processing level to assign to the output.
-      If None, the processing level of the inputs is preserved.
-
+        The processing level to assign to the output.
+        If None, the processing level of the inputs is preserved.
 
     Returns
     -------
     dict
-      Dictionary (keys = timedeltas) with indicators separated by temporal resolution.
+        Dictionary (keys = timedeltas) with indicators separated by temporal resolution.
 
     See Also
     --------
     xclim.indicators, xclim.core.indicator.build_indicator_module_from_yaml
-
     """
     if isinstance(indicators, (str, Path)):
         logger.debug("Loading indicator module.")
@@ -183,7 +181,7 @@ def compute_indicators(
 def registry_from_module(
     module, registry=None, variable_column="variable"
 ) -> DerivedVariableRegistry:
-    """Converts a xclim virtual indicators module to an intake_esm Derived Variable Registry.
+    """Convert a xclim virtual indicators module to an intake_esm Derived Variable Registry.
 
     Parameters
     ----------
