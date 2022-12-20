@@ -1,3 +1,4 @@
+# noqa: D100
 import datetime
 import logging
 import re
@@ -37,18 +38,17 @@ __all__ = [
 
 
 def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
-    """
-    Custom call to clisops.subset() that allows for an automatic buffer around the region.
+    """Customize a call to clisops.subset() that allows for an automatic buffer around the region.
 
     Parameters
     ----------
     ds : xr.Dataset
-      Dataset to be subsetted
+        Dataset to be subsetted
     region : dict
-      Description of the region and the subsetting method (required fields listed in the Notes)
+        Description of the region and the subsetting method (required fields listed in the Notes)
 
-    Note
-    ----------
+    Notes
+    -----
     'region' fields:
         method: str
             ['gridpoint', 'bbox', shape']
@@ -60,10 +60,10 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
     Returns
     -------
     xr.Dataset
-      Subsetted Dataset
+        Subsetted Dataset.
 
     See Also
-    ________
+    --------
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
     if "buffer" in region.keys():
@@ -148,54 +148,52 @@ def extract_dataset(
     preprocess: Callable = None,
     resample_methods: Optional[dict] = None,
 ) -> Union[dict, xr.Dataset]:
-    """
-    Takes one element of the output of `search_data_catalogs` and returns a dataset,
-    performing conversions and resampling as needed.
+    """Take one element of the output of `search_data_catalogs` and returns a dataset, performing conversions and resampling as needed.
 
     Nothing is written to disk within this function.
 
     Parameters
     ----------
-    catalog: DataCatalog
-      Sub-catalog for a single dataset, one value of the output of `search_data_catalogs`.
+    catalog : DataCatalog
+        Sub-catalog for a single dataset, one value of the output of `search_data_catalogs`.
     variables_and_freqs : dict
-      Variables and freqs, following a 'variable: xrfreq-compatible str' format.
-      If None, it will be read from catalog._requested_variables and catalog._requested_variable_freqs
-      (set by `variables_and_freqs` in `search_data_catalogs`)
+        Variables and freqs, following a 'variable: xrfreq-compatible str' format.
+        If None, it will be read from catalog._requested_variables and catalog._requested_variable_freqs
+        (set by `variables_and_freqs` in `search_data_catalogs`)
     periods : list
-      [start, end] of the period to be evaluated (or a list of lists)
-      Will be read from catalog._requested_periods if None. Leave both None to extract everything.
+        [start, end] of the period to be evaluated (or a list of lists)
+        Will be read from catalog._requested_periods if None. Leave both None to extract everything.
     region : dict, optional
-      Description of the region and the subsetting method (required fields listed in the Notes).
-    to_level: str
-      The processing level to assign to the output.
-      Defaults to 'extracted'
+        Description of the region and the subsetting method (required fields listed in the Notes).
+    to_level : str
+        The processing level to assign to the output.
+        Defaults to 'extracted'
     ensure_correct_time : bool
-      When True (default), even if the data has the correct frequency, its time coordinate is
-      checked so that it exactly matches the frequency code (xrfreq). For example, daily data given at
-      noon would be transformed to be given at midnight. If the time coordinate is invalid,
-      it raises an error.
+        When True (default), even if the data has the correct frequency, its time coordinate is
+        checked so that it exactly matches the frequency code (xrfreq). For example, daily data given at
+        noon would be transformed to be given at midnight. If the time coordinate is invalid,
+        it raises an error.
     xr_open_kwargs : dict, optional
-      A dictionary of keyword arguments to pass to `DataCatalogs.to_dataset_dict`, which
-      will be passed to `xr.open_dataset`.
+        A dictionary of keyword arguments to pass to `DataCatalogs.to_dataset_dict`, which
+        will be passed to `xr.open_dataset`.
     xr_combine_kwargs : dict, optional
-      A dictionary of keyword arguments to pass to `DataCatalogs.to_dataset_dict`, which
-      will be passed to `xr.combine_by_coords`.
+        A dictionary of keyword arguments to pass to `DataCatalogs.to_dataset_dict`, which
+        will be passed to `xr.combine_by_coords`.
     preprocess : callable, optional
-      If provided, call this function on each dataset prior to aggregation.
+        If provided, call this function on each dataset prior to aggregation.
     resample_methods : dict, optional
-      Dictionary where the keys are the variables and the values are the resampling method.
-      Options for the resampling method are {'mean', 'min', 'max', 'sum', 'wind_direction'}.
-      If the method is not given for a variable, it is guessed from the variable name and frequency,
-      using the mapping in CVs/resampling_methods.json. If the variable is not found there,
-      "mean" is used by default.
+        Dictionary where the keys are the variables and the values are the resampling method.
+        Options for the resampling method are {'mean', 'min', 'max', 'sum', 'wind_direction'}.
+        If the method is not given for a variable, it is guessed from the variable name and frequency,
+        using the mapping in CVs/resampling_methods.json. If the variable is not found there,
+        "mean" is used by default.
 
     Returns
     -------
     dict, xr.Dataset
-      Dictionary (keys = xrfreq) with datasets containing all available and computed variables,
-      subsetted to the region, everything resampled to the requested frequency.
-      If there is a single frequency, a Dataset will be returned instead.
+        Dictionary (keys = xrfreq) with datasets containing all available and computed variables,
+        subsetted to the region, everything resampled to the requested frequency.
+        If there is a single frequency, a Dataset will be returned instead.
 
     Notes
     -----
@@ -210,7 +208,7 @@ def extract_dataset(
             Multiplier to apply to the model resolution.
 
     See Also
-    ________
+    --------
     intake_esm.core.esm_datastore.to_dataset_dict, xarray.open_dataset, xarray.combine_by_coords
     """
     resample_methods = resample_methods or {}
@@ -397,27 +395,26 @@ def resample(
     ds: Optional[xr.Dataset] = None,
     method: Optional[str] = None,
 ) -> xr.DataArray:
-    """
-    Aggregate variable to the target frequency.
+    """Aggregate variable to the target frequency.
 
     Parameters
     ----------
-    da: xr.DataArray
-      DataArray of the variable to resample, must have a "time" dimension and be of a
-      finer temporal resolution than "target_timestep".
-    target_frequency: str
-      The target frequency/freq str, must be one of the frequency supported by pandas.
+    da  : xr.DataArray
+        DataArray of the variable to resample, must have a "time" dimension and be of a
+        finer temporal resolution than "target_timestep".
+    target_frequency : str
+        The target frequency/freq str, must be one of the frequency supported by pandas.
     ds : xr.Dataset, optional
-      The "wind_direction" resampling method needs extra variables, which can be given here.
+        The "wind_direction" resampling method needs extra variables, which can be given here.
     method : {'mean', 'min', 'max', 'sum', 'wind_direction'}, optional
-      The resampling method. If None (default), it is guessed from the variable name and frequency,
-      using the mapping in CVs/resampling_methods.json. If the variable is not found there,
-      "mean" is used by default.
+        The resampling method. If None (default), it is guessed from the variable name and frequency,
+        using the mapping in CVs/resampling_methods.json. If the variable is not found there,
+        "mean" is used by default.
 
     Returns
     -------
     xr.DataArray
-      Resampled variable
+        Resampled variable
 
     """
     var_name = da.name
@@ -526,44 +523,43 @@ def search_data_catalogs(
     restrict_resolution: str = None,
     restrict_members: dict = None,
 ) -> dict:
-    """
-    Search through DataCatalogs.
+    """Search through DataCatalogs.
 
     Parameters
     ----------
     data_catalogs : Union[list, DataCatalog]
-      DataCatalog (or multiple, in a list) or paths to JSON/CSV data catalogs. They must use the same columns and aggregation options.
+        DataCatalog (or multiple, in a list) or paths to JSON/CSV data catalogs. They must use the same columns and aggregation options.
     variables_and_freqs : dict
-      Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format.
+        Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format.
     other_search_criteria : dict, optional
-      Other criteria to search for in the catalogs' columns, following a 'column_name: list(subset)' format.
+        Other criteria to search for in the catalogs' columns, following a 'column_name: list(subset)' format.
     exclusions : dict, optional
-      Same as other_search_criteria, but for eliminating results.
+        Same as other_search_criteria, but for eliminating results.
     match_hist_and_fut: bool, optional
-      If True, historical and future simulations will be combined into the same line, and search results lacking one of them will be rejected.
+        If True, historical and future simulations will be combined into the same line, and search results lacking one of them will be rejected.
     periods : list
-      [start, end] of the period to be evaluated (or a list of lists).
+        [start, end] of the period to be evaluated (or a list of lists).
     id_columns : list, optional
-      List of columns used to create a id column. If None is given, the original
-      "id" is left.
-    allow_resampling: bool
-      If True (default), variables with a higher time resolution than requested are considered.
-    allow_conversion: bool
-      If True (default) and if the requested variable cannot be found, intermediate variables are
-      searched given that there exists a converting function in the "derived variable registry".
-    conversion_yaml: str
-      Path to a YAML file that defines the possible conversions (used alongside 'allow_conversion'=True).
-      This file should follow the xclim conventions for building a virtual module.
-      If None, the "derived variable registry" will be defined by the file in "xscen/xclim_modules/conversions.yml"
-    restrict_resolution: str
-      Used to restrict the results to the finest/coarsest resolution available for a given simulation.
-      ['finest', 'coarsest'].
-    restrict_members: dict
-      Used to restrict the results to a given number of members for a given simulation.
-      Currently only supports {"ordered": int} format.
+        List of columns used to create a id column. If None is given, the original
+        "id" is left.
+    allow_resampling : bool
+         If True (default), variables with a higher time resolution than requested are considered.
+    allow_conversion : bool
+        If True (default) and if the requested variable cannot be found, intermediate variables are
+        searched given that there exists a converting function in the "derived variable registry".
+    conversion_yaml : str
+        Path to a YAML file that defines the possible conversions (used alongside 'allow_conversion'=True).
+        This file should follow the xclim conventions for building a virtual module.
+        If None, the "derived variable registry" will be defined by the file in "xscen/xclim_modules/conversions.yml"
+    restrict_resolution : str
+        Used to restrict the results to the finest/coarsest resolution available for a given simulation.
+        ['finest', 'coarsest'].
+    restrict_members : dict
+        Used to restrict the results to a given number of members for a given simulation.
+        Currently only supports {"ordered": int} format.
 
-    Note
-    ----------
+    Notes
+    -----
     - The "other_search_criteria" argument accepts wildcard (*) and regular expressions.
     - Frequency can be wildcarded with 'NA' in the `variables_and_freqs` dict.
     - Variable names cannot be wildcarded, they must be CMIP6-standard.
@@ -579,7 +575,7 @@ def search_data_catalogs(
         `extract_dataset` with the same arguments.
 
     See Also
-    ________
+    --------
     intake_esm.core.esm_datastore.search
     """
     cat_kwargs = {}
@@ -809,49 +805,44 @@ def subset_warming_level(
     to_level: str = "warminglevel-{wl}vs{period0}-{period1}",
     wl_dim: str = "+{wl}Cvs{period0}-{period1}",
 ):
-    """
-    Subsets the input dataset with only the window of time over which the requested level of
-    global warming is first reached, using the IPCC Atlas method.
-
+    """Subsets the input dataset with only the window of time over which the requested level of global warming is first reached, using the IPCC Atlas method.
 
     Parameters
     ----------
-    ds: xr.Dataset
-      Input dataset.
-      The dataset should include attributes to help recognize it and find its
-      warming levels - 'cat:mip_era', 'cat:experiment', 'cat:member', and either
-      'cat:source' for global models or 'cat:driving_model' for regional models.
-    wl: float
-      Warming level.
-      eg. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
-    window: int
-      Size of the rolling window in years over which to compute the warming level.
-    tas_baseline_period: list
-      Base period. The warming is calculated with respect to this period. The default is ["1850", "1900"].
-    ignore_member: bool
-      Whether to ignore the member when searching for the model run in tas_csv.
-    tas_csv: str
-      Path to a csv of annual global mean temperature with a row for each year and a column for each dataset.
-      If None, it will default to data/IPCC_annual_global_tas.csv which was built from
-      the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
-      and extra data from pilot models of MRCC5 and ClimEx.
-    to_level:
-      The processing level to assign to the output.
-      Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
-      `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
-    wl_dim: str
-      The value to use to fill the new `warminglevel` dimension.
-      Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
-      `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
-      If None, no new dimensions will be added.
+    ds : xr.Dataset
+       Input dataset.
+       The dataset should include attributes to help recognize it and find its
+       warming levels - 'cat:mip_era', 'cat:experiment', 'cat:member', and either
+       'cat:source' for global models or 'cat:driving_model' for regional models.
+    wl : float
+       Warming level.
+       eg. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
+    window : int
+       Size of the rolling window in years over which to compute the warming level.
+    tas_baseline_period : list
+       Base period. The warming is calculated with respect to this period. The default is ["1850", "1900"].
+    ignore_member : bool
+       Whether to ignore the member when searching for the model run in tas_csv.
+    tas_csv : str
+       Path to a csv of annual global mean temperature with a row for each year and a column for each dataset.
+       If None, it will default to data/IPCC_annual_global_tas.csv which was built from
+       the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
+       and extra data from pilot models of MRCC5 and ClimEx.
+    to_level :
+       The processing level to assign to the output.
+       Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
+       `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
+    wl_dim : str
+       The value to use to fill the new `warminglevel` dimension.
+       Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
+       `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
+       If None, no new dimensions will be added.
 
     Returns
     -------
     xr.Dataset
         Warming level dataset.
-
     """
-
     if tas_baseline_period is None:
         tas_baseline_period = ["1850", "1900"]
 
@@ -965,7 +956,7 @@ def subset_warming_level(
 
 
 def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
-    """Updates a DataCatalog by recopying each "historical" entry to its corresponding future experiments.
+    """Update a DataCatalog by recopying each "historical" entry to its corresponding future experiments.
 
     For examples, if an historical entry has corresponding "ssp245" and "ssp585" entries,
     then it is copied twice, with its "experiment" field modified accordingly.
@@ -1057,7 +1048,7 @@ def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
 
 
 def _restrict_by_resolution(catalogs: dict, id_columns: list, restrictions: str):
-    """Updates the results from search_data_catalogs by removing simulations with multiple resolutions available.
+    """Update the results from search_data_catalogs by removing simulations with multiple resolutions available.
 
     Notes
     -----
@@ -1180,12 +1171,10 @@ def _restrict_by_resolution(catalogs: dict, id_columns: list, restrictions: str)
 
 
 def _restrict_multimembers(catalogs: dict, id_columns: list, restrictions: dict):
-    """Updates the results from search_data_catalogs by removing simulations with multiple members available
+    """Update the results from search_data_catalogs by removing simulations with multiple members available.
 
     Uses regex to try and adequately detect and order the member's identification number, but only tested for 'r-i-p'.
-
     """
-
     df = pd.concat([catalogs[s].df for s in catalogs.keys()])
     # remove the member from the group_by
     df["id_nomem"] = df[
@@ -1230,8 +1219,8 @@ def _restrict_multimembers(catalogs: dict, id_columns: list, restrictions: dict)
 def _subset_file_coverage(
     df: pd.DataFrame, periods: list, *, coverage: float = 0.99
 ) -> pd.DataFrame:
-    """
-    Returns a subset of files that overlap with the target period(s),
+    """Return a subset of files that overlap with the target period(s).
+
     The minimum resolution for periods is 1 hour.
 
     Parameters

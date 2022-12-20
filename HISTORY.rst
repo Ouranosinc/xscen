@@ -15,6 +15,8 @@ New features and enhancements
 * New ``scripting.skippable`` context, allowing the use of CTRL-C to skip code sections. (:pull:`106`).
 * Possibility of fields with underscores in the patterns of ``parse_directory``. (:pull:`111`).
 * New ``utils.show_versions`` function for printing or writing to file the dependency versions of `xscen`. (:issue:`109`, :pull:`112`).
+* Added previously private notebooks to the documentation. (:pull:`108`).
+* Notebooks are now tested using `pytest` with `nbval`. (:pull:`108`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -22,7 +24,7 @@ Breaking changes
 Bug fixes
 ^^^^^^^^^
 * ``clean_up`` now converts the calendar of variables that use "interpolate" in "missing_by_var" at the same time.
-Hence, when it is a conversion from a 360_day calendar, the random dates are the same for all of the these variables. (:issue:`102`, :pull:`104`).
+    - Hence, when it is a conversion from a 360_day calendar, the random dates are the same for all of the these variables. (:issue:`102`, :pull:`104`).
 * ``properties_and_measures`` no longer casts month coordinates to string. (:pull:`106`).
 * `search_data_catalogs` no longer crashes if it finds nothing. (:issue:`42`, :pull:`92`).
 * Prevented fixed fields from being duplicated during `_dispatch_historical_to_future` (:issue:`81`, :pull:`92`).
@@ -36,6 +38,8 @@ Internal changes
 * ``compute_deltas`` skips the unstacking step if there is no time dimension and cast object dimensions to string. (:pull:`9`)
 * Added the "2sem" frequency to the translations CVs. (:pull:`111`).
 * Skip files we can't read in ``parse_directory``. (:pull:`111`).
+* Fixed non-numpy-standard Docstrings. (:pull:`108`).
+* Added more metadata to package description on PyPI. (:pull:`108`).
 * Faster ``search_data_catalogs`` and ``extract_dataset`` through a faster ``DataCatalog.unique``, date parsing and a rewrite of the ``ensure_correct_time`` logic. (:pull:`127`).
 
 v0.4.0 (2022-09-28)

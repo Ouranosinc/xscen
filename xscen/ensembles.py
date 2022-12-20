@@ -1,3 +1,4 @@
+# noqa: D100
 import inspect
 import logging
 import warnings
@@ -28,27 +29,26 @@ def ensemble_stats(
     to_level: str = "ensemble",
     stats_kwargs=None,
 ) -> xr.Dataset:
-    """
-    Creates an ensemble and computes statistics on it.
+    """Create an ensemble and computes statistics on it.
 
     Parameters
     ----------
-    datasets: Any
+    datasets : Any
         List of file paths or xarray Dataset/DataArray objects to include in the ensemble.
         A dictionary can be passed instead of a list, in which case the keys are used as coordinates along the new
         `realization` axis.
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
-    statistics: dict
+    statistics : dict
         xclim.ensembles statistics to be called. Dictionary in the format {function: arguments}.
         If a function requires 'ref', the dictionary entry should be the inputs of a .loc[], e.g. {"ref": {"horizons": "1981-2010"}}
-    create_kwargs: dict
+    create_kwargs : dict
         Dictionary of arguments for xclim.ensembles.create_ensemble.
-    weights: xr.DataArray
+    weights : xr.DataArray
         Weights to apply along the 'realization' dimension. This array cannot contain missing values.
-    common_attrs_only:
+    common_attrs_only : bool
         If True, keeps only the global attributes that are the same for all datasets and generate new id.
         If False, keeps global attrs of the first dataset (same behaviour as xclim.ensembles.create_ensemble)
-    to_level: str
+    to_level : str
         The processing level to assign to the output.
 
     Returns
@@ -65,7 +65,8 @@ def ensemble_stats(
 
     if isinstance(statistics, str) and isinstance(stats_kwargs, dict):
         warnings.warn(
-            "The usage of 'statistics: str' with 'stats_kwargs: dict' will be abandoned. Please use 'statistics: dict' instead.",
+            "The usage of 'statistics: str' with 'stats_kwargs: dict' will be abandoned. "
+            "Please use 'statistics: dict' instead.",
             category=FutureWarning,
         )
         statistics = {statistics: stats_kwargs}
@@ -142,17 +143,16 @@ def generate_weights(
     datasets: Union[dict, list],
     independence_level: str = "all",
 ) -> xr.DataArray:
-    """
-    Uses realization attributes to automatically generate weights along the 'realization' dimension.
+    """Use realization attributes to automatically generate weights along the 'realization' dimension.
 
     Parameters
     ----------
-    datasets: dict
+    datasets : dict
         List of Dataset objects that will be included in the ensemble.
         The datasets should include attributes to help recognize them - 'cat:activity','cat:source', and 'cat:driving_model' for regional models.
         A dictionary can be passed instead of a list, in which case the keys are used for the 'realization' coordinate.
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
-    independence_level: str
+    independence_level : str
         'all': Weights using the method '1 model - 1 Vote', where every unique combination of 'source' and 'driving_model' is considered a model.
         'GCM': Weights using the method '1 GCM - 1 Vote'
 
@@ -161,7 +161,6 @@ def generate_weights(
     xr.DataArray
         Weights along the 'realization' dimension.
     """
-
     # TODO: 2-D weights along the horizon dimension
 
     if (isinstance(datasets, list)) and (isinstance(datasets[0], (str, Path))):
