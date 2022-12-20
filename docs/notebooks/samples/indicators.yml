@@ -1,6 +1,6 @@
 realm: atmos
 indicators:
-  growing_degree_days:
+  growing_degree_daysTESTS:
     base: growing_degree_days
   tg_min:
     base: tg_min
