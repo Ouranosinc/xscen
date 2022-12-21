@@ -150,6 +150,7 @@ csv_kwargs = {
 class DataCatalog(intake_esm.esm_datastore):
     """
     A read-only intake_esm catalog adapted to xscen's syntax.
+
     This class expects the catalog to have the columns listed in :py:data:`xscen.catalog.COLUMNS`
     and it comes with default arguments for reading the CSV files (:py:data:`xscen.catalog.csv_kwargs`).
     For example, all string columns (except `path`) are casted to a categorical dtype and the
