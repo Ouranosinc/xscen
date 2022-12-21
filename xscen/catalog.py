@@ -246,12 +246,14 @@ class DataCatalog(intake_esm.esm_datastore):
         if self.df.size == 0:
             raise ValueError("Catalog is empty.")
         if isinstance(columns, str):
-            columns = [columns]
+            cols = [columns]
         elif columns is None:
-            columns = self.df.columns
-        uni = pd.Series(self._unique(list(columns)))
-        if len(columns) == 1:
-            return uni[columns[0]]
+            cols = list(self.df.columns)
+        else:
+            cols = list(columns)
+        uni = pd.Series(self._unique(cols))
+        if isinstance(columns, str):
+            return uni[columns]
         return uni
 
     def iter_unique(self, *columns):
