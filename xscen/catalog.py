@@ -248,7 +248,10 @@ class DataCatalog(intake_esm.esm_datastore):
             columns = [columns]
         elif columns is None:
             columns = self.df.columns
-        return pd.Series(self._unique(list(columns)))
+        uni = pd.Series(self._unique(list(columns)))
+        if len(columns) == 1:
+            return uni[columns[0]]
+        return uni
 
     def iter_unique(self, *columns):
         """Iterate over sub-catalogs for each group of unique values for all specified columns.
