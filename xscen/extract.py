@@ -265,7 +265,7 @@ def extract_dataset(
                 # Check if we got the expected freq (skip for too short timeseries)
                 inffreq = xr.infer_freq(ds_ts.time) if ds_ts.time.size > 2 else None
                 if inffreq == expfreq:
-                    # Even the freq is correct, we ensure the correct "anchor" for daily and finer
+                    # Even when the freq is correct, we ensure the correct "anchor" for daily and finer
                     if expfreq in "DHTMUL":
                         ds_ts["time"] = ds_ts.time.dt.floor(expfreq)
                 else:
