@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Cancel previous runs
-        uses: styfle/cancel-workflow-action@0.9.1
+        uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
       - uses: actions/checkout@v3
@@ -25,9 +25,14 @@ jobs:
         with:
           python-version: "3.8"
       - name: Install tox
-        run: pip install tox
+        shell: bash -l {0}
+        run: |
+          pip install tox~=3.0
       - name: Run linting suite
-        run: tox -e black
+        shell: bash -l {0}
+        run: |
+          tox -e black
+
 
   test:
     name: Smoke Test
@@ -36,23 +41,57 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup conda
-        uses: conda-incubator/setup-miniconda@v2.1.1
+        uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: xscen
+          auto-update-conda: true
           channels: conda-forge,defaults
           mamba-version: "*"
           python-version: "3.9"
       - name: Conda and mamba versions
         shell: bash -l {0}
-        run: mamba --version
+        run: |
+          mamba --version
       - name: Install tox
         shell: bash -l {0}
-        run: mamba install -n xscen tox tox-conda
+        run: |
+          mamba install -n xscen "tox<4.0" tox-conda
       - name: Test with tox
         shell: bash -l {0}
         run: |
           conda activate xscen
           tox -e py39
+        env:
+          CONDA_EXE: mamba
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  doctests:
+    name: Doctests
+    needs: black
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: xscen
+          auto-update-conda: true
+          channels: conda-forge,defaults
+          mamba-version: "*"
+          python-version: "3.9"
+      - name: Conda and mamba versions
+        shell: bash -l {0}
+        run: |
+          mamba --version
+      - name: Install tox
+        shell: bash -l {0}
+        run: |
+          mamba install -n xscen "tox<4.0" tox-conda
+      - name: Doctests with tox
+        shell: bash -l {0}
+        run: |
+          conda activate xscen
+          tox -e doctests
         env:
           CONDA_EXE: mamba
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

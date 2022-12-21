@@ -1,6 +1,4 @@
-"""
-A collection of various convenience objects and functions to use in scripts.
-"""
+"""A collection of various convenience objects and functions to use in scripts."""
 import logging
 import mimetypes
 import os
@@ -246,13 +244,13 @@ class measure_time:
         self.cpu = cpu
         self.logger = logger
 
-    def __enter__(self):
+    def __enter__(self):  # noqa: D105
         self.start = time.perf_counter()
         self.start_cpu = time.process_time()
         self.logger.info(f"Started process {self.name}.")
         return
 
-    def __exit__(self, *args, **kwargs):
+    def __exit__(self, *args, **kwargs):  # noqa: D105
         elapsed = time.perf_counter() - self.start
         elapsed_cpu = time.process_time() - self.start_cpu
         occ = elapsed_cpu / elapsed

@@ -1,5 +1,7 @@
-"""
+"""Configuration module.
+
 Configuration in this module is taken from yaml files.
+
 Functions wrapped by :py:func:`parse_config` have their kwargs automatically patched by
 values in the config.
 
@@ -97,6 +99,7 @@ CONFIG = ConfigDict()
 
 def recursive_update(d, other):
     """Update a dictionary recursively with another dictionary.
+
     Values that are Mappings are updated recursively as well.
     """
     for k, v in other.items():
@@ -112,6 +115,7 @@ def recursive_update(d, other):
 
 
 def args_as_str(*args: Tuple[Any, ...]) -> Tuple[str, ...]:
+    """Return arguments as strings."""
     new_args = []
     for i, arg in enumerate(*args):
         if isinstance(arg, Path):
@@ -152,7 +156,7 @@ def load_config(*files, reset=False, verbose=False):
             _setup_external(module, CONFIG.get(module, {}))
 
 
-def parse_config(func_or_cls):
+def parse_config(func_or_cls):  # noqa: D103
 
     module = ".".join(func_or_cls.__module__.split(".")[1:])
 

@@ -1,3 +1,4 @@
+# noqa: D100
 import logging
 import os
 import shutil as sh
@@ -30,20 +31,18 @@ __all__ = [
 
 
 def get_engine(file: str) -> str:
-    """
-    Uses a h5py functionality to determine if a NetCDF file is compatible with h5netcdf
+    """Use functionality of h5py to determine if a NetCDF file is compatible with h5netcdf.
 
     Parameters
     ----------
-    file: str
-      Path to the file.
+    file : str
+        Path to the file.
 
     Returns
     -------
     str
-      Engine to use with xarray
+        Engine to use with xarray
     """
-
     # find the ideal engine for xr.open_mfdataset
     if Path(file).suffix == ".zarr":
         engine = "zarr"
@@ -61,24 +60,23 @@ def estimate_chunks(
     target_mb: float = 50,
     chunk_per_variable: bool = False,
 ) -> dict:
-    """
-    Returns an approximate chunking for a file or dataset.
+    """Return an approximate chunking for a file or dataset.
 
     Parameters
     ----------
     ds : xr.Dataset, str
-      Either a xr.Dataset or the path to a NetCDF file. Existing chunks are not taken into account.
+        Either a xr.Dataset or the path to a NetCDF file. Existing chunks are not taken into account.
     dims : list
-      Dimension(s) on which to estimate the chunking. Not implemented for more than 2 dimensions.
-    target_mb: float, optional
-      Roughly the size of chunks (in Mb) to aim for.
-    chunk_per_variable: bool
-      If True, the output will be separated per variable. Otherwise, a common chunking will be found.
+        Dimension(s) on which to estimate the chunking. Not implemented for more than 2 dimensions.
+    target_mb : float, optional
+        Roughly the size of chunks (in Mb) to aim for.
+    chunk_per_variable : bool
+        If True, the output will be separated per variable. Otherwise, a common chunking will be found.
 
     Returns
     -------
     dict
-      dictionary of estimated chunks
+        dictionary of estimated chunks
 
     """
 
@@ -205,21 +203,20 @@ def subset_maxsize(
     ds: xr.Dataset,
     maxsize_gb: float,
 ) -> list:
-    """
-    Estimate a dataset's size and, if higher than the given limit, subset it alongside the 'time' dimension
+    """Estimate a dataset's size and, if higher than the given limit, subset it alongside the 'time' dimension.
 
     Parameters
     ----------
     ds : xr.Dataset
-      Dataset to be saved.
+        Dataset to be saved.
     maxsize_gb : float
-      Target size for the NetCDF files. If the dataset is bigger than this number, it will be separated alongside the 'time' dimension.
+        Target size for the NetCDF files.
+        If the dataset is bigger than this number, it will be separated alongside the 'time' dimension.
 
     Returns
     -------
     list
-      list of xr.Dataset subsetted alongside 'time' to limit the filesize to the requested maximum.
-
+        list of xr.Dataset subsetted alongside 'time' to limit the filesize to the requested maximum.
     """
     # Estimate the size of the dataset
     size_of_file = 0
@@ -256,9 +253,9 @@ def clean_incomplete(path: Union[str, os.PathLike], complete: Sequence[str]) -> 
     Parameters
     ----------
     path : str, Path
-      A path to a zarr folder.
+        A path to a zarr folder.
     complete : sequence of strings
-      Name of variables that were completed.
+        Name of variables that were completed.
 
     Returns
     -------
@@ -282,29 +279,28 @@ def save_to_netcdf(
     rechunk: Optional[dict] = None,
     netcdf_kwargs: Optional[dict] = None,
 ) -> None:
-    """Saves a Dataset to NetCDF, rechunking if requested.
+    """Save a Dataset to NetCDF, rechunking if requested.
 
     Parameters
     ----------
     ds : xr.Dataset
-      Dataset to be saved.
+        Dataset to be saved.
     filename : str
-      Name of the NetCDF file to be saved.
+        Name of the NetCDF file to be saved.
     rechunk : dict, optional
-      This is a mapping from dimension name to new chunks (in any format understood by dask).
-      Rechunking is only done on *data* variables sharing dimensions with this argument.
+        This is a mapping from dimension name to new chunks (in any format understood by dask).
+        Rechunking is only done on *data* variables sharing dimensions with this argument.
     netcdf_kwargs : dict, optional
-      Additional arguments to send to_netcdf()
+        Additional arguments to send to_netcdf()
 
     Returns
     -------
     None
 
     See Also
-    ________
+    --------
     xarray.Dataset.to_netcdf
     """
-
     if rechunk:
         for rechunk_var in ds.data_vars:
             # Support for chunks varying per variable
@@ -361,8 +357,8 @@ def save_to_zarr(
     itervar: bool = False,
     timeout_cleanup: bool = True,
 ) -> None:
-    """
-    Saves a Dataset to Zarr, rechunking if requested.
+    """Save a Dataset to Zarr format, rechunking if requested.
+
     According to mode, removes variables that we don't want to re-compute in ds.
 
     Parameters
@@ -378,7 +374,7 @@ def save_to_zarr(
       Additional arguments to send to_zarr()
     compute : bool
       Whether to start the computation or return a delayed object.
-    mode: {'f', 'o', 'a'}
+    mode : {'f', 'o', 'a'}
       If 'f', fails if any variable already exists.
       if 'o', removes the existing variables.
       if 'a', skip existing variables, writes the others.
@@ -397,10 +393,9 @@ def save_to_zarr(
     dask.delayed object if compute=False, None otherwise.
 
     See Also
-    ________
+    --------
     xarray.Dataset.to_zarr
     """
-
     # to address this issue https://github.com/pydata/xarray/issues/3476
     for v in list(ds.coords.keys()):
         if ds.coords[v].dtype == object:
@@ -537,29 +532,29 @@ def rechunk(
     Parameters
     ----------
     path_in : path, str or xr.Dataset
-      Input to rechunk.
+        Input to rechunk.
     path_out : path or str
-      Path to the target zarr.
-    chunks_over_var: dict
-      Mapping from variables to mappings from dimension name to size. Give this argument or `chunks_over_dim`.
-    chunks_over_dim: dict
-      Mapping from dimension name to size that will be used for all variables in ds.
-      Give this argument or `chunks_over_var`.
+        Path to the target zarr.
+    chunks_over_var : dict
+        Mapping from variables to mappings from dimension name to size. Give this argument or `chunks_over_dim`.
+    chunks_over_dim : dict
+        Mapping from dimension name to size that will be used for all variables in ds.
+        Give this argument or `chunks_over_var`.
     worker_mem : str
-      The maximal memory usage of each task.
-      When using a distributed Client, this an approximate memory per thread.
-      Each worker of the client should have access to 10-20% more memory than this times the number of threads.
-    temp_store: path, str, optional
-      A path to a zarr where to store intermediate results.
-    overwrite: bool
-      If True, it will delete whatever is in path_out before doing the rechunking.
+        The maximal memory usage of each task.
+        When using a distributed Client, this an approximate memory per thread.
+        Each worker of the client should have access to 10-20% more memory than this times the number of threads.
+    temp_store : path, str, optional
+        A path to a zarr where to store intermediate results.
+    overwrite : bool
+        If True, it will delete whatever is in path_out before doing the rechunking.
 
     Returns
     -------
     None
 
     See Also
-    ________
+    --------
     rechunker.rechunk
     """
     if Path(path_out).is_dir() and overwrite:

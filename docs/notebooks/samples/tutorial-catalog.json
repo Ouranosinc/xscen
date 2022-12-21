@@ -1,0 +1,37 @@
+{
+  "esmcat_version": "0.1.0",
+  "attributes": [],
+  "assets": {
+    "column_name": "path",
+    "format": null,
+    "format_column_name": "format"
+  },
+  "aggregation_control": {
+    "variable_column_name": "variable",
+    "groupby_attrs": [
+      "id",
+      "domain",
+      "processing_level",
+      "xrfreq"
+    ],
+    "aggregations": [
+      {
+        "type": "join_existing",
+        "attribute_name": "date_start",
+        "options": {
+          "dim": "time"
+        }
+      },
+      {
+        "type": "union",
+        "attribute_name": "variable",
+        "options": {}
+      }
+    ]
+  },
+  "id": "tutorial-catalog",
+  "description": "Catalog for the tutorial NetCDFs.",
+  "title": "tutorial-catalog",
+  "last_updated": "2022-11-18T20:10:33Z",
+  "catalog_file": "tutorial-catalog.csv"
+}
