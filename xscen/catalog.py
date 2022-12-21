@@ -120,18 +120,6 @@ def _parse_list_of_strings(elem):
     return (elem,)
 
 
-# def _parse_dates(elem):
-#     try:
-#         if isinstance(elem, str):
-#             return pd.Timestamp(elem).to_period("H")
-#         return pd.DatetimeIndex(elem).to_period("H")
-#     except pd.errors.OutOfBoundsDatetime:
-#         warnings.warn(
-#             "Somes dates are out of the datetime64[ns] range, switching to slower direct period parsing."
-#         )
-#         if isinstance(elem, str):
-#             return pd.Period(elem, freq="H")
-#         return pd.PeriodIndex(elem, freq="H")
 def _parse_dates(elem):
     """Parse an array of dates (strings) into a PeriodIndex of hourly frequency."""
     # Cast to normal datetime as this is much faster than to period for in-bounds dates
@@ -162,6 +150,11 @@ csv_kwargs = {
 class DataCatalog(intake_esm.esm_datastore):
     """
     A read-only intake_esm catalog adapted to xscen's syntax.
+    This class expects the catalog to have the columns listed in :py:data:`xscen.catalog.COLUMNS`
+    and it comes with default arguments for reading the CSV files (:py:data:`xscen.catalog.csv_kwargs`).
+    For example, all string columns (except `path`) are casted to a categorical dtype and the
+    datetime columns are parsed with a special function that allows dates outside the conventional
+    `datetime64[ns]` bounds by storing the data using :py:class:`pandas.Period` objects.
 
     See Also
     --------
