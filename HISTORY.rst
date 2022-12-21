@@ -40,6 +40,7 @@ Internal changes
 * Skip files we can't read in ``parse_directory``. (:pull:`111`).
 * Fixed non-numpy-standard Docstrings. (:pull:`108`).
 * Added more metadata to package description on PyPI. (:pull:`108`).
+* Faster ``search_data_catalogs`` and ``extract_dataset`` through a faster ``DataCatalog.unique``, date parsing and a rewrite of the ``ensure_correct_time`` logic. (:pull:`127`).
 
 v0.4.0 (2022-09-28)
 -------------------
