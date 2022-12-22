@@ -1,3 +1,4 @@
+# noqa: D100
 import ast
 import itertools
 import json
@@ -10,7 +11,7 @@ from copy import deepcopy
 from datetime import datetime
 from glob import glob
 from pathlib import Path, PosixPath
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import cftime
 import dask
@@ -18,6 +19,7 @@ import fsspec as fs
 import intake_esm
 import netCDF4
 import pandas as pd
+import tlz
 import xarray
 import xarray as xr
 import yaml
@@ -119,17 +121,15 @@ def _parse_list_of_strings(elem):
 
 
 def _parse_dates(elem):
-    try:
-        if isinstance(elem, str):
-            return pd.Timestamp(elem).to_period("H")
-        return pd.DatetimeIndex(elem).to_period("H")
-    except pd.errors.OutOfBoundsDatetime:
-        warnings.warn(
-            "Somes dates are out of the datetime64[ns] range, switching to slower direct period parsing."
-        )
-        if isinstance(elem, str):
-            return pd.Period(elem, freq="H")
-        return pd.PeriodIndex(elem, freq="H")
+    """Parse an array of dates (strings) into a PeriodIndex of hourly frequency."""
+    # Cast to normal datetime as this is much faster than to period for in-bounds dates
+    # errors are coerced to NaT, we convert to a PeriodIndex and then to a (mutable) series
+    time = pd.to_datetime(elem, errors="coerce").astype(pd.PeriodDtype("H")).to_series()
+    nat = time.isnull()
+    # Only where we have NaT (parser errors and empty fields), parse into a Period
+    # This will raise DateParseError as expected if the string is not parsable.
+    time[nat] = pd.PeriodIndex(elem[nat], freq="H")
+    return pd.PeriodIndex(time)
 
 
 csv_kwargs = {
@@ -151,8 +151,14 @@ class DataCatalog(intake_esm.esm_datastore):
     """
     A read-only intake_esm catalog adapted to xscen's syntax.
 
+    This class expects the catalog to have the columns listed in :py:data:`xscen.catalog.COLUMNS`
+    and it comes with default arguments for reading the CSV files (:py:data:`xscen.catalog.csv_kwargs`).
+    For example, all string columns (except `path`) are casted to a categorical dtype and the
+    datetime columns are parsed with a special function that allows dates outside the conventional
+    `datetime64[ns]` bounds by storing the data using :py:class:`pandas.Period` objects.
+
     See Also
-    ________
+    --------
     intake_esm.core.esm_datastore
     """
 
@@ -192,7 +198,7 @@ class DataCatalog(intake_esm.esm_datastore):
           If `metadata` doesn't contain it, a name to give to the catalog.
 
         See Also
-        ________
+        --------
         pandas.read_csv
         """
         if isinstance(paths, os.PathLike):
@@ -215,20 +221,40 @@ class DataCatalog(intake_esm.esm_datastore):
         # Create the intake catalog
         return cls({"esmcat": esmdata, "df": df}, **intake_kwargs)
 
-    def __dir__(self) -> List[str]:
+    def __dir__(self) -> List[str]:  # noqa: D105
         rv = ["iter_unique", "drop_duplicates", "check_valid"]
         return super().__dir__() + rv
 
+    def _unique(self, columns) -> Dict:
+        def _find_unique(series):
+            values = series.dropna()
+            if series.name in self.esmcat.columns_with_iterables:
+                values = tlz.concat(values)
+            return list(tlz.unique(values))
+
+        data = self.df[columns]
+        if data.empty:
+            return {col: [] for col in self.df.columns}
+        else:
+            return data.apply(_find_unique, result_type="reduce").to_dict()
+
     def unique(self, columns: Union[str, list] = None):
-        """
-        Simpler way to get unique elements from a column in the catalog.
+        """Return a series of unique values in the catalog.
+
+        Subsets on a columns list if specified.
         """
         if self.df.size == 0:
             raise ValueError("Catalog is empty.")
-        out = super().unique()
-        if columns is not None:
-            out = out[columns]
-        return out
+        if isinstance(columns, str):
+            cols = [columns]
+        elif columns is None:
+            cols = list(self.df.columns)
+        else:
+            cols = list(columns)
+        uni = pd.Series(self._unique(cols))
+        if isinstance(columns, str):
+            return uni[columns]
+        return uni
 
     def iter_unique(self, *columns):
         """Iterate over sub-catalogs for each group of unique values for all specified columns.
@@ -236,12 +262,12 @@ class DataCatalog(intake_esm.esm_datastore):
         This is a generator that yields a tuple of the unique values of the current
         group, in the same order as the arguments, and the sub-catalog.
         """
-        for values in itertools.product(*map(self.unique, columns)):
+        for values in itertools.product(*self.unique(columns)):
             sim = self.search(**dict(zip(columns, values)))
             if sim:  # So we never yield empty catalogs
                 yield values, sim
 
-    def drop_duplicates(self, columns: Optional[List[str]] = None):
+    def drop_duplicates(self, columns: Optional[List[str]] = None):  # noqa: D102
         # In case variables are being added in an existing Zarr, append them
         if columns is None:
             columns = ["id", "path"]
@@ -269,7 +295,7 @@ class DataCatalog(intake_esm.esm_datastore):
             subset=columns, keep="last", ignore_index=True, inplace=True
         )
 
-    def check_valid(self):
+    def check_valid(self):  # noqa: D102
         # In case files were deleted manually, double-check that files do exist
         def check_existing(row):
             path = Path(row.path)
@@ -322,11 +348,10 @@ class DataCatalog(intake_esm.esm_datastore):
 
 
 class ProjectCatalog(DataCatalog):
-    """
-    A DataCatalog with additional 'write' functionalities that can update and upload itself.
+    """A DataCatalog with additional 'write' functionalities that can update and upload itself.
 
     See Also
-    ________
+    --------
     intake_esm.core.esm_datastore
     """
 
@@ -420,28 +445,25 @@ class ProjectCatalog(DataCatalog):
         project: dict = None,
         **kwargs,
     ):
-        """
-        Open or create a project catalog.
+        """Open or create a project catalog.
 
         Parameters
         ----------
-        df : PathLike, dict
-          If string, this must be a path or URL to a catalog JSON file.
-          If dict, this must be a dict representation of an ESM catalog.  See the notes below.
-        create: bool
-          If True, and if 'df' is a string, this will create an empty ProjectCatalog if none already exists.
+        df : str, dict
+            If str, this must be a path or URL to a catalog JSON file.
+            If dict, this must be a dict representation of an ESM catalog.  See the notes below.
+        create : bool
+            If True, and if 'df' is a string, this will create an empty ProjectCatalog if none already exists.
         project : dict-like
-          Metadata to create the catalog, if required.
+            Metadata to create the catalog, if required.
         overwrite : bool
-          If this and 'create' are True, this will overwrite any existing JSON and CSV file with an empty catalog.
+            If this and 'create' are True, this will overwrite any existing JSON and CSV file with an empty catalog.
 
         Notes
-        ----------
+        -----
         The dictionary in 'df' must have two keys: ‘esmcat’ and ‘df’.
         The ‘esmcat’ key must be a dict representation of the ESM catalog. This should follow the template used by xscen.catalog.esm_col_data.
         The ‘df’ key must be a Pandas DataFrame containing content that would otherwise be in the CSV file.
-
-
         """
         if create:
             if isinstance(df, (str, Path)) and (
@@ -466,7 +488,7 @@ class ProjectCatalog(DataCatalog):
             ]
         ] = None,
     ):
-        """Updates the catalog with new data and writes the new data to the csv file.
+        """Update the catalog with new data and writes the new data to the csv file.
 
         Once the internal dataframe is updated with `df`, the csv on disk is parsed,
         updated with the internal dataframe, duplicates are dropped and everything is
@@ -548,8 +570,10 @@ class ProjectCatalog(DataCatalog):
         ds: xarray.Dataset,
         path: str,
         info_dict: Optional[dict] = None,
+        **info_kwargs,
     ):
-        """Updates the catalog with new data and writes the new data to the csv file.
+        """Update the catalog with new data and writes the new data to the csv file.
+
         We get the new data from the attributes of `ds`, the dictionary `info_dict` and `path`.
 
         Once the internal dataframe is updated with the new data, the csv on disk is parsed,
@@ -565,12 +589,12 @@ class ProjectCatalog(DataCatalog):
         Parameters
         ----------
         ds : xarray.Dataset
-          Dataset that we want to add to the catalog.
-          The columns of the catalog will be filled from the global attributes starting with 'cat:' of the dataset.
-        info_dict: dict
-          Optional extra information to fill the catalog.
-        path: str
-          Path where ds is stored
+            Dataset that we want to add to the catalog.
+            The columns of the catalog will be filled from the global attributes starting with 'cat:' of the dataset.
+        info_dict : dict
+            Optional extra information to fill the catalog.
+        path : str
+            Path where ds is stored
         """
         d = {}
 
@@ -579,6 +603,8 @@ class ProjectCatalog(DataCatalog):
                 d[col] = ds.attrs[f"cat:{col}"]
         if info_dict:
             d.update(info_dict)
+        if info_kwargs:
+            d.update(info_kwargs)
 
         if "time" in ds:
             d["date_start"] = str(
@@ -588,7 +614,7 @@ class ProjectCatalog(DataCatalog):
                 ds.isel(time=-1).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
             )
 
-        d["path"] = path
+        d["path"] = str(path)
 
         # variable should be based on the Dataset
         d["variable"] = tuple(v for v in ds.data_vars if len(ds[v].dims) > 0)
@@ -602,9 +628,7 @@ class ProjectCatalog(DataCatalog):
         self.update(pd.Series(d))
 
     def refresh(self):
-        """
-        Re-reads the catalog csv saved on disk.
-        """
+        """Reread the catalog CSV saved on disk."""
         if self.meta_file is None:
             raise ValueError(
                 "Only full catalogs can be refreshed, but this instance is only a subset."
@@ -618,7 +642,7 @@ class ProjectCatalog(DataCatalog):
         if len(self.df) != initlen:
             self.update()
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> str:  # noqa: D105
         return (
             f'<{self.esmcat.id or ""} project catalog with {len(self)} dataset(s) from '
             f'{len(self.df)} asset(s) ({"subset" if self.meta_file is None else "full"})>'
@@ -767,18 +791,18 @@ def _name_parser(
     Parameters
     ----------
     path : str
-      Full file path.
+        Full file path.
     patterns : list or str
-      List of patterns to try in `reverse_format`, special wildcards to manage underscores are added.
-      See :py:func:`parse_directory`.
+        List of patterns to try in `reverse_format`, special wildcards to manage underscores are added.
+        See :py:func:`parse_directory`.
     columns : list of string, optional
-      If given, the metadata is restricted to fields from this list.
+        If given, the metadata is restricted to fields from this list.
     read_from_file : list of string or dict, optional
-      If not None, passed directly to :py:func:`parse_from_ds` as `names`.
-    attrs_map: dict, optional
-      If `read_from_file` is not None, passed directly to :py:func:`parse_from_ds`.
-    xr_open_kwargs: dict, optional
-      If required, arguments to send to xr.open_dataset() when opening the file to read the attributes.
+        If not None, passed directly to :py:func:`parse_from_ds` as `names`.
+    attrs_map : dict, optional
+        If `read_from_file` is not None, passed directly to :py:func:`parse_from_ds`.
+    xr_open_kwargs : dict, optional
+        If required, arguments to send to xr.open_dataset() when opening the file to read the attributes.
 
     Returns
     -------
@@ -868,7 +892,7 @@ def parse_directory(
     ----------
     directories : list
         List of directories to parse. The parse is recursive and accepts wildcards (*).
-    globpattern: str
+    globpattern : str
         A glob pattern for file name matching, usually only a suffix like "*.nc".
         May include folder matching, in which case don't forget that the search is parallelized for
         subfolders up to the depth given by `parallel_depth`. Contrary to real posix glob patterns,
@@ -881,7 +905,7 @@ def parse_directory(
     read_from_file : boolean or set of strings or tuple of 2 sets of strings.
         If True, if some fields were not parsed from their path, files are opened and
         missing fields are parsed from their metadata, if found.
-        If a set of column names, only those fields are parsed from the file, if missing.
+        If a sequence of column names, only those fields are parsed from the file, if missing.
         If False (default), files are never opened.
         If a tuple of 2 lists of strings, only the first file of groups defined by the
         first list of columns is read and the second list of columns is parsed from the
@@ -891,7 +915,7 @@ def parse_directory(
         Using the {column_name: description} format, information to apply to all files.
     cvs: str or PosixPath or dict, optional
         Dictionary with mapping from parsed name to controlled names for each column.
-        May have an additionnal "attributes" entry which maps from attribute names in the files to
+        May have an additional "attributes" entry which maps from attribute names in the files to
         official column names. The attribute translation is done before the rest.
         In the "variable" entry, if a name is mapped to None (null), that variable will not be listed in the catalog.
     xr_open_kwargs: dict
@@ -900,7 +924,7 @@ def parse_directory(
         The level at which to parallelize the file search. A value of 1 (default and minimum), means the subfolders
         of each directory are searched in parallel, a value of 2 would search the subfolders' subfolders in parallel, and so on.
     only_official_columns: bool
-        If True (default), this ensure the final catalog only has the columns defined in :py:data:`COLUMNS`. Other fields in the patterns will raise an error.
+        If True (default), this ensures the final catalog only has the columns defined in :py:data:`COLUMNS`. Other fields in the patterns will raise an error.
         If False, the columns are those used in the patterns and the homogenous info. In that case, the column order is not determined.
         Path, format and id are always present in the output.
 
@@ -1163,7 +1187,7 @@ def parse_from_ds(
 
 
 def _parse_from_zarr(path: os.PathLike, get_vars=True):
-    """Obtains the list of variables and the list of global attributes from a zarr dataset, reading the json files directly.
+    """Obtain the list of variables and the list of global attributes from a zarr dataset, reading the JSON files directly.
 
     Variables are those
     - where .zattrs/_ARRAY_DIMENSIONS is not empty
@@ -1203,7 +1227,7 @@ def _parse_from_zarr(path: os.PathLike, get_vars=True):
 
 
 def _parse_from_nc(path: os.PathLike, get_vars=True, get_time=True):
-    """Obtains the list of variables, the time coordinate and the list of global attributes from a netCDF dataset, using netCDF4."""
+    """Obtain the list of variables, the time coordinate, and the list of global attributes from a netCDF dataset, using netCDF4."""
     ds = netCDF4.Dataset(str(path))
     ds_attrs = {k: ds.getncattr(k) for k in ds.ncattrs()}
 
@@ -1238,28 +1262,26 @@ def date_parser(
     strtime_format: str = "%Y-%m-%d",
     freq: str = "H",
 ) -> Union[str, pd.Period, pd.Timestamp]:
-    """
-    Returns a datetime from a string
+    """Return a datetime from a string.
 
     Parameters
     ----------
     date : str
-      Date to be converted
+        Date to be converted
     end_of_period : bool, optional
-      If True, the date will be the end of month or year depending on what's most appropriate
-    out_dtype: str, optional
-      Choices are 'period', 'datetime' or 'str'
-    strtime_format: str, optional
-      If out_dtype=='str', this sets the strftime format
+        If True, the date will be the end of month or year depending on what's most appropriate
+    out_dtype : str, optional
+        Choices are 'period', 'datetime' or 'str'
+    strtime_format : str, optional
+        If out_dtype=='str', this sets the strftime format
     freq : str
-      If out_dtype=='period', this sets the frequency of the period.
+        If out_dtype=='period', this sets the frequency of the period.
 
     Returns
     -------
     pd.Period, pd.Timestamp, str
-      Parsed date
+        Parsed date
     """
-
     # Formats, ordered depending on string length
     fmts = {
         4: ["%Y"],
@@ -1323,7 +1345,9 @@ def date_parser(
     return date
 
 
-def generate_id(df: Union[pd.DataFrame, xr.Dataset], id_columns: Optional[list] = None):
+def generate_id(
+    df: Union[pd.DataFrame, xr.Dataset], id_columns: Optional[list] = None
+):  # noqa: D401
     """Utility to create an ID from column entries.
 
     Parameters
@@ -1350,13 +1374,14 @@ def generate_id(df: Union[pd.DataFrame, xr.Dataset], id_columns: Optional[list] 
     )
 
 
-def unstack_id(df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]) -> dict:
-    """
-    Utility that reverse-engineers an ID using catalog entries.
+def unstack_id(
+    df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]
+) -> dict:  # noqa: D401
+    """Utility that reverse-engineers an ID using catalog entries.
 
     Parameters
     ----------
-    df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]
+    df : Union[pd.DataFrame, ProjectCatalog, DataCatalog]
         Either a Project/DataCatalog or the pandas DataFrame.
 
     Returns
@@ -1364,7 +1389,6 @@ def unstack_id(df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]) -> dict:
     dict
         Dictionary with one entry per unique ID, which are themselves dictionaries of all the individual parts of the ID.
     """
-
     if isinstance(df, (ProjectCatalog, DataCatalog)):
         df = df.df
 
