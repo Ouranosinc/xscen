@@ -260,6 +260,29 @@ def extract_dataset(
             ),
             reverse=True,
         ):
+            if "time" in ds_ts and ensure_correct_time:
+                # Expected freq (xrfreq is the wanted freq)
+                expfreq = catalog[key].df.xrfreq.iloc[0]
+                # Check if we got the expected freq (skip for too short timeseries)
+                inffreq = xr.infer_freq(ds_ts.time) if ds_ts.time.size > 2 else None
+                if inffreq == expfreq:
+                    # Even when the freq is correct, we ensure the correct "anchor" for daily and finer
+                    if expfreq in "DHTMUL":
+                        ds_ts["time"] = ds_ts.time.dt.floor(expfreq)
+                else:
+                    # We can't infer it, there might be a problem
+                    counts = ds_ts.time.resample(time=expfreq).count()
+                    if (counts > 1).any().item():
+                        raise ValueError(
+                            "Dataset is labelled as having a sampling frequency of "
+                            f"{xrfreq}, but some periods have more than one data point."
+                        )
+                    if (counts.isnull()).any().item():
+                        raise ValueError(
+                            "The resampling count contains nans. There might be some missing data."
+                        )
+                    ds_ts["time"] = counts.time
+
             for var_name, da in ds_ts.data_vars.items():
                 # Support for grid_mapping, crs, and other such variables
                 if len(da.dims) == 0 and var_name not in ds:
@@ -300,7 +323,9 @@ def extract_dataset(
                     elif len(grid_mapping) > 1:
                         raise ValueError("Multiple grid_mapping detected.")
 
-                if "time" not in da.dims:
+                if "time" not in da.dims or (
+                    catalog[key].df["xrfreq"].iloc[0] == variables_and_freqs[var_name]
+                ):
                     ds = ds.assign({var_name: da})
                 else:  # check if it needs resampling
                     if pd.to_timedelta(
@@ -322,23 +347,6 @@ def extract_dataset(
                                 )
                             }
                         )
-                    elif (
-                        catalog[key].df["xrfreq"].iloc[0]
-                        == variables_and_freqs[var_name]
-                    ):
-                        if ensure_correct_time:
-                            counts = da.time.resample(time=xrfreq).count()
-                            if any(counts > 1):
-                                raise ValueError(
-                                    "Dataset is labelled as having a sampling frequency of "
-                                    f"{xrfreq}, but some periods have more than one data point."
-                                )
-                            if any(counts.isnull()):
-                                raise ValueError(
-                                    "The resampling count contains nans. There might be some missing data."
-                                )
-                            da["time"] = counts.time
-                        ds = ds.assign({var_name: da})
                     else:
                         raise ValueError(
                             "Variable is at a coarser frequency than requested."
@@ -637,15 +645,20 @@ def search_data_catalogs(
             f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
         )
 
-    ids = generate_id(catalog.df, id_columns)
-    if id_columns is not None:
-        # Recreate id from user specifications
-        catalog.df["id"] = ids
-    else:
-        # Only fill in the missing IDs
-        catalog.df["id"] = catalog.df["id"].fillna(ids)
+    if id_columns is not None or catalog.df["id"].isnull().any():
+        ids = generate_id(catalog.df, id_columns)
+        if id_columns is not None:
+            # Recreate id from user specifications
+            catalog.df["id"] = ids
+        else:
+            # Only fill in the missing IDs
+            catalog.df["id"] = catalog.df["id"].fillna(ids)
 
-    logger.info(f"Iterating over {catalog.nunique()['id']} potential datasets.")
+    if catalog.df.empty:
+        logger.warning("Found no match corresponding to the 'other' search criteria.")
+        return {}
+
+    logger.info(f"Iterating over {len(catalog.unique('id'))} potential datasets.")
     # Loop on each dataset to assess whether they have all required variables
     # And select best freq/timedelta for each
     catalogs = {}
