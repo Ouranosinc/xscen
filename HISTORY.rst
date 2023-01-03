@@ -17,6 +17,7 @@ New features and enhancements
 * New ``utils.show_versions`` function for printing or writing to file the dependency versions of `xscen`. (:issue:`109`, :pull:`112`).
 * Added previously private notebooks to the documentation. (:pull:`108`).
 * Notebooks are now tested using `pytest` with `nbval`. (:pull:`108`).
+* New ``restrict_wl`` argument for ``extract.search_data_catalogs`` to filter dataset that are not in the warming level csv. (:issue:`105`, :pull:`138`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
