@@ -551,7 +551,7 @@ def search_data_catalogs(
         Used to restrict the results to a given number of members for a given simulation.
         Currently only supports {"ordered": int} format.
     restrict_warming_level : bool,dict
-        Used to restrict the results to only datasets that exist in the csv used to compute warming levels.
+        Used to restrict the results to only datasets that exist in the csv used to compute warming levels in `subset_warming_level`.
         If True, this will only keep the datasets that have a mip_era, source, experiment
         and member combination that exist in the csv. This does not guarantees that a given warming level will be reached, only that the datasets have corresponding columns in the csv.
         More option can be added by passing a dictionary instead of a boolean.
