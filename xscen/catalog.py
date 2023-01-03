@@ -11,7 +11,7 @@ from copy import deepcopy
 from datetime import datetime
 from glob import glob
 from pathlib import Path, PosixPath
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import cftime
 import dask
@@ -19,6 +19,7 @@ import fsspec as fs
 import intake_esm
 import netCDF4
 import pandas as pd
+import tlz
 import xarray
 import xarray as xr
 import yaml
@@ -26,9 +27,9 @@ from dask.diagnostics import ProgressBar
 from intake.source.utils import reverse_format
 from intake_esm.cat import ESMCatalogModel
 
-from .config import CONFIG, parse_config, recursive_update
+from .config import CONFIG, args_as_str, parse_config, recursive_update
 from .io import get_engine
-from .utils import CV
+from .utils import CV  # noqa
 
 logger = logging.getLogger(__name__)
 # Monkey patch for attribute names in the output of to_dataset_dict
@@ -120,17 +121,15 @@ def _parse_list_of_strings(elem):
 
 
 def _parse_dates(elem):
-    try:
-        if isinstance(elem, str):
-            return pd.Timestamp(elem).to_period("H")
-        return pd.DatetimeIndex(elem).to_period("H")
-    except pd.errors.OutOfBoundsDatetime:
-        warnings.warn(
-            "Somes dates are out of the datetime64[ns] range, switching to slower direct period parsing."
-        )
-        if isinstance(elem, str):
-            return pd.Period(elem, freq="H")
-        return pd.PeriodIndex(elem, freq="H")
+    """Parse an array of dates (strings) into a PeriodIndex of hourly frequency."""
+    # Cast to normal datetime as this is much faster than to period for in-bounds dates
+    # errors are coerced to NaT, we convert to a PeriodIndex and then to a (mutable) series
+    time = pd.to_datetime(elem, errors="coerce").astype(pd.PeriodDtype("H")).to_series()
+    nat = time.isnull()
+    # Only where we have NaT (parser errors and empty fields), parse into a Period
+    # This will raise DateParseError as expected if the string is not parsable.
+    time[nat] = pd.PeriodIndex(elem[nat], freq="H")
+    return pd.PeriodIndex(time)
 
 
 csv_kwargs = {
@@ -152,6 +151,12 @@ class DataCatalog(intake_esm.esm_datastore):
     """
     A read-only intake_esm catalog adapted to xscen's syntax.
 
+    This class expects the catalog to have the columns listed in :py:data:`xscen.catalog.COLUMNS`
+    and it comes with default arguments for reading the CSV files (:py:data:`xscen.catalog.csv_kwargs`).
+    For example, all string columns (except `path`) are casted to a categorical dtype and the
+    datetime columns are parsed with a special function that allows dates outside the conventional
+    `datetime64[ns]` bounds by storing the data using :py:class:`pandas.Period` objects.
+
     See Also
     --------
     intake_esm.core.esm_datastore
@@ -162,6 +167,8 @@ class DataCatalog(intake_esm.esm_datastore):
         kwargs["read_csv_kwargs"] = recursive_update(
             csv_kwargs.copy(), kwargs.get("read_csv_kwargs", {})
         )
+        args = args_as_str(args)
+
         super().__init__(*args, **kwargs)
         if check_valid:
             self.check_valid()
@@ -220,14 +227,36 @@ class DataCatalog(intake_esm.esm_datastore):
         rv = ["iter_unique", "drop_duplicates", "check_valid"]
         return super().__dir__() + rv
 
+    def _unique(self, columns) -> Dict:
+        def _find_unique(series):
+            values = series.dropna()
+            if series.name in self.esmcat.columns_with_iterables:
+                values = tlz.concat(values)
+            return list(tlz.unique(values))
+
+        data = self.df[columns]
+        if data.empty:
+            return {col: [] for col in self.df.columns}
+        else:
+            return data.apply(_find_unique, result_type="reduce").to_dict()
+
     def unique(self, columns: Union[str, list] = None):
-        """Get unique elements from a column in the catalog."""
+        """Return a series of unique values in the catalog.
+
+        Subsets on a columns list if specified.
+        """
         if self.df.size == 0:
             raise ValueError("Catalog is empty.")
-        out = super().unique()
-        if columns is not None:
-            out = out[columns]
-        return out
+        if isinstance(columns, str):
+            cols = [columns]
+        elif columns is None:
+            cols = list(self.df.columns)
+        else:
+            cols = list(columns)
+        uni = pd.Series(self._unique(cols))
+        if isinstance(columns, str):
+            return uni[columns]
+        return uni
 
     def iter_unique(self, *columns):
         """Iterate over sub-catalogs for each group of unique values for all specified columns.
@@ -235,7 +264,7 @@ class DataCatalog(intake_esm.esm_datastore):
         This is a generator that yields a tuple of the unique values of the current
         group, in the same order as the arguments, and the sub-catalog.
         """
-        for values in itertools.product(*map(self.unique, columns)):
+        for values in itertools.product(*self.unique(columns)):
             sim = self.search(**dict(zip(columns, values)))
             if sim:  # So we never yield empty catalogs
                 yield values, sim
@@ -543,6 +572,7 @@ class ProjectCatalog(DataCatalog):
         ds: xarray.Dataset,
         path: str,
         info_dict: Optional[dict] = None,
+        **info_kwargs,
     ):
         """Update the catalog with new data and writes the new data to the csv file.
 
@@ -575,6 +605,8 @@ class ProjectCatalog(DataCatalog):
                 d[col] = ds.attrs[f"cat:{col}"]
         if info_dict:
             d.update(info_dict)
+        if info_kwargs:
+            d.update(info_kwargs)
 
         if "time" in ds:
             d["date_start"] = str(
@@ -584,7 +616,7 @@ class ProjectCatalog(DataCatalog):
                 ds.isel(time=-1).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
             )
 
-        d["path"] = path
+        d["path"] = str(path)
 
         # variable should be based on the Dataset
         d["variable"] = tuple(v for v in ds.data_vars if len(ds[v].dims) > 0)

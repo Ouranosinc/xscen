@@ -60,18 +60,20 @@ autosectionlabel_prefix_document = True
 autosectionlabel_maxdepth = 2
 
 autosummary_generate = True
-skip_notebooks = os.getenv("SKIP_NOTEBOOKS")
-if skip_notebooks or os.getenv("READTHEDOCS_VERSION_TYPE") in [
-    "branch",
-    "external",
-]:
-    if skip_notebooks:
-        warnings.warn("Not executing notebooks.")
-    nbsphinx_execute = "never"
-elif os.getenv("READTHEDOCS_VERSION_NAME") in ["latest", "stable"]:
-    nbsphinx_execute = "always"
-else:
-    nbsphinx_execute = "auto"
+nbsphinx_execute = "always"
+
+# skip_notebooks = os.getenv("SKIP_NOTEBOOKS")
+# if skip_notebooks or os.getenv("READTHEDOCS_VERSION_TYPE") in [
+#     "branch",
+#     "external",
+# ]:
+#     if skip_notebooks:
+#         warnings.warn("Not executing notebooks.")
+#     nbsphinx_execute = "never"
+# elif os.getenv("READTHEDOCS_VERSION_NAME") in ["latest", "stable"]:
+#     nbsphinx_execute = "always"
+# else:
+#     nbsphinx_execute = "auto"
 
 # To avoid having to install these and burst memory limit on ReadTheDocs.
 # autodoc_mock_imports = [
