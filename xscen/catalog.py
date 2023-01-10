@@ -27,9 +27,9 @@ from dask.diagnostics import ProgressBar
 from intake.source.utils import reverse_format
 from intake_esm.cat import ESMCatalogModel
 
-from .config import CONFIG, parse_config, recursive_update
+from .config import CONFIG, args_as_str, parse_config, recursive_update
 from .io import get_engine
-from .utils import CV
+from .utils import CV  # noqa
 
 logger = logging.getLogger(__name__)
 # Monkey patch for attribute names in the output of to_dataset_dict
@@ -167,6 +167,8 @@ class DataCatalog(intake_esm.esm_datastore):
         kwargs["read_csv_kwargs"] = recursive_update(
             csv_kwargs.copy(), kwargs.get("read_csv_kwargs", {})
         )
+        args = args_as_str(args)
+
         super().__init__(*args, **kwargs)
         if check_valid:
             self.check_valid()
