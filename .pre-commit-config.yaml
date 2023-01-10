@@ -33,13 +33,13 @@ repos:
         additional_dependencies: [ 'flake8-rst-docstrings' ]
         args: [ '--config=setup.cfg' ]
   - repo: https://github.com/pycqa/isort
-    rev: v5.11.3
+    rev: 5.11.4
     hooks:
       - id: isort
         args: [ '--settings-file=setup.cfg' ]
         exclude: ^docs/
   - repo: https://github.com/pycqa/pydocstyle
-    rev: 6.1.1
+    rev: 6.2.3
     hooks:
       - id: pydocstyle
         args: [ '--config=setup.cfg' ]
@@ -49,7 +49,7 @@ repos:
       - id: yamllint
         args: [ '--config-file=.yamllint.yaml' ]
   - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.5.3
+    rev: 1.6.1
     hooks:
       - id: nbqa-pyupgrade
         args: [ '--py38-plus' ]
