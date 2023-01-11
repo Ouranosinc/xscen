@@ -542,7 +542,7 @@ def produce_horizon(
         window = int(ds.time.dt.year[-1] - ds.time.dt.year[0]) + 1
         if to_level and "{wl}" not in to_level:
             to_level = to_level.format(
-                period0=ds.time.dt.year[0], period1=ds.time.dt.year[-1]
+                period0=ds.time.dt.year[0].values, period1=ds.time.dt.year[-1].values
             )
 
     # compute indicators
