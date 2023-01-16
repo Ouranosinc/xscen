@@ -809,7 +809,9 @@ def search_data_catalogs(
     if restrict_warming_level and len(catalogs) > 0:
         if isinstance(restrict_warming_level, bool):
             restrict_warming_level = {}
-        restrict_warming_level = restrict_warming_level.setdefault("ignore_member", False)
+        restrict_warming_level = restrict_warming_level.setdefault(
+            "ignore_member", False
+        )
         restrict_warming_level = restrict_warming_level.setdefault("tas_csv", None)
         catalogs = _restrict_wl(catalogs, restrict_warming_level)
 
