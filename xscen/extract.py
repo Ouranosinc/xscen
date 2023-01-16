@@ -525,7 +525,7 @@ def search_data_catalogs(
     conversion_yaml: str = None,
     restrict_resolution: str = None,
     restrict_members: dict = None,
-    restrict_warming_level: dict = None,
+    restrict_warming_level: Union[dict, bool] = None,
 ) -> dict:
     """Search through DataCatalogs.
 
@@ -562,12 +562,12 @@ def search_data_catalogs(
         Used to restrict the results to a given number of members for a given simulation.
         Currently only supports {"ordered": int} format.
     restrict_warming_level : bool,dict
-        Used to restrict the results to only datasets that exist in the csv used to compute warming levels in `subset_warming_level`.
+        Used to restrict the results only to datasets that exist in the csv used to compute warming levels in `subset_warming_level`.
         If True, this will only keep the datasets that have a mip_era, source, experiment
         and member combination that exist in the csv. This does not guarantees that a given warming level will be reached, only that the datasets have corresponding columns in the csv.
         More option can be added by passing a dictionary instead of a boolean.
-        If {'ignore_member':True}, it will keep dataset that have the right mip_era, source and experiment, regardless of member.
-        If {tas_csv: Path_to_csv}, it will use this csv instead of the default one provided by xscen.
+        If {'ignore_member':True}, it will disregard the member when trying to match the dataset to a column.
+        If {tas_csv: Path_to_csv}, it will use an alternative csv instead of the default one provided by xscen.
 
     Notes
     -----
@@ -809,10 +809,8 @@ def search_data_catalogs(
     if restrict_warming_level and len(catalogs) > 0:
         if isinstance(restrict_warming_level, bool):
             restrict_warming_level = {}
-        if "ignore_member" not in restrict_warming_level:
-            restrict_warming_level["ignore_member"] = False
-        if "tas_csv" not in restrict_warming_level:
-            restrict_warming_level["tas_csv"] = None
+        restrict_warming_level = restrict_warming_level.setdefault("ignore_member", False)
+        restrict_warming_level = restrict_warming_level.setdefault("tas_csv", None)
         catalogs = _restrict_wl(catalogs, restrict_warming_level)
 
     return catalogs
