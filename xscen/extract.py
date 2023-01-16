@@ -652,6 +652,12 @@ def search_data_catalogs(
         logger.info(
             f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
         )
+    if restrict_warming_level:
+        if isinstance(restrict_warming_level, bool):
+            restrict_warming_level = {}
+        restrict_warming_level.setdefault("ignore_member", False)
+        restrict_warming_level.setdefault("tas_csv", None)
+        catalog.esmcat._df = _restrict_wl(catalog.df, restrict_warming_level)
 
     if id_columns is not None or catalog.df["id"].isnull().any():
         ids = generate_id(catalog.df, id_columns)
@@ -805,15 +811,6 @@ def search_data_catalogs(
 
     if restrict_members is not None and len(catalogs) > 0:
         catalogs = _restrict_multimembers(catalogs, id_columns, restrict_members)
-
-    if restrict_warming_level and len(catalogs) > 0:
-        if isinstance(restrict_warming_level, bool):
-            restrict_warming_level = {}
-        restrict_warming_level = restrict_warming_level.setdefault(
-            "ignore_member", False
-        )
-        restrict_warming_level = restrict_warming_level.setdefault("tas_csv", None)
-        catalogs = _restrict_wl(catalogs, restrict_warming_level)
 
     return catalogs
 
@@ -1240,9 +1237,8 @@ def _restrict_multimembers(catalogs: dict, id_columns: list, restrictions: dict)
     return catalogs
 
 
-def _restrict_wl(catalogs: dict, restrictions: dict):
+def _restrict_wl(df, restrictions: dict):
     """Update the results from search_data_catalogs by removing simulations that are not available in the warming level csv."""
-    df = pd.concat([catalogs[s].df for s in catalogs.keys()])
     tas_csv = restrictions["tas_csv"]
     if tas_csv is None:
         tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
@@ -1261,13 +1257,23 @@ def _restrict_wl(catalogs: dict, restrictions: dict):
         )
         csv_source = list(annual_tas.columns[1:])
 
-    to_remove = pd.unique(df[~df["csv_name"].isin(csv_source)]["id"])
+    # to_remove = pd.unique(df[~df["csv_name"].isin(csv_source)]["id"])
+    #
+    # for k in to_remove:
+    #     logger.info(f"Removing {k} from the results.")
+    #     df.pop(k)
 
-    for k in to_remove:
-        logger.info(f"Removing {k} from the results.")
-        catalogs.pop(k)
+    to_keep = df["csv_name"].isin(csv_source)
+    removed = pd.unique(df[~to_keep]["id"])
 
-    return catalogs
+    df = df[to_keep]
+    logger.info(
+        f"Removing the following datasets because of the restriction for warming levels: {list(removed)}"
+    )
+
+    df = df.drop(columns=["csv_name"])
+
+    return df
 
 
 def _subset_file_coverage(
