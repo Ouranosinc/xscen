@@ -46,7 +46,7 @@ jobs:
           activate-environment: xscen
           auto-update-conda: true
           channels: conda-forge,defaults
-          mamba-version: "*"
+          miniforge-variant: Mambaforge
           python-version: "3.9"
       - name: Conda and mamba versions
         shell: bash -l {0}
@@ -77,7 +77,7 @@ jobs:
           activate-environment: xscen
           auto-update-conda: true
           channels: conda-forge,defaults
-          mamba-version: "*"
+          miniforge-variant: Mambaforge
           python-version: "3.9"
       - name: Conda and mamba versions
         shell: bash -l {0}
