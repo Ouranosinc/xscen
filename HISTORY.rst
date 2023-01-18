@@ -4,7 +4,7 @@ History
 
 v0.5.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Sarah Gammon (:user:`sg2475962`) and Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -32,6 +32,7 @@ Bug fixes
 * Added deepcopy before `skipna` is popped in `spatial_mean` (:pull:`92`).
 * `subset_warming_level` now validates that the data exists in the dataset provided (:issue:`117`, :pull:`119`).
 * Adapt `stack_drop_nan` for the newest version of xarray (2022.12.0). (:issue:`122`, :pull:`126`).
+* Fix `stack_drop_nan` not working if intermediate directories don't exist (:issue:`128`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
