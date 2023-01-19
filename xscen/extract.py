@@ -525,6 +525,7 @@ def search_data_catalogs(
     conversion_yaml: str = None,
     restrict_resolution: str = None,
     restrict_members: dict = None,
+    restrict_warming_level: Union[dict, bool] = None,
 ) -> dict:
     """Search through DataCatalogs.
 
@@ -560,6 +561,13 @@ def search_data_catalogs(
     restrict_members : dict
         Used to restrict the results to a given number of members for a given simulation.
         Currently only supports {"ordered": int} format.
+    restrict_warming_level : bool, dict
+        Used to restrict the results only to datasets that exist in the csv used to compute warming levels in `subset_warming_level`.
+        If True, this will only keep the datasets that have a mip_era, source, experiment
+        and member combination that exist in the csv. This does not guarantees that a given warming level will be reached, only that the datasets have corresponding columns in the csv.
+        More option can be added by passing a dictionary instead of a boolean.
+        If {'ignore_member':True}, it will disregard the member when trying to match the dataset to a column.
+        If {tas_csv: Path_to_csv}, it will use an alternative csv instead of the default one provided by xscen.
 
     Notes
     -----
@@ -644,6 +652,12 @@ def search_data_catalogs(
         logger.info(
             f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
         )
+    if restrict_warming_level:
+        if isinstance(restrict_warming_level, bool):
+            restrict_warming_level = {}
+        restrict_warming_level.setdefault("ignore_member", False)
+        restrict_warming_level.setdefault("tas_csv", None)
+        catalog.esmcat._df = _restrict_wl(catalog.df, restrict_warming_level)
 
     if id_columns is not None or catalog.df["id"].isnull().any():
         ids = generate_id(catalog.df, id_columns)
@@ -1221,6 +1235,39 @@ def _restrict_multimembers(catalogs: dict, id_columns: list, restrictions: dict)
                 catalogs.pop(k)
 
     return catalogs
+
+
+def _restrict_wl(df, restrictions: dict):
+    """Update the results from search_data_catalogs by removing simulations that are not available in the warming level csv."""
+    tas_csv = restrictions["tas_csv"]
+    if tas_csv is None:
+        tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
+
+    # open csv
+    annual_tas = pd.read_csv(tas_csv, index_col="year")
+
+    if restrictions["ignore_member"]:
+        df["csv_name"] = df["mip_era"].str.cat(
+            [df["source"], df["experiment"]], sep="_"
+        )
+        csv_source = ["_".join(x.split("_")[:-1]) for x in annual_tas.columns[1:]]
+    else:
+        df["csv_name"] = df["mip_era"].str.cat(
+            [df["source"], df["experiment"], df["member"]], sep="_"
+        )
+        csv_source = list(annual_tas.columns[1:])
+
+    to_keep = df["csv_name"].isin(csv_source)
+    removed = pd.unique(df[~to_keep]["id"])
+
+    df = df[to_keep]
+    logger.info(
+        f"Removing the following datasets because of the restriction for warming levels: {list(removed)}"
+    )
+
+    df = df.drop(columns=["csv_name"])
+
+    return df
 
 
 def _subset_file_coverage(
