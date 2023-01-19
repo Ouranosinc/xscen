@@ -1257,12 +1257,6 @@ def _restrict_wl(df, restrictions: dict):
         )
         csv_source = list(annual_tas.columns[1:])
 
-    # to_remove = pd.unique(df[~df["csv_name"].isin(csv_source)]["id"])
-    #
-    # for k in to_remove:
-    #     logger.info(f"Removing {k} from the results.")
-    #     df.pop(k)
-
     to_keep = df["csv_name"].isin(csv_source)
     removed = pd.unique(df[~to_keep]["id"])
 
