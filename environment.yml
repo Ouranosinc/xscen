@@ -1,34 +1,35 @@
 name: xscen
 channels:
   - conda-forge
-  - defaults
 dependencies:
   - python >=3.8
-  # FIXME: These entries require versions
   # Don't forget to sync the changes here with environment-dev.yml!
   # Main packages
+  - cartopy
   - cftime
   - clisops
   - dask
-  # 2022-12-12: ESMpy 8.3.1 and 8.4.0 are incompatible with newest xesmf
-  - esmpy <=8.2
+  - fsspec
   - geopandas
+  - h5netcdf
+  - intake
+  - intake-esm >=2022.9.18
+  - matplotlib
+  - netCDF4
+  - numpy
   - pandas
+  - pyyaml
   - rechunker
   - shapely
   - xarray
   - xclim >=0.37
-  - xesmf >=0.6.2
-  - pyyaml
-  - intake
-  - intake-esm >=2022.9.18
-  # Plotting
-  - cartopy
-  - matplotlib
-  - nc-time-axis >=1.3.1
-  # IO
-  - h5py
-  - netCDF4
-  - pyarrow
+  - xesmf >=0.7
   - zarr
+  # To avoid bugs
+  # See https://github.com/esmf-org/esmf/issues/115
+  # we add this "dependency" so the following pip install doesn't install anything else than xscen
+  - pytest-json-report
+  # Opt
+  - nc-time-axis >=1.3.1
+  - pyarrow >=1.0.0
   - pip

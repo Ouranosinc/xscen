@@ -31,7 +31,7 @@ requirements = [
     "dask",
     "fsspec",
     "geopandas",
-    "h5py",
+    "h5netcdf",
     "intake",
     "intake-esm>=2022.9.18",
     "matplotlib",
@@ -43,7 +43,7 @@ requirements = [
     "shapely",
     "xarray",
     "xclim>=0.37",
-    "xesmf>=0.6.2",  # This is not available on pypi.
+    "xesmf>=0.7",  # This is not available on pypi.
     "zarr",
 ]
 
@@ -79,6 +79,6 @@ setup(
     test_suite="tests",
     tests_require=["pytest", "pytest-cov"],
     url="https://github.com/Ouranosinc/xscen",
-    version="0.4.15-beta",
+    version="0.4.17-beta",
     zip_safe=False,
 )
