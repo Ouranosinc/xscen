@@ -8,11 +8,13 @@ from pathlib import Path
 from types import ModuleType
 from typing import Optional, Sequence, TextIO, Union
 
+import flox.xarray
 import numpy as np
 import pandas as pd
 import xarray as xr
 from xclim.core import units
 from xclim.core.calendar import convert_calendar, get_calendar, parse_offset
+from xclim.core.utils import uses_dask
 from xclim.testing.utils import show_versions as _show_versions
 
 from xscen.config import parse_config
@@ -719,8 +721,9 @@ def publish_release_notes(
 @parse_config
 def unstack_dates(
     ds: xr.Dataset,
-    seasons: dict = None,
+    seasons: list = None,
     new_dim: str = "season",
+    winter_starts_year: bool = False,
 ):
     """Unstack a multi-season timeseries into a yearly axis and a season one.
 
@@ -728,73 +731,146 @@ def unstack_dates(
     ----------
     ds: xr.Dataset or DataArray
       The xarray object with a "time" coordinate.
+      Only supports monthly or coarser frequencies.
+      The time axis must be complete and regular (`xr.infer_freq(ds.time)` doesn't fail).
     seasons: dict, optional
-      A dictonary from "MM-DD" dates to a season name.
+      A dictionary from month number to a season name.
       If not given, it is guessed from the time coord's frequency.
       See notes.
     new_dim: str
       The name of the new dimension.
+    winter_starts_year: bool
+      If True, the winter season (DJF) is associated with the year of January, instead of December.
 
     Returns
     -------
     xr.Dataset or DataArray
-      Same as ds but the time axis is now yearly (AS-JAN) and the seasons are along the new dimenion.
+      Same as ds but the time axis is now yearly (AS-JAN) and the seasons are along the new dimension.
 
     Notes
     -----
-    When `seasons` is None, :py:func:`xarray.infer_freq` is called and its output determines the new coordinate:
+    When `season` is None, the inferred frequency determines the new coordinate:
 
     - For MS, the coordinates are the month abbreviations in english (JAN, FEB, etc.)
     - For ?QS-? and other ?MS frequencies, the coordinates are the initials of the months in each season.
-      Ex: QS-DEC : DJF, MAM, JJA, SON.
+      Ex: QS-DEC (with winter_starts_year=True) : DJF, MAM, JJA, SON.
     - For YS or AS-JAN, the new coordinate has a single value of "annual".
     - For ?AS-? frequencies, the new coordinate has a single value of "annual-{anchor}", were "anchor"
       is the abbreviation of the first month of the year. Ex: AS-JUL -> "annual-JUL".
-    - For any other frequency, this function fails if `seasons` is None.
     """
-    if seasons is None:
-        freq = xr.infer_freq(ds.time)
-        if freq is not None:
-            mult, base, _, _ = parse_offset(freq)
-        if freq is None or base not in ["A", "Q", "M", "Y"]:
-            raise ValueError(
-                f"Can't infer season labels for time coordinate with frequency {freq}. Consider passing the  `seasons` dict explicitly."
-            )
+    # Get some info about the time axis
+    freq = xr.infer_freq(ds.time)
+    first, last = ds.indexes["time"][[0, -1]]
+    use_cftime = xr.coding.times.contains_cftime_datetimes(ds.time)
+    calendar = ds.time.dt.calendar
+    mult, base, isstart, anchor = parse_offset(freq)
 
-        # We want the class of the datetime coordinate, to ensure it is conserved.
+    if base not in "YAQM":
+        raise ValueError(
+            f"Only monthly frequencies or coarser are supported. Got: {freq}."
+        )
+
+    # Fast track for annual
+    if base == "A":
+        if seasons:
+            seaname = seasons[first.month]
+        elif anchor == "JAN":
+            seaname = "annual"
+        else:
+            seaname = f"annual-{anchor}"
+        dso = ds.expand_dims({new_dim: [seaname]})
+        dso["time"] = xr.date_range(
+            f"{first.year}-01-01",
+            f"{last.year}-01-01",
+            freq="YS",
+            calendar=calendar,
+            use_cftime=use_cftime,
+        )
+        return dso
+
+    # Guess the new season coordinate
+    if seasons is None:
         if base == "Q" or (base == "M" and mult > 1):
             # Labels are the month initials
             months = np.array(list("JFMAMJJASOND"))
             n = mult * {"M": 1, "Q": 3}[base]
             seasons = {
-                f"{m:02d}-01": "".join(months[np.array(range(m - 1, m + n - 1)) % 12])
+                m: "".join(months[np.array(range(m - 1, m + n - 1)) % 12])
                 for m in np.unique(ds.time.dt.month)
             }
-        elif base in ["A", "Y"]:
-            seasons = {
-                f"{m:02d}-01": f"annual-{abb}"
-                for m, abb in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.items()
-            }
-            seasons["01-01"] = "annual"
         else:  # M or MS
-            seasons = {
-                f"{m:02d}-01": abb
-                for m, abb in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.items()
-            }
+            seasons = xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.items()
+    # The ordered season names
+    seas_list = [seasons[month] for month in sorted(seasons.keys())]
 
-    datetime = xr.coding.cftime_offsets.get_date_type(
-        ds.time.dt.calendar, xr.coding.times.contains_cftime_datetimes(ds.time)
-    )
-    years = [datetime(yr, 1, 1) for yr in ds.time.dt.year.values]
-    seas = [seasons[k] for k in ds.time.dt.strftime("%m-%d").values]
-    ds = ds.assign_coords(
-        time=pd.MultiIndex.from_arrays([years, seas], names=["_year", new_dim])
-    )
-    ds = ds.unstack("time").rename(_year="time")
+    # Multi-month seasons that isn't synced with january
+    if winter_starts_year and 1 not in seasons:
+        winter_month = max(
+            seasons.keys()
+        )  # The last label is the period that overlaps the year
+        seas_list = [seasons[winter_month]] + seas_list[
+            :-1
+        ]  # Put it back in the beginning
+        # The year associated with each timestamp (add 1 in winter)
+        years = ds.time.dt.year + xr.where(ds.time.dt.month == winter_month, 1, 0)
+    else:  # Monthly or aligned seasons
+        years = ds.time.dt.year
 
-    # Sort new coord
-    inverted = dict(zip(seasons.values(), seasons.keys()))
-    return ds.sortby(ds[new_dim].copy(data=[inverted[s] for s in ds[new_dim].values]))
+    # The goal here is to use `reshape()` instead of `unstack` to limit the number of dask operations.
+    # Thus, the time axis must be properly constructed so that reshapes fits the final size.
+    # We pad on both sides to ensure full years
+    pad_left = seas_list.index(seasons[first.month])
+    pad_right = len(seas_list) - (seas_list.index(seasons[last.month]) + 1)
+    dsp = ds.pad(time=(pad_left, pad_right))  # pad with NaN
+    # Similarly pad our "group labels".
+    years = years.pad(time=(pad_left, pad_right), constant_values=(years[0], years[-1]))
+
+    new_time = xr.date_range(  # New time axis (YS)
+        f"{years[0].item()}-01-01",
+        f"{years[-1].item()}-01-01",
+        freq="YS",
+        calendar=calendar,
+        use_cftime=use_cftime,
+    )
+    # New shape
+    Nt, Ns = len(new_time), len(seas_list)
+
+    if uses_dask(ds):
+        # This is where it happens. Flox will minimally rechunk
+        # so the reshape operation can be performed blockwise
+        dsp = flox.xarray.rechunk_for_blockwise(dsp, "time", years)
+
+    new_coords = {
+        "time": new_time,
+        new_dim: seas_list,
+        **{k: c for k, c in ds.coords.items() if k != "time"},
+    }
+
+    def reshape_da(da):
+        # Replace (A,N,B) by (A,Nt,Ns,B) in both the new shape and the new dims
+        new_shape = list(var.shape)
+        new_shape[da.get_axis_num("time")] = Ns
+        new_shape.insert(da.get_axis_num("time"), Nt)
+        new_dims = list(da.dims)
+        new_dims[da.get_axis_num("time")] = new_dim
+        new_dims.insert(da.get_axis_num("time"), "time")
+        return xr.DataArray(
+            da.data.reshape(new_shape),  # Use dask or numpy's algo.
+            dims=new_dims,
+            coords=new_coords,
+            attrs=da.attrs,
+        )
+
+    if isinstance(ds, xr.Dataset):
+        dso = xr.Dataset(attrs=ds.attrs)
+        for name, var in dsp.data_vars.items():
+            if "time" not in var.dims:
+                dso[name] = var
+            else:
+                dso[name] = reshape_da(var)
+    else:
+        dso = reshape_da(dsp)
+    return dso
 
 
 def show_versions(

@@ -29,6 +29,7 @@ requirements = [
     "cftime",
     "clisops",
     "dask",
+    "flox",
     "fsspec",
     "geopandas",
     "h5netcdf",
