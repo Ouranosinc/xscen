@@ -1,6 +1,7 @@
 # noqa: D100
 import datetime
 import logging
+import os
 import re
 from copy import deepcopy
 from pathlib import Path
@@ -259,6 +260,29 @@ def extract_dataset(
             ),
             reverse=True,
         ):
+            if "time" in ds_ts and ensure_correct_time:
+                # Expected freq (xrfreq is the wanted freq)
+                expfreq = catalog[key].df.xrfreq.iloc[0]
+                # Check if we got the expected freq (skip for too short timeseries)
+                inffreq = xr.infer_freq(ds_ts.time) if ds_ts.time.size > 2 else None
+                if inffreq == expfreq:
+                    # Even when the freq is correct, we ensure the correct "anchor" for daily and finer
+                    if expfreq in "DHTMUL":
+                        ds_ts["time"] = ds_ts.time.dt.floor(expfreq)
+                else:
+                    # We can't infer it, there might be a problem
+                    counts = ds_ts.time.resample(time=expfreq).count()
+                    if (counts > 1).any().item():
+                        raise ValueError(
+                            "Dataset is labelled as having a sampling frequency of "
+                            f"{xrfreq}, but some periods have more than one data point."
+                        )
+                    if (counts.isnull()).any().item():
+                        raise ValueError(
+                            "The resampling count contains nans. There might be some missing data."
+                        )
+                    ds_ts["time"] = counts.time
+
             for var_name, da in ds_ts.data_vars.items():
                 # Support for grid_mapping, crs, and other such variables
                 if len(da.dims) == 0 and var_name not in ds:
@@ -299,7 +323,9 @@ def extract_dataset(
                     elif len(grid_mapping) > 1:
                         raise ValueError("Multiple grid_mapping detected.")
 
-                if "time" not in da.dims:
+                if "time" not in da.dims or (
+                    catalog[key].df["xrfreq"].iloc[0] == variables_and_freqs[var_name]
+                ):
                     ds = ds.assign({var_name: da})
                 else:  # check if it needs resampling
                     if pd.to_timedelta(
@@ -321,23 +347,6 @@ def extract_dataset(
                                 )
                             }
                         )
-                    elif (
-                        catalog[key].df["xrfreq"].iloc[0]
-                        == variables_and_freqs[var_name]
-                    ):
-                        if ensure_correct_time:
-                            counts = da.time.resample(time=xrfreq).count()
-                            if any(counts > 1):
-                                raise ValueError(
-                                    "Dataset is labelled as having a sampling frequency of "
-                                    f"{xrfreq}, but some periods have more than one data point."
-                                )
-                            if any(counts.isnull()):
-                                raise ValueError(
-                                    "The resampling count contains nans. There might be some missing data."
-                                )
-                            da["time"] = counts.time
-                        ds = ds.assign({var_name: da})
                     else:
                         raise ValueError(
                             "Variable is at a coarser frequency than requested."
@@ -501,7 +510,9 @@ def resample(
 
 @parse_config
 def search_data_catalogs(
-    data_catalogs: Union[list, DataCatalog],
+    data_catalogs: Union[
+        Union[str, os.PathLike], List[Union[str, os.PathLike]], DataCatalog
+    ],
     variables_and_freqs: dict,
     *,
     other_search_criteria: Optional[dict] = None,
@@ -514,12 +525,13 @@ def search_data_catalogs(
     conversion_yaml: str = None,
     restrict_resolution: str = None,
     restrict_members: dict = None,
+    restrict_warming_level: Union[dict, bool] = None,
 ) -> dict:
     """Search through DataCatalogs.
 
     Parameters
     ----------
-    data_catalogs : Union[list, DataCatalog]
+    data_catalogs : Union[Union[str, os.PathLike], List[Union[str, os.PathLike]], DataCatalog]
         DataCatalog (or multiple, in a list) or paths to JSON/CSV data catalogs. They must use the same columns and aggregation options.
     variables_and_freqs : dict
         Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format.
@@ -549,6 +561,13 @@ def search_data_catalogs(
     restrict_members : dict
         Used to restrict the results to a given number of members for a given simulation.
         Currently only supports {"ordered": int} format.
+    restrict_warming_level : bool, dict
+        Used to restrict the results only to datasets that exist in the csv used to compute warming levels in `subset_warming_level`.
+        If True, this will only keep the datasets that have a mip_era, source, experiment
+        and member combination that exist in the csv. This does not guarantees that a given warming level will be reached, only that the datasets have corresponding columns in the csv.
+        More option can be added by passing a dictionary instead of a boolean.
+        If {'ignore_member':True}, it will disregard the member when trying to match the dataset to a column.
+        If {tas_csv: Path_to_csv}, it will use an alternative csv instead of the default one provided by xscen.
 
     Notes
     -----
@@ -577,6 +596,10 @@ def search_data_catalogs(
         cat_kwargs = {
             "registry": registry_from_module(load_xclim_module(conversion_yaml))
         }
+
+    # Cast paths to single item list
+    if isinstance(data_catalogs, (str, Path)):
+        data_catalogs = [data_catalogs]
 
     # Prepare a unique catalog to search from, with the DerivedCat added if required
     if isinstance(data_catalogs, DataCatalog):
@@ -629,16 +652,27 @@ def search_data_catalogs(
         logger.info(
             f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
         )
+    if restrict_warming_level:
+        if isinstance(restrict_warming_level, bool):
+            restrict_warming_level = {}
+        restrict_warming_level.setdefault("ignore_member", False)
+        restrict_warming_level.setdefault("tas_csv", None)
+        catalog.esmcat._df = _restrict_wl(catalog.df, restrict_warming_level)
 
-    ids = generate_id(catalog.df, id_columns)
-    if id_columns is not None:
-        # Recreate id from user specifications
-        catalog.df["id"] = ids
-    else:
-        # Only fill in the missing IDs
-        catalog.df["id"] = catalog.df["id"].fillna(ids)
+    if id_columns is not None or catalog.df["id"].isnull().any():
+        ids = generate_id(catalog.df, id_columns)
+        if id_columns is not None:
+            # Recreate id from user specifications
+            catalog.df["id"] = ids
+        else:
+            # Only fill in the missing IDs
+            catalog.df["id"] = catalog.df["id"].fillna(ids)
 
-    logger.info(f"Iterating over {catalog.nunique()['id']} potential datasets.")
+    if catalog.df.empty:
+        logger.warning("Found no match corresponding to the 'other' search criteria.")
+        return {}
+
+    logger.info(f"Iterating over {len(catalog.unique('id'))} potential datasets.")
     # Loop on each dataset to assess whether they have all required variables
     # And select best freq/timedelta for each
     catalogs = {}
@@ -1201,6 +1235,39 @@ def _restrict_multimembers(catalogs: dict, id_columns: list, restrictions: dict)
                 catalogs.pop(k)
 
     return catalogs
+
+
+def _restrict_wl(df, restrictions: dict):
+    """Update the results from search_data_catalogs by removing simulations that are not available in the warming level csv."""
+    tas_csv = restrictions["tas_csv"]
+    if tas_csv is None:
+        tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
+
+    # open csv
+    annual_tas = pd.read_csv(tas_csv, index_col="year")
+
+    if restrictions["ignore_member"]:
+        df["csv_name"] = df["mip_era"].str.cat(
+            [df["source"], df["experiment"]], sep="_"
+        )
+        csv_source = ["_".join(x.split("_")[:-1]) for x in annual_tas.columns[1:]]
+    else:
+        df["csv_name"] = df["mip_era"].str.cat(
+            [df["source"], df["experiment"], df["member"]], sep="_"
+        )
+        csv_source = list(annual_tas.columns[1:])
+
+    to_keep = df["csv_name"].isin(csv_source)
+    removed = pd.unique(df[~to_keep]["id"])
+
+    df = df[to_keep]
+    logger.info(
+        f"Removing the following datasets because of the restriction for warming levels: {list(removed)}"
+    )
+
+    df = df.drop(columns=["csv_name"])
+
+    return df
 
 
 def _subset_file_coverage(

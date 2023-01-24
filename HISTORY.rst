@@ -4,7 +4,7 @@ History
 
 v0.5.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Sarah Gammon (:user:`sg2475962`) and Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -17,6 +17,7 @@ New features and enhancements
 * New ``utils.show_versions`` function for printing or writing to file the dependency versions of `xscen`. (:issue:`109`, :pull:`112`).
 * Added previously private notebooks to the documentation. (:pull:`108`).
 * Notebooks are now tested using `pytest` with `nbval`. (:pull:`108`).
+* New ``restrict_warming_level`` argument for ``extract.search_data_catalogs`` to filter dataset that are not in the warming level csv. (:issue:`105`, :pull:`138`).
 * New 'cos-lat' averaging in `spatial_mean` (:issue:`94`, :pull:`125`).
 
 Breaking changes
@@ -33,6 +34,8 @@ Bug fixes
 * Added deepcopy before `skipna` is popped in `spatial_mean` (:pull:`92`).
 * `subset_warming_level` now validates that the data exists in the dataset provided (:issue:`117`, :pull:`119`).
 * Adapt `stack_drop_nan` for the newest version of xarray (2022.12.0). (:issue:`122`, :pull:`126`).
+* Fix `stack_drop_nan` not working if intermediate directories don't exist (:issue:`128`).
+* Fixed a crash when `compute_indicators` produced fixed fields (pull:`139`).
 * `compute_indicators` no longer crashes if less than 3 timesteps are produced (:pull:`125`).
 
 Internal changes
@@ -42,6 +45,9 @@ Internal changes
 * Skip files we can't read in ``parse_directory``. (:pull:`111`).
 * Fixed non-numpy-standard Docstrings. (:pull:`108`).
 * Added more metadata to package description on PyPI. (:pull:`108`).
+* Faster ``search_data_catalogs`` and ``extract_dataset`` through a faster ``DataCatalog.unique``, date parsing and a rewrite of the ``ensure_correct_time`` logic. (:pull:`127`).
+* The ``search_data_catalogs`` function now accepts `str` or `pathlib.Path` variables (in addition to lists of either data type) for performing catalog lookups. (:pull:`121`).
+* `produce_horizons` now supports fixed fields (pull:`139`).
 * Better warning messages in `_subset_file_coverage` when coverage is insufficient (:pull:`125`).
 
 v0.4.0 (2022-09-28)

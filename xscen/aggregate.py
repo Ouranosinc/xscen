@@ -576,7 +576,7 @@ def produce_horizon(
         window = int(ds.time.dt.year[-1] - ds.time.dt.year[0]) + 1
         if to_level and "{wl}" not in to_level:
             to_level = to_level.format(
-                period0=ds.time.dt.year[0], period1=ds.time.dt.year[-1]
+                period0=ds.time.dt.year[0].values, period1=ds.time.dt.year[-1].values
             )
 
     # compute indicators
@@ -585,12 +585,17 @@ def produce_horizon(
     # Compute the window-year mean
     ds_merge = xr.Dataset()
     for freq, ds_ind in ind_dict.items():
-        ds_mean = climatological_mean(
-            ds_ind,
-            window=window,
-        )
+        if freq != "fx":
+            ds_mean = climatological_mean(
+                ds_ind,
+                window=window,
+            )
+        else:
+            ds_mean = ds_ind
 
-        if "AS" not in freq:  # if not annual, need to stack dates
+        if "AS" in freq:
+            ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
+        elif freq != "fx":  # if not annual or fixed, need to stack dates
             # name new_dim
             if "QS" in freq:
                 new_dim = "season"
@@ -614,7 +619,10 @@ def produce_horizon(
             )
 
         else:
-            ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
+            ds_mean = ds_mean.expand_dims(
+                dim={"horizon": [f"{ds.time.dt.year[0]}-{ds.time.dt.year[-1]}"]}
+            )
+            ds_mean["horizon"] = ds_mean["horizon"].astype(str)
 
         if "warminglevel" in ds_mean.dims:
             wl = ds_mean["warminglevel"].values
