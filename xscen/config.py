@@ -185,7 +185,7 @@ def parse_config(func_or_cls):  # noqa: D103
     if isinstance(func_or_cls, type):
         func_or_cls.__init__ = _wrapper
         return func_or_cls
-    _wrapper: func_or_cls
+    _wrapper: func_or_cls  # Fix a decorator bug in Pycharm 2022
     return _wrapper
 
 
