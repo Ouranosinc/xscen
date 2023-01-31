@@ -6,7 +6,7 @@ import re
 from io import StringIO
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, Sequence, TextIO, Union
+from typing import Dict, Optional, Sequence, TextIO, Union
 
 import flox.xarray
 import numpy as np
@@ -721,7 +721,7 @@ def publish_release_notes(
 @parse_config
 def unstack_dates(
     ds: xr.Dataset,
-    seasons: list = None,
+    seasons: Dict[int, str] = None,
     new_dim: str = "season",
     winter_starts_year: bool = False,
 ):
