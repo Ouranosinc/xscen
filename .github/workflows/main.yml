@@ -35,10 +35,11 @@ jobs:
           tox -e black
 
   testing:
-    name: Smoke Test with Python${{ matrix.python-version }} (${{ matrix.doctests }})
+    name: Smoke Test with Python${{ matrix.python-version }} (${{ matrix.tox-build }})
     needs: black
     runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
         include:
           - python-version: "3.9"
@@ -69,7 +70,6 @@ jobs:
       - name: Test with tox
         run: |
           tox -e ${{ matrix.tox-build }}
-        continue-on-error: true
         env:
-          CONDA_EXE: micromamba
+          CONDA_EXE: mamba
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
