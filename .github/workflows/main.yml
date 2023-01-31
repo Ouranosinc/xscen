@@ -59,14 +59,13 @@ jobs:
           cache-downloads: true
           environment-file: environment.yml
           extra-specs: |
+            mamba
             python=${{ matrix.python-version }}
+            tox~="3.0"
+            tox-conda
       - name: Conda and mamba versions
         run: |
-          conda --version
-          echo "micromamba: $(micromamba --version)"
-      - name: Install tox
-        run: |
-          micromamba install -n xscen "tox~=3.0" tox-conda
+          mamba --version
       - name: Test with tox
         run: |
           tox -e ${{ matrix.tox-build }}
