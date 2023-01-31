@@ -66,9 +66,12 @@ jobs:
       - name: Conda and mamba versions
         run: |
           mamba --version
+      - name: Install tox-current-env
+        run: |
+          pip install tox-current-env
       - name: Test with tox
         run: |
-          tox -e ${{ matrix.tox-build }}
+          tox -e ${{ matrix.tox-build }} --current-env
         env:
           CONDA_EXE: mamba
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
