@@ -4,6 +4,7 @@ import logging
 import os
 import re
 from io import StringIO
+from itertools import chain
 from pathlib import Path
 from types import ModuleType
 from typing import Dict, Optional, Sequence, TextIO, Union
@@ -724,6 +725,7 @@ def unstack_dates(
     seasons: Dict[int, str] = None,
     new_dim: str = "season",
     winter_starts_year: bool = False,
+    freq: Optional[str] = None,
 ):
     """Unstack a multi-season timeseries into a yearly axis and a season one.
 
@@ -733,6 +735,7 @@ def unstack_dates(
       The xarray object with a "time" coordinate.
       Only supports monthly or coarser frequencies.
       The time axis must be complete and regular (`xr.infer_freq(ds.time)` doesn't fail).
+      Non-regular data with known frequency can be repaired with `ds.resample(time=freq).first()`.
     seasons: dict, optional
       A dictionary from month number to a season name.
       If not given, it is guessed from the time coord's frequency.
@@ -741,6 +744,9 @@ def unstack_dates(
       The name of the new dimension.
     winter_starts_year: bool
       If True, the winter season (DJF) is associated with the year of January, instead of December.
+    freq : str, optional
+      If `infer_freq(ds.time)` fails, this is the frequency to assumed.
+      The data is simply resampled with `ds.resample(time=freq).first()`, which pads missing timesteps with NaN.
 
     Returns
     -------
@@ -788,6 +794,11 @@ def unstack_dates(
         )
         return dso
 
+    if base == "M" and 12 % mult != 0:
+        raise ValueError(
+            f"Only periods that divide the year evenly are supported. Got {freq}."
+        )
+
     # Guess the new season coordinate
     if seasons is None:
         if base == "Q" or (base == "M" and mult > 1):
@@ -799,18 +810,16 @@ def unstack_dates(
                 for m in np.unique(ds.time.dt.month)
             }
         else:  # M or MS
-            seasons = xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.items()
+            seasons = xr.coding.cftime_offsets._MONTH_ABBREVIATIONS
     # The ordered season names
     seas_list = [seasons[month] for month in sorted(seasons.keys())]
 
     # Multi-month seasons that isn't synced with january
     if winter_starts_year and 1 not in seasons:
-        winter_month = max(
-            seasons.keys()
-        )  # The last label is the period that overlaps the year
-        seas_list = [seasons[winter_month]] + seas_list[
-            :-1
-        ]  # Put it back in the beginning
+        # The last label is the period that overlaps the year
+        winter_month = max(seasons.keys())
+        # Put it back in the beginning
+        seas_list = [seasons[winter_month]] + seas_list[:-1]
         # The year associated with each timestamp (add 1 in winter)
         years = ds.time.dt.year + xr.where(ds.time.dt.month == winter_month, 1, 0)
     else:  # Monthly or aligned seasons
@@ -825,6 +834,7 @@ def unstack_dates(
     # Similarly pad our "group labels".
     years = years.pad(time=(pad_left, pad_right), constant_values=(years[0], years[-1]))
 
+    # New coords
     new_time = xr.date_range(  # New time axis (YS)
         f"{years[0].item()}-01-01",
         f"{years[-1].item()}-01-01",
@@ -832,45 +842,32 @@ def unstack_dates(
         calendar=calendar,
         use_cftime=use_cftime,
     )
-    # New shape
-    Nt, Ns = len(new_time), len(seas_list)
+    new_coords = dict(ds.coords)
+    new_coords.update({"time": new_time, new_dim: seas_list})
+
+    def reshape_da(da):
+        if "time" not in da.dims:
+            return da
+        # Replace (A,'time',B) by (A,'time', 'season',B) in both the new shape and the new dims
+        new_dims = list(
+            chain.from_iterable(
+                [d] if d != "time" else ["time", "season"] for d in da.dims
+            )
+        )
+        new_shape = [len(new_coords[d]) for d in new_dims]
+        # Use dask or numpy's algo.
+        return xr.DataArray(da.data.reshape(new_shape), dims=new_dims)
 
     if uses_dask(ds):
         # This is where it happens. Flox will minimally rechunk
         # so the reshape operation can be performed blockwise
         dsp = flox.xarray.rechunk_for_blockwise(dsp, "time", years)
 
-    new_coords = {
-        "time": new_time,
-        new_dim: seas_list,
-        **{k: c for k, c in ds.coords.items() if k != "time"},
-    }
-
-    def reshape_da(da):
-        # Replace (A,N,B) by (A,Nt,Ns,B) in both the new shape and the new dims
-        new_shape = list(var.shape)
-        new_shape[da.get_axis_num("time")] = Ns
-        new_shape.insert(da.get_axis_num("time"), Nt)
-        new_dims = list(da.dims)
-        new_dims[da.get_axis_num("time")] = new_dim
-        new_dims.insert(da.get_axis_num("time"), "time")
-        return xr.DataArray(
-            da.data.reshape(new_shape),  # Use dask or numpy's algo.
-            dims=new_dims,
-            coords=new_coords,
-            attrs=da.attrs,
-        )
-
     if isinstance(ds, xr.Dataset):
-        dso = xr.Dataset(attrs=ds.attrs)
-        for name, var in dsp.data_vars.items():
-            if "time" not in var.dims:
-                dso[name] = var
-            else:
-                dso[name] = reshape_da(var)
+        dso = dsp.map(reshape_da, keep_attrs=True)
     else:
         dso = reshape_da(dsp)
-    return dso
+    return dso.assign_coords(**new_coords)
 
 
 def show_versions(
