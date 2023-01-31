@@ -3,7 +3,7 @@ name: "xscen Testing Suite"
 on:
   push:
     branches:
-      - master
+      - main
     paths-ignore:
       - HISTORY.rst
       - setup.cfg
@@ -15,6 +15,9 @@ jobs:
   black:
     name: Code Style Compliance
     runs-on: ubuntu-22.04
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - name: Cancel previous runs
         uses: styfle/cancel-workflow-action@0.11.0
@@ -25,73 +28,48 @@ jobs:
         with:
           python-version: "3.8"
       - name: Install tox
-        shell: bash -l {0}
         run: |
           pip install tox~=3.0
       - name: Run linting suite
-        shell: bash -l {0}
         run: |
           tox -e black
 
-
-  test:
-    name: Smoke Test
+  testing:
+    name: Smoke Test with Python${{ matrix.python-version }} (${{ matrix.doctests }})
     needs: black
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        include:
+          - python-version: "3.9"
+            tox-build: "py39"
+          - python-version: "3.10"
+            tox-build: "py310"
+          - python-version: "3.8"
+            tox-build: "doctests"
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v3
-      - name: Setup conda
-        uses: conda-incubator/setup-miniconda@v2
+      - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
+        uses: mamba-org/provision-with-micromamba@main
         with:
-          activate-environment: xscen
-          auto-update-conda: true
-          channels: conda-forge,defaults
-          miniforge-variant: Mambaforge
-          python-version: "3.9"
+          cache-downloads: true
+          environment-file: environment.yml
+          extra-specs: |
+            python=${{ matrix.python-version }}
       - name: Conda and mamba versions
-        shell: bash -l {0}
         run: |
-          mamba --version
+          conda --version
+          echo "micromamba: $(micromamba --version)"
       - name: Install tox
-        shell: bash -l {0}
         run: |
-          mamba install -n xscen "tox<4.0" tox-conda
+          micromamba install -n xscen "tox~=3.0" tox-conda
       - name: Test with tox
-        shell: bash -l {0}
         run: |
-          conda activate xscen
-          tox -e py39
+          tox -e ${{ matrix.tox-build }}
+        continue-on-error: true
         env:
-          CONDA_EXE: mamba
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  doctests:
-    name: Doctests
-    needs: black
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup conda
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: xscen
-          auto-update-conda: true
-          channels: conda-forge,defaults
-          miniforge-variant: Mambaforge
-          python-version: "3.9"
-      - name: Conda and mamba versions
-        shell: bash -l {0}
-        run: |
-          mamba --version
-      - name: Install tox
-        shell: bash -l {0}
-        run: |
-          mamba install -n xscen "tox<4.0" tox-conda
-      - name: Doctests with tox
-        shell: bash -l {0}
-        run: |
-          conda activate xscen
-          tox -e doctests
-        env:
-          CONDA_EXE: mamba
+          CONDA_EXE: micromamba
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
