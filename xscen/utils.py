@@ -725,7 +725,6 @@ def unstack_dates(
     seasons: Dict[int, str] = None,
     new_dim: str = "season",
     winter_starts_year: bool = False,
-    freq: Optional[str] = None,
 ):
     """Unstack a multi-season timeseries into a yearly axis and a season one.
 
@@ -744,9 +743,6 @@ def unstack_dates(
       The name of the new dimension.
     winter_starts_year: bool
       If True, the winter season (DJF) is associated with the year of January, instead of December.
-    freq : str, optional
-      If `infer_freq(ds.time)` fails, this is the frequency to assumed.
-      The data is simply resampled with `ds.resample(time=freq).first()`, which pads missing timesteps with NaN.
 
     Returns
     -------
