@@ -29,7 +29,7 @@ from intake_esm.cat import ESMCatalogModel
 
 from .config import CONFIG, args_as_str, parse_config, recursive_update
 from .io import get_engine
-from .utils import CV  # noqa
+from .utils import CV, ensure_correct_time  # noqa
 
 logger = logging.getLogger(__name__)
 # Monkey patch for attribute names in the output of to_dataset_dict
@@ -347,6 +347,77 @@ class DataCatalog(intake_esm.esm_datastore):
         if exists:
             logger.info(f"An entry exists for: {columns}")
         return exists
+
+    def to_dataset(
+        self,
+        concat_on: Optional[List[str]] = None,
+        ensemble_on: Optional[List[str]] = None,
+        calendar: Optional[str] = "standard",
+        **kwargs,
+    ) -> xr.Dataset:
+        """
+        Open the catalog's entries into a single dataset.
+
+        Same as :py:meth:`xscen.catalog.DataCatalog.to_dask`, but with additionnal control over the aggregations.
+        Ensemble preprocessing logic is taken from :py:func:`xclim.ensembles.create_ensemble`.
+        When `ensemble_on` is given, the function ensures all entries have the correct time coordinate according to `xrfreq`.
+
+        Parameters
+        ----------
+        concat_on : list of strings, optional
+          A list of catalog columns to concat the datasets over. Each will become a new dimension with the column values as coordinates.
+          Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
+        ensemble_on : list of strings, optional
+          A list of strings to combine into a new `id` over which the datasets are concatenated.
+          The new dimension is named "realization".
+          Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
+        calendar : str, optional
+          If `ensemble_on` is given, all datasets are converted to this calendar before concatenation.
+          Ignored if `ensemble_on` is None (default). If None, no conversion is done.
+          `align_on` is always "date".
+        kwargs:
+            Any other arguments are passed to :py:meth:`xscen.catalog.DataCatalog.to_dataset_dict`.
+            The `preprocess` argument cannot be used.
+
+        Returns
+        -------
+        :py:class:`~xarray.Dataset`
+        """
+        cat = deepcopy(self)
+        preprocess = None
+        if concat_on:
+            cat.esmcat.aggregation_control.aggregations.extend(
+                [
+                    intake_esm.cat.Aggregation(
+                        type=intake_esm.cat.AggregationType.join_new, attribute_name=col
+                    )
+                    for col in concat_on
+                ]
+            )
+
+        if ensemble_on:
+            cat.esmcat.df["id"] = generate_id(cat.esmcat.df, ensemble_on)
+            cat.esmcat.aggregation_control.aggregations.append(
+                intake_esm.cat.Aggregation(
+                    type=intake_esm.cat.AggregationType.join_new, attribute_name="id"
+                )
+            )
+            cat.esmcat.aggregation_control.groupby_attrs.remove("id")
+
+            xrfreq = cat.df["xrfreq"].unique()[0]
+
+            def preprocess(ds):
+                ds = ensure_correct_time(ds, xrfreq)
+                if calendar is not None:
+                    ds = ds.convert_calendar(
+                        calendar, use_cftime=(calendar == "default"), align_on="date"
+                    )
+                return ds
+
+        ds = cat.to_dask(preprocess=preprocess, **kwargs)
+        if ensemble_on:
+            ds = ds.rename(id="realization")
+        return ds
 
 
 class ProjectCatalog(DataCatalog):

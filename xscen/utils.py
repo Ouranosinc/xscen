@@ -845,3 +845,33 @@ def show_versions(
         ]
 
     return _show_versions(file=file, deps=deps)
+
+
+def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
+    """
+    Ensure a dataset has the correct time coordinate, as expected for the given frequency.
+
+    Daily or finer datasets are "floored" even if `xr.infer_freq` succeeds.
+    Errors are raised if the number of data points per period is not 1.
+    The dataset is modified in-place, but returned nonetheless.
+    """
+    # Check if we got the expected freq (skip for too short timeseries)
+    inffreq = xr.infer_freq(ds.time) if ds.time.size > 2 else None
+    if inffreq == xrfreq:
+        # Even when the freq is correct, we ensure the correct "anchor" for daily and finer
+        if xrfreq in "DHTMUL":
+            ds["time"] = ds.time.dt.floor(xrfreq)
+    else:
+        # We can't infer it, there might be a problem
+        counts = ds.time.resample(time=xrfreq).count()
+        if (counts > 1).any().item():
+            raise ValueError(
+                "Dataset is labelled as having a sampling frequency of "
+                f"{xrfreq}, but some periods have more than one data point."
+            )
+        if (counts.isnull()).any().item():
+            raise ValueError(
+                "The resampling count contains nans. There might be some missing data."
+            )
+        ds["time"] = counts.time
+    return ds
