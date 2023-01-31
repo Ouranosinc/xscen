@@ -142,7 +142,7 @@ def load_config(*elements, reset=False, verbose=False):
     ----------
     elements : str
         Files or values to add into the config.
-        If a a directory is passed, all `.yml` files of this directory are added, in alphabetical order.
+        If a directory is passed, all `.yml` files of this directory are added, in alphabetical order.
         If a "key=value" string, "key" is a dotted name and value will be evaluated if possible.
     reset: bool
         If True, the current config is erased before loading files.
