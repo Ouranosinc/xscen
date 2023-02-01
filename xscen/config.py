@@ -157,7 +157,6 @@ def load_config(*files, reset=False, verbose=False):
 
 
 def parse_config(func_or_cls):  # noqa: D103
-
     module = ".".join(func_or_cls.__module__.split(".")[1:])
 
     if isinstance(func_or_cls, type):

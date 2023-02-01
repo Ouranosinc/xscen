@@ -525,7 +525,6 @@ def clean_up(
 
     # convert calendar
     if convert_calendar_kwargs:
-
         ds_copy = ds.copy()
         # create mask of grid point that should always be nan
         ocean = ds_copy.isnull().all("time")

@@ -1021,7 +1021,6 @@ def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
         for activity_id in set(sdf.activity) - {"HighResMip", np.NaN}:
             sub_sdf = sdf[sdf.activity == activity_id]
             for exp_id in set(sub_sdf.experiment) - {"historical", "piControl", np.NaN}:
-
                 exp_hist = hist.copy()
                 exp_hist["experiment"] = exp_id
                 exp_hist["activity"] = activity_id
