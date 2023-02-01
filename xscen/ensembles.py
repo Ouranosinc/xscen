@@ -179,7 +179,6 @@ def generate_weights(
     )
 
     for r in weights.realization.values:
-
         # Weight == 0 means it hasn't been processed yet
         if weights.sel(realization=r) == 0:
             sim = info[r]

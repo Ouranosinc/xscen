@@ -375,7 +375,6 @@ def spatial_mean(
 
     # This calls .interp() to a pair of coordinates
     elif method == "interp_coord":
-
         # Find the centroid
         if region is not None:
             if region["method"] == "gridpoint":
@@ -414,7 +413,6 @@ def spatial_mean(
 
     # Uses xesmf.SpatialAverager
     elif method == "xesmf":
-
         # If the region is a bounding box, call shapely and geopandas to transform it into an input compatible with xesmf
         if region["method"] == "bbox":
             lon_point_list = [
