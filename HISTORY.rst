@@ -18,6 +18,7 @@ New features and enhancements
 * Added previously private notebooks to the documentation. (:pull:`108`).
 * Notebooks are now tested using `pytest` with `nbval`. (:pull:`108`).
 * New ``restrict_warming_level`` argument for ``extract.search_data_catalogs`` to filter dataset that are not in the warming level csv. (:issue:`105`, :pull:`138`).
+* Set configuration value programmatically thourgh ``CONFIG.set``. (:pull:`144`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -46,6 +47,7 @@ Internal changes
 * Faster ``search_data_catalogs`` and ``extract_dataset`` through a faster ``DataCatalog.unique``, date parsing and a rewrite of the ``ensure_correct_time`` logic. (:pull:`127`).
 * The ``search_data_catalogs`` function now accepts `str` or `pathlib.Path` variables (in addition to lists of either data type) for performing catalog lookups. (:pull:`121`).
 * `produce_horizons` now supports fixed fields (pull:`139`).
+* Rewrite of ``unstack_dates`` for better performance with dask arrays. (:pull:`144`).
 
 v0.4.0 (2022-09-28)
 -------------------

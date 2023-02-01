@@ -128,7 +128,7 @@ def args_as_str(*args: Tuple[Any, ...]) -> Tuple[str, ...]:
 
 
 def load_config(*elements, reset=False, verbose=False):
-    """Load configuration from given files or key=value pairs (in order, the last has priority).
+    """Load configuration from given files or key=value pairs.
 
     Once all elements are loaded, special sections are dispatched to their module, but only if
     the section was changed by the loaded elements. These special sections are:
@@ -141,20 +141,21 @@ def load_config(*elements, reset=False, verbose=False):
     Parameters
     ----------
     elements : str
-        Files or values to add into the config.
-        If a directory is passed, all `.yml` files of this directory are added, in alphabetical order.
-        If a "key=value" string, "key" is a dotted name and value will be evaluated if possible.
+      Files or values to add into the config.
+      If a directory is passed, all `.yml` files of this directory are added, in alphabetical order.
+      If a "key=value" string, "key" is a dotted name and value will be evaluated if possible.
+      "key=value" pairs are set last, after all files are being processed.
     reset: bool
-        If True, the current config is erased before loading files.
+      If True, the current config is erased before loading files.
     verbose: bool
-        if True, each element triggers a INFO log line.
+      if True, each element triggers a INFO log line.
 
     Example
     -------
-    >>> load_config("my_config.yml", "config_dir/", "xarray.keep_attrs=True")
+    >>> load_config("my_config.yml", "config_dir/", "logging.loggers.xscen.level=DEBUG")
 
     Will load configuration from `my_config.yml`, then from all yml files in `config_dir`
-    and then the xarray.keep_attrs value will be set to True.
+    and then the logging level of xscen's logger will be set to DEBUG.
     """
     if reset:
         CONFIG.clear()

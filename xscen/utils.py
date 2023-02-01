@@ -734,7 +734,6 @@ def unstack_dates(
       The xarray object with a "time" coordinate.
       Only supports monthly or coarser frequencies.
       The time axis must be complete and regular (`xr.infer_freq(ds.time)` doesn't fail).
-      Non-regular data with known frequency can be repaired with `ds.resample(time=freq).first()`.
     seasons: dict, optional
       A dictionary from month number to a season name.
       If not given, it is guessed from the time coord's frequency.
@@ -762,6 +761,12 @@ def unstack_dates(
     """
     # Get some info about the time axis
     freq = xr.infer_freq(ds.time)
+    if freq is None:
+        raise ValueError(
+            "The data must have a clean time coordinate. If you know the "
+            "data's frequency, please pass `ds.resample(time=freq).first()` "
+            "to pad missing dates and reset the time coordinate."
+        )
     first, last = ds.indexes["time"][[0, -1]]
     use_cftime = xr.coding.times.contains_cftime_datetimes(ds.time)
     calendar = ds.time.dt.calendar
