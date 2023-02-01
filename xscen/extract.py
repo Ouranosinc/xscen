@@ -294,7 +294,11 @@ def extract_dataset(
                     continue
 
                 # TODO: 2nd part is a temporary fix until this is changed in intake_esm
-                if var_name in ds or var_name not in variables_and_freqs.keys():
+                if (
+                    var_name in ds
+                    or variables_and_freqs.get(var_name) != xrfreq
+                    or var_name not in catalog._requested_variables_true
+                ):
                     continue
 
                 # TODO: This is a temporary fix for an xclim bug where the grid_mapping attribute is not transferred upon calculation
