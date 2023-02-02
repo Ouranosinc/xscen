@@ -385,7 +385,6 @@ for cvfile in (Path(__file__).parent / "CVs").glob("*.json"):
         raise ValueError(f"While reading {cvfile} got {err}")
 
 
-@parse_config
 def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     """Change units of Datasets to non-CF units.
 
@@ -430,7 +429,6 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     return ds
 
 
-@parse_config
 def clean_up(
     ds: xr.Dataset,
     *,
@@ -715,7 +713,6 @@ def publish_release_notes(
     print(history, file=file)
 
 
-@parse_config
 def unstack_dates(
     ds: xr.Dataset,
     seasons: dict = None,

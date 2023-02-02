@@ -388,7 +388,6 @@ def extract_dataset(
     return out_dict
 
 
-@parse_config
 def resample(
     da: xr.DataArray,
     target_frequency: str,
