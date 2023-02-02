@@ -152,7 +152,7 @@ def load_config(*elements, reset=False, verbose=False):
 
     Example
     -------
-    >>> load_config("my_config.yml", "config_dir/", "logging.loggers.xscen.level=DEBUG")
+    >>> load_config("my_config.yml", "config_dir/", "logging.loggers.xscen.level=DEBUG")  # doctest: +SKIP
 
     Will load configuration from `my_config.yml`, then from all yml files in `config_dir`
     and then the logging level of xscen's logger will be set to DEBUG.
