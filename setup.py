@@ -29,6 +29,7 @@ requirements = [
     "cftime",
     "clisops",
     "dask",
+    "flox",
     "fsspec",
     "geopandas",
     "h5netcdf",
@@ -79,6 +80,6 @@ setup(
     test_suite="tests",
     tests_require=["pytest", "pytest-cov"],
     url="https://github.com/Ouranosinc/xscen",
-    version="0.4.18-beta",
+    version="0.4.22-beta",
     zip_safe=False,
 )

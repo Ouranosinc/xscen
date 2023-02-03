@@ -163,7 +163,6 @@ class DataCatalog(intake_esm.esm_datastore):
     """
 
     def __init__(self, *args, check_valid=False, drop_duplicates=False, **kwargs):
-
         kwargs["read_csv_kwargs"] = recursive_update(
             csv_kwargs.copy(), kwargs.get("read_csv_kwargs", {})
         )

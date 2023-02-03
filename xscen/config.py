@@ -76,22 +76,24 @@ class ConfigDict(dict):
             return ConfigDict(deepcopy(value))
         return value
 
+    def set(self, key, value):
+        parts = key.split(".")
+        d = self
+        for part in parts[:-1]:
+            d = d.setdefault(part, {})
+            if not isinstance(d, collections.abc.Mapping):
+                raise ValueError(
+                    f"Key {key} points to an invalid config section ({part} if not a mapping)."
+                )
+        d[parts[-1]] = value
+
     def update_from_list(self, pairs):
         for key, valstr in pairs:
             try:
                 val = ast.literal_eval(valstr)
-            except ValueError:
+            except (ValueError, SyntaxError):
                 val = valstr
-
-            parts = key.split(".")
-            d = self
-            for part in parts[:-1]:
-                d = d.setdefault(part, {})
-                if not isinstance(d, collections.abc.Mapping):
-                    raise ValueError(
-                        f"Key {key} points to an invalid config section ({part} if not a mapping)."
-                    )
-            d[parts[-1]] = val
+            self.set(key, val)
 
 
 CONFIG = ConfigDict()
@@ -125,12 +127,35 @@ def args_as_str(*args: Tuple[Any, ...]) -> Tuple[str, ...]:
     return tuple(new_args)
 
 
-def load_config(*files, reset=False, verbose=False):
-    """Load configuration from given files (in order, the last has priority).
+def load_config(*elements, reset=False, verbose=False):
+    """Load configuration from given files or key=value pairs.
 
-    If a path to a directory is passed, all `.yml` files of this directory are added, in alphabetical order.
-    When no files are passed, the default locations are used.
-    If reset is True, the current config is erased before loading files.
+    Once all elements are loaded, special sections are dispatched to their module, but only if
+    the section was changed by the loaded elements. These special sections are:
+
+    * `logging` : Everything passed to :py:func:`logging.config.dictConfig`.
+    * `xarray` : Passed to :py:func:`xarray.set_options`.
+    * `xclim` : Passed to :py:func:`xclim.set_options`.
+    * `warning` : Mappings where the key is a Warning category (or "all") and the value an action to passe to :py:func:`warnings.simplefilter`.
+
+    Parameters
+    ----------
+    elements : str
+      Files or values to add into the config.
+      If a directory is passed, all `.yml` files of this directory are added, in alphabetical order.
+      If a "key=value" string, "key" is a dotted name and value will be evaluated if possible.
+      "key=value" pairs are set last, after all files are being processed.
+    reset: bool
+      If True, the current config is erased before loading files.
+    verbose: bool
+      if True, each element triggers a INFO log line.
+
+    Example
+    -------
+    >>> load_config("my_config.yml", "config_dir/", "logging.loggers.xscen.level=DEBUG")  # doctest: +SKIP
+
+    Will load configuration from `my_config.yml`, then from all yml files in `config_dir`
+    and then the logging level of xscen's logger will be set to DEBUG.
     """
     if reset:
         CONFIG.clear()
@@ -138,18 +163,25 @@ def load_config(*files, reset=False, verbose=False):
     old_external = [deepcopy(CONFIG.get(module, {})) for module in EXTERNAL_MODULES]
 
     # Use of map(Path, ...) ensures that "file" is a Path, no matter if a Path or a str was given.
-    for file in map(Path, files):
-        if file.is_dir():
-            # Get all yml files, sort by name
-            configfiles = sorted(file.glob("*.yml"), key=lambda p: p.name)
+    for element in elements:
+        if "=" in element:
+            key, value = element.split("=")
+            CONFIG.update_from_list([(key, value)])
+            if verbose:
+                logger.info(f"Updated the config with {element}.")
         else:
-            configfiles = [file]
+            file = Path(element)
+            if file.is_dir():
+                # Get all yml files, sort by name
+                configfiles = sorted(file.glob("*.yml"), key=lambda p: p.name)
+            else:
+                configfiles = [file]
 
-        for configfile in configfiles:
-            with configfile.open() as f:
-                recursive_update(CONFIG, yaml.safe_load(f))
-                if verbose:
-                    logger.info(f"Updated the config with {configfile}.")
+            for configfile in configfiles:
+                with configfile.open() as f:
+                    recursive_update(CONFIG, yaml.safe_load(f))
+                    if verbose:
+                        logger.info(f"Updated the config with {configfile}.")
 
     for module, old in zip(EXTERNAL_MODULES, old_external):
         if old != CONFIG.get(module, {}):
@@ -157,7 +189,6 @@ def load_config(*files, reset=False, verbose=False):
 
 
 def parse_config(func_or_cls):  # noqa: D103
-
     module = ".".join(func_or_cls.__module__.split(".")[1:])
 
     if isinstance(func_or_cls, type):
@@ -185,6 +216,7 @@ def parse_config(func_or_cls):  # noqa: D103
     if isinstance(func_or_cls, type):
         func_or_cls.__init__ = _wrapper
         return func_or_cls
+    _wrapper: func_or_cls  # Fix a decorator bug in Pycharm 2022
     return _wrapper
 
 
