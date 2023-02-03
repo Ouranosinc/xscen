@@ -246,6 +246,8 @@ def extract_dataset(
         xarray_open_kwargs=xr_open_kwargs,
         xarray_combine_by_coords_kwargs=xr_combine_kwargs,
         preprocess=preprocess,
+        # Only print a progress bar when it is minimally useful
+        progressbar=(len(catalog.keys()) > 1),
     )
 
     out_dict = {}
@@ -294,8 +296,8 @@ def extract_dataset(
                 # TODO: 2nd part is a temporary fix until this is changed in intake_esm
                 if (
                     var_name in ds
+                    or variables_and_freqs.get(var_name) != xrfreq
                     or var_name not in catalog._requested_variables_true
-                    or variables_and_freqs[var_name] != xrfreq
                 ):
                     continue
 
