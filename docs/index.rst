@@ -26,6 +26,7 @@ Features
 
     readme
     installation
+    goodtoknow
     notebooks/1_catalog
     notebooks/2_getting_started
     notebooks/3_diagnostics
