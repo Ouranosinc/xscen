@@ -349,8 +349,8 @@ class DataCatalog(intake_esm.esm_datastore):
 
     def to_dataset(
         self,
-        concat_on: Optional[List[str]] = None,
-        ensemble_on: Optional[List[str]] = None,
+        concat_on: Optional[Union[List[str], str]] = None,
+        ensemble_on: Optional[Union[List[str], str]] = None,
         calendar: Optional[str] = "standard",
         **kwargs,
     ) -> xr.Dataset:
@@ -363,10 +363,10 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Parameters
         ----------
-        concat_on : list of strings, optional
+        concat_on : list of strings or str, optional
           A list of catalog columns to concat the datasets over. Each will become a new dimension with the column values as coordinates.
           Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
-        ensemble_on : list of strings, optional
+        ensemble_on : list of strings or str, optional
           A list of catalog columns to combine into a new `id` over which the datasets are concatenated.
           The new dimension is named "realization".
           Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
@@ -376,15 +376,26 @@ class DataCatalog(intake_esm.esm_datastore):
           `align_on` is always "date".
         kwargs:
             Any other arguments are passed to :py:meth:`xscen.catalog.DataCatalog.to_dataset_dict`.
-            The `preprocess` argument cannot be used.
+            The `preprocess` argument cannot be used if `ensemble_on` is given.
 
         Returns
         -------
         :py:class:`~xarray.Dataset`
         """
         cat = deepcopy(self)
-        preprocess = None
+        preprocess = kwargs.get("preprocess")
         if concat_on:
+            if isinstance(concat_on, str):
+                concat_on = [concat_on]
+            # Guess what the ID was and rebuild a new one, omitting the concatenated columns.
+            unstacked = unstack_id(cat)
+            cat.esmcat.df["id"] = cat.df.apply(
+                lambda row: _build_id(
+                    row, [col for col in unstacked[row["id"]] if col not in concat_on]
+                ),
+                axis=1,
+            )
+
             cat.esmcat.aggregation_control.aggregations.extend(
                 [
                     intake_esm.cat.Aggregation(
@@ -395,6 +406,8 @@ class DataCatalog(intake_esm.esm_datastore):
             )
 
         if ensemble_on:
+            if isinstance(ensemble_on, str):
+                ensemble_on = [ensemble_on]
             cat.esmcat.df["id"] = generate_id(cat.esmcat.df, ensemble_on)
             cat.esmcat.aggregation_control.aggregations.append(
                 intake_esm.cat.Aggregation(
@@ -1417,6 +1430,11 @@ def date_parser(
     return date
 
 
+def _build_id(element: pd.Series, columns: List[str]):
+    """Build an ID from a catalog's row and a list of columns."""
+    return "_".join(map(str, filter(pd.notna, element[columns].values)))
+
+
 def generate_id(
     df: Union[pd.DataFrame, xr.Dataset], id_columns: Optional[list] = None
 ):  # noqa: D401
@@ -1441,9 +1459,7 @@ def generate_id(
 
     id_columns = [x for x in (id_columns or ID_COLUMNS) if x in df.columns]
 
-    return df[id_columns].apply(
-        lambda row: "_".join(map(str, filter(pd.notna, row.values))), axis=1
-    )
+    return df.apply(_build_id, axis=1, args=(id_columns,))
 
 
 def unstack_id(
@@ -1479,7 +1495,7 @@ def unstack_id(
 
         # Make sure that all elements are the same, if there are multiple lines
         if len(subset) > 1:
-            if not all([subset[col].is_unique for col in subset.columns]):
+            if not all([subset[col].nunique() == 1 for col in subset.columns]):
                 raise ValueError(
                     "Not all elements of the columns are the same for a given ID!"
                 )
