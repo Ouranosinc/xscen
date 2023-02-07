@@ -19,7 +19,7 @@ New features and enhancements
 * Notebooks are now tested using `pytest` with `nbval`. (:pull:`108`).
 * New ``restrict_warming_level`` argument for ``extract.search_data_catalogs`` to filter dataset that are not in the warming level csv. (:issue:`105`, :pull:`138`).
 * Set configuration value programmatically thourgh ``CONFIG.set``. (:pull:`144`).
-* New ``to_dataset`` method on ``DataCatalog``. The same as ``to_dask``, but exposing more aggregation options. (:pull:`147).
+* New ``to_dataset`` method on ``DataCatalog``. The same as ``to_dask``, but exposing more aggregation options. (:pull:`147`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^

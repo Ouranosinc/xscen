@@ -357,7 +357,7 @@ class DataCatalog(intake_esm.esm_datastore):
         """
         Open the catalog's entries into a single dataset.
 
-        Same as :py:meth:`xscen.catalog.DataCatalog.to_dask`, but with additionnal control over the aggregations.
+        Same as :py:meth:`~intake_esm.core.esm_datastore.to_dask`, but with additionnal control over the aggregations.
         Ensemble preprocessing logic is taken from :py:func:`xclim.ensembles.create_ensemble`.
         When `ensemble_on` is given, the function ensures all entries have the correct time coordinate according to `xrfreq`.
 
@@ -375,27 +375,42 @@ class DataCatalog(intake_esm.esm_datastore):
           Ignored if `ensemble_on` is None (default). If None, no conversion is done.
           `align_on` is always "date".
         kwargs:
-            Any other arguments are passed to :py:meth:`xscen.catalog.DataCatalog.to_dataset_dict`.
+            Any other arguments are passed to :py:meth:`~intake_esm.core.esm_datastore.to_dataset_dict`.
             The `preprocess` argument cannot be used if `ensemble_on` is given.
 
         Returns
         -------
         :py:class:`~xarray.Dataset`
+
+        See Also
+        --------
+        intake_esm.core.esm_datastore.to_dataset_dict
+        intake_esm.core.esm_datastore.to_dask
+        xclim.ensembles.create_ensemble
         """
         cat = deepcopy(self)
         preprocess = kwargs.get("preprocess")
-        if concat_on:
-            if isinstance(concat_on, str):
-                concat_on = [concat_on]
-            # Guess what the ID was and rebuild a new one, omitting the concatenated columns.
-            unstacked = unstack_id(cat)
-            cat.esmcat.df["id"] = cat.df.apply(
-                lambda row: _build_id(
-                    row, [col for col in unstacked[row["id"]] if col not in concat_on]
-                ),
-                axis=1,
+
+        if isinstance(concat_on, str):
+            concat_on = [concat_on]
+        if isinstance(ensemble_on, str):
+            ensemble_on = [ensemble_on]
+        rm_from_id = (concat_on or []) + (ensemble_on or []) + ["realization"]
+
+        aggs = {
+            agg.attribute_name for agg in cat.esmcat.aggregation_control.aggregations
+        }
+        if not set(cat.esmcat.aggregation_control.groupby_attrs).isdisjoint(rm_from_id):
+            raise ValueError(
+                "Can't add aggregations for columns in the catalog's groupby_attrs "
+                f"({cat.esmcat.aggregation_control.groupby_attrs})"
+            )
+        if not aggs.isdisjoint(rm_from_id):
+            raise ValueError(
+                "Can't add aggregations for columns were an aggregation already exists ({aggs})"
             )
 
+        if concat_on:
             cat.esmcat.aggregation_control.aggregations.extend(
                 [
                     intake_esm.cat.Aggregation(
@@ -406,16 +421,17 @@ class DataCatalog(intake_esm.esm_datastore):
             )
 
         if ensemble_on:
-            if isinstance(ensemble_on, str):
-                ensemble_on = [ensemble_on]
-            cat.esmcat.df["id"] = generate_id(cat.esmcat.df, ensemble_on)
+            if preprocess is not None:
+                warnings.warn(
+                    "Using `ensemble_on` will override the iven `preprocess` function."
+                )
+            cat.df["realization"] = generate_id(cat.df, ensemble_on)
             cat.esmcat.aggregation_control.aggregations.append(
                 intake_esm.cat.Aggregation(
-                    type=intake_esm.cat.AggregationType.join_new, attribute_name="id"
+                    type=intake_esm.cat.AggregationType.join_new,
+                    attribute_name="realization",
                 )
             )
-            cat.esmcat.aggregation_control.groupby_attrs.remove("id")
-
             xrfreq = cat.df["xrfreq"].unique()[0]
 
             def preprocess(ds):
@@ -426,9 +442,16 @@ class DataCatalog(intake_esm.esm_datastore):
                     )
                 return ds
 
+        if rm_from_id:
+            # Guess what the ID was and rebuild a new one, omitting the columns part of the aggregation
+            unstacked = unstack_id(cat)
+            cat.esmcat.df["id"] = cat.df.apply(
+                lambda row: _build_id(
+                    row, [col for col in unstacked[row["id"]] if col not in rm_from_id]
+                ),
+                axis=1,
+            )
         ds = cat.to_dask(preprocess=preprocess, **kwargs)
-        if ensemble_on:
-            ds = ds.rename(id="realization")
         return ds
 
 
