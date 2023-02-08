@@ -358,7 +358,7 @@ class DataCatalog(intake_esm.esm_datastore):
         Open the catalog's entries into a single dataset.
 
         Same as :py:meth:`~intake_esm.core.esm_datastore.to_dask`, but with additional control over the aggregations. The dataset definition logic is left untouched by this method (by default: ["id", "domain", "processing_level", "xrfreq"]). What this method does is provide a way to concatenate datasets from the catalog itself, using `intake_esm`'s functionalities. `concat_on` will keep the column names and add them as new dimensions, while `ensemble_on` will override the column names and concatenate the datasets along a new `realization` dimension. Both can be used at the same time.
-        
+
         Ensemble preprocessing logic is taken from :py:func:`xclim.ensembles.create_ensemble`.
         When `ensemble_on` is given, the function ensures all entries have the correct time coordinate according to `xrfreq`.
         If either argument is given, the "id" is reconstructed by removing mentions of aggregated columns.
