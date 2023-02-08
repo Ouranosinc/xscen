@@ -360,6 +360,8 @@ class DataCatalog(intake_esm.esm_datastore):
         Same as :py:meth:`~intake_esm.core.esm_datastore.to_dask`, but with additionnal control over the aggregations.
         Ensemble preprocessing logic is taken from :py:func:`xclim.ensembles.create_ensemble`.
         When `ensemble_on` is given, the function ensures all entries have the correct time coordinate according to `xrfreq`.
+        If either argument is given, the "id" is reconstructed by removing mentions of aggregated columns.
+        This will override any "custom" id, ones not unstackable with :py:func:`~xscen.catalog.unstack_id`.
 
         Parameters
         ----------
@@ -375,8 +377,8 @@ class DataCatalog(intake_esm.esm_datastore):
           Ignored if `ensemble_on` is None (default). If None, no conversion is done.
           `align_on` is always "date".
         kwargs:
-            Any other arguments are passed to :py:meth:`~intake_esm.core.esm_datastore.to_dataset_dict`.
-            The `preprocess` argument cannot be used if `ensemble_on` is given.
+          Any other arguments are passed to :py:meth:`~intake_esm.core.esm_datastore.to_dataset_dict`.
+          The `preprocess` argument cannot be used if `ensemble_on` is given.
 
         Returns
         -------
@@ -442,7 +444,7 @@ class DataCatalog(intake_esm.esm_datastore):
                     )
                 return ds
 
-        if rm_from_id:
+        if len(rm_from_id) > 1:
             # Guess what the ID was and rebuild a new one, omitting the columns part of the aggregation
             unstacked = unstack_id(cat)
             cat.esmcat.df["id"] = cat.df.apply(
@@ -1517,11 +1519,10 @@ def unstack_id(
         ].drop("id", axis=1)
 
         # Make sure that all elements are the same, if there are multiple lines
-        if len(subset) > 1:
-            if not all([subset[col].nunique() == 1 for col in subset.columns]):
-                raise ValueError(
-                    "Not all elements of the columns are the same for a given ID!"
-                )
+        if not (subset.nunique() == 1).all():
+            raise ValueError(
+                "Not all elements of the columns are the same for a given ID!"
+            )
 
         out[ids] = {attr: subset[attr].iloc[0] for attr in subset.columns}
 
