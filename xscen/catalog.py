@@ -371,7 +371,7 @@ class DataCatalog(intake_esm.esm_datastore):
           A list of catalog columns over which to concat the datasets (in addition to 'time'). Each will become a new dimension with the column values as coordinates.
           Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
         create_ensemble_on : list of strings or str, optional
-          The given column values will be merged into a new id-like "realization" column, which will concatenated over.
+          The given column values will be merged into a new id-like "realization" column, which will be concatenated over.
           The given columns are removed from the dataset id, so as to remove them from the groupby_attrs logic.
           Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
         calendar : str, optional
