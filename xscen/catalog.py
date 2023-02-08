@@ -357,7 +357,8 @@ class DataCatalog(intake_esm.esm_datastore):
         """
         Open the catalog's entries into a single dataset.
 
-        Same as :py:meth:`~intake_esm.core.esm_datastore.to_dask`, but with additionnal control over the aggregations.
+        Same as :py:meth:`~intake_esm.core.esm_datastore.to_dask`, but with additional control over the aggregations. The dataset definition logic is left untouched by this method (by default: ["id", "domain", "processing_level", "xrfreq"]). What this method does is provide a way to concatenate datasets from the catalog itself, using `intake_esm`'s functionalities. `concat_on` will keep the column names and add them as new dimensions, while `ensemble_on` will override the column names and concatenate the datasets along a new `realization` dimension. Both can be used at the same time.
+        
         Ensemble preprocessing logic is taken from :py:func:`xclim.ensembles.create_ensemble`.
         When `ensemble_on` is given, the function ensures all entries have the correct time coordinate according to `xrfreq`.
         If either argument is given, the "id" is reconstructed by removing mentions of aggregated columns.
@@ -366,7 +367,7 @@ class DataCatalog(intake_esm.esm_datastore):
         Parameters
         ----------
         concat_on : list of strings or str, optional
-          A list of catalog columns to concat the datasets over. Each will become a new dimension with the column values as coordinates.
+          A list of catalog columns over which to concat the datasets (in addition to 'time'). Each will become a new dimension with the column values as coordinates.
           Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
         ensemble_on : list of strings or str, optional
           A list of catalog columns to combine into a new `id` over which the datasets are concatenated.
@@ -425,7 +426,7 @@ class DataCatalog(intake_esm.esm_datastore):
         if ensemble_on:
             if preprocess is not None:
                 warnings.warn(
-                    "Using `ensemble_on` will override the iven `preprocess` function."
+                    "Using `ensemble_on` will override the given `preprocess` function."
                 )
             cat.df["realization"] = generate_id(cat.df, ensemble_on)
             cat.esmcat.aggregation_control.aggregations.append(
