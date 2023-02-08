@@ -350,36 +350,37 @@ class DataCatalog(intake_esm.esm_datastore):
     def to_dataset(
         self,
         concat_on: Optional[Union[List[str], str]] = None,
-        ensemble_on: Optional[Union[List[str], str]] = None,
+        create_ensemble_on: Optional[Union[List[str], str]] = None,
         calendar: Optional[str] = "standard",
         **kwargs,
     ) -> xr.Dataset:
         """
         Open the catalog's entries into a single dataset.
 
-        Same as :py:meth:`~intake_esm.core.esm_datastore.to_dask`, but with additional control over the aggregations. The dataset definition logic is left untouched by this method (by default: ["id", "domain", "processing_level", "xrfreq"]). What this method does is provide a way to concatenate datasets from the catalog itself, using `intake_esm`'s functionalities. `concat_on` will keep the column names and add them as new dimensions, while `ensemble_on` will override the column names and concatenate the datasets along a new `realization` dimension. Both can be used at the same time.
+        Same as :py:meth:`~intake_esm.core.esm_datastore.to_dask`, but with additional control over the aggregations.
+        The dataset definition logic is left untouched by this method (by default: ["id", "domain", "processing_level", "xrfreq"]),
+        except that newly aggregated columns are removed from the "id".
+        This will override any "custom" id, ones not unstackable with :py:func:`~xscen.catalog.unstack_id`.
 
         Ensemble preprocessing logic is taken from :py:func:`xclim.ensembles.create_ensemble`.
-        When `ensemble_on` is given, the function ensures all entries have the correct time coordinate according to `xrfreq`.
-        If either argument is given, the "id" is reconstructed by removing mentions of aggregated columns.
-        This will override any "custom" id, ones not unstackable with :py:func:`~xscen.catalog.unstack_id`.
+        When `create_ensemble_on` is given, the function ensures all entries have the correct time coordinate according to `xrfreq`.
 
         Parameters
         ----------
         concat_on : list of strings or str, optional
           A list of catalog columns over which to concat the datasets (in addition to 'time'). Each will become a new dimension with the column values as coordinates.
           Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
-        ensemble_on : list of strings or str, optional
-          A list of catalog columns to combine into a new `id` over which the datasets are concatenated.
-          The new dimension is named "realization".
+        create_ensemble_on : list of strings or str, optional
+          The given column values will be merged into a new id-like "realization" column, which will concatenated over.
+          The given columns are removed from the dataset id, so as to remove them from the groupby_attrs logic.
           Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
         calendar : str, optional
-          If `ensemble_on` is given, all datasets are converted to this calendar before concatenation.
-          Ignored if `ensemble_on` is None (default). If None, no conversion is done.
+          If `create_ensemble_on` is given, all datasets are converted to this calendar before concatenation.
+          Ignored otherwise (default). If None, no conversion is done.
           `align_on` is always "date".
         kwargs:
           Any other arguments are passed to :py:meth:`~intake_esm.core.esm_datastore.to_dataset_dict`.
-          The `preprocess` argument cannot be used if `ensemble_on` is given.
+          The `preprocess` argument cannot be used if `create_ensemble_on` is given.
 
         Returns
         -------
@@ -396,9 +397,9 @@ class DataCatalog(intake_esm.esm_datastore):
 
         if isinstance(concat_on, str):
             concat_on = [concat_on]
-        if isinstance(ensemble_on, str):
-            ensemble_on = [ensemble_on]
-        rm_from_id = (concat_on or []) + (ensemble_on or []) + ["realization"]
+        if isinstance(create_ensemble_on, str):
+            create_ensemble_on = [create_ensemble_on]
+        rm_from_id = (concat_on or []) + (create_ensemble_on or []) + ["realization"]
 
         aggs = {
             agg.attribute_name for agg in cat.esmcat.aggregation_control.aggregations
@@ -410,7 +411,7 @@ class DataCatalog(intake_esm.esm_datastore):
             )
         if not aggs.isdisjoint(rm_from_id):
             raise ValueError(
-                "Can't add aggregations for columns were an aggregation already exists ({aggs})"
+                f"Can't add aggregations for columns were an aggregation already exists ({aggs})"
             )
 
         if concat_on:
@@ -423,12 +424,12 @@ class DataCatalog(intake_esm.esm_datastore):
                 ]
             )
 
-        if ensemble_on:
+        if create_ensemble_on:
             if preprocess is not None:
                 warnings.warn(
-                    "Using `ensemble_on` will override the given `preprocess` function."
+                    "Using `create_ensemble_on` will override the given `preprocess` function."
                 )
-            cat.df["realization"] = generate_id(cat.df, ensemble_on)
+            cat.df["realization"] = generate_id(cat.df, create_ensemble_on)
             cat.esmcat.aggregation_control.aggregations.append(
                 intake_esm.cat.Aggregation(
                     type=intake_esm.cat.AggregationType.join_new,
