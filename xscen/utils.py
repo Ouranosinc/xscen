@@ -853,12 +853,12 @@ def unstack_dates(
         )
         new_shape = [len(new_coords[d]) for d in new_dims]
         # Use dask or numpy's algo.
-        return xr.DataArray(da.data.reshape(new_shape), dims=new_dims)
 
-    if uses_dask(ds):
-        # This is where it happens. Flox will minimally rechunk
-        # so the reshape operation can be performed blockwise
-        dsp = flox.xarray.rechunk_for_blockwise(dsp, "time", years)
+        if uses_dask(da):
+            # This is where it happens. Flox will minimally rechunk
+            # so the reshape operation can be performed blockwise
+            da = flox.xarray.rechunk_for_blockwise(da, "time", years)
+        return xr.DataArray(da.data.reshape(new_shape), dims=new_dims)
 
     if isinstance(ds, xr.Dataset):
         dso = dsp.map(reshape_da, keep_attrs=True)
