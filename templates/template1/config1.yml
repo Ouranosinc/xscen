@@ -1,0 +1,508 @@
+# example of a config for the workflow
+
+#list of task to accomplish in the workflow
+tasks:
+  - extract
+  - regrid
+  - biasadjust
+  - cleanup
+  - rechunk
+  - indicators
+  - climatology
+  - delta
+  - ensembles
+#  - diagnostics
+
+# argument to create the project
+project:
+    name: template1
+    version: 1.0.0
+    description: Template for xscen workflow
+    id: t1
+
+
+extract:
+  reconstruction:
+    dask:
+      n_workers: 2
+      threads_per_worker: 3
+      memory_limit: 10GB
+    search_data_catalogs:
+      variables_and_freqs: &var_and_freq # this is an anchor. more on anchors:  https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/
+        tasmax: D
+        tasmin: D
+        pr: D
+        dtr: D
+      allow_resampling: False
+      allow_conversion: True
+      periods: &ref_period
+        - '1991'
+        - '2020'
+      other_search_criteria:
+        source:
+          "ERA5-Land"
+    extract_dataset:
+      region: &region
+        name: test1
+        method: bbox
+        buffer: 1.5
+        bbox:
+          lon_bnds: [ -80, -79 ]
+          lat_bnds: [ 44, 44.2 ]
+    stack_drop_nans: &stack
+      True
+    save:
+      mode: o
+      encoding:
+        tasmax: &f32
+          dtype: float32
+        tasmin:
+          dtype: float32
+        pr:
+          dtype: float32
+        dtr:
+          dtype: float32
+      rechunk:
+        time: -1
+        loc: 10
+  simulation:
+    dask:
+      n_workers: 2
+      threads_per_worker: 5
+      memory_limit: 10GB
+    search_data_catalogs:
+      variables_and_freqs: *var_and_freq
+      match_hist_and_fut: True
+      allow_conversion: True
+      allow_resampling: False
+      periods: &sim_period
+        - '1950'
+        - '2100'
+      other_search_criteria:
+        mip_era: CMIP6
+        experiment:
+          - ssp245
+          - ssp370
+        source:
+          - CMCC-ESM2
+          - KACE-1-0-G
+    extract_dataset:
+      xr_combine_kwargs:
+        combine_attrs: override
+      xr_open_kwargs:
+        drop_variables:
+          - height
+      region: *region
+    floor: D
+    save:
+      mode: o
+      encoding:
+        tasmax: *f32
+        tasmin: *f32
+        pr: *f32
+        dtr: *f32
+      rechunk:
+        lat: -1
+        lon: -1
+        time: 365
+
+
+regrid:
+  dask:
+    n_workers: 2
+    threads_per_worker: 5
+    memory_limit: 10GB
+  inputs:
+    type: simulation
+    processing_level: extracted
+  output:
+    type: reconstruction
+    processing_level: extracted
+  regrid_dataset: # these will be automatically passed to the function
+    regridder_kwargs:
+      method: bilinear
+      extrap_method: inverse_dist
+      locstream_out: *stack
+      reuse_weights: False
+    intermediate_reg_grids:
+      reg1:
+        cf_grid_2d:
+          lon0_b: -80
+          lon1_b: -79
+          d_lon: 0.5
+          lat0_b: 44
+          lat1_b: 44.6
+          d_lat: 0.5
+        regridder_kwargs:
+          method: bilinear
+          extrap_method: inverse_dist
+          locstream_out: False
+          reuse_weights: False
+  save: &save_time_-1
+    mode: o
+    rechunk:
+      time: -1
+
+
+
+biasadjust:
+  dtr:
+      dask: &dask_ba
+        n_workers: 6
+        threads_per_worker: 3
+        memory_limit: "4GB"
+      sim_inputs: &sim_inputs
+        type: simulation
+        processing_level: regridded
+      ref_input: &ref_input
+        type: reconstruction
+        processing_level: extracted
+      xscen_train:
+          reference_period: *ref_period
+          method: DetrendedQuantileMapping
+          group:
+              group: time.dayofyear
+              window: 31
+          xclim_train_args:
+              kind: "*"
+              nquantiles: 50
+      xscen_adjust:
+          simulation_period: *sim_period
+          xclim_adjust_args:
+              detrend:
+                  LoessDetrend:
+                    f: 0.2
+                    niter: 1
+                    d: 0
+                    weights: tricube
+              interp: nearest
+              extrapolation: constant
+          bias_adjust_institution: &b_a_inst
+            Ouranos
+          bias_adjust_project: &b_a_pro
+            test1
+      save: *save_time_-1
+  tasmax:
+      dask: *dask_ba
+      sim_inputs: *sim_inputs
+      ref_input: *ref_input
+      xscen_train:
+          reference_period: *ref_period
+          method: DetrendedQuantileMapping
+          group:
+              group: time.dayofyear
+              window: 31
+          xclim_train_args:
+              kind: "+"
+              nquantiles: 50
+      xscen_adjust:
+          simulation_period: *sim_period
+          xclim_adjust_args:
+            detrend:
+                LoessDetrend:
+                  f: 0.2
+                  niter: 1
+                  d: 0
+                  weights: tricube
+            interp: nearest
+            extrapolation: constant
+          bias_adjust_institution: *b_a_inst
+          bias_adjust_project: *b_a_pro
+      save: *save_time_-1
+  pr:
+      dask: *dask_ba
+      sim_inputs: *sim_inputs
+      ref_input: *ref_input
+      xscen_train:
+          reference_period: *ref_period
+          method: DetrendedQuantileMapping
+          group:
+              group: time.dayofyear
+              window: 31
+          jitter_under:
+              thresh: 0.05 mm d-1
+          xclim_train_args:
+              kind: "*"
+              nquantiles: 50
+      xscen_adjust:
+          simulation_period: *sim_period
+          xclim_adjust_args:
+              detrend:
+                  LoessDetrend:
+                    f: 0.2
+                    niter: 1
+                    d: 0
+                    weights: tricube
+              interp: nearest
+              extrapolation: constant
+          bias_adjust_institution: *b_a_inst
+          bias_adjust_project: *b_a_pro
+      save: *save_time_-1
+
+
+cleanup:
+  dask:
+    n_workers: 4
+    threads_per_worker: 3
+    memory_limit: "6GB"
+  search_data_catalogs:
+    variables_and_freqs:
+      tasmax: D
+      tasmin: D
+      pr: D
+    allow_conversion: True
+    allow_resampling: False
+    other_search_criteria:
+      processing_level: biasadjusted
+  xscen_clean_up:
+    maybe_unstack_dict:
+      stack_drop_nans: *stack
+      rechunk:
+        lat: 15
+        lon: 15
+        time: -1
+    variables_and_units:
+      tasmax: degC
+      tasmin: degC
+      pr: mm d-1
+    convert_calendar_kwargs:
+      target: standard
+      align_on: random
+    missing_by_var:
+      tasmax: interpolate
+      tasmin: interpolate
+      pr: [ 0 ]
+    remove_all_attrs_except:
+      global:
+        - ^cat/
+        - history
+      tasmax: &attrs_to_keep
+        - bias_adjustment
+        - cell_methods
+        - coordinates
+        - history
+        - long_name
+        - standard_name
+        - units
+      tasmin: *attrs_to_keep
+      pr: *attrs_to_keep
+    add_attrs:
+      global:
+        title: Info-Crue CMIP6 - {sim_id}
+        Notes: |
+          Regridded on the grid of ERA5-Land, then bias-adjusted with detrended
+          quantile mapping on a day-of-year basis with a window of 31 days,
+          LOESS detrending and 50 quantiles.
+          There is a second bias adjustement for pr's extreme values.
+          Tasmax, dtr and pr were adjusted, tasmin was computed
+          from tasmax and dtr after the adjustment.
+          The reference was ERA5-Land over the 1991-2010 period.
+        redistribution: Redistribution prohibited. For internal use only.
+        version: "1.0.0"
+      tasmax:
+        standard_name: air_temperature
+        long_name: Maximal daily temperature
+        cell_methods: "time: maximum within days"
+      tasmin:
+        standard_name: air_temperature
+        long_name: Minimal daily temperature
+        cell_methods: "time: minimum within days"
+      pr:
+        standard_name: precipitation_flux
+        long_name: Mean daily precipitation flux
+        cell_methods: "time: mean within days"
+  save:
+    mode: o
+    encoding:
+      tasmax:
+        dtype: float32
+      tasmin:
+        dtype: float32
+      pr:
+        dtype: float32
+
+
+rechunk:
+  dask:
+    n_workers: 3
+    threads_per_worker: 5
+    memory_limit: "6GB"
+  inputs:
+    processing_level: cleaned
+  xscen_rechunk:
+    worker_mem: 2GB
+    chunks_over_dim:
+      lat: 3
+      lon: 3
+      time: 4year
+    overwrite: True
+
+indicators:
+  dask:
+    n_workers: 8
+    threads_per_worker: 5
+    memory_limit: "2GB"
+  inputs:
+    processing_level: rechunked
+  compute_indicators: # automatically parsed
+    {}
+  save: *save_time_-1
+
+
+aggregate:
+  dask:
+    n_workers: 4
+    threads_per_worker: 4
+    memory_limit: "6GB"
+  input:
+    clim:
+      processing_level: indicators
+    delta:
+      processing_level: climatology
+  climatological_mean: # automatically parsed
+    window: 30
+    interval: 10
+    periods: [['1951', '2100']]
+    to_level: climatology
+  compute_deltas: # automatically parsed
+    kind: "+"
+    reference_horizon: "1991-2020"
+    to_level: 'abs-delta'
+  save:
+    mode: 'o'
+
+ensembles:
+  dask:
+    n_workers: 3
+    threads_per_worker: 5
+    memory_limit: "5GB"
+  processing_levels:
+    - indicators
+    - climatology
+    - delta
+  ensemble_stats: # automatically parsed
+    statistics: ensemble_percentiles
+    stats_kwargs:
+      split: False
+    common_attrs_only: True
+  save:
+    mode: o
+
+diagnostics:
+  kind:
+    reference:
+      dask:
+        n_workers: 3
+        threads_per_worker: 5
+        memory_limit: "5GB"
+      inputs:
+        processing_level: extracted
+        type: reconstruction
+      properties_and_measures:
+        period: *ref_period
+        unstack: *stack
+        unit_conversion:
+          tasmin: degC
+          tasmax: degC
+          pr: mm d-1
+        to_level_prop: diag-properties-ref
+      save:
+        mode: o
+        rechunk:
+          lat: -1
+          lon: -1
+    simulation:
+      dask:
+        n_workers: 3
+        threads_per_worker: 5
+        memory_limit: "5GB"
+      inputs:
+        processing_level: regridded
+        type: simulation
+      dref_for_measure:
+        processing_level: diag-properties-ref
+      properties_and_measures:
+        period: *ref_period
+        unstack: *stack
+        unit_conversion:
+          tasmin: degC
+          tasmax: degC
+          pr: mm d-1
+        to_level_prop: diag-properties-sim
+        to_level_meas: diag-measures-sim
+      save:
+        mode: o
+        rechunk:
+          lat: -1
+          lon: -1
+    scenario:
+      dask:
+        n_workers: 3
+        threads_per_worker: 5
+        memory_limit: "5GB"
+      inputs:
+        processing_level: cleaned
+        type: simulation
+      dref_for_measure:
+        processing_level: diag-properties-ref
+      properties_and_measures:
+        period: *ref_period
+        unstack: False
+        to_level_prop: diag-properties-scen
+        to_level_meas: diag-measures-scen
+      save:
+        mode: o
+        rechunk:
+          lat: -1
+          lon: -1
+  summary_meas:
+    measures_heatmap:
+      meas_datasets_search:
+        processing_level:
+          - diag-measures-sim
+          - diag-measures-scen
+      args:
+
+
+
+
+
+# send an email when code fails
+mail:
+    send_mail:
+        to: lavoie.juliette@ouranos.ca
+    subject: Info-Crue CMIP6
+    send_mail_on_exit:
+        msg_ok: Toutes les étapes demandées ont été complétées.
+        msg_err: Une erreur est survenue durant le traitement.
+        on_error_only: True
+
+dask:
+    client:
+        dashboard_address: 6786
+    array.slicing.split_large_chunks: False
+
+logging:
+    formatters:
+        default:
+            format: '%(asctime)s %(levelname)-8s %(name)-15s %(message)s'
+            datefmt: '%Y-%m-%d %H:%M:%S'
+    handlers:
+        console:
+            class : logging.StreamHandler
+            formatter: default
+            level : INFO
+        file:
+            class: logging.FileHandler
+            formatter: default
+            level : DEBUG
+    loggers:
+        xscen:
+            propagate: False
+            level: INFO
+            handlers: [file, console]
+
+# parameters to open datasets
+to_dataset_dict:
+  xarray_open_kwargs:
+    decode_timedelta: False
