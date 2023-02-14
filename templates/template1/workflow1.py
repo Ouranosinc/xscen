@@ -87,12 +87,6 @@ if __name__ == "__main__":
 
                             # drop nans and stack lat/lon in 1d loc (makes code faster)
                             if type_dict.get("stack_drop_nans", False):
-                                # Temporary measure to fix reference file
-                                if "_precision" in ds.lat.attrs:
-                                    del ds.lat.attrs["_precision"]
-                                if "_precision" in ds.lon.attrs:
-                                    del ds.lon.attrs["_precision"]
-
                                 ds = xs.utils.stack_drop_nans(
                                     ds,
                                     ds[list(ds.data_vars)[0]]
@@ -134,8 +128,6 @@ if __name__ == "__main__":
                 path = f"{CONFIG['paths']['task']}".format(**cur)
                 xs.save_to_zarr(ds=ds_regrid, filename=path, **CONFIG["regrid"]["save"])
                 pcat.update_from_ds(ds=ds_regrid, path=path, info_dict=cur)
-
-            # TODO: add diagnostics
 
     # --- BIAS ADJUST ---
     if "biasadjust" in CONFIG["tasks"]:
@@ -200,7 +192,7 @@ if __name__ == "__main__":
                     # iter over dataset of different frequencies (usually just 'D')
                     for key_freq, ds in freq_dict.items():
                         # clean up the dataset
-                        ds = xs.clean_up(
+                        ds_clean = xs.clean_up(
                             ds=ds,
                             to_level="cleaned",
                             **CONFIG["cleanup"]["xscen_clean_up"],
@@ -208,12 +200,10 @@ if __name__ == "__main__":
 
                         # save and update
                         path = f"{CONFIG['paths']['task']}".format(**cur)
-                        xs.save_to_zarr(
-                            ds=ds, filename=path, **CONFIG["cleanup"]["save"]
-                        )
-                        pcat.update_from_ds(ds=ds, path=path)
+                        xs.save_to_zarr(ds_clean, path, **CONFIG["cleanup"]["save"])
+                        pcat.update_from_ds(ds=ds_clean, path=path)
 
-    # --- RECHUNK ---
+    # --- RECHUNK and store final daily data ---
     if "rechunk" in CONFIG["tasks"]:
         # get inputs and iter over them
         dict_input = pcat.search(**CONFIG["rechunk"]["inputs"]).to_dataset_dict(**tdd)
@@ -247,7 +237,84 @@ if __name__ == "__main__":
                         info_dict={"processing_level": "final"},
                     )
 
-                    # TODO: add diag
+    # --- DIAGNOSTICS ---
+    if "diagnostics" in CONFIG["tasks"]:
+        # compute properties (and measures) on different kinds of data (ref, sim,scen)
+        for kind, kind_dict in CONFIG["diagnostics"]["kind"].items():
+            # iterate on inputs
+            dict_input = pcat.search(**kind_dict["inputs"]).to_dataset_dict(**tdd)
+            for key_input, ds_input in dict_input.items():
+                cur = {
+                    "id": ds_input.attrs["cat:id"],
+                    "processing_level": kind_dict["properties_and_measures"].get(
+                        "to_level_prop", "diag-properties"
+                    ),
+                    "xrfreq": "fx",
+                }
+
+                if not pcat.exists_in_cat(**cur):
+                    with (
+                        Client(**CONFIG["diagnostics"]["dask"], **daskkws),
+                        xs.measure_time(name=f"diagnostics {key_input}", logger=logger),
+                    ):
+                        # get the reference for the measures
+                        dref_for_measure = None
+                        if "dref_for_measure" in kind_dict:
+                            dref_for_measure = pcat.search(
+                                **kind_dict["dref_for_measure"],
+                            ).to_dataset(**tdd)
+
+                        # compute properties and measures
+                        prop, meas = xs.properties_and_measures(
+                            ds=ds_input,
+                            dref_for_measure=dref_for_measure,
+                            **kind_dict["properties_and_measures"],
+                        )
+
+                        # save to zarr
+                        for out in [meas, prop]:
+                            cur["processing_level"] = out.attrs["cat:processing_level"]
+                            # don't save if empty
+                            if len(out.data_vars) > 0:
+                                path_diag = f"{CONFIG['paths']['task']}".format(**cur)
+                                xs.save_to_zarr(out, path_diag, **kind_dict["save"])
+                                pcat.update_from_ds(ds=out, path=path_diag)
+
+        # # summary of diagnostics
+        # get sim measures
+        meas_dict = pcat.search(processing_level="diag-measures-sim").to_dataset_dict(
+            **tdd
+        )
+        for id_meas, ds_meas_sim in meas_dict.items():
+            cur = {
+                "id": ds_meas_sim.attrs["cat:id"],
+                "processing_level": "diag-improved",
+                "xrfreq": "fx",
+            }
+            if not pcat.exists_in_cat(**cur):
+                with (
+                    Client(**CONFIG["diagnostics"]["dask"], **daskkws),
+                    xs.measure_time(name=f"summary diag {cur['id']}", logger=logger),
+                ):
+                    # get scen meas associated with sim
+                    meas_datasets = {}
+                    meas_datasets["sim"] = ds_meas_sim
+                    meas_datasets["scen"] = pcat.search(
+                        processing_level="diag-measures-scen",
+                        id=cur["id"],
+                    ).to_dataset(**tdd)
+
+                    # compute heatmap
+                    hm = xs.diagnostics.measures_heatmap(meas_datasets)
+
+                    # compute improved
+                    ip = xs.diagnostics.measures_improvement(meas_datasets)
+
+                    # save and update
+                    for ds in [hm, ip]:
+                        path_diag = f"{CONFIG['paths']['task']}".format(**cur)
+                        xs.save_to_zarr(ds=ds, filename=path_diag, mode="o")
+                        pcat.update_from_ds(ds=ds, path=path_diag)
 
     # --- INDICATORS ---
     if "indicators" in CONFIG["tasks"]:
@@ -334,83 +401,46 @@ if __name__ == "__main__":
     # --- ENSEMBLES ---
     if "ensembles" in CONFIG["tasks"]:
         # one ensemble (file) per level, per experiment
-        for processing_level in CONFIG["ensemble"]["processing_levels"]:
+        for processing_level in CONFIG["ensembles"]["processing_levels"]:
             ind_df = pcat.search(processing_level=processing_level).df
             # iterate through available xrfreq, exp and variables
             for experiment in ind_df.experiment.unique():
-                # get all datasets that go in the ensemble
-                ind_dict = pcat.search(
-                    processing_level=processing_level,
-                    experiment=experiment,
-                ).to_dataset_dict(**tdd)
+                for xrfreq in ind_df.xrfreq.unique():
+                    # get all datasets that go in the ensemble
+                    ind_dict = pcat.search(
+                        processing_level=processing_level,
+                        experiment=experiment,
+                        xrfreq=xrfreq,
+                    ).to_dataset_dict(**tdd)
 
-                cur = {"processing_level": processing_level, "experimen": experiment}
-                if not pcat.exists_in_cat(**cur):
-                    with (
-                        Client(**CONFIG["ensembles"]["dask"], **daskkws),
-                        xs.measure_time(
-                            name=f"ensemble-{processing_level} {experiment}",
-                            logger=logger,
-                        ),
-                    ):
-                        ens_stats = xs.ensemble_stats(datasets=ind_dict)
+                    cur = {
+                        "processing_level": f"ensemble-{processing_level}",
+                        "experiment": experiment,
+                        "xrfreq": xrfreq,
+                    }
+                    if not pcat.exists_in_cat(**cur):
+                        with (
+                            Client(**CONFIG["ensembles"]["dask"], **daskkws),
+                            xs.measure_time(
+                                name=f"ens-{processing_level} {experiment} {xrfreq}",
+                                logger=logger,
+                            ),
+                        ):
+                            ens_stats = xs.ensemble_stats(
+                                datasets=ind_dict,
+                                to_level=f"ensemble-{processing_level}",
+                            )
 
-                        # add new id
-                        cur["id"] = ens_stats.attrs["cat:id"]
+                            # add new id
+                            cur["id"] = ens_stats.attrs["cat:id"]
 
-                        # save to zarr
-                        path = f"{CONFIG['paths']['task']}".format(**cur)
-                        xs.save_to_zarr(ens_stats, path, **CONFIG["ensembles"]["save"])
-                        pcat.update_from_ds(ds=ens_stats, path=path)
+                            # save to zarr
+                            path = f"{CONFIG['paths']['task']}".format(**cur)
+                            xs.save_to_zarr(
+                                ens_stats, path, **CONFIG["ensembles"]["save"]
+                            )
+                            pcat.update_from_ds(ds=ens_stats, path=path)
 
-    # --- DIAGNOSTICS ---
-    # TODO: finish this
-    if "diagnostics" in CONFIG["tasks"]:
-        # compute properties (and measures) on different kinds of data
-        for kind, kind_dict in CONFIG["diagnostics"]["kind"].items():
-            # iterate on inputs
-            dict_input = pcat.search(**kind_dict["inputs"]).to_dataset_dict(**tdd)
-            for key_input, ds_input in dict_input.items():
-                cur = {
-                    "id": ds_input.attrs["cat:id"],
-                    "processing_level": kind_dict["properties_and_measures"].get(
-                        "to_level_prop", "diag-properties"
-                    ),
-                }
-
-                if not pcat.exists_in_cat(**cur):
-                    with (
-                        Client(**kind_dict["dask"], **daskkws),
-                        xs.measure_time(name=f"diagnostics {key_input}", logger=logger),
-                    ):
-                        # get the reference for the measures
-                        dref_for_measure = None
-                        if "dref_for_measure" in kind_dict:
-                            dref_for_measure = pcat.search(
-                                **kind_dict["dref_for_measure"], domain=cur["domain"]
-                            ).to_dask()
-
-                        # compute properties and measures
-                        prop, meas = xs.properties_and_measures(
-                            ds=ds_input,
-                            dref_for_measure=dref_for_measure,
-                            **kind_dict["properties_and_measures"],
-                        )
-
-                        # save to zarr
-                        for out in [prop, meas]:
-                            cur["processing_level"] = out.attrs["cat:processing_level"]
-                            # don't save if empty
-                            if len(out.data_vars) > 0:
-                                path_diag = f"{CONFIG['paths']['task']}".format(**cur)
-                                xs.save_to_zarr(out, path_diag, **kind_dict["save"])
-                                pcat.update_from_ds(ds=out, path=path_diag)
-
-        # for func, func_dict in CONFIG["diagnostics"].get('summary_meas',{}).items():
-        #     input_dict = pcat.search(**func_dict['meas_datasets_search']).to_dataset_dict(**tdd)
-        #     for id_meas, meas_datasets in input_dict.items():
-        #         func_args = func_dict.copy()
-        #         func_args['meas_datasets']=
 
 # TODO: when do we want to erase stuff
 # TODO: decode_timedelta?

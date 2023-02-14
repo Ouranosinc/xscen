@@ -1,17 +1,26 @@
 # example of a config for the workflow
 
-#list of task to accomplish in the workflow
+
+# This workflow is made to know exactly where to restart if the code is stopped.
+# It looks if the result of a task exists in the project catalog before executing the task.
+# The workflow does NOT automatically remove intermediate files.
+
+#List of task to accomplish in the workflow
+# Each task will iterate over all simulations before moving on to the next task.
+# It might be useful to start by running it once on a single simulation
+# ( by modifying extract:simulation:search_data_catalogs:other_search_criteria:) to make sure all tasks work properly .
 tasks:
-  - extract
-  - regrid
-  - biasadjust
-  - cleanup
-  - rechunk
-  - indicators
-  - climatology
-  - delta
-  - ensembles
-#  - diagnostics
+  - extract # Extract the simulation and reference dataset with the right domain and period.
+  - regrid # Regrid the simulation onto the reference grid.
+  - biasadjust # Train and adjust the simulation dataset one variable at the time.
+  - cleanup # Join each individually adjusted variable back in one scenario dataset and clean up other details.
+  - rechunk # Rechunk the scenario dataset and save it.
+  - diagnostics # Compute diagnostics (properties, measures and summaries)
+  - indicators # Compute xclim indicators on the scenario.
+  - climatology # Compute the climatological mean of the indicators
+  - delta # Compute the deltas of the climatological means.
+  - ensembles # Compute the ensemble statistics on indicators, climatology and deltas.
+
 
 # argument to create the project
 project:
@@ -26,7 +35,7 @@ extract:
     dask:
       n_workers: 2
       threads_per_worker: 3
-      memory_limit: 10GB
+      memory_limit: 15GB
     search_data_catalogs:
       variables_and_freqs: &var_and_freq # this is an anchor. more on anchors:  https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/
         tasmax: D
@@ -68,7 +77,7 @@ extract:
   simulation:
     dask:
       n_workers: 2
-      threads_per_worker: 5
+      threads_per_worker: 3
       memory_limit: 10GB
     search_data_catalogs:
       variables_and_freqs: *var_and_freq
@@ -86,12 +95,18 @@ extract:
         source:
           - CMCC-ESM2
           - KACE-1-0-G
+        member:
+          - r1i1p1f1
     extract_dataset:
       xr_combine_kwargs:
         combine_attrs: override
       xr_open_kwargs:
         drop_variables:
           - height
+        chunks:
+          lat: 10
+          lon: 10
+          time: 365
       region: *region
     floor: D
     save:
@@ -144,7 +159,6 @@ regrid:
       time: -1
 
 
-
 biasadjust:
   dtr:
       dask: &dask_ba
@@ -180,7 +194,7 @@ biasadjust:
           bias_adjust_institution: &b_a_inst
             Ouranos
           bias_adjust_project: &b_a_pro
-            test1
+            template1
       save: *save_time_-1
   tasmax:
       dask: *dask_ba
@@ -273,9 +287,6 @@ cleanup:
       tasmin: interpolate
       pr: [ 0 ]
     remove_all_attrs_except:
-      global:
-        - ^cat/
-        - history
       tasmax: &attrs_to_keep
         - bias_adjustment
         - cell_methods
@@ -288,7 +299,6 @@ cleanup:
       pr: *attrs_to_keep
     add_attrs:
       global:
-        title: Info-Crue CMIP6 - {sim_id}
         Notes: |
           Regridded on the grid of ERA5-Land, then bias-adjusted with detrended
           quantile mapping on a day-of-year basis with a window of 31 days,
@@ -302,15 +312,12 @@ cleanup:
       tasmax:
         standard_name: air_temperature
         long_name: Maximal daily temperature
-        cell_methods: "time: maximum within days"
       tasmin:
         standard_name: air_temperature
         long_name: Minimal daily temperature
-        cell_methods: "time: minimum within days"
       pr:
         standard_name: precipitation_flux
         long_name: Mean daily precipitation flux
-        cell_methods: "time: mean within days"
   save:
     mode: o
     encoding:
@@ -337,15 +344,77 @@ rechunk:
       time: 4year
     overwrite: True
 
+
+diagnostics:
+  dask:
+    n_workers: 3
+    threads_per_worker: 5
+    memory_limit: "5GB"
+  kind:
+    reference:
+      inputs:
+        processing_level: extracted
+        type: reconstruction
+      properties_and_measures:
+        period: *ref_period
+        unstack: *stack
+        change_units_arg:
+          tasmin: degC
+          tasmax: degC
+          pr: mm d-1
+        to_level_prop: diag-properties-ref
+      save:
+        mode: o
+        rechunk:
+          lat: -1
+          lon: -1
+    simulation:
+      inputs:
+        processing_level: regridded
+        type: simulation
+      dref_for_measure:
+        processing_level: diag-properties-ref
+      properties_and_measures:
+        period: *ref_period
+        unstack: *stack
+        change_units_arg:
+          tasmin: degC
+          tasmax: degC
+          pr: mm d-1
+        to_level_prop: diag-properties-sim
+        to_level_meas: diag-measures-sim
+      save:
+        mode: o
+        rechunk:
+          lat: -1
+          lon: -1
+    scenario:
+      inputs:
+        processing_level: cleaned
+        type: simulation
+      dref_for_measure:
+        processing_level: diag-properties-ref
+      properties_and_measures:
+        period: *ref_period
+        unstack: False
+        to_level_prop: diag-properties-scen
+        to_level_meas: diag-measures-scen
+      save:
+        mode: o
+        rechunk:
+          lat: -1
+          lon: -1
+  measures_heatmap: {} # automatically parsed
+  measures_improvement: {}   # automatically parsed
+
 indicators:
   dask:
     n_workers: 8
     threads_per_worker: 5
     memory_limit: "2GB"
   inputs:
-    processing_level: rechunked
-  compute_indicators: # automatically parsed
-    {}
+    processing_level: final
+  compute_indicators: {} # automatically parsed
   save: *save_time_-1
 
 
@@ -367,7 +436,7 @@ aggregate:
   compute_deltas: # automatically parsed
     kind: "+"
     reference_horizon: "1991-2020"
-    to_level: 'abs-delta'
+    to_level: 'delta'
   save:
     mode: 'o'
 
@@ -381,87 +450,15 @@ ensembles:
     - climatology
     - delta
   ensemble_stats: # automatically parsed
-    statistics: ensemble_percentiles
+    statistics:
+      ensemble_percentiles: {}
     stats_kwargs:
       split: False
     common_attrs_only: True
   save:
     mode: o
 
-diagnostics:
-  kind:
-    reference:
-      dask:
-        n_workers: 3
-        threads_per_worker: 5
-        memory_limit: "5GB"
-      inputs:
-        processing_level: extracted
-        type: reconstruction
-      properties_and_measures:
-        period: *ref_period
-        unstack: *stack
-        unit_conversion:
-          tasmin: degC
-          tasmax: degC
-          pr: mm d-1
-        to_level_prop: diag-properties-ref
-      save:
-        mode: o
-        rechunk:
-          lat: -1
-          lon: -1
-    simulation:
-      dask:
-        n_workers: 3
-        threads_per_worker: 5
-        memory_limit: "5GB"
-      inputs:
-        processing_level: regridded
-        type: simulation
-      dref_for_measure:
-        processing_level: diag-properties-ref
-      properties_and_measures:
-        period: *ref_period
-        unstack: *stack
-        unit_conversion:
-          tasmin: degC
-          tasmax: degC
-          pr: mm d-1
-        to_level_prop: diag-properties-sim
-        to_level_meas: diag-measures-sim
-      save:
-        mode: o
-        rechunk:
-          lat: -1
-          lon: -1
-    scenario:
-      dask:
-        n_workers: 3
-        threads_per_worker: 5
-        memory_limit: "5GB"
-      inputs:
-        processing_level: cleaned
-        type: simulation
-      dref_for_measure:
-        processing_level: diag-properties-ref
-      properties_and_measures:
-        period: *ref_period
-        unstack: False
-        to_level_prop: diag-properties-scen
-        to_level_meas: diag-measures-scen
-      save:
-        mode: o
-        rechunk:
-          lat: -1
-          lon: -1
-  summary_meas:
-    measures_heatmap:
-      meas_datasets_search:
-        processing_level:
-          - diag-measures-sim
-          - diag-measures-scen
-      args:
+
 
 
 
@@ -479,7 +476,7 @@ mail:
 
 dask:
     client:
-        dashboard_address: 6786
+        dashboard_address: 6786 # change this for your number
     array.slicing.split_large_chunks: False
 
 logging:
