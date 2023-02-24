@@ -62,7 +62,7 @@ jobs:
             mamba
             python=${{ matrix.python-version }}
             tox~="3.0"
-            tox-conda
+            tox-conda>=0.10.2
       - name: Conda and mamba versions
         run: |
           mamba --version
