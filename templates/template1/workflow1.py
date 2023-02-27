@@ -66,8 +66,7 @@ if __name__ == "__main__":
                     "processing_level": "extracted",
                 }
                 # check if steps was already done
-                # if not pcat.exists_in_cat(**cur):
-                if True:
+                if not pcat.exists_in_cat(**cur):
                     with (
                         Client(**type_dict["dask"], **daskkws),
                         xs.measure_time(name=f"extract {ds_id}", logger=logger),
