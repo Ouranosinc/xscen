@@ -5,10 +5,10 @@
 # It looks if the result of a task exists in the project catalog before executing the task.
 # The workflow does NOT automatically remove intermediate files.
 
-#List of task to accomplish in the workflow
+# List of task to accomplish in the workflow
 # Each task will iterate over all simulations before moving on to the next task.
-# It might be useful to start by running it once on a single simulation
-# ( by modifying extract:simulation:search_data_catalogs:other_search_criteria:) to make sure all tasks work properly .
+# It might be useful to start by running it once on a single simulation (by modifying
+# extract:simulation:search_data_catalogs:other_search_criteria:) to make sure all tasks work properly .
 tasks:
   - extract # Extract the simulation and reference dataset with the right domain and period.
   - regrid # Regrid the simulation onto the reference grid.
@@ -22,12 +22,11 @@ tasks:
   - ensembles # Compute the ensemble statistics on indicators, climatology and deltas.
 
 
-# argument to create the project
-project:
-    name: template1
-    version: 1.0.0
-    description: Template for xscen workflow
-    id: t1
+project: # argument to create the project
+  name: template1
+  version: 1.0.0
+  description: Template for xscen workflow
+  id: t1
 
 
 extract:
@@ -161,97 +160,97 @@ regrid:
 
 biasadjust:
   dtr:
-      dask: &dask_ba
-        n_workers: 6
-        threads_per_worker: 3
-        memory_limit: "4GB"
-      sim_inputs: &sim_inputs
-        type: simulation
-        processing_level: regridded
-      ref_input: &ref_input
-        type: reconstruction
-        processing_level: extracted
-      xscen_train:
-          reference_period: *ref_period
-          method: DetrendedQuantileMapping
-          group:
-              group: time.dayofyear
-              window: 31
-          xclim_train_args:
-              kind: "*"
-              nquantiles: 50
-      xscen_adjust:
-          simulation_period: *sim_period
-          xclim_adjust_args:
-              detrend:
-                  LoessDetrend:
-                    f: 0.2
-                    niter: 1
-                    d: 0
-                    weights: tricube
-              interp: nearest
-              extrapolation: constant
-          bias_adjust_institution: &b_a_inst
-            Ouranos
-          bias_adjust_project: &b_a_pro
-            template1
-      save: *save_time_-1
+    dask: &dask_ba
+      n_workers: 6
+      threads_per_worker: 3
+      memory_limit: "4GB"
+    sim_inputs: &sim_inputs
+      type: simulation
+      processing_level: regridded
+    ref_input: &ref_input
+      type: reconstruction
+      processing_level: extracted
+    xscen_train:
+      reference_period: *ref_period
+      method: DetrendedQuantileMapping
+      group:
+        group: time.dayofyear
+        window: 31
+      xclim_train_args:
+        kind: "*"
+        nquantiles: 50
+    xscen_adjust:
+      simulation_period: *sim_period
+      xclim_adjust_args:
+        detrend:
+          LoessDetrend:
+            f: 0.2
+            niter: 1
+            d: 0
+            weights: tricube
+        interp: nearest
+        extrapolation: constant
+      bias_adjust_institution: &b_a_inst
+        Ouranos
+      bias_adjust_project: &b_a_pro
+        template1
+    save: *save_time_-1
   tasmax:
-      dask: *dask_ba
-      sim_inputs: *sim_inputs
-      ref_input: *ref_input
-      xscen_train:
-          reference_period: *ref_period
-          method: DetrendedQuantileMapping
-          group:
-              group: time.dayofyear
-              window: 31
-          xclim_train_args:
-              kind: "+"
-              nquantiles: 50
-      xscen_adjust:
-          simulation_period: *sim_period
-          xclim_adjust_args:
-            detrend:
-                LoessDetrend:
-                  f: 0.2
-                  niter: 1
-                  d: 0
-                  weights: tricube
-            interp: nearest
-            extrapolation: constant
-          bias_adjust_institution: *b_a_inst
-          bias_adjust_project: *b_a_pro
-      save: *save_time_-1
+    dask: *dask_ba
+    sim_inputs: *sim_inputs
+    ref_input: *ref_input
+    xscen_train:
+      reference_period: *ref_period
+      method: DetrendedQuantileMapping
+      group:
+        group: time.dayofyear
+        window: 31
+      xclim_train_args:
+        kind: "+"
+        nquantiles: 50
+    xscen_adjust:
+      simulation_period: *sim_period
+      xclim_adjust_args:
+        detrend:
+          LoessDetrend:
+            f: 0.2
+            niter: 1
+            d: 0
+            weights: tricube
+        interp: nearest
+        extrapolation: constant
+      bias_adjust_institution: *b_a_inst
+      bias_adjust_project: *b_a_pro
+    save: *save_time_-1
   pr:
-      dask: *dask_ba
-      sim_inputs: *sim_inputs
-      ref_input: *ref_input
-      xscen_train:
-          reference_period: *ref_period
-          method: DetrendedQuantileMapping
-          group:
-              group: time.dayofyear
-              window: 31
-          jitter_under:
-              thresh: 0.05 mm d-1
-          xclim_train_args:
-              kind: "*"
-              nquantiles: 50
-      xscen_adjust:
-          simulation_period: *sim_period
-          xclim_adjust_args:
-              detrend:
-                  LoessDetrend:
-                    f: 0.2
-                    niter: 1
-                    d: 0
-                    weights: tricube
-              interp: nearest
-              extrapolation: constant
-          bias_adjust_institution: *b_a_inst
-          bias_adjust_project: *b_a_pro
-      save: *save_time_-1
+    dask: *dask_ba
+    sim_inputs: *sim_inputs
+    ref_input: *ref_input
+    xscen_train:
+      reference_period: *ref_period
+      method: DetrendedQuantileMapping
+      group:
+        group: time.dayofyear
+        window: 31
+      jitter_under:
+        thresh: 0.05 mm d-1
+      xclim_train_args:
+        kind: "*"
+        nquantiles: 50
+    xscen_adjust:
+      simulation_period: *sim_period
+      xclim_adjust_args:
+        detrend:
+          LoessDetrend:
+            f: 0.2
+            niter: 1
+            d: 0
+            weights: tricube
+        interp: nearest
+        extrapolation: constant
+      bias_adjust_institution: *b_a_inst
+      bias_adjust_project: *b_a_pro
+    save: *save_time_-1
 
 
 cleanup:
@@ -269,6 +268,7 @@ cleanup:
     other_search_criteria:
       processing_level: biasadjusted
   xscen_clean_up:
+    to_level: cleaned
     maybe_unstack_dict:
       stack_drop_nans: *stack
       rechunk:
@@ -407,6 +407,7 @@ diagnostics:
   measures_heatmap: {} # automatically parsed
   measures_improvement: {}   # automatically parsed
 
+
 indicators:
   dask:
     n_workers: 8
@@ -440,6 +441,7 @@ aggregate:
   save:
     mode: 'o'
 
+
 ensembles:
   dask:
     n_workers: 3
@@ -459,47 +461,43 @@ ensembles:
     mode: o
 
 
+mail: # send an email when code fails or succeed
+  send_mail:
+    to: lavoie.juliette@ouranos.ca
+  subject: Info-Crue CMIP6
+  send_mail_on_exit:
+    msg_ok: Toutes les étapes demandées ont été complétées.
+    msg_err: Une erreur est survenue durant le traitement.
+    on_error_only: True
 
 
+dask: # general dask arguments
+  client:
+    dashboard_address: 6786 # change this for your number
+  array.slicing.split_large_chunks: False
 
 
+logging: # general logging args
+  formatters:
+    default:
+      format: '%(asctime)s %(levelname)-8s %(name)-15s %(message)s'
+      datefmt: '%Y-%m-%d %H:%M:%S'
+  handlers:
+    console:
+      class : logging.StreamHandler
+      formatter: default
+      level : INFO
+    file:
+      class: logging.FileHandler
+      formatter: default
+      level : DEBUG
+  loggers:
+    xscen:
+      propagate: False
+      level: INFO
+      handlers: [file, console]
 
-# send an email when code fails
-mail:
-    send_mail:
-        to: lavoie.juliette@ouranos.ca
-    subject: Info-Crue CMIP6
-    send_mail_on_exit:
-        msg_ok: Toutes les étapes demandées ont été complétées.
-        msg_err: Une erreur est survenue durant le traitement.
-        on_error_only: True
 
-dask:
-    client:
-        dashboard_address: 6786 # change this for your number
-    array.slicing.split_large_chunks: False
-
-logging:
-    formatters:
-        default:
-            format: '%(asctime)s %(levelname)-8s %(name)-15s %(message)s'
-            datefmt: '%Y-%m-%d %H:%M:%S'
-    handlers:
-        console:
-            class : logging.StreamHandler
-            formatter: default
-            level : INFO
-        file:
-            class: logging.FileHandler
-            formatter: default
-            level : DEBUG
-    loggers:
-        xscen:
-            propagate: False
-            level: INFO
-            handlers: [file, console]
-
-# parameters to open datasets
-to_dataset_dict:
+to_dataset_dict: # parameters to open datasets
   xarray_open_kwargs:
     decode_timedelta: False

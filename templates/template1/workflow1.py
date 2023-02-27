@@ -1,9 +1,7 @@
-"""Trying to do a unique workflow."""
+"""Template of a typical workflow."""
 import atexit
 import logging
 import os
-from copy import deepcopy
-from pathlib import Path
 
 import xarray as xr
 from dask import config as dskconf
@@ -17,6 +15,7 @@ xs.load_config(
     "paths1.yml", "config1.yml", verbose=(__name__ == "__main__"), reset=True
 )
 
+# get logger
 if "logging" in CONFIG:
     logger = logging.getLogger("xscen")
 
@@ -37,7 +36,7 @@ if __name__ == "__main__":
     if "mail" in CONFIG:
         atexit.register(xs.send_mail_on_exit, subject=CONFIG["mail"]["subject"])
 
-    # initialize Project Catalog (only do this once)
+    # initialize Project Catalog (only do this once, if the file doesn't already exist)
     if not os.path.exists(CONFIG["paths"]["project_catalog"]):
         pcat = xs.ProjectCatalog.create(
             CONFIG["paths"]["project_catalog"],
@@ -68,7 +67,6 @@ if __name__ == "__main__":
                 }
                 # check if steps was already done
                 if not pcat.exists_in_cat(**cur):
-                    # TODO: find a way to define context in a function
                     with (
                         Client(**type_dict["dask"], **daskkws),
                         xs.measure_time(name=f"extract {ds_id}", logger=logger),
@@ -82,7 +80,7 @@ if __name__ == "__main__":
                         # iterate over the different datasets/frequencies
                         for key_freq, ds in ds_dict.items():
                             if type_dict.get("floor", False):
-                                # probably this wont be need when data is cleaned
+                                # wont be needing this when data is completely cleaned
                                 ds["time"] = ds.time.dt.floor(type_dict["floor"])
 
                             # drop nans and stack lat/lon in 1d loc (makes code faster)
@@ -131,6 +129,7 @@ if __name__ == "__main__":
 
     # --- BIAS ADJUST ---
     if "biasadjust" in CONFIG["tasks"]:
+        # iter over each variable that needs to be adjusted
         for var, ba_dict in CONFIG["biasadjust"].items():
             # get all input simulations and iter over them
             dict_sim = pcat.search(**ba_dict["sim_inputs"]).to_dataset_dict(**tdd)
@@ -149,7 +148,7 @@ if __name__ == "__main__":
                         ),
                     ):
                         # get reference
-                        ds_ref = pcat.search(**ba_dict["ref_input"]).to_dask()
+                        ds_ref = pcat.search(**ba_dict["ref_input"]).to_dataset(**tdd)
                         # training
                         ds_tr = xs.train(
                             dref=ds_ref,
@@ -157,6 +156,8 @@ if __name__ == "__main__":
                             var=[var],
                             **ba_dict["xscen_train"],
                         )
+
+                        # might need to save ds_tr in between if data is too big.
 
                         # adjusting
                         ds_scen = xs.adjust(
@@ -173,7 +174,7 @@ if __name__ == "__main__":
 
     # --- CLEAN UP ---
     if "cleanup" in CONFIG["tasks"]:
-        # get all dataset to clean_up and iter over them
+        # get all datasets to clean up and iter
         cu_cats = xs.search_data_catalogs(**CONFIG["cleanup"]["search_data_catalogs"])
         for cu_id, cu_cat in cu_cats.items():
             cur = {
@@ -186,7 +187,7 @@ if __name__ == "__main__":
                     Client(**CONFIG["cleanup"]["dask"], **daskkws),
                     xs.measure_time(name=f"clean {cu_id}", logger=logger),
                 ):
-                    # put the individually adjusted variables back together in 1 ds
+                    # put the individually adjusted variables back together in one ds
                     freq_dict = xs.extract_dataset(catalog=cu_cat)
 
                     # iter over dataset of different frequencies (usually just 'D')
@@ -194,7 +195,6 @@ if __name__ == "__main__":
                         # clean up the dataset
                         ds_clean = xs.clean_up(
                             ds=ds,
-                            to_level="cleaned",
                             **CONFIG["cleanup"]["xscen_clean_up"],
                         )
 
@@ -312,6 +312,7 @@ if __name__ == "__main__":
 
                     # save and update
                     for ds in [hm, ip]:
+                        cur["processing_level"] = ds.attrs["cat:processing_level"]
                         path_diag = f"{CONFIG['paths']['task']}".format(**cur)
                         xs.save_to_zarr(ds=ds, filename=path_diag, mode="o")
                         pcat.update_from_ds(ds=ds, path=path_diag)
@@ -400,7 +401,7 @@ if __name__ == "__main__":
 
     # --- ENSEMBLES ---
     if "ensembles" in CONFIG["tasks"]:
-        # one ensemble (file) per level, per experiment
+        # one ensemble (file) per level, per experiment, per xrfreq
         for processing_level in CONFIG["ensembles"]["processing_levels"]:
             ind_df = pcat.search(processing_level=processing_level).df
             # iterate through available xrfreq, exp and variables
