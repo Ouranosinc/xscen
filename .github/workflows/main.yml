@@ -61,8 +61,8 @@ jobs:
           extra-specs: |
             mamba
             python=${{ matrix.python-version }}
-            tox~="3.0"
-            tox-conda>=0.10.2
+            tox~=3.0
+            tox-conda==0.10.1
       - name: Conda and mamba versions
         run: |
           mamba --version
