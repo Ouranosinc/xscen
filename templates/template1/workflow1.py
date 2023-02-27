@@ -33,8 +33,8 @@ if __name__ == "__main__":
         f2.close()
 
     # set email config
-    if "mail" in CONFIG:
-        atexit.register(xs.send_mail_on_exit, subject=CONFIG["mail"]["subject"])
+    if "scripting" in CONFIG:
+        atexit.register(xs.send_mail_on_exit, subject=CONFIG["scripting"]["subject"])
 
     # initialize Project Catalog (only do this once, if the file doesn't already exist)
     if not os.path.exists(CONFIG["paths"]["project_catalog"]):
@@ -66,7 +66,8 @@ if __name__ == "__main__":
                     "processing_level": "extracted",
                 }
                 # check if steps was already done
-                if not pcat.exists_in_cat(**cur):
+                # if not pcat.exists_in_cat(**cur):
+                if True:
                     with (
                         Client(**type_dict["dask"], **daskkws),
                         xs.measure_time(name=f"extract {ds_id}", logger=logger),
@@ -442,6 +443,7 @@ if __name__ == "__main__":
                             )
                             pcat.update_from_ds(ds=ens_stats, path=path)
 
-
-# TODO: when do we want to erase stuff
-# TODO: decode_timedelta?
+    xs.send_mail(
+        subject="Template 1 - Success",
+        msg="Congratulations! All tasks of the workflow are done!",
+    )

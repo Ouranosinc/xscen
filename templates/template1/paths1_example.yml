@@ -1,1 +1,72 @@
-# TODO: transfer paths1.yml without paths
+#add you own paths and rename this file paths1.yml
+
+paths:
+  project_catalog: &pcat
+    PATH/pcat_test1.json
+  task: PATH/{processing_level}/{id}_{xrfreq}_{processing_level}.zarr
+  ba: PATH/{processing_level}/{id}_{xrfreq}_{processing_level}_{variable}.zarr
+
+# Task Arguments
+
+extract:
+  reconstruction:
+    search_data_catalogs:
+      data_catalogs:
+         -  PATH_TO_OFFICIAL_CATALOGUES/reconstruction.json
+  simulation:
+    search_data_catalogs:
+      data_catalogs:
+        -  PATH_TO_OFFICIAL_CATALOGUES/simulation.json
+
+regrid:
+  regrid_dataset:
+    weights_location: PATH/regridded/weights/
+
+cleanup:
+  search_data_catalogs:
+    data_catalogs:
+      - *pcat
+
+rechunk:
+  xscen_rechunk:
+    temp_store: PATH/tmp/
+
+indicators:
+  path_yml: indicators1.yml
+
+diagnostics:
+  kind:
+    reference:
+      properties_and_measures:
+        properties: properties1.yml
+    simulation:
+      properties_and_measures:
+        properties: properties1.yml
+    scenario:
+      properties_and_measures:
+        properties: properties1.yml
+
+# General Arguments
+
+dask:
+  client:
+    local_directory: DASK_PATH
+    dashboard_address: 6785
+
+logging:
+    handlers:
+        file:
+            filename: PATH/logger.log
+
+utils:
+    stack_drop_nans:
+        to_file: &coords
+          PATH/stack_coords/coords_{domain}_{shape}.nc
+    unstack_fill_nan:
+      coords: *coords
+    maybe_unstack:
+      coords: *coords
+
+scripting:
+  send_mail:
+    to: YOUR_EMAIL

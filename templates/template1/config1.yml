@@ -3,12 +3,13 @@
 
 # This workflow is made to know exactly where to restart if the code is stopped.
 # It looks if the result of a task exists in the project catalog before executing the task.
-# The workflow does NOT automatically remove intermediate files.
+# The workflow does NOT automatically remove intermediate files. You might run out of space.
 
 # List of task to accomplish in the workflow
 # Each task will iterate over all simulations before moving on to the next task.
-# It might be useful to start by running it once on a single simulation (by modifying
-# extract:simulation:search_data_catalogs:other_search_criteria:) to make sure all tasks work properly .
+# It might be useful to start by running it once over all tasks on a single simulation
+#  (by modifying extract:simulation:search_data_catalogs:other_search_criteria:)
+# to make sure all tasks work properly before launching it for all simulations.
 tasks:
   - extract # Extract the simulation and reference dataset with the right domain and period.
   - regrid # Regrid the simulation onto the reference grid.
@@ -21,13 +22,7 @@ tasks:
   - delta # Compute the deltas of the climatological means.
   - ensembles # Compute the ensemble statistics on indicators, climatology and deltas.
 
-
-project: # argument to create the project
-  name: template1
-  version: 1.0.0
-  description: Template for xscen workflow
-  id: t1
-
+# Task Arguments
 
 extract:
   reconstruction:
@@ -132,26 +127,12 @@ regrid:
   output:
     type: reconstruction
     processing_level: extracted
-  regrid_dataset: # these will be automatically passed to the function
+  regrid_dataset: # this will be automatically passed to the function.
     regridder_kwargs:
       method: bilinear
       extrap_method: inverse_dist
       locstream_out: *stack
       reuse_weights: False
-    intermediate_reg_grids:
-      reg1:
-        cf_grid_2d:
-          lon0_b: -80
-          lon1_b: -79
-          d_lon: 0.5
-          lat0_b: 44
-          lat1_b: 44.6
-          d_lat: 0.5
-        regridder_kwargs:
-          method: bilinear
-          extrap_method: inverse_dist
-          locstream_out: False
-          reuse_weights: False
   save: &save_time_-1
     mode: o
     rechunk:
@@ -275,7 +256,7 @@ cleanup:
         lat: 15
         lon: 15
         time: -1
-    variables_and_units:
+    variables_and_units: &units
       tasmax: degC
       tasmin: degC
       pr: mm d-1
@@ -286,38 +267,6 @@ cleanup:
       tasmax: interpolate
       tasmin: interpolate
       pr: [ 0 ]
-    remove_all_attrs_except:
-      tasmax: &attrs_to_keep
-        - bias_adjustment
-        - cell_methods
-        - coordinates
-        - history
-        - long_name
-        - standard_name
-        - units
-      tasmin: *attrs_to_keep
-      pr: *attrs_to_keep
-    add_attrs:
-      global:
-        Notes: |
-          Regridded on the grid of ERA5-Land, then bias-adjusted with detrended
-          quantile mapping on a day-of-year basis with a window of 31 days,
-          LOESS detrending and 50 quantiles.
-          There is a second bias adjustement for pr's extreme values.
-          Tasmax, dtr and pr were adjusted, tasmin was computed
-          from tasmax and dtr after the adjustment.
-          The reference was ERA5-Land over the 1991-2010 period.
-        redistribution: Redistribution prohibited. For internal use only.
-        version: "1.0.0"
-      tasmax:
-        standard_name: air_temperature
-        long_name: Maximal daily temperature
-      tasmin:
-        standard_name: air_temperature
-        long_name: Minimal daily temperature
-      pr:
-        standard_name: precipitation_flux
-        long_name: Mean daily precipitation flux
   save:
     mode: o
     encoding:
@@ -358,10 +307,7 @@ diagnostics:
       properties_and_measures:
         period: *ref_period
         unstack: *stack
-        change_units_arg:
-          tasmin: degC
-          tasmax: degC
-          pr: mm d-1
+        change_units_arg: *units
         to_level_prop: diag-properties-ref
       save:
         mode: o
@@ -377,10 +323,7 @@ diagnostics:
       properties_and_measures:
         period: *ref_period
         unstack: *stack
-        change_units_arg:
-          tasmin: degC
-          tasmax: degC
-          pr: mm d-1
+        change_units_arg: *units
         to_level_prop: diag-properties-sim
         to_level_meas: diag-measures-sim
       save:
@@ -404,8 +347,8 @@ diagnostics:
         rechunk:
           lat: -1
           lon: -1
-  measures_heatmap: {} # automatically parsed
-  measures_improvement: {}   # automatically parsed
+  measures_heatmap: {} # automatically passed to the function
+  measures_improvement: {}   # automatically passed to the function
 
 
 indicators:
@@ -415,7 +358,7 @@ indicators:
     memory_limit: "2GB"
   inputs:
     processing_level: final
-  compute_indicators: {} # automatically parsed
+  compute_indicators: {} # automatically passed to the function
   save: *save_time_-1
 
 
@@ -429,12 +372,12 @@ aggregate:
       processing_level: indicators
     delta:
       processing_level: climatology
-  climatological_mean: # automatically parsed
+  climatological_mean: # automatically passed to the function
     window: 30
     interval: 10
     periods: [['1951', '2100']]
     to_level: climatology
-  compute_deltas: # automatically parsed
+  compute_deltas: # automatically passed to the function
     kind: "+"
     reference_horizon: "1991-2020"
     to_level: 'delta'
@@ -451,7 +394,7 @@ ensembles:
     - indicators
     - climatology
     - delta
-  ensemble_stats: # automatically parsed
+  ensemble_stats: # automatically passed to the function
     statistics:
       ensemble_percentiles: {}
     stats_kwargs:
@@ -461,19 +404,23 @@ ensembles:
     mode: o
 
 
-mail: # send an email when code fails or succeed
-  send_mail:
-    to: lavoie.juliette@ouranos.ca
-  subject: Info-Crue CMIP6
+# General Arguments
+
+project: # argument to create the project
+  name: template1
+  version: 1.0.0
+  description: Template for xscen workflow
+  id: t1
+
+scripting: # send an email when code fails or succeed
+  subject: Template 1
   send_mail_on_exit:
-    msg_ok: Toutes les étapes demandées ont été complétées.
-    msg_err: Une erreur est survenue durant le traitement.
+    #msg_ok: Toutes les étapes demandées ont été complétées.
+    msg_err: Something went wrong!
     on_error_only: True
 
 
 dask: # general dask arguments
-  client:
-    dashboard_address: 6786 # change this for your number
   array.slicing.split_large_chunks: False
 
 
