@@ -42,7 +42,7 @@ extract:
         - '1991'
         - '2020'
       other_search_criteria:
-        source:
+        source: # put the reference you want here
           "ERA5-Land"
     extract_dataset:
       region: &region
@@ -81,7 +81,7 @@ extract:
       periods: &sim_period
         - '1950'
         - '2100'
-      other_search_criteria:
+      other_search_criteria: # put the simulations you want here
         mip_era: CMIP6
         experiment:
           - ssp245
@@ -415,7 +415,6 @@ project: # argument to create the project
 scripting: # send an email when code fails or succeed
   subject: Template 1
   send_mail_on_exit:
-    #msg_ok: Toutes les étapes demandées ont été complétées.
     msg_err: Something went wrong!
     on_error_only: True
 
