@@ -61,14 +61,12 @@ jobs:
           extra-specs: |
             mamba
             python=${{ matrix.python-version }}
-            tox~=3.0
-            tox-conda==0.10.1
       - name: Conda and mamba versions
         run: |
           mamba --version
       - name: Install tox-current-env
         run: |
-          pip install tox-current-env
+          pip install tox tox-conda tox-current-env
       - name: Test with tox
         run: |
           tox -e ${{ matrix.tox-build }} --current-env
