@@ -1,5 +1,7 @@
 # XSCEN-specific
 paths.yml
+docs/modules.rst
+docs/xscen*.rst
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
