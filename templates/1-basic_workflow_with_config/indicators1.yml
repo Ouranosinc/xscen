@@ -1,0 +1,8 @@
+realm: atmos
+indicators:
+  consecutive_frost_days:
+    base: consecutive_frost_days
+  sdii:
+    base: sdii
+    parameters:
+      freq: MS

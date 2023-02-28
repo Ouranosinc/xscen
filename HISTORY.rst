@@ -2,7 +2,7 @@
 History
 =======
 
-v0.5.0 (unreleased)
+v0.5.0 (2023-02-28)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Sarah Gammon (:user:`sg2475962`) and Pascal Bourgault (:user:`aulemahal`).
 
@@ -18,12 +18,13 @@ New features and enhancements
 * Added previously private notebooks to the documentation. (:pull:`108`).
 * Notebooks are now tested using `pytest` with `nbval`. (:pull:`108`).
 * New ``restrict_warming_level`` argument for ``extract.search_data_catalogs`` to filter dataset that are not in the warming level csv. (:issue:`105`, :pull:`138`).
-* Set configuration value programmatically thourgh ``CONFIG.set``. (:pull:`144`).
+* Set configuration value programmatically through ``CONFIG.set``. (:pull:`144`).
 * New ``to_dataset`` method on ``DataCatalog``. The same as ``to_dask``, but exposing more aggregation options. (:pull:`147`).
+* New templates folder with one general template. (:issue:`151`, :pull:`158`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* Functions that are called internally can no longuer parse the configuration. (:pull:`133`).
+* Functions that are called internally can no longer parse the configuration. (:pull:`133`).
 
 Bug fixes
 ^^^^^^^^^
@@ -37,7 +38,7 @@ Bug fixes
 * `subset_warming_level` now validates that the data exists in the dataset provided (:issue:`117`, :pull:`119`).
 * Adapt `stack_drop_nan` for the newest version of xarray (2022.12.0). (:issue:`122`, :pull:`126`).
 * Fix `stack_drop_nan` not working if intermediate directories don't exist (:issue:`128`).
-* Fixed a crash when `compute_indicators` produced fixed fields (pull:`139`).
+* Fixed a crash when `compute_indicators` produced fixed fields (:pull:`139`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
