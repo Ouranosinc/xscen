@@ -407,13 +407,13 @@ ensembles:
 # General Arguments
 
 project: # argument to create the project
-  name: template1
+  name: Template 1 - basic_workflow_with_config
   version: 1.0.0
   description: Template for xscen workflow
   id: t1
 
 scripting: # send an email when code fails or succeed
-  subject: Template 1
+  subject: Template 1 - basic_workflow_with_config
   send_mail_on_exit:
     msg_err: Something went wrong!
     on_error_only: True
