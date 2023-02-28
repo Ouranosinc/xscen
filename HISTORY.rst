@@ -2,6 +2,14 @@
 History
 =======
 
+v0.6.0 (unreleased)
+-------------------
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* `xscen` now manages packaging for PyPi and TestPyPI via GitHub workflows. (:pull:`159`).
+
 v0.5.0 (2023-02-28)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Sarah Gammon (:user:`sg2475962`) and Pascal Bourgault (:user:`aulemahal`).
@@ -49,7 +57,7 @@ Internal changes
 * Added more metadata to package description on PyPI. (:pull:`108`).
 * Faster ``search_data_catalogs`` and ``extract_dataset`` through a faster ``DataCatalog.unique``, date parsing and a rewrite of the ``ensure_correct_time`` logic. (:pull:`127`).
 * The ``search_data_catalogs`` function now accepts `str` or `pathlib.Path` variables (in addition to lists of either data type) for performing catalog lookups. (:pull:`121`).
-* `produce_horizons` now supports fixed fields (pull:`139`).
+* `produce_horizons` now supports fixed fields (:pull:`139`).
 * Rewrite of ``unstack_dates`` for better performance with dask arrays. (:pull:`144`).
 
 v0.4.0 (2022-09-28)
