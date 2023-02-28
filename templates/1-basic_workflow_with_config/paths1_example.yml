@@ -51,7 +51,7 @@ diagnostics:
 dask:
   client:
     local_directory: DASK_PATH
-    dashboard_address: 6785
+    dashboard_address: YOUR_RANDOM_NUMBER
 
 logging:
     handlers:
