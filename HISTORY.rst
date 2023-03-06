@@ -8,7 +8,7 @@ Contributors to this version: Trevor James Smith (:user:`Zeitsperre`).
 
 Bug fixes
 ^^^^^^^^^
-* Forbid pandas v1.5.3 in the environment files. (:issue:`161`, :pull:`162`).
+* Forbid pandas v1.5.3 in the environment files, as the linux conda build breaks the data catalog parser. (:issue:`161`, :pull:`162`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
