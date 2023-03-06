@@ -2,6 +2,7 @@
 paths.yml
 docs/modules.rst
 docs/xscen*.rst
+docs/notebooks/_data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
