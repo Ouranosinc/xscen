@@ -18,7 +18,7 @@ dependencies:
   - matplotlib
   - netCDF4
   - numpy
-  - pandas
+  - pandas!=1.5.3
   - pyyaml
   - rechunker
   - shapely
