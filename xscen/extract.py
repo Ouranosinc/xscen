@@ -24,7 +24,9 @@ from .catalog import (
 )
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
-from .utils import CV, natural_sort
+from .utils import CV
+from .utils import ensure_correct_time as _ensure_correct_time
+from .utils import natural_sort
 
 logger = logging.getLogger(__name__)
 
@@ -246,6 +248,8 @@ def extract_dataset(
         xarray_open_kwargs=xr_open_kwargs,
         xarray_combine_by_coords_kwargs=xr_combine_kwargs,
         preprocess=preprocess,
+        # Only print a progress bar when it is minimally useful
+        progressbar=(len(catalog.keys()) > 1),
     )
 
     out_dict = {}
@@ -263,25 +267,7 @@ def extract_dataset(
             if "time" in ds_ts and ensure_correct_time:
                 # Expected freq (xrfreq is the wanted freq)
                 expfreq = catalog[key].df.xrfreq.iloc[0]
-                # Check if we got the expected freq (skip for too short timeseries)
-                inffreq = xr.infer_freq(ds_ts.time) if ds_ts.time.size > 2 else None
-                if inffreq == expfreq:
-                    # Even when the freq is correct, we ensure the correct "anchor" for daily and finer
-                    if expfreq in "DHTMUL":
-                        ds_ts["time"] = ds_ts.time.dt.floor(expfreq)
-                else:
-                    # We can't infer it, there might be a problem
-                    counts = ds_ts.time.resample(time=expfreq).count()
-                    if (counts > 1).any().item():
-                        raise ValueError(
-                            "Dataset is labelled as having a sampling frequency of "
-                            f"{xrfreq}, but some periods have more than one data point."
-                        )
-                    if (counts.isnull()).any().item():
-                        raise ValueError(
-                            "The resampling count contains nans. There might be some missing data."
-                        )
-                    ds_ts["time"] = counts.time
+                ds_ts = _ensure_correct_time(ds_ts, expfreq)
 
             for var_name, da in ds_ts.data_vars.items():
                 # Support for grid_mapping, crs, and other such variables
@@ -294,8 +280,8 @@ def extract_dataset(
                 # TODO: 2nd part is a temporary fix until this is changed in intake_esm
                 if (
                     var_name in ds
+                    or variables_and_freqs.get(var_name) != xrfreq
                     or var_name not in catalog._requested_variables_true
-                    or variables_and_freqs[var_name] != xrfreq
                 ):
                     continue
 
@@ -388,7 +374,6 @@ def extract_dataset(
     return out_dict
 
 
-@parse_config
 def resample(
     da: xr.DataArray,
     target_frequency: str,
@@ -1021,7 +1006,6 @@ def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
         for activity_id in set(sdf.activity) - {"HighResMip", np.NaN}:
             sub_sdf = sdf[sdf.activity == activity_id]
             for exp_id in set(sub_sdf.experiment) - {"historical", "piControl", np.NaN}:
-
                 exp_hist = hist.copy()
                 exp_hist["experiment"] = exp_id
                 exp_hist["activity"] = activity_id

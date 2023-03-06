@@ -1,0 +1,29 @@
+realm: generic
+indicators:
+  quantile_02-tasmin:
+    base: xclim.sdba.properties.quantile
+    cf_attrs:
+      long_name: 2th quantile of the minimum temperature
+    input:
+      da: tasmin
+    parameters:
+      q: 0.98
+      group: time.season
+  maximum_length_of_warm_spell:
+    base: xclim.sdba.properties.spell_length_distribution
+    cf_attrs:
+      long_name: Maximum spell length distribution when the mean temperature is larger or equal to the 90th quantile.
+    input:
+      da: tasmax
+    parameters:
+      method: quantile
+      op: '>='
+      thresh: 0.9
+      stat: max
+  mean-pr:
+    base: xclim.sdba.properties.mean
+    cf_attrs:
+      long_name: Variance of the precipitation
+    input:
+      da: pr
+    measure: xclim.sdba.measures.RATIO

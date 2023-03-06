@@ -9,6 +9,7 @@ dependencies:
   - cftime
   - clisops
   - dask
+  - flox
   - fsspec
   - geopandas
   - h5netcdf
@@ -52,4 +53,4 @@ dependencies:
   - pip
   # Testing
   - tox <4.0 # 2022-12-12: tox v4.0 is incompatible with tox-conda plugin
-  - tox-conda
+  - tox-conda >=0.10.2
