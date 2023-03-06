@@ -4,7 +4,7 @@ History
 
 v0.6.0 (unreleased)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
 
 Bug fixes
 ^^^^^^^^^
