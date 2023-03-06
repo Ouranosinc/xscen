@@ -4,7 +4,11 @@ History
 
 v0.6.0 (unreleased)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
+
+Bug fixes
+^^^^^^^^^
+* Forbid pandas v1.5.3 in the environment files, as the linux conda build breaks the data catalog parser. (:issue:`161`, :pull:`162`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
