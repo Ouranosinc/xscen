@@ -6,9 +6,14 @@ v0.6.0 (unreleased)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`).
 
+Bug fixes
+^^^^^^^^^
+* Forbid pandas v1.5.3 in the environment files (:issue:`161`, :pull:`161`)
+
 Internal changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now manages packaging for PyPi and TestPyPI via GitHub workflows. (:pull:`159`).
+
 
 v0.5.0 (2023-02-28)
 -------------------
