@@ -4,11 +4,17 @@ History
 
 v0.6.0 (unreleased)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`).
+
+Bug fixes
+^^^^^^^^^
+* Only return requested variables when using ``DataCatalog.to_dataset`` (:pull:`163`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now manages packaging for PyPi and TestPyPI via GitHub workflows. (:pull:`159`).
+* Pre-load coordinates in ``extract.clisops_subset`` (:pull:`163`).
+* Minimal documentation for templates (:pull:`163`).
 
 v0.5.0 (2023-02-28)
 -------------------
