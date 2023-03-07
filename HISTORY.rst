@@ -13,6 +13,8 @@ Bug fixes
 Internal changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now manages packaging for PyPi and TestPyPI via GitHub workflows. (:pull:`159`).
+* `xscen` is now indexed in `Zenodo <https://zenodo.org/>`_, under the `ouranos` community of projects (:pull:`164`).
+* Added a few relevant `Shields <https://shields.io/>`_ to the README.rst (:pull:`164`).
 
 v0.5.0 (2023-02-28)
 -------------------
