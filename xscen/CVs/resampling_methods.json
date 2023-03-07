@@ -1,14 +1,12 @@
 {
-    "any":
-  {
-	"sfcWindfromdir": "wind_direction",
-	"sfcWind": "wind_direction",
-	"uas": "wind_direction",
-	"vas": "wind_direction"
+  "any": {
+    "sfcWindfromdir": "wind_direction",
+    "sfcWind": "wind_direction",
+    "uas": "wind_direction",
+    "vas": "wind_direction"
   },
-    "D":
-  {
-	"tasmin": "min",
-	"tasmax": "max"
+  "D": {
+    "tasmin": "min",
+    "tasmax": "max"
   }
 }

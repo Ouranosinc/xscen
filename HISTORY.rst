@@ -4,7 +4,7 @@ History
 
 v0.6.0 (unreleased)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12,15 +12,22 @@ New features and enhancements
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* N/A
+* 'mean' averaging has been deprecated in `spatial_mean` (:pull:`125`).
+* 'interp_coord' has been renamed to 'interp_centroid' in `spatial_mean` (:pull:`125`).
 
 Bug fixes
 ^^^^^^^^^
+* Forbid pandas v1.5.3 in the environment files, as the linux conda build breaks the data catalog parser. (:issue:`161`, :pull:`162`).
+* Only return requested variables when using ``DataCatalog.to_dataset`` (:pull:`163`).
 * `compute_indicators` no longer crashes if less than 3 timesteps are produced (:pull:`125`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now manages packaging for PyPi and TestPyPI via GitHub workflows. (:pull:`159`).
+* Pre-load coordinates in ``extract.clisops_subset`` (:pull:`163`).
+* Minimal documentation for templates (:pull:`163`).
+* `xscen` is now indexed in `Zenodo <https://zenodo.org/>`_, under the `ouranos` community of projects (:pull:`164`).
+* Added a few relevant `Shields <https://shields.io/>`_ to the README.rst (:pull:`164`).
 * Better warning messages in `_subset_file_coverage` when coverage is insufficient (:pull:`125`).
 
 v0.5.0 (2023-02-28)

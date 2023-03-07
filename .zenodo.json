@@ -1,0 +1,57 @@
+{
+  "creators": [
+    {
+      "name": "Rondeau-Genesse, Gabriel",
+      "affiliation": "Ouranos",
+      "orcid": "0000-0003-3389-9406"
+    },
+    {
+      "name": "Bourgault, Pascal",
+      "affiliation": "Ouranos",
+      "orcid": "0000-0003-1192-0403"
+    },
+    {
+      "name": "Lavoie, Juliette",
+      "affiliation": "Ouranos",
+      "orcid": "0000-0002-4708-5182"
+    },
+    {
+      "name": "Smith, Trevor James",
+      "affiliation": "Ouranos",
+      "orcid": "0000-0001-5393-8359"
+    },
+    {
+      "name": "Gammon, Sarah",
+      "affiliation": "Ouranos",
+      "orcid": "0009-0007-6082-9063"
+    },
+    {
+      "name": "Logan, Travis",
+      "affiliation": "Ouranos",
+      "orcid": "0000-0002-2212-9580"
+    },
+    {
+      "name": "Caron, Louis-Philippe",
+      "affiliation": "Ouranos",
+      "orcid": "0000-0001-5221-0147"
+    }
+  ],
+  "keywords": [
+    "climate",
+    "climatology",
+    "climate change",
+    "climate indicators",
+    "prediction",
+    "analysis",
+    "scenarios",
+    "xarray"
+  ],
+  "license": "Apache-2.0",
+  "communities": [
+    {
+      "identifier": "ouranos"
+    }
+  ],
+  "upload_type": "software",
+  "access_right": "open"
+}
