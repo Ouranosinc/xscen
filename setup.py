@@ -27,6 +27,7 @@ for search, replacement in hyperlink_replacements.items():
 requirements = [
     "cartopy",
     "cftime",
+    "cf_xarray>=0.7.6",
     "clisops",
     "dask",
     "flox",
@@ -39,6 +40,7 @@ requirements = [
     "netCDF4",
     "numpy",
     "pandas",
+    "pygeos",
     "pyyaml",
     "rechunker",
     "shapely",

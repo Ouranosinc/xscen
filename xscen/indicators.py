@@ -111,6 +111,15 @@ def compute_indicators(
     else:
         logger.info(f"Computing {N} indicators.")
 
+    def _infer_freq_from_meta(ind):
+        return (
+            ind.injected_parameters["freq"]
+            if "freq" in ind.injected_parameters
+            else ind.parameters["freq"]["default"]
+            if "freq" in ind.parameters
+            else ind.src_freq
+        )
+
     out_dict = dict()
     for i, ind in enumerate(indicators, 1):
         if isinstance(ind, tuple):
@@ -126,13 +135,7 @@ def compute_indicators(
             # Infer the indicator's frequency
             if "time" in out.dims:
                 if len(out.time) < 3:
-                    freq = (
-                        ind.injected_parameters["freq"]
-                        if "freq" in ind.injected_parameters
-                        else ind.parameters["freq"]["default"]
-                        if "freq" in ind.parameters
-                        else ind.src_freq
-                    )
+                    freq = _infer_freq_from_meta(ind)
                 else:
                     freq = xr.infer_freq(out.time)
             else:
@@ -149,13 +152,7 @@ def compute_indicators(
                 # Infer the indicator's frequency
                 if "time" in tmp.dims:
                     if len(tmp.time) < 3:
-                        freq = (
-                            ind.injected_parameters["freq"]
-                            if "freq" in ind.injected_parameters
-                            else ind.parameters["freq"]["default"]
-                            if "freq" in ind.parameters
-                            else ind.src_freq
-                        )
+                        freq = _infer_freq_from_meta(ind)
                     else:
                         freq = xr.infer_freq(tmp.time)
                 else:
