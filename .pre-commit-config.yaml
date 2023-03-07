@@ -14,10 +14,13 @@ repos:
         exclude: setup.cfg
       - id: end-of-file-fixer
         exclude: setup.cfg
+      - id: check-json
       - id: check-yaml
         args: [ '--allow-multiple-documents' ]
       - id: debug-statements
       - id: mixed-line-ending
+      - id: pretty-format-json
+        args: ['--autofix', '--no-ensure-ascii', '--no-sort-keys']
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.10.0
     hooks:
