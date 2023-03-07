@@ -26,6 +26,7 @@ Features
 
     readme
     installation
+    templates
     goodtoknow
     notebooks/1_catalog
     notebooks/2_getting_started

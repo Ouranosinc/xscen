@@ -4,15 +4,18 @@ History
 
 v0.6.0 (unreleased)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`).
 
 Bug fixes
 ^^^^^^^^^
 * Forbid pandas v1.5.3 in the environment files, as the linux conda build breaks the data catalog parser. (:issue:`161`, :pull:`162`).
+* Only return requested variables when using ``DataCatalog.to_dataset`` (:pull:`163`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now manages packaging for PyPi and TestPyPI via GitHub workflows. (:pull:`159`).
+* Pre-load coordinates in ``extract.clisops_subset`` (:pull:`163`).
+* Minimal documentation for templates (:pull:`163`).
 * `xscen` is now indexed in `Zenodo <https://zenodo.org/>`_, under the `ouranos` community of projects (:pull:`164`).
 * Added a few relevant `Shields <https://shields.io/>`_ to the README.rst (:pull:`164`).
 

@@ -3,16 +3,19 @@ import datetime
 import logging
 import os
 import re
+import warnings
 from copy import deepcopy
 from pathlib import Path
 from typing import Callable, List, Optional, Union
 
 import clisops.core.subset
+import dask
 import numpy as np
 import pandas as pd
 import xarray as xr
 import xclim as xc
 from intake_esm.derived import DerivedVariableRegistry
+from xclim.core.utils import uses_dask
 
 from .catalog import DataCatalog  # noqa
 from .catalog import (
@@ -69,6 +72,9 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
     --------
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
+    if uses_dask(ds.lon) or uses_dask(ds.lat):
+        warnings.warn("Loading longitude and latitude for more efficient subsetting.")
+        ds["lon"], ds["lat"] = dask.compute(ds.lon, ds.lat)
     if "buffer" in region.keys():
         # estimate the model resolution
         if len(ds.lon.dims) == 1:  # 1D lat-lon

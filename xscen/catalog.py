@@ -368,7 +368,8 @@ class DataCatalog(intake_esm.esm_datastore):
         Parameters
         ----------
         concat_on : list of strings or str, optional
-          A list of catalog columns over which to concat the datasets (in addition to 'time'). Each will become a new dimension with the column values as coordinates.
+          A list of catalog columns over which to concat the datasets (in addition to 'time').
+          Each will become a new dimension with the column values as coordinates.
           Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
         create_ensemble_on : list of strings or str, optional
           The given column values will be merged into a new id-like "realization" column, which will be concatenated over.
@@ -393,6 +394,8 @@ class DataCatalog(intake_esm.esm_datastore):
         xclim.ensembles.create_ensemble
         """
         cat = deepcopy(self)
+        # Put back what was removed by the copy...
+        cat._requested_variables = self._requested_variables
         preprocess = kwargs.get("preprocess")
 
         if isinstance(concat_on, str):
@@ -454,6 +457,11 @@ class DataCatalog(intake_esm.esm_datastore):
                     row, [col for col in unstacked[row["id"]] if col not in rm_from_id]
                 ),
                 axis=1,
+            )
+
+        if (N := len(cat.keys())) != 1:
+            raise ValueError(
+                f"Expected exactly one dataset, received {N} instead : {cat.keys()}"
             )
         ds = cat.to_dask(preprocess=preprocess, **kwargs)
         return ds
