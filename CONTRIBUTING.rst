@@ -159,6 +159,7 @@ Versioning/Tagging
 
 A reminder for the maintainers on how to deploy.
 Make sure all your changes are committed (including an entry in HISTORY.rst).
+The templates must also be tested manually before each release.
 Then run::
 
 $ bumpversion patch # possible: major / minor / patch
