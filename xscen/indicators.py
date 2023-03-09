@@ -165,6 +165,11 @@ def compute_indicators(
                 concats.extend(tmp)
             out = xr.concat(concats, dim="time")
 
+        # Make sure that attributes have been kept for the dimensions and coordinates. Fixes a bug in flox.
+        for c in set(list(out.coords) + list(out.dims)):
+            if (out[c].attrs != ds[c].attrs) and (out[c].sizes == ds[c].sizes):
+                out[c].attrs = ds[c].attrs
+
         if "time" in out.dims:
             # cut the time axis to be within the same years as the input
             # for QS-DEC, xclim starts on DJF with time previous_year-12-01 with a nan as values. We want to cut this.

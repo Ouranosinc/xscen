@@ -392,7 +392,7 @@ def spatial_mean(
         # Prepare the History field
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"weighted mean(dim={[d for d in ds.cf.axes['X'] + ds.cf.axes['Y']]}) using a 'cos-lat' approximation"
+            f"weighted mean(dim={[d for d in ds.cf.axes['X'] + ds.cf.axes['Y']]}) using a 'cos-lat' approximation of areacella (in deg2)"
         )
 
     # This simply calls .mean() over the spatial dimensions
