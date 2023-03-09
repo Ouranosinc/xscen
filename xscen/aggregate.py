@@ -370,7 +370,10 @@ def spatial_mean(
                 f"Make sure that the computation is right."
             )
 
-        if (ds.cf["longitude"].min() < -160) & (ds.cf["longitude"].max() > 160):
+        if (
+            ((ds.cf["longitude"].min() < -160) & (ds.cf["longitude"].max() > 160))
+            or ((ds.cf["longitude"].min() < 20) & (ds.cf["longitude"].max() > 340))
+        ):
             logger.warning(
                 "The region appears to be crossing the -180/180° meridian. Bounds computation is currently bugged in cf_xarray. "
                 "Make sure that the computation is right."
