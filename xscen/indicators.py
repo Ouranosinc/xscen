@@ -165,7 +165,7 @@ def compute_indicators(
                 concats.extend(tmp)
             out = xr.concat(concats, dim="time")
 
-        # Make sure that attributes have been kept for the dimensions and coordinates. Fixes a bug in flox.
+        # Make sure that attributes have been kept for the dimensions and coordinates. Fixes a bug in xarray.
         for c in set(list(out.coords) + list(out.dims)):
             if (out[c].attrs != ds[c].attrs) and (out[c].sizes == ds[c].sizes):
                 out[c].attrs = ds[c].attrs
