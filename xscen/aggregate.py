@@ -456,7 +456,7 @@ def spatial_mean(
     # Uses xesmf.SpatialAverager
     elif method == "xesmf":
         logger.warning(
-            "A bug has been found with xesmf.SpatialAverager that impacts big or regions. "
+            "A bug has been found with xesmf.SpatialAverager that appears to impact big regions. "
             "Until this is fixed, make sure that the computation is right or use multiple smaller regions."
         )
         # If the region is a bounding box, call shapely and geopandas to transform it into an input compatible with xesmf
