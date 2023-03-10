@@ -338,14 +338,12 @@ def spatial_mean(
     if method == "mean":
         warnings.warn(
             "xs.spatial_mean with method=='mean' is deprecated and will be abandoned in a future release. Use method=='cos-lat' instead for a more robust but similar method.",
-            category=DeprecationWarning,
-            stacklevel=2,
+            category=FutureWarning,
         )
     elif method == "interp_coord":
         warnings.warn(
             "xs.spatial_mean with method=='interp_coord' is deprecated. Use method=='interp_centroid' instead.",
-            category=DeprecationWarning,
-            stacklevel=2,
+            category=FutureWarning,
         )
         method = "interp_centroid"
 
