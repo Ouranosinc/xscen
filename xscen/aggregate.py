@@ -10,6 +10,7 @@ from typing import Sequence, Tuple, Union
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pygeos
 import xarray as xr
 import xesmf as xe
 from shapely.geometry import Polygon
@@ -291,15 +292,15 @@ def spatial_mean(
     ds : xr.Dataset
         Dataset to use for the computation.
     method : str
-        'mean' will perform a .mean() over the spatial dimensions of the Dataset.
-        'interp_coord' will find the region's centroid (if coordinates are not fed through kwargs), then perform a .interp() over the spatial dimensions of the Dataset.
+        'cos-lat' will weight the area covered by each pixel using an approximation based on latitude.
+        'interp_centroid' will find the region's centroid (if coordinates are not fed through kwargs), then perform a .interp() over the spatial dimensions of the Dataset.
         The coordinate can also be directly fed to .interp() through the 'kwargs' argument below.
         'xesmf' will make use of xESMF's SpatialAverager. This will typically be more precise, especially for irregular regions, but can be much slower than other methods.
     call_clisops : bool
         If True, xscen.extraction.clisops_subset will be called prior to the other operations. This requires the 'region' argument.
     region : dict
         Description of the region and the subsetting method (required fields listed in the Notes).
-        If method=='interp_coord', this is used to find the region's centroid.
+        If method=='interp_centroid', this is used to find the region's centroid.
         If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
     kwargs : dict
         Arguments to send to either mean(), interp() or SpatialAverager().
@@ -334,36 +335,70 @@ def spatial_mean(
     xarray.Dataset.mean, xarray.Dataset.interp, xesmf.SpatialAverager
     """
     kwargs = kwargs or {}
+    if method == "mean":
+        warnings.warn(
+            "xs.spatial_mean with method=='mean' is deprecated and will be abandoned in a future release. Use method=='cos-lat' instead for a more robust but similar method.",
+            category=FutureWarning,
+        )
+    elif method == "interp_coord":
+        warnings.warn(
+            "xs.spatial_mean with method=='interp_coord' is deprecated. Use method=='interp_centroid' instead.",
+            category=FutureWarning,
+        )
+        method = "interp_centroid"
 
     # If requested, call xscen.extraction.clisops_subset prior to averaging
     if call_clisops:
         ds = clisops_subset(ds, region)
 
+    if method == "cos-lat":
+        if "latitude" not in ds.cf.coordinates:
+            raise ValueError(
+                "Could not determine the latitude name using CF conventions. "
+                "Use kwargs = {lat: str} to specify the coordinate name."
+            )
+
+        if "units" not in ds.cf["latitude"].attrs:
+            logger.warning(
+                f"{ds.attrs.get('cat:id', '')}: Latitude does not appear to have units. Make sure that the computation is right."
+            )
+        elif ds.cf["latitude"].attrs["units"] != "degrees_north":
+            logger.warning(
+                f"{ds.attrs.get('cat:id', '')}: Latitude units is '{ds.cf['latitude'].attrs['units']}', expected 'degrees_north'. "
+                f"Make sure that the computation is right."
+            )
+
+        if ((ds.cf["longitude"].min() < -160) & (ds.cf["longitude"].max() > 160)) or (
+            (ds.cf["longitude"].min() < 20) & (ds.cf["longitude"].max() > 340)
+        ):
+            logger.warning(
+                "The region appears to be crossing the -180/180° meridian. Bounds computation is currently bugged in cf_xarray. "
+                "Make sure that the computation is right."
+            )
+
+        ds = ds.cf.add_bounds(["longitude", "latitude"])
+        weights = xr.DataArray(
+            pygeos.area(
+                pygeos.polygons(pygeos.linearrings(ds.lon_bounds, ds.lat_bounds))
+            ),
+            dims=ds.cf["longitude"].dims,
+            coords=ds.cf["longitude"].coords,
+        ) * np.cos(np.deg2rad(ds.cf["latitude"]))
+
+        ds_agg = ds.weighted(weights).mean(
+            [d for d in ds.cf.axes["X"] + ds.cf.axes["Y"]], keep_attrs=True
+        )
+
+        # Prepare the History field
+        new_history = (
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+            f"weighted mean(dim={[d for d in ds.cf.axes['X'] + ds.cf.axes['Y']]}) using a 'cos-lat' approximation of areacella (in deg2)"
+        )
+
     # This simply calls .mean() over the spatial dimensions
-    if method == "mean":
+    elif method == "mean":
         if "dim" not in kwargs:
-            # Determine the X and Y names
-            spatial_dims = []
-            for d in ["X", "Y"]:
-                if d in ds.cf.axes:
-                    spatial_dims.extend([ds.cf[d].name])
-                elif (
-                    (d == "X")
-                    and ("longitude" in ds.cf.coordinates)
-                    and (len(ds[ds.cf.coordinates["longitude"][0]].dims) == 1)
-                ):
-                    spatial_dims.extend(ds.cf.coordinates["longitude"])
-                elif (
-                    (d == "Y")
-                    and ("latitude" in ds.cf.coordinates)
-                    and (len(ds[ds.cf.coordinates["latitude"][0]].dims) == 1)
-                ):
-                    spatial_dims.extend(ds.cf.coordinates["latitude"])
-            if len(spatial_dims) == 0:
-                raise ValueError(
-                    "Could not determine the spatial dimension(s) using CF conventions. Use kwargs = {dim: list} to specify on which dimension to perform the averaging."
-                )
-            kwargs["dim"] = spatial_dims
+            kwargs["dim"] = ds.cf.axes["X"] + ds.cf.axes["Y"]
 
         ds_agg = ds.mean(keep_attrs=True, **kwargs)
 
@@ -374,9 +409,14 @@ def spatial_mean(
         )
 
     # This calls .interp() to a pair of coordinates
-    elif method == "interp_coord":
+    elif method == "interp_centroid":
         # Find the centroid
-        if region is not None:
+        if region is None:
+            if ds.cf.axes["X"][0] not in kwargs:
+                kwargs[ds.cf.axes["X"][0]] = ds[ds.cf.axes["X"][0]].mean().values
+            if ds.cf.axes["Y"][0] not in kwargs:
+                kwargs[ds.cf.axes["Y"][0]] = ds[ds.cf.axes["Y"][0]].mean().values
+        else:
             if region["method"] == "gridpoint":
                 if len(region["gridpoint"]["lon"] != 1):
                     raise ValueError(
@@ -413,6 +453,10 @@ def spatial_mean(
 
     # Uses xesmf.SpatialAverager
     elif method == "xesmf":
+        logger.warning(
+            "A bug has been found with xesmf.SpatialAverager that appears to impact big regions. "
+            "Until this is fixed, make sure that the computation is right or use multiple smaller regions."
+        )
         # If the region is a bounding box, call shapely and geopandas to transform it into an input compatible with xesmf
         if region["method"] == "bbox":
             lon_point_list = [
@@ -455,7 +499,7 @@ def spatial_mean(
             )
 
         else:
-            raise ValueError("'method' not understood.")
+            raise ValueError("'method' should be one of [bbox, shape].")
 
         kwargs_copy = deepcopy(kwargs)
         skipna = kwargs_copy.pop("skipna", False)

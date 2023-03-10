@@ -111,6 +111,15 @@ def compute_indicators(
     else:
         logger.info(f"Computing {N} indicators.")
 
+    def _infer_freq_from_meta(ind):
+        return (
+            ind.injected_parameters["freq"]
+            if "freq" in ind.injected_parameters
+            else ind.parameters["freq"]["default"]
+            if "freq" in ind.parameters
+            else ind.src_freq
+        )
+
     out_dict = dict()
     for i, ind in enumerate(indicators, 1):
         if isinstance(ind, tuple):
@@ -124,7 +133,13 @@ def compute_indicators(
             out = ind(ds=ds)
 
             # Infer the indicator's frequency
-            freq = xr.infer_freq(out.time) if "time" in out.dims else "fx"
+            if "time" in out.dims:
+                if len(out.time) < 3:
+                    freq = _infer_freq_from_meta(ind)
+                else:
+                    freq = xr.infer_freq(out.time)
+            else:
+                freq = "fx"
 
         else:
             # Multiple time periods to concatenate
@@ -135,7 +150,13 @@ def compute_indicators(
                 tmp = ind(ds=ds_subset)
 
                 # Infer the indicator's frequency
-                freq = xr.infer_freq(tmp.time) if "time" in tmp.dims else "fx"
+                if "time" in tmp.dims:
+                    if len(tmp.time) < 3:
+                        freq = _infer_freq_from_meta(ind)
+                    else:
+                        freq = xr.infer_freq(tmp.time)
+                else:
+                    freq = "fx"
 
                 # In order to concatenate time periods, the indicator still needs a time dimension
                 if freq == "fx":
@@ -143,6 +164,11 @@ def compute_indicators(
 
                 concats.extend(tmp)
             out = xr.concat(concats, dim="time")
+
+        # Make sure that attributes have been kept for the dimensions and coordinates. Fixes a bug in xarray.
+        for c in set(list(out.coords) + list(out.dims)):
+            if (out[c].attrs != ds[c].attrs) and (out[c].sizes == ds[c].sizes):
+                out[c].attrs = ds[c].attrs
 
         if "time" in out.dims:
             # cut the time axis to be within the same years as the input
