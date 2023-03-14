@@ -13,7 +13,7 @@ from .catalog import DataCatalog
 from .config import parse_config
 from .indicators import load_xclim_module
 from .io import save_to_zarr
-from .utils import change_units, unstack_fill_nan
+from .utils import change_units, clean_up, unstack_fill_nan
 
 logger = logging.getLogger(__name__)
 
@@ -370,3 +370,41 @@ def measures_improvement(
     ds_better.attrs.pop("cat:variable", None)
 
     return ds_better
+
+
+def measures_improvement_2d(dict_input: dict, to_level: str = "diag-improved-2d"):
+    """
+    Create a 2D dataset with dimension `datasets` showing the fraction of improved grid cell.
+
+    Parameters
+    ----------
+    dict_input: dict
+      If dict of datasets, the datasets should be the output of `measures_improvement`.
+      If dict of dict/list, the dict/list should be the input to `measures_improvement`.
+    to_level: str
+      Processing_level to assign to the output dataset
+
+    Returns
+    -------
+    xr.Dataset
+      Dataset with extra `datasets` coordinates
+    """
+    merge = {}
+    for name, value in dict_input.items():
+        # if dataset, assume the value is already the output of `measures_improvement`
+        if isinstance(value, xr.Dataset):
+            out = value.expand_dims(dim={"datasets": [name]})
+        # else, compute the `measures_improvement`
+        else:
+            out = measures_improvement(value).expand_dims(dim={"datasets": [name]})
+        merge[name] = out
+    # put everything in one dataset with dim datasets
+    ds_merge = xr.concat(list(merge.values()), dim="datasets")
+    ds_merge["datasets"] = ds_merge["datasets"].astype(str)
+    ds_merge = clean_up(
+        ds=ds_merge,
+        common_attrs_only=merge,
+    )
+    ds_merge.attrs["cat:processing_level"] = to_level
+
+    return ds_merge
