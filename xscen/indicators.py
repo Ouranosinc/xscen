@@ -166,7 +166,9 @@ def compute_indicators(
             out = xr.concat(concats, dim="time")
 
         # Make sure that attributes have been kept for the dimensions and coordinates. Fixes a bug in xarray.
-        for c in set(list(out.coords) + list(out.dims)):
+        for c in set(list(out.coords) + list(out.dims)).intersection(
+            set(list(ds.coords) + list(ds.dims))
+        ):
             if (out[c].attrs != ds[c].attrs) and (out[c].sizes == ds[c].sizes):
                 out[c].attrs = ds[c].attrs
 
