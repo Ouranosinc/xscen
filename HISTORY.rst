@@ -10,7 +10,7 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New 'cos-lat' averaging in `spatial_mean` (:issue:`94`, :pull:`125`).
 * Support for computing anomalies in `compute_deltas`  (:pull:`165`).
-* Add function `measures_improvement_2d`. (:pull:`167`).
+* Add function `diagnostics.measures_improvement_2d`. (:pull:`167`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
