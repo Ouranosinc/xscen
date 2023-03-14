@@ -374,33 +374,34 @@ def measures_improvement(
 
 def measures_improvement_2d(dict_input: dict, to_level: str = "diag-improved-2d"):
     """
-    Create a 2D dataset with dimension `datasets` showing the fraction of improved grid cell.
+    Create a 2D dataset with dimension `realization` showing the fraction of improved grid cell.
 
     Parameters
     ----------
     dict_input: dict
       If dict of datasets, the datasets should be the output of `measures_improvement`.
       If dict of dict/list, the dict/list should be the input to `measures_improvement`.
+      The keys will be the values of the dimension `realization`.
     to_level: str
-      Processing_level to assign to the output dataset
+      Processing_level to assign to the output dataset.
 
     Returns
     -------
     xr.Dataset
-      Dataset with extra `datasets` coordinates
+      Dataset with extra `realization` coordinates.
     """
     merge = {}
     for name, value in dict_input.items():
         # if dataset, assume the value is already the output of `measures_improvement`
         if isinstance(value, xr.Dataset):
-            out = value.expand_dims(dim={"datasets": [name]})
+            out = value.expand_dims(dim={"realization": [name]})
         # else, compute the `measures_improvement`
         else:
-            out = measures_improvement(value).expand_dims(dim={"datasets": [name]})
+            out = measures_improvement(value).expand_dims(dim={"realization": [name]})
         merge[name] = out
     # put everything in one dataset with dim datasets
-    ds_merge = xr.concat(list(merge.values()), dim="datasets")
-    ds_merge["datasets"] = ds_merge["datasets"].astype(str)
+    ds_merge = xr.concat(list(merge.values()), dim="realization")
+    ds_merge["realization"] = ds_merge["realization"].astype(str)
     ds_merge = clean_up(
         ds=ds_merge,
         common_attrs_only=merge,
