@@ -9,6 +9,7 @@ Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New 'cos-lat' averaging in `spatial_mean` (:issue:`94`, :pull:`125`).
+* Support for computing anomalies in `compute_deltas`  (:pull:`165`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^

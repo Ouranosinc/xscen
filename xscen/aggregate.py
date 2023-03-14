@@ -161,7 +161,7 @@ def climatological_mean(
 @parse_config
 def compute_deltas(
     ds: xr.Dataset,
-    reference_horizon: str,
+    reference_horizon: Union[str, xr.Dataset],
     *,
     kind: Union[str, dict] = "+",
     rename_variables: bool = True,
@@ -173,8 +173,8 @@ def compute_deltas(
     ----------
     ds : xr.Dataset
         Dataset to use for the computation.
-    reference_horizon : str
-        YYYY-YYYY string corresponding to the 'horizon' coordinate of the reference period.
+    reference_horizon : str or xr.Dataset
+        Either a YYYY-YYYY string corresponding to the 'horizon' coordinate of the reference period, or a xr.Dataset containing the climatological mean.
     kind : str
         ['+', '/', '%'] Whether to provide absolute, relative, or percentage deltas.
         Can also be a dictionary separated per variable name.
@@ -189,8 +189,24 @@ def compute_deltas(
     xr.Dataset
         Returns a Dataset with the requested deltas.
     """
-    # Separate the reference from the other horizons
-    ref = ds.where(ds.horizon == reference_horizon, drop=True)
+    if isinstance(reference_horizon, str):
+        # Separate the reference from the other horizons
+        ref = ds.where(ds.horizon == reference_horizon, drop=True)
+    elif isinstance(reference_horizon, xr.Dataset):
+        ref = reference_horizon
+        if "horizon" in ref:
+            reference_horizon = np.unique(ref["horizon"])
+            if len(reference_horizon) != 1:
+                raise ValueError(
+                    "The reference dataset appears to contain multiple horizons."
+                )
+            reference_horizon = reference_horizon[0]
+        else:
+            reference_horizon = "unknown_horizon"
+    else:
+        raise ValueError(
+            "reference_horizon should be either a string or an xarray.Dataset."
+        )
 
     if "time" in ds:
         # Remove references to 'year' in REF
@@ -211,7 +227,7 @@ def compute_deltas(
 
     else:
         other_hz = ds
-        ref = ref.squeeze("horizon")
+        ref = ref.squeeze()
     deltas = xr.Dataset(coords=other_hz.coords, attrs=other_hz.attrs)
     # Calculate deltas
     for vv in list(ds.data_vars):
