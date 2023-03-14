@@ -161,8 +161,8 @@ def climatological_mean(
 @parse_config
 def compute_deltas(
     ds: xr.Dataset,
+    reference_horizon: Union[str, xr.Dataset],
     *,
-    reference_horizon: Union[str, xr.Dataset] = None,
     kind: Union[str, dict] = "+",
     rename_variables: bool = True,
     to_level: str = "delta_climatology",
