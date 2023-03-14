@@ -294,7 +294,10 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
     ).T
 
     name_of_datasets = name_of_datasets or list(range(1, hmap.shape[0] + 1))
-
+    warnings.warn(
+        "In a future release, the dimension `datasets` of the output will change name for `realization`.",
+        category=FutureWarning,
+    )
     ds_hmap = xr.DataArray(
         hmap,
         coords={
