@@ -6,6 +6,10 @@ v0.6.0 (unreleased)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
+Announcements
+^^^^^^^^^^^^^
+* Deprecation: Release 0.6.0 of xclim will be the last version to use the dimension name `datasets` for the output of `diagnotics.measures_heatmap`. The new name will be `realization`.
+
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New 'cos-lat' averaging in `spatial_mean` (:issue:`94`, :pull:`125`).
