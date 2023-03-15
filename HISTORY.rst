@@ -6,9 +6,6 @@ v0.6.0 (unreleased)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
-Announcements
-^^^^^^^^^^^^^
-* Deprecation: Release 0.6.0 of xclim will be the last version to use the dimension name `datasets` for the output of `diagnotics.measures_heatmap`. The new name will be `realization`.
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20,6 +17,7 @@ Breaking changes
 ^^^^^^^^^^^^^^^^
 * 'mean' averaging has been deprecated in `spatial_mean` (:pull:`125`).
 * 'interp_coord' has been renamed to 'interp_centroid' in `spatial_mean` (:pull:`125`).
+* The 'datasets' dimension of the output of `diagnostics.measures_heatmap` is renamed 'realization'. (:pull:`167`).
 
 Bug fixes
 ^^^^^^^^^
