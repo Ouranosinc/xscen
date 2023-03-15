@@ -6,7 +6,6 @@ v0.6.0 (unreleased)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
-
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New 'cos-lat' averaging in `spatial_mean` (:issue:`94`, :pull:`125`).

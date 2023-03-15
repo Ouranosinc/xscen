@@ -307,6 +307,10 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
     ds_hmap.attrs = xr.core.merge.merge_attrs(
         [ds.attrs for ds in meas_datasets], combine_attrs="drop_conflicts"
     )
+    ds_hmap = clean_up(
+        ds=ds_hmap,
+        common_attrs_only=meas_datasets,
+    )
     ds_hmap.attrs["cat:processing_level"] = to_level
     ds_hmap.attrs.pop("cat:variable", None)
 
