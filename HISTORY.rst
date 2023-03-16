@@ -10,11 +10,13 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New 'cos-lat' averaging in `spatial_mean` (:issue:`94`, :pull:`125`).
 * Support for computing anomalies in `compute_deltas`  (:pull:`165`).
+* Add function `diagnostics.measures_improvement_2d`. (:pull:`167`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * 'mean' averaging has been deprecated in `spatial_mean` (:pull:`125`).
 * 'interp_coord' has been renamed to 'interp_centroid' in `spatial_mean` (:pull:`125`).
+* The 'datasets' dimension of the output of `diagnostics.measures_heatmap` is renamed 'realization'. (:pull:`167`).
 
 Bug fixes
 ^^^^^^^^^
