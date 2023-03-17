@@ -260,7 +260,13 @@ def extract_dataset(
     )
 
     out_dict = {}
-    for xrfreq in pd.unique([x for y in list(variables_and_freqs.values()) for x in y]):
+    for xrfreq in pd.unique(
+        [
+            x if isinstance(y, list) else y
+            for y in variables_and_freqs.values()
+            for x in y
+        ]
+    ):
         ds = xr.Dataset()
         attrs = {}
         # iterate on the datasets, in reverse timedelta order
