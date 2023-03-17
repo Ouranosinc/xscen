@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import warnings
+from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
 from typing import Callable, List, Optional, Union
@@ -21,9 +22,9 @@ from .catalog import DataCatalog  # noqa
 from .catalog import (
     ID_COLUMNS,
     concat_data_catalogs,
-    date_parser,
     generate_id,
     parse_from_ds,
+    subset_file_coverage,
 )
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
@@ -236,11 +237,11 @@ def extract_dataset(
 
     if variables_and_freqs is None:
         try:
-            variables_and_freqs = dict(
-                zip(
-                    catalog._requested_variables_true, catalog._requested_variable_freqs
-                )
-            )
+            variables_and_freqs = defaultdict(list)
+            for a, b in zip(
+                catalog._requested_variables_true, catalog._requested_variable_freqs
+            ):
+                variables_and_freqs[a].extend(b)
         except ValueError:
             raise ValueError("Failed to determine the requested variables and freqs.")
 
@@ -259,21 +260,26 @@ def extract_dataset(
     )
 
     out_dict = {}
-    for xrfreq in pd.unique(list(variables_and_freqs.values())):
+    for xrfreq in pd.unique([x for y in list(variables_and_freqs.values()) for x in y]):
         ds = xr.Dataset()
         attrs = {}
         # iterate on the datasets, in reverse timedelta order
         for key, ds_ts in sorted(
             ds_dict.items(),
-            key=lambda kv: CV.xrfreq_to_timedelta(
-                catalog[kv[0]].df.xrfreq.iloc[0], default="NAN"
+            key=lambda kv: pd.Timedelta(
+                CV.xrfreq_to_timedelta(catalog[kv[0]].df.xrfreq.iloc[0], default="NAN")
             ),
             reverse=True,
         ):
-            if "time" in ds_ts and ensure_correct_time:
-                # Expected freq (xrfreq is the wanted freq)
-                expfreq = catalog[key].df.xrfreq.iloc[0]
-                ds_ts = _ensure_correct_time(ds_ts, expfreq)
+            if "time" in ds_ts:
+                if pd.Timedelta(
+                    CV.xrfreq_to_timedelta(catalog[key].df.xrfreq.iloc[0])
+                ) > pd.Timedelta(CV.xrfreq_to_timedelta(xrfreq)):
+                    continue
+                if ensure_correct_time:
+                    # Expected freq (xrfreq is the wanted freq)
+                    expfreq = catalog[key].df.xrfreq.iloc[0]
+                    ds_ts = _ensure_correct_time(ds_ts, expfreq)
 
             for var_name, da in ds_ts.data_vars.items():
                 # Support for grid_mapping, crs, and other such variables
@@ -286,7 +292,7 @@ def extract_dataset(
                 # TODO: 2nd part is a temporary fix until this is changed in intake_esm
                 if (
                     var_name in ds
-                    or variables_and_freqs.get(var_name) != xrfreq
+                    or xrfreq not in list(variables_and_freqs.get(var_name))
                     or var_name not in catalog._requested_variables_true
                 ):
                     continue
@@ -316,24 +322,22 @@ def extract_dataset(
                         raise ValueError("Multiple grid_mapping detected.")
 
                 if "time" not in da.dims or (
-                    catalog[key].df["xrfreq"].iloc[0] == variables_and_freqs[var_name]
+                    catalog[key].df["xrfreq"].iloc[0] == xrfreq
                 ):
                     ds = ds.assign({var_name: da})
                 else:  # check if it needs resampling
                     if pd.to_timedelta(
                         CV.xrfreq_to_timedelta(catalog[key].df["xrfreq"].iloc[0])
-                    ) < pd.to_timedelta(
-                        CV.xrfreq_to_timedelta(variables_and_freqs[var_name])
-                    ):
+                    ) < pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq)):
                         logger.info(
                             f"Resampling {var_name} from [{catalog[key].df['xrfreq'].iloc[0]}]"
-                            f" to [{variables_and_freqs[var_name]}]."
+                            f" to [{xrfreq}]."
                         )
                         ds = ds.assign(
                             {
                                 var_name: resample(
                                     da,
-                                    variables_and_freqs[var_name],
+                                    xrfreq,
                                     ds=ds_ts,
                                     method=resample_methods.get(var_name, None),
                                 )
@@ -671,118 +675,131 @@ def search_data_catalogs(
         for (sim_id,), scat in catalog.iter_unique("id"):
             # Find all the entries that match search parameters
             varcats = []
-            for var_id, xrfreq in variables_and_freqs.items():
-                if xrfreq == "fx":
-                    varcat = scat.search(
-                        xrfreq=xrfreq,
-                        variable=var_id,
-                        require_all_on=["id", "xrfreq"],
-                    )
-                    if len(varcat) == 0:
-                        # Try searching in other experiments or members
-                        scat_id = {
-                            i: scat.df[i].iloc[0]
-                            for i in id_columns or ID_COLUMNS
-                            if i in scat.df.columns
-                        }
-                        scat_id.pop("experiment", None)
-                        scat_id.pop("member", None)
-                        varcat = catalog.search(
-                            **scat_id,
+            for var_id, xrfreqs in variables_and_freqs.items():
+                if isinstance(xrfreqs, str):
+                    xrfreqs = [xrfreqs]
+                for xrfreq in xrfreqs:
+                    if xrfreq == "fx":
+                        varcat = scat.search(
                             xrfreq=xrfreq,
                             variable=var_id,
                             require_all_on=["id", "xrfreq"],
                         )
-                        if len(varcat) > 1:
-                            varcat.esmcat._df = varcat.df.iloc[[0]]
-                        if len(varcat) == 1:
-                            logger.warning(
-                                f"Dataset {sim_id} doesn't have the fixed field {var_id}, but it can be acquired from {varcat.df['id'].iloc[0]}."
+                        if len(varcat) == 0:
+                            # Try searching in other experiments or members
+                            scat_id = {
+                                i: scat.df[i].iloc[0]
+                                for i in id_columns or ID_COLUMNS
+                                if i in scat.df.columns
+                            }
+                            scat_id.pop("experiment", None)
+                            scat_id.pop("member", None)
+                            varcat = catalog.search(
+                                **scat_id,
+                                xrfreq=xrfreq,
+                                variable=var_id,
+                                require_all_on=["id", "xrfreq"],
                             )
-                            for i in {"member", "experiment", "id"}.intersection(
-                                varcat.df.columns
-                            ):
-                                varcat.df.loc[:, i] = scat.df[i].iloc[0]
+                            if len(varcat) > 1:
+                                varcat.esmcat._df = varcat.df.iloc[[0]]
+                            if len(varcat) == 1:
+                                logger.warning(
+                                    f"Dataset {sim_id} doesn't have the fixed field {var_id}, but it can be acquired from {varcat.df['id'].iloc[0]}."
+                                )
+                                for i in {"member", "experiment", "id"}.intersection(
+                                    varcat.df.columns
+                                ):
+                                    varcat.df.loc[:, i] = scat.df[i].iloc[0]
 
-                    # TODO: Temporary fix until this is changed in intake_esm
-                    varcat._requested_variables_true = [var_id]
-                    varcat._dependent_variables = list(
-                        set(varcat._requested_variables).difference(
-                            varcat._requested_variables_true
+                        # TODO: Temporary fix until this is changed in intake_esm
+                        varcat._requested_variables_true = [var_id]
+                        varcat._dependent_variables = list(
+                            set(varcat._requested_variables).difference(
+                                varcat._requested_variables_true
+                            )
                         )
-                    )
-                else:
-                    # TODO: Add support for DerivedVariables that themselves require DerivedVariables
-                    # TODO: Add support for DerivedVariables that exist on different frequencies (e.g. 1hr 'pr' & 3hr 'tas')
-                    varcat = scat.search(
-                        variable=var_id, require_all_on=["id", "xrfreq"]
-                    )
-                    logger.debug(
-                        f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
-                    )
-                    # TODO: Temporary fix until this is changed in intake_esm
-                    varcat._requested_variables_true = [var_id]
-                    varcat._dependent_variables = list(
-                        set(varcat._requested_variables).difference(
-                            varcat._requested_variables_true
-                        )
-                    )
-
-                    # We want to match lines with the correct freq,
-                    # IF allow_resampling is True and xrfreq translates to a timedelta,
-                    # we also want those with (stricyly) higher temporal resolution
-                    same_frq = varcat.df.xrfreq == xrfreq
-                    td = pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq))
-                    varcat.df["timedelta"] = pd.to_timedelta(
-                        varcat.df.xrfreq.apply(CV.xrfreq_to_timedelta, default="NAN")
-                    )
-                    # else is joker (any timedelta)
-                    lower_frq = (
-                        np.less(varcat.df.timedelta, td) if pd.notnull(td) else False
-                    )
-                    varcat.esmcat._df = varcat.df[
-                        same_frq | (lower_frq & allow_resampling)
-                    ]
-
-                    # For each dataset (id - xrfreq - processing_level - domain - variable), make sure that file availability covers the requested time periods
-                    if periods is not None and len(varcat) > 0:
-                        valid_tp = []
-                        for var, group in varcat.df.groupby(
-                            varcat.esmcat.aggregation_control.groupby_attrs
-                            + ["variable"]
-                        ):
-                            valid_tp.append(
-                                _subset_file_coverage(group, periods)
-                            )  # If valid, this returns the subset of files that cover the time period
-                        varcat.esmcat._df = pd.concat(valid_tp)
-
-                    # We now select the coarsest timedelta for each variable
-                    # we need to re-iterate over variables in case we used the registry (and thus there are multiple variables in varcat)
-                    rows = []
-                    for var, group in varcat.df.groupby("variable"):
-                        rows.append(group[group.timedelta == group.timedelta.max()])
-                    if rows:
-                        # check if the requested variable exists and if so, remove DeriveVariable references
-                        v_list = [rows[i]["variable"].iloc[0] for i in range(len(rows))]
-                        v_list_check = [
-                            var_id in v_list[i] for i in range(len(v_list))
-                        ]  # necessary in case a file has multiple variables
-                        if any(v_list_check):
-                            rows = [rows[v_list_check.index(True)]]
-                            varcat.derivedcat = DerivedVariableRegistry()
-                        varcat.esmcat._df = pd.concat(rows, ignore_index=True)
                     else:
-                        varcat.esmcat._df = pd.DataFrame()
+                        # TODO: Add support for DerivedVariables that themselves require DerivedVariables
+                        # TODO: Add support for DerivedVariables that exist on different frequencies (e.g. 1hr 'pr' & 3hr 'tas')
+                        varcat = scat.search(
+                            variable=var_id, require_all_on=["id", "xrfreq"]
+                        )
+                        logger.debug(
+                            f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
+                        )
+                        # TODO: Temporary fix until this is changed in intake_esm
+                        varcat._requested_variables_true = [var_id]
+                        varcat._dependent_variables = list(
+                            set(varcat._requested_variables).difference(
+                                varcat._requested_variables_true
+                            )
+                        )
 
-                if varcat.df.empty:
-                    logger.debug(
-                        f"Dataset {sim_id} doesn't have all needed variables (missing at least {var_id})."
-                    )
-                    break
-                if "timedelta" in varcat.df.columns:
-                    varcat.df.drop(columns=["timedelta"], inplace=True)
-                varcat._requested_variable_freqs = [xrfreq]
-                varcats.append(varcat)
+                        # We want to match lines with the correct freq,
+                        # IF allow_resampling is True and xrfreq translates to a timedelta,
+                        # we also want those with (stricyly) higher temporal resolution
+                        same_frq = varcat.df.xrfreq == xrfreq
+                        td = pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq))
+                        varcat.df["timedelta"] = pd.to_timedelta(
+                            varcat.df.xrfreq.apply(
+                                CV.xrfreq_to_timedelta, default="NAN"
+                            )
+                        )
+                        # else is joker (any timedelta)
+                        lower_frq = (
+                            np.less(varcat.df.timedelta, td)
+                            if pd.notnull(td)
+                            else False
+                        )
+                        varcat.esmcat._df = varcat.df[
+                            same_frq | (lower_frq & allow_resampling)
+                        ]
+
+                        # For each dataset (id - xrfreq - processing_level - domain - variable), make sure that file availability covers the requested time periods
+                        if periods is not None and len(varcat) > 0:
+                            valid_tp = []
+                            for var, group in varcat.df.groupby(
+                                varcat.esmcat.aggregation_control.groupby_attrs
+                                + ["variable"]
+                            ):
+                                valid_tp.append(
+                                    subset_file_coverage(group, periods)
+                                )  # If valid, this returns the subset of files that cover the time period
+                            varcat.esmcat._df = pd.concat(valid_tp)
+
+                        # We now select the coarsest timedelta for each variable
+                        # we need to re-iterate over variables in case we used the registry (and thus there are multiple variables in varcat)
+                        rows = []
+                        for var, group in varcat.df.groupby("variable"):
+                            rows.append(group[group.timedelta == group.timedelta.max()])
+                        if rows:
+                            # check if the requested variable exists and if so, remove DeriveVariable references
+                            v_list = [
+                                rows[i]["variable"].iloc[0] for i in range(len(rows))
+                            ]
+                            v_list_check = [
+                                var_id in v_list[i] for i in range(len(v_list))
+                            ]  # necessary in case a file has multiple variables
+                            if any(v_list_check):
+                                rows = [rows[v_list_check.index(True)]]
+                                varcat.derivedcat = DerivedVariableRegistry()
+                            varcat.esmcat._df = pd.concat(rows, ignore_index=True)
+                        else:
+                            varcat.esmcat._df = pd.DataFrame()
+
+                    if varcat.df.empty:
+                        logger.debug(
+                            f"Dataset {sim_id} doesn't have all needed variables (missing at least {var_id})."
+                        )
+                        break
+                    if "timedelta" in varcat.df.columns:
+                        varcat.df.drop(columns=["timedelta"], inplace=True)
+                    varcat._requested_variable_freqs = [xrfreq]
+                    varcats.append(varcat)
+
+                else:
+                    continue
+                break
             else:
                 catalogs[sim_id] = concat_data_catalogs(*varcats)
                 if periods is not None:
@@ -1258,98 +1275,3 @@ def _restrict_wl(df, restrictions: dict):
     df = df.drop(columns=["csv_name"])
 
     return df
-
-
-def _subset_file_coverage(
-    df: pd.DataFrame, periods: list, *, coverage: float = 0.99
-) -> pd.DataFrame:
-    """Return a subset of files that overlap with the target period(s).
-
-    The minimum resolution for periods is 1 hour.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-      List of files to be evaluated, with at least a date_start and date_end column,
-      which are expected to be `pd.Period` objects with `freq='H'`.
-    periods : list
-      [start, end] of the period to be evaluated (or a list of lists)
-    coverage : float
-      Percentage of hours that need to be covered in a given period for the dataset to be valid
-
-    Returns
-    -------
-    pd.DataFrame
-      Subset of files that overlap the targetted period(s)
-    """
-    if not isinstance(periods[0], list):
-        periods = [periods]
-
-    # Create an Interval for each file
-    file_intervals = df.apply(
-        lambda r: pd.Interval(
-            left=r["date_start"].ordinal, right=r["date_end"].ordinal, closed="both"
-        ),
-        axis=1,
-    )
-
-    # Check for duplicated Intervals
-    if any(file_intervals.duplicated()):
-        logging.warning(
-            f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Time periods are overlapping."
-        )
-        return pd.DataFrame(columns=df.columns)
-
-    # Create an array of True/False
-    files_to_keep = np.zeros(len(file_intervals), dtype=bool)
-    for period in periods:
-        period_interval = pd.Interval(
-            left=date_parser(str(period[0]), freq="H").ordinal,
-            right=date_parser(str(period[1]), end_of_period=True, freq="H").ordinal,
-            closed="both",
-        )
-        files_in_range = file_intervals.apply(lambda r: period_interval.overlaps(r))
-
-        if len(df[files_in_range]) == 0:
-            logging.warning(
-                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage (no files in range)."
-            )
-            return pd.DataFrame(columns=df.columns)
-
-        # Very rough guess of the coverage relative to the requested period,
-        # without having to open the files or checking day-by-day
-
-        # Number of hours in the requested period
-        period_nb_hrs = date_parser(
-            str(period[1]), end_of_period=True, freq="H"
-        ) - date_parser(str(period[0]), freq="H")
-
-        # Sum of hours in all selected files, restricted by the requested period
-        guessed_nb_hrs_sum = (
-            df[files_in_range].apply(
-                lambda x: np.min(
-                    [
-                        x["date_end"],
-                        date_parser(str(period[1]), end_of_period=True, freq="H"),
-                    ]
-                ),
-                axis=1,
-            )
-            - df[files_in_range].apply(
-                lambda x: np.max(
-                    [x["date_start"], date_parser(str(period[0]), freq="H")]
-                ),
-                axis=1,
-            )
-        ).sum()
-
-        if guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos < coverage:
-            logging.warning(
-                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage "
-                f"(guessed at {guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos:.1%})."
-            )
-            return pd.DataFrame(columns=df.columns)
-
-        files_to_keep = files_to_keep | files_in_range
-
-    return df[files_to_keep]
