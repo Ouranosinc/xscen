@@ -17,12 +17,18 @@ Features
 * Regridding with xESMF.
 * Bias adjustment with xclim.
 
+Installation
+------------
+
+Please refer to the `installation docs`_.
+
 Acknowledgments
 ---------------
 This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pypackage`_ project template.
 
 .. _Cookiecutter: https://github.com/audreyfeldroy/cookiecutter-pypackage
 .. _`Ouranosinc/cookiecutter-pypackage`: https://github.com/Ouranosinc/cookiecutter-pypackage
+.. _installation docs: https://xscen.readthedocs.io/en/latest/installation.html
 
 .. |logo| image:: https://raw.githubusercontent.com/Ouranosinc/xscen/main/docs/_static/_images/xscen-logo-small.png
         :target: https://github.com/Ouranosinc/xscen
@@ -52,5 +58,5 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
         :alt: Supported Python Versions
 
 .. |status| image:: https://www.repostatus.org/badges/latest/wip.svg
-   :alt: Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.
-   :target: https://www.repostatus.org/#wip
+        :target: https://www.repostatus.org/#wip
+        :alt: Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.
