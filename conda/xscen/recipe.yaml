@@ -15,7 +15,7 @@ source:
 build:
   noarch: python
   script: '{{ PYTHON }} -m pip install . -vv'
-  number: 0
+  number: 1
 
 requirements:
   host:
@@ -25,6 +25,7 @@ requirements:
     - python >=3.8
     - cartopy
     - cftime
+    - cf_xarray >=0.7.6
     - clisops
     - dask-core
     - flox
@@ -34,6 +35,8 @@ requirements:
     - intake
     - intake-esm >=2022.9.18
     - matplotlib-base
+    - pyarrow  # Used when opening catalogs.
+    - pygeos
     - netcdf4
     - numpy
     - pandas
