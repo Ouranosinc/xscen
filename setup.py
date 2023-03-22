@@ -40,6 +40,7 @@ requirements = [
     "netCDF4",
     "numpy",
     "pandas",
+    "pyarrow",  # Used when opening catalogs.
     "pygeos",
     "pyyaml",
     "rechunker",

@@ -6,6 +6,10 @@ v0.6.0 (unreleased)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
+Announcements
+^^^^^^^^^^^^^
+* `xscen` is now offered as a conda package available through Anaconda.org. Refer to the installation documentation for more information. (:issue:`149`, :pull:`171`).
+
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New 'cos-lat' averaging in `spatial_mean` (:issue:`94`, :pull:`125`).
