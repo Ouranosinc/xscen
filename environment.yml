@@ -7,7 +7,7 @@ dependencies:
   # Main packages
   - cartopy
   - cftime
-  - cf_xarray >= 0.7.6
+  - cf_xarray >=0.7.6
   - clisops
   - dask
   - flox
@@ -19,7 +19,7 @@ dependencies:
   - matplotlib
   - netCDF4
   - numpy
-  - pandas!=1.5.3
+  - pandas !=1.5.3
   - pygeos
   - pyyaml
   - rechunker
