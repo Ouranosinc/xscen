@@ -519,6 +519,16 @@ def spatial_mean(
 
         kwargs_copy = deepcopy(kwargs)
         skipna = kwargs_copy.pop("skipna", False)
+
+        if (
+            ds.cf["longitude"].ndim == 2
+            and "longitude" not in ds.cf.bounds
+            and "rotated_pole" in ds
+        ):
+            from .regrid import create_bounds_rotated_pole
+
+            ds = ds.update(create_bounds_rotated_pole(ds))
+
         savg = xe.SpatialAverager(ds, polygon.geometry, **kwargs_copy)
         ds_agg = savg(ds, keep_attrs=True, skipna=skipna)
         extra_coords = {
