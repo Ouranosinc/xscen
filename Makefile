@@ -70,7 +70,7 @@ autodoc: clean-docs ## create sphinx-apidoc files
 	sphinx-apidoc -o docs/ --module-first xscen
 
 linkcheck: autodoc ## run checks over all external links found throughout the documentation
-	$(MAKE) -C docs linkcheck
+	env SKIP_NOTEBOOKS=1 $(MAKE) -C docs linkcheck
 
 docs: autodoc ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs html

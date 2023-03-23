@@ -20,6 +20,7 @@
 #
 import os
 import sys
+import warnings
 from pathlib import Path
 
 sys.path.insert(0, os.path.abspath('..'))
@@ -67,14 +68,16 @@ autosectionlabel_maxdepth = 2
 autosummary_generate = True
 nbsphinx_execute = "always"
 
-# skip_notebooks = os.getenv("SKIP_NOTEBOOKS")
+# To avoid running notebooks on linkcheck
+skip_notebooks = os.getenv("SKIP_NOTEBOOKS")
+if skip_notebooks:
+    warnings.warn("Not executing notebooks.")
+nbsphinx_execute = "never"
+
 # if skip_notebooks or os.getenv("READTHEDOCS_VERSION_TYPE") in [
 #     "branch",
 #     "external",
 # ]:
-#     if skip_notebooks:
-#         warnings.warn("Not executing notebooks.")
-#     nbsphinx_execute = "never"
 # elif os.getenv("READTHEDOCS_VERSION_NAME") in ["latest", "stable"]:
 #     nbsphinx_execute = "always"
 # else:
