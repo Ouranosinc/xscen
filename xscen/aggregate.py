@@ -450,7 +450,10 @@ def spatial_mean(
                 }
 
             elif region["method"] == "shape":
-                s = gpd.read_file(region["shape"]["shape"])
+                if not isinstance(region["shape"]["shape"], gpd.GeoDataFrame):
+                    s = gpd.read_file(region["shape"]["shape"])
+                else:
+                    s = region["shape"]["shape"]
                 if len(s != 1):
                     raise ValueError(
                         "Only a single polygon should be used with interp_centroid."
@@ -499,7 +502,10 @@ def spatial_mean(
 
         # If the region is a shapefile, open with geopandas
         elif region["method"] == "shape":
-            polygon = gpd.read_file(region["shape"]["shape"])
+            if not isinstance(region["shape"]["shape"], gpd.GeoDataFrame):
+                polygon = gpd.read_file(region["shape"]["shape"])
+            else:
+                polygon = region["shape"]["shape"]
 
             # Simplify the geometries to a given tolerance, if needed.
             # The simpler the polygons, the faster the averaging, but it will lose some precision.
