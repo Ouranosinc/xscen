@@ -28,7 +28,7 @@ requirements = [
     "cartopy",
     "cftime",
     "cf_xarray>=0.7.6",
-    "clisops",
+    "clisops>=0.9.5",
     "dask",
     "flox",
     "fsspec",
