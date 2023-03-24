@@ -71,6 +71,13 @@ Input / Output
    :members:
    :noindex:
 
+Spatial tools
+-------------
+
+.. automodule:: xscen.spatial
+   :members:
+   :noindex:
+
 Controlled Vocabulary and Mappings
 ----------------------------------
 
