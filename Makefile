@@ -66,9 +66,13 @@ test: ## run tests quickly with the default Python
 test-all: ## run tests on every Python version with tox
 	tox
 
-docs: ## generate Sphinx HTML documentation, including API docs
-	$(MAKE) -C docs clean
+autodoc: clean-docs ## create sphinx-apidoc files
 	sphinx-apidoc -o docs/ --module-first xscen
+
+linkcheck: autodoc ## run checks over all external links found throughout the documentation
+	env SKIP_NOTEBOOKS=1 $(MAKE) -C docs linkcheck
+
+docs: autodoc ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs html
 ifndef READTHEDOCS
 	$(BROWSER) docs/_build/html/index.html
