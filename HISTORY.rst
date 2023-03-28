@@ -21,6 +21,7 @@ Bug fixes
 * Forbid pandas v1.5.3 in the environment files, as the linux conda build breaks the data catalog parser. (:issue:`161`, :pull:`162`).
 * Only return requested variables when using ``DataCatalog.to_dataset`` (:pull:`163`).
 * `compute_indicators` no longer crashes if less than 3 timesteps are produced (:pull:`125`).
+* `xscen.utils.unstack_fill_nan`` can now handle datasets that have non dimension coordinates. (:issue:`156`, :pull:`175`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
