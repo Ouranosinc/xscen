@@ -2,13 +2,14 @@ name: xscen-dev
 channels:
   - conda-forge
 dependencies:
+  - python >=3.8
   # Don't forget to sync the changes here with environment.yml!
   # Some pins here are meant to accelerate conda and might not be related to real needs
   # Main packages
   - cartopy
   - cftime
-  - cf_xarray >= 0.7.6
-  - clisops
+  - cf_xarray >=0.7.6
+  - clisops >=0.9.5
   - dask
   - flox
   - fsspec
@@ -19,12 +20,12 @@ dependencies:
   - matplotlib
   - netCDF4
   - numpy
-  - pandas!=1.5.3
+  - pandas !=1.5.3
   - pygeos
   - pyyaml
   - rechunker
   - shapely
-  - xarray
+  - xarray <2023.3.0  # See https://github.com/Ouranosinc/xscen/pull/173
   - xclim >=0.37
   - xesmf >=0.7
   - zarr

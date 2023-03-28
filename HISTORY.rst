@@ -6,31 +6,40 @@ v0.6.0 (unreleased)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
+Announcements
+^^^^^^^^^^^^^
+* `xscen` is now offered as a conda package available through Anaconda.org. Refer to the installation documentation for more information. (:issue:`149`, :pull:`171`).
+
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* New 'cos-lat' averaging in `spatial_mean` (:issue:`94`, :pull:`125`).
-* Support for computing anomalies in `compute_deltas`  (:pull:`165`).
+* New 'cos-lat' averaging in `spatial_mean`. (:issue:`94`, :pull:`125`).
+* Support for computing anomalies in `compute_deltas`.  (:pull:`165`).
+* Add function `diagnostics.measures_improvement_2d`. (:pull:`167`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* 'mean' averaging has been deprecated in `spatial_mean` (:pull:`125`).
-* 'interp_coord' has been renamed to 'interp_centroid' in `spatial_mean` (:pull:`125`).
+* 'mean' averaging has been deprecated in `spatial_mean`. (:pull:`125`).
+* 'interp_coord' has been renamed to 'interp_centroid' in `spatial_mean`. (:pull:`125`).
+* The 'datasets' dimension of the output of ``diagnostics.measures_heatmap`` is renamed 'realization'. (:pull:`167`).
 
 Bug fixes
 ^^^^^^^^^
 * Forbid pandas v1.5.3 in the environment files, as the linux conda build breaks the data catalog parser. (:issue:`161`, :pull:`162`).
-* Only return requested variables when using ``DataCatalog.to_dataset`` (:pull:`163`).
-* `compute_indicators` no longer crashes if less than 3 timesteps are produced (:pull:`125`).
+* Only return requested variables when using ``DataCatalog.to_dataset``. (:pull:`163`).
+* ``compute_indicators`` no longer crashes if less than 3 timesteps are produced. (:pull:`125`).
+* `xarray` is temporarily pinned below v2023.3.0 due to an API-breaking change. (:issue:`175`, :pull:`173`).
 * `xscen.utils.unstack_fill_nan`` can now handle datasets that have non dimension coordinates. (:issue:`156`, :pull:`175`).
+
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now manages packaging for PyPi and TestPyPI via GitHub workflows. (:pull:`159`).
 * Pre-load coordinates in ``extract.clisops_subset`` (:pull:`163`).
-* Minimal documentation for templates (:pull:`163`).
-* `xscen` is now indexed in `Zenodo <https://zenodo.org/>`_, under the `ouranos` community of projects (:pull:`164`).
-* Added a few relevant `Shields <https://shields.io/>`_ to the README.rst (:pull:`164`).
-* Better warning messages in `_subset_file_coverage` when coverage is insufficient (:pull:`125`).
+* Minimal documentation for templates. (:pull:`163`).
+* `xscen` is now indexed in `Zenodo <https://zenodo.org/>`_, under the `ouranos` community of projects. (:pull:`164`).
+* Added a few relevant `Shields <https://shields.io/>`_ to the README.rst. (:pull:`164`).
+* Better warning messages in ``_subset_file_coverage`` when coverage is insufficient. (:pull:`125`).
+* The top-level Makefile now includes a `linkcheck` recipe, and the ReadTheDocs configuration no longer reinstalls the `llvmlite` compiler library. (:pull:`173`).
 
 v0.5.0 (2023-02-28)
 -------------------

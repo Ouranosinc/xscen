@@ -17,6 +17,7 @@ repos:
       - id: check-json
       - id: check-yaml
         args: [ '--allow-multiple-documents' ]
+        exclude: conda/xscen/meta.yaml
       - id: debug-statements
       - id: mixed-line-ending
       - id: pretty-format-json
@@ -48,12 +49,12 @@ repos:
       - id: pydocstyle
         args: [ '--config=setup.cfg' ]
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.29.0
+    rev: v1.30.0
     hooks:
       - id: yamllint
         args: [ '--config-file=.yamllint.yaml' ]
   - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.6.3
+    rev: 1.6.4
     hooks:
       - id: nbqa-pyupgrade
         args: [ '--py38-plus' ]

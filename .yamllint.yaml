@@ -6,3 +6,6 @@ rules:
     max: 120
     level: warning
   truthy: disable
+
+ignore: |
+  conda/xscen/meta.yaml

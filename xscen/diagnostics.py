@@ -13,7 +13,7 @@ from .catalog import DataCatalog
 from .config import parse_config
 from .indicators import load_xclim_module
 from .io import save_to_zarr
-from .utils import change_units, unstack_fill_nan
+from .utils import change_units, clean_up, unstack_fill_nan
 
 logger = logging.getLogger(__name__)
 
@@ -294,19 +294,22 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
     ).T
 
     name_of_datasets = name_of_datasets or list(range(1, hmap.shape[0] + 1))
-
     ds_hmap = xr.DataArray(
         hmap,
         coords={
-            "datasets": name_of_datasets,
+            "realization": name_of_datasets,
             "properties": list(meas_datasets[0].data_vars),
         },
-        dims=["datasets", "properties"],
+        dims=["realization", "properties"],
     )
     ds_hmap = ds_hmap.to_dataset(name="heatmap")
 
     ds_hmap.attrs = xr.core.merge.merge_attrs(
         [ds.attrs for ds in meas_datasets], combine_attrs="drop_conflicts"
+    )
+    ds_hmap = clean_up(
+        ds=ds_hmap,
+        common_attrs_only=meas_datasets,
     )
     ds_hmap.attrs["cat:processing_level"] = to_level
     ds_hmap.attrs.pop("cat:variable", None)
@@ -370,3 +373,42 @@ def measures_improvement(
     ds_better.attrs.pop("cat:variable", None)
 
     return ds_better
+
+
+def measures_improvement_2d(dict_input: dict, to_level: str = "diag-improved-2d"):
+    """
+    Create a 2D dataset with dimension `realization` showing the fraction of improved grid cell.
+
+    Parameters
+    ----------
+    dict_input: dict
+      If dict of datasets, the datasets should be the output of `measures_improvement`.
+      If dict of dict/list, the dict/list should be the input to `measures_improvement`.
+      The keys will be the values of the dimension `realization`.
+    to_level: str
+      Processing_level to assign to the output dataset.
+
+    Returns
+    -------
+    xr.Dataset
+      Dataset with extra `realization` coordinates.
+    """
+    merge = {}
+    for name, value in dict_input.items():
+        # if dataset, assume the value is already the output of `measures_improvement`
+        if isinstance(value, xr.Dataset):
+            out = value.expand_dims(dim={"realization": [name]})
+        # else, compute the `measures_improvement`
+        else:
+            out = measures_improvement(value).expand_dims(dim={"realization": [name]})
+        merge[name] = out
+    # put everything in one dataset with dim datasets
+    ds_merge = xr.concat(list(merge.values()), dim="realization")
+    ds_merge["realization"] = ds_merge["realization"].astype(str)
+    ds_merge = clean_up(
+        ds=ds_merge,
+        common_attrs_only=merge,
+    )
+    ds_merge.attrs["cat:processing_level"] = to_level
+
+    return ds_merge

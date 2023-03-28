@@ -1,0 +1,69 @@
+{% set name = "xscen" %}
+{% set version = "0.5.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/xscen-{{ version }}.tar.gz
+  sha256: f31df2cb52e87dd82d2fc7d340788e4edf14abccf04685a9249a2067594b721a
+
+build:
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv
+  number: 1
+
+requirements:
+  host:
+    - python >=3.8
+    - pip
+  run:
+    - python >=3.8
+    - cartopy
+    - cftime
+    - cf_xarray >=0.7.6
+    - clisops
+    - dask-core
+    - flox
+    - fsspec
+    - geopandas
+    - h5netcdf
+    - intake
+    - intake-esm >=2022.9.18
+    - matplotlib-base
+    - pyarrow  # Used when opening catalogs.
+    - pygeos
+    - netcdf4
+    - numpy
+    - pandas
+    - pyyaml
+    - rechunker
+    - shapely
+    - xarray
+    - xclim >=0.37
+    - xesmf >=0.7
+    - zarr
+
+test:
+  imports:
+    - xscen
+  commands:
+    - pip check
+  requires:
+    - pip
+    - pytest-json-report  # Added due to a bug in esmpy. See: https://github.com/esmf-org/esmf/issues/115
+
+about:
+  home: https://github.com/Ouranosinc/xscen
+  summary: A climate change scenario-building analysis framework, built with xclim/xarray.
+  license: Apache-2.0
+  license_file: LICENSE
+
+extra:
+  recipe-maintainers:
+    # GitHub.com
+    - Zeitsperre
+    - RondeauG
+    - aulemahal
+    - juliettelavoie
