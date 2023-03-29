@@ -7,6 +7,8 @@ from copy import deepcopy
 from pathlib import PosixPath
 from typing import Optional, Union
 
+import cartopy.crs as ccrs
+import cf_xarray as cfxr
 import numpy as np
 import xarray as xr
 import xesmf as xe
@@ -310,6 +312,20 @@ def _regridder(
     xe.frontend.Regridder
         Regridder object
     """
+    if method.startswith("conservative"):
+        if (
+            ds_in.cf["longitude"].ndim == 2
+            and "longitude" not in ds_in.cf.bounds
+            and "rotated_pole" in ds_in
+        ):
+            ds_in = ds_in.update(create_bounds_rotated_pole(ds_in))
+        if (
+            ds_grid.cf["longitude"].ndim == 2
+            and "longitude" not in ds_grid.cf.bounds
+            and "rotated_pole" in ds_grid
+        ):
+            ds_grid = ds_grid.update(create_bounds_rotated_pole(ds_grid))
+
     regridder = xe.Regridder(
         ds_in=ds_in,
         ds_out=ds_grid,
@@ -321,3 +337,49 @@ def _regridder(
         regridder.to_netcdf(filename)
 
     return regridder
+
+
+def create_bounds_rotated_pole(ds):
+    """Create bounds for rotated pole datasets."""
+    ds = ds.cf.add_bounds(["rlat", "rlon"])
+
+    # In "vertices" format then expand to 2D. From (N, 2) to (N+1,) to (N+1, M+1)
+    rlatv1D = cfxr.bounds_to_vertices(ds.rlat_bounds, "bounds")
+    rlonv1D = cfxr.bounds_to_vertices(ds.rlon_bounds, "bounds")
+    rlatv = rlatv1D.expand_dims(rlon_vertices=rlonv1D).transpose(
+        "rlon_vertices", "rlat_vertices"
+    )
+    rlonv = rlonv1D.expand_dims(rlat_vertices=rlatv1D).transpose(
+        "rlon_vertices", "rlat_vertices"
+    )
+
+    # Get cartopy's crs for the projection
+    RP = ccrs.RotatedPole(
+        pole_longitude=ds.rotated_pole.grid_north_pole_longitude,
+        pole_latitude=ds.rotated_pole.grid_north_pole_latitude,
+        central_rotated_longitude=ds.rotated_pole.north_pole_grid_longitude,
+    )
+    PC = ccrs.PlateCarree()
+
+    # Project points
+    pts = PC.transform_points(RP, rlonv.values, rlatv.values)
+    lonv = rlonv.copy(data=pts[..., 0]).rename("lon_vertices")
+    latv = rlatv.copy(data=pts[..., 1]).rename("lat_vertices")
+
+    # Back to CF bounds format. From (N+1, M+1) to (4, N, M)
+    lonb = cfxr.vertices_to_bounds(lonv, ("bounds", "rlon", "rlat")).rename(
+        "lon_bounds"
+    )
+    latb = cfxr.vertices_to_bounds(latv, ("bounds", "rlon", "rlat")).rename(
+        "lat_bounds"
+    )
+
+    # Create dataset, set coords and attrs
+    ds_bnds = xr.merge([lonb, latb]).assign(
+        lon=ds.lon, lat=ds.lat, rotated_pole=ds.rotated_pole
+    )
+    ds_bnds["rlat"] = ds.rlat
+    ds_bnds["rlon"] = ds.rlon
+    ds_bnds.lat.attrs["bounds"] = "lat_bounds"
+    ds_bnds.lon.attrs["bounds"] = "lon_bounds"
+    return ds_bnds.transpose(*ds.lon.dims, "bounds")

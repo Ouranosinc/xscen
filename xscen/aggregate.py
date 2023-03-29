@@ -450,7 +450,10 @@ def spatial_mean(
                 }
 
             elif region["method"] == "shape":
-                s = gpd.read_file(region["shape"]["shape"])
+                if not isinstance(region["shape"]["shape"], gpd.GeoDataFrame):
+                    s = gpd.read_file(region["shape"]["shape"])
+                else:
+                    s = region["shape"]["shape"]
                 if len(s != 1):
                     raise ValueError(
                         "Only a single polygon should be used with interp_centroid."
@@ -499,7 +502,10 @@ def spatial_mean(
 
         # If the region is a shapefile, open with geopandas
         elif region["method"] == "shape":
-            polygon = gpd.read_file(region["shape"]["shape"])
+            if not isinstance(region["shape"]["shape"], gpd.GeoDataFrame):
+                polygon = gpd.read_file(region["shape"]["shape"])
+            else:
+                polygon = region["shape"]["shape"]
 
             # Simplify the geometries to a given tolerance, if needed.
             # The simpler the polygons, the faster the averaging, but it will lose some precision.
@@ -519,6 +525,16 @@ def spatial_mean(
 
         kwargs_copy = deepcopy(kwargs)
         skipna = kwargs_copy.pop("skipna", False)
+
+        if (
+            ds.cf["longitude"].ndim == 2
+            and "longitude" not in ds.cf.bounds
+            and "rotated_pole" in ds
+        ):
+            from .regrid import create_bounds_rotated_pole
+
+            ds = ds.update(create_bounds_rotated_pole(ds))
+
         savg = xe.SpatialAverager(ds, polygon.geometry, **kwargs_copy)
         ds_agg = savg(ds, keep_attrs=True, skipna=skipna)
         extra_coords = {
