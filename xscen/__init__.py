@@ -15,6 +15,7 @@ from . import (
     reduce,
     regrid,
     scripting,
+    spatial,
     utils,
 )
 
