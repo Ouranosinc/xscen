@@ -28,7 +28,7 @@ requirements = [
     "cartopy",
     "cftime",
     "cf_xarray>=0.7.6",
-    "clisops",
+    "clisops>=0.9.5",
     "dask",
     "flox",
     "fsspec",
@@ -39,13 +39,13 @@ requirements = [
     "matplotlib",
     "netCDF4",
     "numpy",
-    "pandas",
+    "pandas!=1.5.3",
     "pyarrow",  # Used when opening catalogs.
     "pygeos",
     "pyyaml",
     "rechunker",
     "shapely",
-    "xarray",
+    "xarray<2023.3.0",  # See https://github.com/Ouranosinc/xscen/pull/173
     "xclim>=0.37",
     "xesmf>=0.7",  # This is not available on pypi.
     "zarr",
@@ -83,6 +83,6 @@ setup(
     test_suite="tests",
     tests_require=["pytest", "pytest-cov"],
     url="https://github.com/Ouranosinc/xscen",
-    version="0.5.7-beta",
+    version="0.5.8-beta",
     zip_safe=False,
 )
