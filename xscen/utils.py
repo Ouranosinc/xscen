@@ -192,35 +192,62 @@ def unstack_fill_nan(
     if coords is None:
         logger.info("Dataset unstacked using no coords argument.")
 
-    if isinstance(coords, (list, tuple)):
-        dims, crds = zip(*[(name, ds[name].load().values) for name in coords])
-    else:
+    if isinstance(coords, (str, os.PathLike)):
+        # find original shape in the attrs of one of the dimension
+        original_shape = "unknown"
+        for c in ds.coords:
+            if "original_shape" in ds[c].attrs:
+                original_shape = ds[c].attrs["original_shape"]
+        domain = ds.attrs.get("cat:domain", "unknown")
+        coords = coords.format(domain=domain, shape=original_shape)
+        logger.info(f"Dataset unstacked using {coords}.")
+        coords = xr.open_dataset(coords)
+        # separate coords that are dims or not
+        coords_and_dims = {
+            name: x for name, x in coords.coords.items() if name in coords.dims
+        }
+        coords_not_dims = {
+            name: x for name, x in coords.coords.items() if name not in coords.dims
+        }
+
         dims, crds = zip(
             *[
                 (name, crd.load().values)
                 for name, crd in ds.coords.items()
-                if crd.dims == (dim,)
+                if crd.dims == (dim,) and name in coords_and_dims
             ]
         )
+        out = (
+            ds.drop_vars(dims)
+            .assign_coords({dim: pd.MultiIndex.from_arrays(crds, names=dims)})
+            .unstack(dim)
+        )
 
-    out = (
-        ds.drop_vars(dims)
-        .assign_coords({dim: pd.MultiIndex.from_arrays(crds, names=dims)})
-        .unstack(dim)
-    )
+        # only reindex with the dims
+        out = out.reindex(**coords_and_dims)
+        # add back the coords that arent dims
+        for c in coords_not_dims:
+            out[c] = coords[c]
+    else:
+        if isinstance(coords, (list, tuple)):
+            dims, crds = zip(*[(name, ds[name].load().values) for name in coords])
+        else:
+            dims, crds = zip(
+                *[
+                    (name, crd.load().values)
+                    for name, crd in ds.coords.items()
+                    if crd.dims == (dim,)
+                ]
+            )
 
-    if not isinstance(coords, (list, tuple)) and coords is not None:
-        if isinstance(coords, (str, os.PathLike)):
-            # find original shape in the attrs of one of the dimension
-            original_shape = "unknown"
-            for c in ds.coords:
-                if "original_shape" in ds[c].attrs:
-                    original_shape = ds[c].attrs["original_shape"]
-            domain = ds.attrs.get("cat:domain", "unknown")
-            coords = coords.format(domain=domain, shape=original_shape)
-            logger.info(f"Dataset unstacked using {coords}.")
-            coords = xr.open_dataset(coords)
-        out = out.reindex(**coords.coords)
+        out = (
+            ds.drop_vars(dims)
+            .assign_coords({dim: pd.MultiIndex.from_arrays(crds, names=dims)})
+            .unstack(dim)
+        )
+
+        if not isinstance(coords, (list, tuple)) and coords is not None:
+            out = out.reindex(**coords.coords)
 
     for dim in dims:
         out[dim].attrs.update(ds[dim].attrs)
