@@ -241,9 +241,15 @@ def extract_dataset(
             for a, b in zip(
                 catalog._requested_variables_true, catalog._requested_variable_freqs
             ):
-                variables_and_freqs[a].extend(b)
+                variables_and_freqs[a].extend([b])
         except ValueError:
             raise ValueError("Failed to determine the requested variables and freqs.")
+    else:
+        # Make everything a list
+        variables_and_freqs = {
+            k: [v] if not isinstance(v, list) else v
+            for k, v in variables_and_freqs.items()
+        }
 
     # Default arguments to send xarray
     xr_open_kwargs = xr_open_kwargs or {}
@@ -260,13 +266,7 @@ def extract_dataset(
     )
 
     out_dict = {}
-    for xrfreq in pd.unique(
-        [
-            x if isinstance(y, list) else y
-            for y in variables_and_freqs.values()
-            for x in y
-        ]
-    ):
+    for xrfreq in pd.unique([x for y in variables_and_freqs.values() for x in y]):
         ds = xr.Dataset()
         attrs = {}
         # iterate on the datasets, in reverse timedelta order
@@ -298,12 +298,7 @@ def extract_dataset(
                 # TODO: 2nd part is a temporary fix until this is changed in intake_esm
                 if (
                     var_name in ds
-                    or xrfreq
-                    not in (
-                        variables_and_freqs.get(var_name)
-                        if isinstance(variables_and_freqs.get(var_name), list)
-                        else [variables_and_freqs.get(var_name)]
-                    )
+                    or xrfreq not in variables_and_freqs.get(var_name)
                     or var_name not in catalog._requested_variables_true
                 ):
                     continue
