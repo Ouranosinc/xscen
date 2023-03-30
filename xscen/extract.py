@@ -421,6 +421,13 @@ def resample(
     """
     var_name = da.name
 
+    initial_frequency = xr.infer_freq(da.time.dt.round("T")) or "undetected"
+    if initial_frequency == "D":
+        logger.warning(
+            "You appear to be resampling daily data using extract_dataset. "
+            "It is advised to use compute_indicators instead, as it is far more robust."
+        )
+
     if method is None:
         if (
             target_frequency in CV.resampling_methods.dict
@@ -492,8 +499,6 @@ def resample(
         out = getattr(da.resample(time=target_frequency), method)(
             dim="time", keep_attrs=True
         )
-
-    initial_frequency = xr.infer_freq(da.time.dt.round("T")) or "undetected"
 
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {method} "
