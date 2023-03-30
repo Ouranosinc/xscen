@@ -167,7 +167,7 @@ def extract_dataset(
     catalog : DataCatalog
         Sub-catalog for a single dataset, one value of the output of `search_data_catalogs`.
     variables_and_freqs : dict
-        Variables and freqs, following a 'variable: xrfreq-compatible str' format.
+        Variables and freqs, following a 'variable: xrfreq-compatible str' format. A list of strings can also be provided.
         If None, it will be read from catalog._requested_variables and catalog._requested_variable_freqs
         (set by `variables_and_freqs` in `search_data_catalogs`)
     periods : list
@@ -535,7 +535,7 @@ def search_data_catalogs(
     data_catalogs : Union[Union[str, os.PathLike], List[Union[str, os.PathLike]], DataCatalog]
         DataCatalog (or multiple, in a list) or paths to JSON/CSV data catalogs. They must use the same columns and aggregation options.
     variables_and_freqs : dict
-        Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format.
+        Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format. A list of strings can also be provided.
     other_search_criteria : dict, optional
         Other criteria to search for in the catalogs' columns, following a 'column_name: list(subset)' format.
     exclusions : dict, optional
