@@ -422,10 +422,18 @@ def resample(
     var_name = da.name
 
     initial_frequency = xr.infer_freq(da.time.dt.round("T")) or "undetected"
-    if initial_frequency == "D":
+    initial_frequency_td = pd.Timedelta(
+        CV.xrfreq_to_timedelta(xr.infer_freq(da.time.dt.round("T")), None)
+    )
+    if initial_frequency_td == pd.Timedelta("1D"):
         logger.warning(
             "You appear to be resampling daily data using extract_dataset. "
             "It is advised to use compute_indicators instead, as it is far more robust."
+        )
+    elif initial_frequency_td > pd.Timedelta("1D"):
+        logger.warning(
+            "You appear to be resampling data that is coarser than daily. "
+            "Be aware that this is not currently explicitely supported by xscen and might result in erroneous manipulations."
         )
 
     if method is None:

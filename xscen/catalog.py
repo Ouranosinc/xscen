@@ -272,7 +272,10 @@ class DataCatalog(intake_esm.esm_datastore):
     def search(self, **columns):
         """Modification of .search() to add the 'periods' keyword."""
         periods = columns.pop("periods", False)
-        cat = super().search(**columns)
+        if len(columns) > 0:
+            cat = super().search(**columns)
+        else:
+            cat = self.__class__({"esmcat": self.esmcat.dict(), "df": self.esmcat._df})
         if periods is not False:
             cat.esmcat._df = subset_file_coverage(
                 cat.esmcat._df, periods=periods, coverage=0, duplicates_ok=True
