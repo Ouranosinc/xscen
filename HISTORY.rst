@@ -18,12 +18,15 @@ New features and enhancements
 * Add function ``regrid.create_bounds_rotated_pole`` and automatic use in ``regrid_dataset`` and ``spatial_mean``. This is temporary, while we wait for a functionning method in ``cf_xarray``. (:pull:`174`, :issue:`96`).
 * Add ``spatial`` submodule with functions ``creep_weights`` and ``creep_fill`` for filling NaNs using neighbours. (:pull:`174`).
 * Allow passing ``GeoDataFrame`` instances in ``spatial_mean``'s ``region`` argument, not only geospatial file paths. (:pull:`174`).
+* Allow searching for periods in `catalog.search`. (:issue:`123`, :pull:`170`).
+* Allow searching and extracting multiple frequencies for a given variable. (:issue:`168`, :pull:`170`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * 'mean' averaging has been deprecated in `spatial_mean`. (:pull:`125`).
 * 'interp_coord' has been renamed to 'interp_centroid' in `spatial_mean`. (:pull:`125`).
 * The 'datasets' dimension of the output of ``diagnostics.measures_heatmap`` is renamed 'realization'. (:pull:`167`).
+* `_subset_file_coverage` was renamed `subset_file_coverage` and moved to ``catalog.py`` to prevent circular imports. (:pull:`170`).
 
 Bug fixes
 ^^^^^^^^^
@@ -32,6 +35,8 @@ Bug fixes
 * ``compute_indicators`` no longer crashes if less than 3 timesteps are produced. (:pull:`125`).
 * `xarray` is temporarily pinned below v2023.3.0 due to an API-breaking change. (:issue:`175`, :pull:`173`).
 * `xscen.utils.unstack_fill_nan`` can now handle datasets that have non dimension coordinates. (:issue:`156`, :pull:`175`).
+* `extract_dataset` now skips a simulation way earlier if the frequency doesn't match. (:pull:`170`).
+* `extract_dataset` now correctly tries to extract in reverse timedelta order. (:pull:`170`).
 
 
 Internal changes
@@ -43,6 +48,7 @@ Internal changes
 * Added a few relevant `Shields <https://shields.io/>`_ to the README.rst. (:pull:`164`).
 * Better warning messages in ``_subset_file_coverage`` when coverage is insufficient. (:pull:`125`).
 * The top-level Makefile now includes a `linkcheck` recipe, and the ReadTheDocs configuration no longer reinstalls the `llvmlite` compiler library. (:pull:`173`).
+* The checkups on coverage and duplicates can now be skipped in `subset_file_coverage`. (:pull:`170`).
 
 v0.5.0 (2023-02-28)
 -------------------

@@ -18,6 +18,7 @@ import dask
 import fsspec as fs
 import intake_esm
 import netCDF4
+import numpy as np
 import pandas as pd
 import tlz
 import xarray
@@ -267,6 +268,19 @@ class DataCatalog(intake_esm.esm_datastore):
             sim = self.search(**dict(zip(columns, values)))
             if sim:  # So we never yield empty catalogs
                 yield values, sim
+
+    def search(self, **columns):
+        """Modification of .search() to add the 'periods' keyword."""
+        periods = columns.pop("periods", False)
+        if len(columns) > 0:
+            cat = super().search(**columns)
+        else:
+            cat = self.__class__({"esmcat": self.esmcat.dict(), "df": self.esmcat._df})
+        if periods is not False:
+            cat.esmcat._df = subset_file_coverage(
+                cat.esmcat._df, periods=periods, coverage=0, duplicates_ok=True
+            )
+        return cat
 
     def drop_duplicates(self, columns: Optional[List[str]] = None):  # noqa: D102
         # In case variables are being added in an existing Zarr, append them
@@ -1537,3 +1551,106 @@ def unstack_id(
         out[ids] = {attr: subset[attr].iloc[0] for attr in subset.columns}
 
     return out
+
+
+def subset_file_coverage(
+    df: pd.DataFrame,
+    periods: list,
+    *,
+    coverage: float = 0.99,
+    duplicates_ok: bool = False,
+) -> pd.DataFrame:
+    """Return a subset of files that overlap with the target period(s).
+
+    The minimum resolution for periods is 1 hour.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+      List of files to be evaluated, with at least a date_start and date_end column,
+      which are expected to be `pd.Period` objects with `freq='H'`.
+    periods : list
+      [start, end] of the period to be evaluated (or a list of lists)
+    coverage : float
+      Percentage of hours that need to be covered in a given period for the dataset to be valid. Use 0 to ignore this checkup.
+    duplicates_ok: bool
+      If True, no checkup is done on possible duplicates.
+
+    Returns
+    -------
+    pd.DataFrame
+      Subset of files that overlap the targetted period(s)
+    """
+    if not isinstance(periods[0], list):
+        periods = [periods]
+
+    # Create an Interval for each file
+    file_intervals = df.apply(
+        lambda r: pd.Interval(
+            left=r["date_start"].ordinal, right=r["date_end"].ordinal, closed="both"
+        ),
+        axis=1,
+    )
+
+    # Check for duplicated Intervals
+    if any(file_intervals.duplicated()) and duplicates_ok is False:
+        logging.warning(
+            f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Time periods are overlapping."
+        )
+        return pd.DataFrame(columns=df.columns)
+
+    # Create an array of True/False
+    files_to_keep = np.zeros(len(file_intervals), dtype=bool)
+    for period in periods:
+        period_interval = pd.Interval(
+            left=date_parser(str(period[0]), freq="H").ordinal,
+            right=date_parser(str(period[1]), end_of_period=True, freq="H").ordinal,
+            closed="both",
+        )
+        files_in_range = file_intervals.apply(lambda r: period_interval.overlaps(r))
+
+        if len(df[files_in_range]) == 0:
+            logging.warning(
+                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage (no files in range)."
+            )
+            return pd.DataFrame(columns=df.columns)
+
+        # Very rough guess of the coverage relative to the requested period,
+        # without having to open the files or checking day-by-day
+        if coverage > 0:
+            # Number of hours in the requested period
+            period_nb_hrs = date_parser(
+                str(period[1]), end_of_period=True, freq="H"
+            ) - date_parser(str(period[0]), freq="H")
+
+            # Sum of hours in all selected files, restricted by the requested period
+            guessed_nb_hrs_sum = (
+                df[files_in_range].apply(
+                    lambda x: np.min(
+                        [
+                            x["date_end"],
+                            date_parser(str(period[1]), end_of_period=True, freq="H"),
+                        ]
+                    ),
+                    axis=1,
+                )
+                - df[files_in_range].apply(
+                    lambda x: np.max(
+                        [x["date_start"], date_parser(str(period[0]), freq="H")]
+                    ),
+                    axis=1,
+                )
+            ).sum()
+
+            if guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos < coverage:
+                logging.warning(
+                    f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage "
+                    f"(guessed at {guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos:.1%})."
+                )
+                return pd.DataFrame(columns=df.columns)
+
+            files_to_keep = files_to_keep | files_in_range
+        else:
+            files_to_keep = files_to_keep | files_in_range
+
+    return df[files_to_keep]
