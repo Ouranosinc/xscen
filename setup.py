@@ -83,6 +83,6 @@ setup(
     test_suite="tests",
     tests_require=["pytest", "pytest-cov"],
     url="https://github.com/Ouranosinc/xscen",
-    version="0.5.10-beta",
+    version="0.5.11-beta",
     zip_safe=False,
 )
