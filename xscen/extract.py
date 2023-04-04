@@ -58,7 +58,9 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
     -----
     'region' fields:
         method: str
-            ['gridpoint', 'bbox', shape']
+            ['gridpoint', 'bbox', shape','sel']
+            If the method is `sel`, this is not a call to clisops but only a subsetting with the xarray .sel() fonction.
+            The keys are the dimension to subset and the value is turned into a slice.
         <method>: dict
             Arguments specific to the method used.
         buffer: float, optional
@@ -131,6 +133,16 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
             f" - clisops v{clisops.__version__}"
         )
 
+    elif region["method"] in ["sel"]:
+        arg_sel = {
+            dim: slice(*map(float, bounds)) for dim, bounds in region["sel"].items()
+        }
+        ds_subset = ds.sel(**arg_sel)
+        new_history = (
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+            f"{region['method']} subsetting with arguments {arg_sel}"
+        )
+
     else:
         raise ValueError("Subsetting type not recognized")
 
@@ -157,6 +169,7 @@ def extract_dataset(
     xr_combine_kwargs: dict = None,
     preprocess: Callable = None,
     resample_methods: Optional[dict] = None,
+    mask: Union[bool, xr.Dataset] = False,
 ) -> Union[dict, xr.Dataset]:
     """Take one element of the output of `search_data_catalogs` and returns a dataset, performing conversions and resampling as needed.
 
@@ -197,6 +210,12 @@ def extract_dataset(
         If the method is not given for a variable, it is guessed from the variable name and frequency,
         using the mapping in CVs/resampling_methods.json. If the variable is not found there,
         "mean" is used by default.
+    mask: xr.Dataset, bool
+        A mask that is applied to all variables and only keeps data where it is True.
+        Where the mask is False, the variables values are replaced by NaNs.
+        The mask should have the same dimensions as the variables extracted.
+        If `mask` is a dataset, the dataset should have a variable named 'mask'.
+        If `mask` is True, it will expect a `mask` variable at xrfreq `fx` to have been extracted.
 
     Returns
     -------
@@ -211,7 +230,7 @@ def extract_dataset(
         name: str
             Region name used to overwrite domain in the catalog.
         method: str
-            ['gridpoint', 'bbox', shape']
+            ['gridpoint', 'bbox', shape', 'sel']
         <method>: dict
             Arguments specific to the method used.
         buffer: float, optional
@@ -386,6 +405,23 @@ def extract_dataset(
             ds.attrs["cat:variable"] = parse_from_ds(ds, ["variable"])["variable"]
 
         out_dict[xrfreq] = ds
+
+    if mask:
+        if isinstance(mask, xr.Dataset):
+            ds_mask = mask["mask"]
+        elif (
+            "fx" in out_dict and "mask" in out_dict["fx"]
+        ):  # get mask that was extracted above
+            ds_mask = out_dict["fx"]["mask"].copy()
+        else:
+            raise ValueError(
+                "No mask found. Either pass a xr.Dataset to the `mask` argument or pass a `dc` that includes a dataset with variable `mask`."
+            )
+
+        # iter over all xrfreq to apply the mask
+        for xrfreq, ds in out_dict.items():
+            if xrfreq != "fx":
+                out_dict[xrfreq] = ds.where(ds_mask)
 
     return out_dict
 
