@@ -212,7 +212,7 @@ def extract_dataset(
         "mean" is used by default.
     mask: xr.Dataset, bool
         A mask that is applied to all variables and only keeps data where it is True.
-        Where the mask is False, the variables values are replaced by NaNs.
+        Where the mask is False, variable values are replaced by NaNs.
         The mask should have the same dimensions as the variables extracted.
         If `mask` is a dataset, the dataset should have a variable named 'mask'.
         If `mask` is True, it will expect a `mask` variable at xrfreq `fx` to have been extracted.
@@ -415,7 +415,7 @@ def extract_dataset(
             ds_mask = out_dict["fx"]["mask"].copy()
         else:
             raise ValueError(
-                "No mask found. Either pass a xr.Dataset to the `mask` argument or pass a `dc` that includes a dataset with variable `mask`."
+                "No mask found. Either pass a xr.Dataset to the `mask` argument or pass a `dc` that includes a dataset with a variable named `mask`."
             )
 
         # iter over all xrfreq to apply the mask

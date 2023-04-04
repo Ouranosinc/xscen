@@ -20,7 +20,7 @@ New features and enhancements
 * Allow passing ``GeoDataFrame`` instances in ``spatial_mean``'s ``region`` argument, not only geospatial file paths. (:pull:`174`).
 * Allow searching for periods in `catalog.search`. (:issue:`123`, :pull:`170`).
 * Allow searching and extracting multiple frequencies for a given variable. (:issue:`168`, :pull:`170`).
-* New features mask in ``extract_dataset``. (:issue:`180`, :pull:`182`).
+* New masking feature in ``extract_dataset``. (:issue:`180`, :pull:`182`).
 * New method "sel" in ``xs.extract.clisops_subset``. (:issue:`180`, :pull:`182`).
 
 Breaking changes
