@@ -420,8 +420,9 @@ def extract_dataset(
 
         # iter over all xrfreq to apply the mask
         for xrfreq, ds in out_dict.items():
-            if xrfreq != "fx":
-                out_dict[xrfreq] = ds.where(ds_mask)
+            out_dict[xrfreq] = ds.where(ds_mask)
+            if xrfreq == "fx":  # put back the mask
+                out_dict[xrfreq]["mask"] = ds_mask
 
     return out_dict
 
