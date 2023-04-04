@@ -60,7 +60,7 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
         method: str
             ['gridpoint', 'bbox', shape','sel']
             If the method is `sel`, this is not a call to clisops but only a subsetting with the xarray .sel() fonction.
-            The keys are the dimension to subset and the value is turned into a slice.
+            The keys are the dimensions to subset and the values are turned into a slice.
         <method>: dict
             Arguments specific to the method used.
         buffer: float, optional
