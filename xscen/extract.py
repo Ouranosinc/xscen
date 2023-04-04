@@ -163,7 +163,7 @@ def extract_dataset(
     xr_combine_kwargs: dict = None,
     preprocess: Callable = None,
     resample_methods: Optional[dict] = None,
-    mask: Union[bool, xr.Dataset] = False,
+    mask: Union[bool, xr.Dataset, xr.DataArray] = False,
 ) -> Union[dict, xr.Dataset]:
     """Take one element of the output of `search_data_catalogs` and returns a dataset, performing conversions and resampling as needed.
 
@@ -403,13 +403,15 @@ def extract_dataset(
     if mask:
         if isinstance(mask, xr.Dataset):
             ds_mask = mask["mask"]
+        elif isinstance(mask, xr.DataArray):
+            ds_mask = mask
         elif (
             "fx" in out_dict and "mask" in out_dict["fx"]
         ):  # get mask that was extracted above
             ds_mask = out_dict["fx"]["mask"].copy()
         else:
             raise ValueError(
-                "No mask found. Either pass a xr.Dataset to the `mask` argument or pass a `dc` that includes a dataset with a variable named `mask`."
+                "No mask found. Either pass a xr.Dataset/xr.DataArray to the `mask` argument or pass a `dc` that includes a dataset with a variable named `mask`."
             )
 
         # iter over all xrfreq to apply the mask
