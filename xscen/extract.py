@@ -28,6 +28,7 @@ from .catalog import (
 )
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
+from .spatial import subset
 from .utils import CV
 from .utils import ensure_correct_time as _ensure_correct_time
 from .utils import natural_sort
@@ -58,9 +59,7 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
     -----
     'region' fields:
         method: str
-            ['gridpoint', 'bbox', shape','sel']
-            If the method is `sel`, this is not a call to clisops but only a subsetting with the xarray .sel() fonction.
-            The keys are the dimensions to subset and the values are turned into a slice.
+            ['gridpoint', 'bbox', shape']
         <method>: dict
             Arguments specific to the method used.
         buffer: float, optional
@@ -75,6 +74,11 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
     --------
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
+    warnings.warn(
+        "clisops_subset is deprecated and will not be available in future versions. "
+        "Use xscen.spatial.subset instead.",
+        category=FutureWarning,
+    )
     if uses_dask(ds.lon) or uses_dask(ds.lat):
         warnings.warn("Loading longitude and latitude for more efficient subsetting.")
         ds["lon"], ds["lat"] = dask.compute(ds.lon, ds.lat)
@@ -131,16 +135,6 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
             f"{region['method']} spatial subsetting with {'buffer=' + str(region['buffer']) if 'buffer' in region else 'no buffer'}"
             f", shape={Path(region['shape']['shape']).name if isinstance(region['shape']['shape'], (str, Path)) else 'gpd.GeoDataFrame'}"
             f" - clisops v{clisops.__version__}"
-        )
-
-    elif region["method"] in ["sel"]:
-        arg_sel = {
-            dim: slice(*map(float, bounds)) for dim, bounds in region["sel"].items()
-        }
-        ds_subset = ds.sel(**arg_sel)
-        new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{region['method']} subsetting with arguments {arg_sel}"
         )
 
     else:
@@ -394,9 +388,9 @@ def extract_dataset(
                 slices.extend([ds.sel({"time": slice(str(period[0]), str(period[1]))})])
             ds = xr.concat(slices, dim="time", **xr_combine_kwargs)
 
-        # Custom call to clisops
+        # subset to the region
         if region is not None:
-            ds = clisops_subset(ds, region)
+            ds = subset(ds, region)
             ds.attrs["cat:domain"] = region["name"]
 
         # add relevant attrs
