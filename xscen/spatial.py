@@ -121,7 +121,8 @@ def creep_fill(da, w):
 
 def subset(
     ds: xr.Dataset,
-    name: str = None,
+    region: dict = None,
+    *,
     method: str = None,
     nb_gridcell_buffer: float = 0,
     **kwargs,
@@ -136,8 +137,8 @@ def subset(
     ----------
     ds : xr.Dataset
         Dataset to be subsetted.
-    name : str
-        Name of the new region.
+    region: dict
+        Deprecated argument that is there for legacy reasons and will be abandoned eventually.
     method : str
         ['gridpoint', 'bbox', shape','sel']
         If the method is `sel`, this is not a call to clisops but only a subsetting with the xarray .sel() fonction.
@@ -157,24 +158,24 @@ def subset(
     --------
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
-    if "region" in kwargs:
+    if "name" in kwargs:
+        kwargs = deepcopy(kwargs.pop("name"))
+
+    if region is not None:
         warnings.warn(
             "The argument 'region' has been deprecated and will be abandoned in a future release.",
             category=FutureWarning,
         )
-        name = name or kwargs["region"].get("name")
-        method = method or kwargs["region"].get("method")
-        if ("buffer" in kwargs["region"]) and ("shape" in kwargs["region"]):
+        method = method or region.get("method")
+        if ("buffer" in region) and ("shape" in region):
             warnings.warn(
                 "To avoid confusion with clisops' buffer argument, xscen's 'buffer' has been renamed 'nb_gridcell_buffer'.",
                 category=FutureWarning,
             )
-            nb_gridcell_buffer = nb_gridcell_buffer or kwargs["region"].get("buffer")
+            nb_gridcell_buffer = nb_gridcell_buffer or region.get("buffer")
         else:
-            nb_gridcell_buffer = nb_gridcell_buffer or kwargs["region"].get(
-                "nb_gridcell_buffer"
-            )
-        kwargs = deepcopy(kwargs["region"][kwargs["method"]])
+            nb_gridcell_buffer = nb_gridcell_buffer or region.get("nb_gridcell_buffer")
+        kwargs = deepcopy(region[region["method"]])
 
     if uses_dask(ds.lon) or uses_dask(ds.lat):
         warnings.warn("Loading longitude and latitude for more efficient subsetting.")
@@ -196,7 +197,7 @@ def subset(
         ds_subset = clisops.core.subset_gridpoint(ds, **kwargs)
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{method} spatial subsetting on {len(kwargs['gridpoint']['lon'])} coordinates - clisops v{clisops.__version__}"
+            f"{method} spatial subsetting on {len(kwargs['lon'])} coordinates - clisops v{clisops.__version__}"
         )
 
     elif method in ["bbox"]:

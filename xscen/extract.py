@@ -5,6 +5,7 @@ import os
 import re
 import warnings
 from collections import defaultdict
+from copy import deepcopy
 from pathlib import Path
 from typing import Callable, List, Optional, Union
 
@@ -33,7 +34,6 @@ logger = logging.getLogger(__name__)
 
 
 __all__ = [
-    "clisops_subset",
     "extract_dataset",
     "resample",
     "search_data_catalogs",
@@ -76,7 +76,7 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
         category=FutureWarning,
     )
 
-    ds_subset = subset(ds, region)
+    ds_subset = subset(ds, region=region)
 
     return ds_subset
 
@@ -156,10 +156,10 @@ def extract_dataset(
             Region name used to overwrite domain in the catalog.
         method: str
             ['gridpoint', 'bbox', shape', 'sel']
-        <method>: dict
-            Arguments specific to the method used.
-        buffer: float, optional
+        nb_gridcell_buffer: float, optional
             Multiplier to apply to the model resolution.
+        kwargs
+            Arguments specific to the method used.
 
     See Also
     --------
@@ -321,7 +321,18 @@ def extract_dataset(
 
         # subset to the region
         if region is not None:
-            ds = subset(ds, region)
+            if region["method"] in region:
+                warnings.warn(
+                    "You seem to be using a deprecated version of region. Please use the new formatting.",
+                    category=FutureWarning,
+                )
+                region = deepcopy(region)
+                if "buffer" in region:
+                    region["nb_gridcell_buffer"] = region.pop("buffer")
+                for k in region[region["method"]]:
+                    region[k] = region[region["method"]][k]
+                region.pop(region["method"])
+            ds = subset(ds, **region)
             ds.attrs["cat:domain"] = region["name"]
 
         # add relevant attrs
