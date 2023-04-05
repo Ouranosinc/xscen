@@ -112,7 +112,7 @@ def extract_dataset(
         [start, end] of the period to be evaluated (or a list of lists)
         Will be read from catalog._requested_periods if None. Leave both None to extract everything.
     region : dict, optional
-        Description of the region and the subsetting method (required fields listed in the Notes).
+        Description of the region and the subsetting method (required fields listed in the Notes) used in `xscen.spatial.subset`.
     to_level : str
         The processing level to assign to the output.
         Defaults to 'extracted'
