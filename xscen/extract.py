@@ -322,7 +322,6 @@ def extract_dataset(
         # subset to the region
         if region is not None:
             ds = subset(ds, region)
-            ds.attrs["cat:domain"] = region["name"]
 
         # add relevant attrs
         ds.attrs["cat:processing_level"] = to_level
