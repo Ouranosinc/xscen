@@ -136,6 +136,8 @@ def subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
     Notes
     -----
     'region' fields:
+        name: str
+            Region name used to overwrite domain in the catalog.
         method: str
             ['gridpoint', 'bbox', shape','sel']
             If the method is `sel`, this is not a call to clisops but only a subsetting with the xarray .sel() fonction.
@@ -231,5 +233,6 @@ def subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
         else new_history
     )
     ds_subset.attrs["history"] = history
+    ds_subset.attrs["cat:domain"] = region["name"]
 
     return ds_subset
