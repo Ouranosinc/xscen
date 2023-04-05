@@ -159,7 +159,8 @@ def subset(
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
     if "name" in kwargs:
-        kwargs = deepcopy(kwargs.pop("name"))
+        kwargs = deepcopy(kwargs)
+        kwargs.pop("name")
 
     if region is not None:
         warnings.warn(
@@ -181,7 +182,7 @@ def subset(
         warnings.warn("Loading longitude and latitude for more efficient subsetting.")
         ds["lon"], ds["lat"] = dask.compute(ds.lon, ds.lat)
     if nb_gridcell_buffer > 0:
-        if "method" not in ["bbox", "shape"]:
+        if method not in ["bbox", "shape"]:
             warnings.warn(
                 "nb_gridcell_buffer has been specified, but is not used for the requested subsetting method.",
             )
