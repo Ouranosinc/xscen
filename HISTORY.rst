@@ -9,6 +9,7 @@ Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette 
 Announcements
 ^^^^^^^^^^^^^
 * `xscen` is now offered as a conda package available through Anaconda.org. Refer to the installation documentation for more information. (:issue:`149`, :pull:`171`).
+* Deprecation: Release 0.6.0 of `xscen` will be the last version to support ``xscen.extract.clisops_subset``. (:pull:`182`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20,6 +21,8 @@ New features and enhancements
 * Allow passing ``GeoDataFrame`` instances in ``spatial_mean``'s ``region`` argument, not only geospatial file paths. (:pull:`174`).
 * Allow searching for periods in `catalog.search`. (:issue:`123`, :pull:`170`).
 * Allow searching and extracting multiple frequencies for a given variable. (:issue:`168`, :pull:`170`).
+* New masking feature in ``extract_dataset``. (:issue:`180`, :pull:`182`).
+* New function ``xs.spatial.subset`` to replace ``xs.extract.clisops_subset`` and add method "sel". (:issue:`180`, :pull:`182`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
