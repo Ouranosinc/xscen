@@ -30,6 +30,7 @@ Breaking changes
 * 'interp_coord' has been renamed to 'interp_centroid' in `spatial_mean`. (:pull:`125`).
 * The 'datasets' dimension of the output of ``diagnostics.measures_heatmap`` is renamed 'realization'. (:pull:`167`).
 * `_subset_file_coverage` was renamed `subset_file_coverage` and moved to ``catalog.py`` to prevent circular imports. (:pull:`170`).
+* `extract_dataset` doesn't fail when a variable is in the dataset, but not `variables_and_freqs`. (:pull:`185`).
 
 Bug fixes
 ^^^^^^^^^

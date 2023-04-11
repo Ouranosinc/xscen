@@ -242,7 +242,7 @@ def extract_dataset(
                 # TODO: 2nd part is a temporary fix until this is changed in intake_esm
                 if (
                     var_name in ds
-                    or xrfreq not in variables_and_freqs.get(var_name)
+                    or xrfreq not in variables_and_freqs.get(var_name, [])
                     or var_name not in catalog._requested_variables_true
                 ):
                     continue
