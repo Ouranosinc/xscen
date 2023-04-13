@@ -9,7 +9,8 @@ Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette 
 Announcements
 ^^^^^^^^^^^^^
 * `xscen` is now offered as a conda package available through Anaconda.org. Refer to the installation documentation for more information. (:issue:`149`, :pull:`171`).
-* Deprecation: Release 0.6.0 of `xscen` will be the last version to support ``xscen.extract.clisops_subset``. (:pull:`182`).
+* Deprecation: Release 0.6.0 of `xscen` will be the last version to support ``xscen.extract.clisops_subset``. Use ``xscen.spatial.subset`` instead. (:pull:`182`, :pull:`184`).
+* Deprecation: The argument `region`, used in multiple functions, has been slightly reformatted. Release 0.6.0 of `xscen` will be the last version to support the old format. (:issue:`99`, :issue:`101`, :pull:`184`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -31,6 +32,8 @@ Breaking changes
 * The 'datasets' dimension of the output of ``diagnostics.measures_heatmap`` is renamed 'realization'. (:pull:`167`).
 * `_subset_file_coverage` was renamed `subset_file_coverage` and moved to ``catalog.py`` to prevent circular imports. (:pull:`170`).
 * `extract_dataset` doesn't fail when a variable is in the dataset, but not `variables_and_freqs`. (:pull:`185`).
+* ``xscen.extract.clisops_subset`` has been deprecated and replaced by ``xscen.spatial.subset``. That new function no longer uses `region` as an argument. (:pull:`182`, :pull:`184`).
+* The argument `region`, used in multiple functions, has been slightly reformatted. (:issue:`99`, :issue:`101`, :pull:`184`).
 
 Bug fixes
 ^^^^^^^^^
@@ -53,6 +56,7 @@ Internal changes
 * Better warning messages in ``_subset_file_coverage`` when coverage is insufficient. (:pull:`125`).
 * The top-level Makefile now includes a `linkcheck` recipe, and the ReadTheDocs configuration no longer reinstalls the `llvmlite` compiler library. (:pull:`173`).
 * The checkups on coverage and duplicates can now be skipped in `subset_file_coverage`. (:pull:`170`).
+* Changed the `ProjectCatalog` docstrings to make it more obvious that it needs to be created empty. (:issue:`99`, :pull:`184`).
 
 v0.5.0 (2023-02-28)
 -------------------
