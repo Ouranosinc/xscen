@@ -48,7 +48,7 @@ extract:
       region: &region
         name: test1
         method: bbox
-        nb_gridcell_buffer: 1.5
+        tile_buffer: 1.5
         lon_bnds: [ -80, -79 ]
         lat_bnds: [ 44, 44.2 ]
     stack_drop_nans: &stack

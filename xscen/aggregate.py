@@ -342,7 +342,7 @@ def spatial_mean(
     'region' required fields:
         method: str
             ['gridpoint', 'bbox', shape', 'sel']
-        nb_gridcell_buffer: float, optional
+        tile_buffer: float, optional
             Multiplier to apply to the model resolution. Only used if spatial_subset==True.
         kwargs
             Arguments specific to the method used.
@@ -381,7 +381,7 @@ def spatial_mean(
         )
         region = deepcopy(region)
         if "buffer" in region:
-            region["nb_gridcell_buffer"] = region.pop("buffer")
+            region["tile_buffer"] = region.pop("buffer")
         _kwargs = region.pop(region["method"])
         region.update(_kwargs)
 

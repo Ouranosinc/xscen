@@ -123,8 +123,9 @@ def subset(
     ds: xr.Dataset,
     region: dict = None,
     *,
+    name: str = None,
     method: str = None,
-    nb_gridcell_buffer: float = 0,
+    tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
     """
@@ -139,10 +140,12 @@ def subset(
         Dataset to be subsetted.
     region: dict
         Deprecated argument that is there for legacy reasons and will be abandoned eventually.
+    name: str
+        Used to rename the 'cat:domain' attribute.
     method : str
         ['gridpoint', 'bbox', shape','sel']
         If the method is `sel`, this is not a call to clisops but only a subsetting with the xarray .sel() fonction.
-    nb_gridcell_buffer : float
+    tile_buffer : float
         For ['bbox', shape'], uses an approximation of the grid cell size to add a buffer around the requested region.
         This differs from clisops' 'buffer' argument in subset_shape().
     kwargs : dict
@@ -158,12 +161,6 @@ def subset(
     --------
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
-    if "name" in kwargs:
-        kwargs = deepcopy(kwargs)
-        name = kwargs.pop("name")
-    else:
-        name = None
-
     if region is not None:
         warnings.warn(
             "The argument 'region' has been deprecated and will be abandoned in a future release.",
@@ -172,23 +169,21 @@ def subset(
         method = method or region.get("method")
         if ("buffer" in region) and ("shape" in region):
             warnings.warn(
-                "To avoid confusion with clisops' buffer argument, xscen's 'buffer' has been renamed 'nb_gridcell_buffer'.",
+                "To avoid confusion with clisops' buffer argument, xscen's 'buffer' has been renamed 'tile_buffer'.",
                 category=FutureWarning,
             )
-            nb_gridcell_buffer = nb_gridcell_buffer or region.get("buffer", 0)
+            tile_buffer = tile_buffer or region.get("buffer", 0)
         else:
-            nb_gridcell_buffer = nb_gridcell_buffer or region.get(
-                "nb_gridcell_buffer", 0
-            )
+            tile_buffer = tile_buffer or region.get("tile_buffer", 0)
         kwargs = deepcopy(region[region["method"]])
 
     if uses_dask(ds.lon) or uses_dask(ds.lat):
         warnings.warn("Loading longitude and latitude for more efficient subsetting.")
         ds["lon"], ds["lat"] = dask.compute(ds.lon, ds.lat)
-    if nb_gridcell_buffer > 0:
+    if tile_buffer > 0:
         if method not in ["bbox", "shape"]:
             warnings.warn(
-                "nb_gridcell_buffer has been specified, but is not used for the requested subsetting method.",
+                "tile_buffer has been specified, but is not used for the requested subsetting method.",
             )
         # estimate the model resolution
         if len(ds.lon.dims) == 1:  # 1D lat-lon
@@ -206,15 +201,15 @@ def subset(
         )
 
     elif method in ["bbox"]:
-        if nb_gridcell_buffer > 0:
+        if tile_buffer > 0:
             # adjust the boundaries
             kwargs["lon_bnds"] = (
-                kwargs["lon_bnds"][0] - lon_res * nb_gridcell_buffer,
-                kwargs["lon_bnds"][1] + lon_res * nb_gridcell_buffer,
+                kwargs["lon_bnds"][0] - lon_res * tile_buffer,
+                kwargs["lon_bnds"][1] + lon_res * tile_buffer,
             )
             kwargs["lat_bnds"] = (
-                kwargs["lat_bnds"][0] - lat_res * nb_gridcell_buffer,
-                kwargs["lat_bnds"][1] + lat_res * nb_gridcell_buffer,
+                kwargs["lat_bnds"][0] - lat_res * tile_buffer,
+                kwargs["lat_bnds"][1] + lat_res * tile_buffer,
             )
 
         if xc.core.utils.uses_dask(ds.cf["longitude"]):
@@ -225,23 +220,23 @@ def subset(
         ds_subset = clisops.core.subset_bbox(ds, **kwargs)
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{method} spatial subsetting with {'buffer=' + str(nb_gridcell_buffer) if nb_gridcell_buffer > 0 else 'no buffer'}"
+            f"{method} spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
             f", lon_bnds={np.array(kwargs['lon_bnds'])}, lat_bnds={np.array(kwargs['lat_bnds'])}"
             f" - clisops v{clisops.__version__}"
         )
 
     elif method in ["shape"]:
-        if nb_gridcell_buffer > 0:
+        if tile_buffer > 0:
             if kwargs.get("buffer") is not None:
                 raise NotImplementedError(
-                    "Both nb_gridcell_buffer and clisops' buffer were requested. Use only one."
+                    "Both tile_buffer and clisops' buffer were requested. Use only one."
                 )
-            kwargs["buffer"] = np.max([lon_res, lat_res]) * nb_gridcell_buffer
+            kwargs["buffer"] = np.max([lon_res, lat_res]) * tile_buffer
 
         ds_subset = clisops.core.subset_shape(ds, **kwargs)
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{method} spatial subsetting with {'buffer=' + str(nb_gridcell_buffer) if nb_gridcell_buffer > 0 else 'no buffer'}"
+            f"{method} spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
             f", shape={Path(kwargs['shape']).name if isinstance(kwargs['shape'], (str, Path)) else 'gpd.GeoDataFrame'}"
             f" - clisops v{clisops.__version__}"
         )

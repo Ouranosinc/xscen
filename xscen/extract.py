@@ -156,7 +156,7 @@ def extract_dataset(
             Region name used to overwrite domain in the catalog.
         method: str
             ['gridpoint', 'bbox', shape', 'sel']
-        nb_gridcell_buffer: float, optional
+        tile_buffer: float, optional
             Multiplier to apply to the model resolution.
         kwargs
             Arguments specific to the method used.
@@ -330,7 +330,7 @@ def extract_dataset(
                 )
                 region = deepcopy(region)
                 if "buffer" in region:
-                    region["nb_gridcell_buffer"] = region.pop("buffer")
+                    region["tile_buffer"] = region.pop("buffer")
                 _kwargs = region.pop(region["method"])
                 region.update(_kwargs)
 
