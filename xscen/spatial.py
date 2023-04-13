@@ -160,7 +160,9 @@ def subset(
     """
     if "name" in kwargs:
         kwargs = deepcopy(kwargs)
-        kwargs.pop("name")
+        name = kwargs.pop("name")
+    else:
+        name = None
 
     if region is not None:
         warnings.warn(
@@ -261,6 +263,7 @@ def subset(
         else new_history
     )
     ds_subset.attrs["history"] = history
-    ds_subset.attrs["cat:domain"] = region["name"]
+    if name is not None:
+        ds_subset.attrs["cat:domain"] = name
 
     return ds_subset

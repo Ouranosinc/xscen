@@ -370,7 +370,11 @@ def spatial_mean(
         )
         spatial_subset = call_clisops
 
-    if (region is not None) and (region["method"] in region):
+    if (
+        (region is not None)
+        and (region["method"] in region)
+        and (isinstance(region[region["method"]], dict))
+    ):
         warnings.warn(
             "You seem to be using a deprecated version of region. Please use the new formatting.",
             category=FutureWarning,
@@ -378,9 +382,8 @@ def spatial_mean(
         region = deepcopy(region)
         if "buffer" in region:
             region["nb_gridcell_buffer"] = region.pop("buffer")
-        for k in region[region["method"]]:
-            region[k] = region[region["method"]][k]
-        region.pop(region["method"])
+        _kwargs = region.pop(region["method"])
+        region.update(_kwargs)
 
     # If requested, call xscen.spatial.subset prior to averaging
     if spatial_subset:

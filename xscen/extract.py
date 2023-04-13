@@ -321,7 +321,9 @@ def extract_dataset(
 
         # subset to the region
         if region is not None:
-            if region["method"] in region:
+            if (region["method"] in region) and (
+                isinstance(region[region["method"]], dict)
+            ):
                 warnings.warn(
                     "You seem to be using a deprecated version of region. Please use the new formatting.",
                     category=FutureWarning,
@@ -329,9 +331,9 @@ def extract_dataset(
                 region = deepcopy(region)
                 if "buffer" in region:
                     region["nb_gridcell_buffer"] = region.pop("buffer")
-                for k in region[region["method"]]:
-                    region[k] = region[region["method"]][k]
-                region.pop(region["method"])
+                _kwargs = region.pop(region["method"])
+                region.update(_kwargs)
+
             ds = subset(ds, **region)
             ds.attrs["cat:domain"] = region["name"]
 
