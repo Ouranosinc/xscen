@@ -70,6 +70,11 @@ def climatological_mean(
         Returns a Dataset of the climatological mean
 
     """
+    if xr.infer_freq(ds.time) == "D":
+        raise NotImplementedError(
+            "xs.climatological_mean does not currently support daily data."
+        )
+
     # there is one less occurrence when a period crosses years
     freq_across_year = [
         f"{f}-{mon}"
