@@ -173,9 +173,11 @@ def subset(
                 "To avoid confusion with clisops' buffer argument, xscen's 'buffer' has been renamed 'nb_gridcell_buffer'.",
                 category=FutureWarning,
             )
-            nb_gridcell_buffer = nb_gridcell_buffer or region.get("buffer")
+            nb_gridcell_buffer = nb_gridcell_buffer or region.get("buffer", 0)
         else:
-            nb_gridcell_buffer = nb_gridcell_buffer or region.get("nb_gridcell_buffer")
+            nb_gridcell_buffer = nb_gridcell_buffer or region.get(
+                "nb_gridcell_buffer", 0
+            )
         kwargs = deepcopy(region[region["method"]])
 
     if uses_dask(ds.lon) or uses_dask(ds.lat):
