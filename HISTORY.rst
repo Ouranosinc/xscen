@@ -32,8 +32,6 @@ Breaking changes
 * The 'datasets' dimension of the output of ``diagnostics.measures_heatmap`` is renamed 'realization'. (:pull:`167`).
 * `_subset_file_coverage` was renamed `subset_file_coverage` and moved to ``catalog.py`` to prevent circular imports. (:pull:`170`).
 * `extract_dataset` doesn't fail when a variable is in the dataset, but not `variables_and_freqs`. (:pull:`185`).
-* ``xscen.extract.clisops_subset`` has been deprecated and replaced by ``xscen.spatial.subset``. That new function no longer uses `region` as an argument. (:pull:`182`, :pull:`184`).
-* The argument `region`, used in multiple functions, has been slightly reformatted. (:issue:`99`, :issue:`101`, :pull:`184`).
 
 Bug fixes
 ^^^^^^^^^
