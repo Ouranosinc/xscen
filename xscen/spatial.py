@@ -261,5 +261,6 @@ def subset(
         else new_history
     )
     ds_subset.attrs["history"] = history
+    ds_subset.attrs["cat:domain"] = region["name"]
 
     return ds_subset
