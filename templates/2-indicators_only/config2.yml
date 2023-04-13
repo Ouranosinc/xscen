@@ -68,9 +68,8 @@ extract:
         # region :
             # name: region_name
             # method: bbox
-            # bbox:
-                # lat_bnds: [45, 47]
-                # lon_bnds: [-75, -70]
+            # lat_bnds: [45, 47]
+            # lon_bnds: [-75, -70]
 
 io:
     save_to_zarr:
