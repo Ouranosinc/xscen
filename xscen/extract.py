@@ -335,7 +335,6 @@ def extract_dataset(
                 region.update(_kwargs)
 
             ds = subset(ds, **region)
-            ds.attrs["cat:domain"] = region["name"]
 
         # add relevant attrs
         ds.attrs["cat:processing_level"] = to_level

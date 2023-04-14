@@ -294,7 +294,7 @@ def spatial_mean(
     ds: xr.Dataset,
     method: str,
     *,
-    spatial_subset: bool = False,
+    spatial_subset: bool = None,
     call_clisops: bool = False,
     region: dict = None,
     kwargs: dict = None,
@@ -315,6 +315,7 @@ def spatial_mean(
         'xesmf' will make use of xESMF's SpatialAverager. This will typically be more precise, especially for irregular regions, but can be much slower than other methods.
     spatial_subset : bool
         If True, xscen.spatial.subset will be called prior to the other operations. This requires the 'region' argument.
+        If None, this will automatically become True if 'region' is provided and the subsetting method is either 'cos-lat' or 'mean'.
     region : dict
         Description of the region and the subsetting method (required fields listed in the Notes).
         If method=='interp_centroid', this is used to find the region's centroid.
@@ -340,6 +341,8 @@ def spatial_mean(
     Notes
     -----
     'region' required fields:
+        name: str
+            Region name used to overwrite domain in the catalog.
         method: str
             ['gridpoint', 'bbox', shape', 'sel']
         tile_buffer: float, optional
@@ -384,6 +387,19 @@ def spatial_mean(
             region["tile_buffer"] = region.pop("buffer")
         _kwargs = region.pop(region["method"])
         region.update(_kwargs)
+
+    if (
+        (region is not None)
+        and (spatial_subset is None)
+        and (method in ["mean", "cos-lat"])
+    ):
+        logger.info("Automatically turning spatial_subset to True based on inputs.")
+        spatial_subset = True
+
+    if (region is not None) and (region.get("tile_buffer", 0) > 0):
+        warnings.warn(
+            "Please note that 'tile_buffer' is not used by xs.spatial_mean. Make sure this is correct.",
+        )
 
     # If requested, call xscen.spatial.subset prior to averaging
     if spatial_subset:
@@ -571,7 +587,7 @@ def spatial_mean(
 
     else:
         raise ValueError(
-            "Subsetting method should be ['mean', 'interp_coord', 'xesmf']"
+            "Subsetting method should be ['cos-lat', 'interp_coord', 'xesmf']"
         )
 
     # History
