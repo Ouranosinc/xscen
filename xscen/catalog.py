@@ -595,6 +595,7 @@ class ProjectCatalog(DataCatalog):
 
         Notes
         -----
+        New ProjectCatalog must first be created empty, using 'df' as the path to the future JSON file, then populated using .update().
         The dictionary in 'df' must have two keys: ‘esmcat’ and ‘df’.
         The ‘esmcat’ key must be a dict representation of the ESM catalog. This should follow the template used by xscen.catalog.esm_col_data.
         The ‘df’ key must be a Pandas DataFrame containing content that would otherwise be in the CSV file.
