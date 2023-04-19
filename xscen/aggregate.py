@@ -125,7 +125,7 @@ def climatological_mean(
         # rebuild time coord
         if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
             time_coord = [
-                pd.to_datetime(f"{y}, {m}, {d}")
+                pd.to_datetime(f"{y - window + 1}, {m}, {d}")
                 for y, m, d in zip(
                     ds_rolling.year.values,
                     ds_rolling.month.values,
@@ -134,7 +134,9 @@ def climatological_mean(
             ]
         elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
             time_coord = [
-                cftime.datetime(y, m, d, calendar=ds.indexes["time"].calendar)
+                cftime.datetime(
+                    y - window + 1, m, d, calendar=ds.indexes["time"].calendar
+                )
                 for y, m, d in zip(
                     ds_rolling.year.values,
                     ds_rolling.month.values,
