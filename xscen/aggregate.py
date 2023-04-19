@@ -424,11 +424,6 @@ def spatial_mean(
         logger.info("Automatically turning spatial_subset to True based on inputs.")
         spatial_subset = True
 
-    if (region is not None) and (region.get("tile_buffer", 0) > 0):
-        warnings.warn(
-            "Please note that 'tile_buffer' is not used by xs.spatial_mean. Make sure this is correct.",
-        )
-
     # If requested, call xscen.spatial.subset prior to averaging
     if spatial_subset:
         ds = subset(ds, **region)
