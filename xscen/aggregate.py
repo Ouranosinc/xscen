@@ -125,7 +125,11 @@ def climatological_mean(
         # rebuild time coord
         if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
             time_coord = pd.to_datetime(
-                {"year": ds_rolling.year.values - window + 1, "month": ds_rolling.month.values, "day": ds_rolling.day.values}
+                {
+                    "year": ds_rolling.year.values - window + 1,
+                    "month": ds_rolling.month.values,
+                    "day": ds_rolling.day.values,
+                }
             )
         elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
             time_coord = [
@@ -288,7 +292,11 @@ def compute_deltas(
         # rebuild time coord
         if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
             time_coord = pd.to_datetime(
-                {'year': deltas.year.values, 'month': deltas.month.values, 'day': deltas.day.values}
+                {
+                    "year": deltas.year.values,
+                    "month": deltas.month.values,
+                    "day": deltas.day.values,
+                }
             )
         elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
             time_coord = [
