@@ -292,12 +292,9 @@ def compute_deltas(
         deltas = deltas.stack(time=("year", "month", "day"))
         # rebuild time coord
         if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
-            time_coord = [
-                pd.to_datetime(f"{y}, {m}, {d}")
-                for y, m, d in zip(
-                    deltas.year.values, deltas.month.values, deltas.day.values
-                )
-            ]
+            time_coord = pd.to_datetime(
+                {'year': deltas.year.values, 'month': deltas.month.values, 'day': deltas.day.values}
+            )
         elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
             time_coord = [
                 cftime.datetime(y, m, d, calendar=ds.indexes["time"].calendar)
