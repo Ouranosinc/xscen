@@ -396,7 +396,6 @@ def spatial_mean(
         logger.info("Automatically turning spatial_subset to True based on inputs.")
         spatial_subset = True
 
-
     # If requested, call xscen.spatial.subset prior to averaging
     if spatial_subset:
         ds = subset(ds, **region)
