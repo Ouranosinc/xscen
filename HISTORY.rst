@@ -26,7 +26,6 @@ New features and enhancements
 * New function ``xs.spatial.subset`` to replace ``xs.extract.clisops_subset`` and add method "sel". (:issue:`180`, :pull:`182`).
 * Add attributes to diagnostics. ( :pull:`189`).
 
-
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * 'mean' averaging has been deprecated in `spatial_mean`. (:pull:`125`).
