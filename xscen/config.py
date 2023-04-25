@@ -45,11 +45,11 @@ import builtins
 import collections.abc
 import inspect
 import logging.config
+import types
 import warnings
 from copy import deepcopy
 from functools import wraps
 from pathlib import Path
-import types
 from typing import Any, Tuple
 
 import xarray as xr
@@ -248,6 +248,8 @@ def get_configurable():
         if isinstance(modobj, types.ModuleType):
             for func in dir(modobj):
                 funcobj = getattr(modobj, func)
-                if getattr(funcobj, 'configurable', False) or getattr(getattr(funcobj, '__init__', None), 'configurable', False):
-                    configurable[f'xscen.{module}.{func}'] = funcobj
+                if getattr(funcobj, "configurable", False) or getattr(
+                    getattr(funcobj, "__init__", None), "configurable", False
+                ):
+                    configurable[f"xscen.{module}.{func}"] = funcobj
     return configurable
