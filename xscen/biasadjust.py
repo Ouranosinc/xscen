@@ -188,10 +188,10 @@ def train(
 def adjust(
     dtrain: xr.Dataset,
     dsim: xr.Dataset,
-    simulation_period: list,
     simulation_periods: list,
     xclim_adjust_args: dict,
     *,
+    simulation_period: list = None,
     to_level: str = "biasadjusted",
     bias_adjust_institution: str = None,
     bias_adjust_project: str = None,
@@ -209,6 +209,8 @@ def adjust(
       Simulated timeseries, projected period.
     simulation_periods : list
       List of [start, end] of the simulation periods to be adjusted (to adjust different period (one at a time).
+    simulation_period : list
+      Legacy argument. Use 'simulation_periods' instead.
     xclim_adjust_args : dict
       Dict of arguments to pass to the `.adjust` of the adjustment object.
     to_level : str, optional
