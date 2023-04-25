@@ -13,6 +13,8 @@ import xarray as xr
 import xclim as xc
 from xclim.core.utils import uses_dask
 
+from .config import parse_config
+
 __all__ = [
     "creep_weights",
     "creep_fill",
@@ -20,6 +22,7 @@ __all__ = [
 ]
 
 
+@parse_config
 def creep_weights(mask, n=1, mode="clip"):
     """Compute weights for the creep fill.
 
@@ -80,6 +83,7 @@ def creep_weights(mask, n=1, mode="clip"):
     )
 
 
+@parse_config
 def creep_fill(da, w):
     """Creep fill using pre-computed weights.
 
@@ -119,6 +123,7 @@ def creep_fill(da, w):
     )
 
 
+@parse_config
 def subset(
     ds: xr.Dataset,
     region: dict = None,
