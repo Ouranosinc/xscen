@@ -129,7 +129,7 @@ def properties_and_measures(
         Path to a YAML file that instructs on how to calculate properties.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
         tuples (indicator name, indicator) as returned by `iter_indicators()`.
-    period : lst
+    period : list
         [start, end] of the period to be evaluated. The period will be selected on ds
         and dref_for_measure if it is given.
     unstack : bool

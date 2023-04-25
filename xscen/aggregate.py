@@ -624,7 +624,7 @@ def produce_horizon(
     indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
       Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     period: list
-      List of strings of format ['start_year', 'end_year'].
+      ['start_year', 'end_year'] of the period to be evaluated.
       If None, the whole time coordinate is used.
     to_level:
       The processing level to assign to the output.
@@ -641,10 +641,10 @@ def produce_horizon(
             "Input dataset should only have `warminglevel` coordinate of length 1."
         )
     if period:
-        ds = ds.sel(time=slice(period[0], period[1])).load()
+        ds = ds.sel(time=slice(str(period[0]), str(period[1]))).load()
         window = int(period[1]) - int(period[0]) + 1
         if to_level:
-            to_level = to_level.format(period0=period[0], period1=period[1])
+            to_level = to_level.format(period0=str(period[0]), period1=str(period[1]))
     else:
         window = int(ds.time.dt.year[-1] - ds.time.dt.year[0]) + 1
         if to_level and "{wl}" not in to_level:

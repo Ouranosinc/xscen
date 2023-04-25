@@ -1,5 +1,6 @@
 # noqa: D100
 import logging
+import warnings
 from copy import deepcopy
 from typing import Optional, Union
 
@@ -188,6 +189,7 @@ def adjust(
     dtrain: xr.Dataset,
     dsim: xr.Dataset,
     simulation_period: list,
+    simulation_periods: list,
     xclim_adjust_args: dict,
     *,
     to_level: str = "biasadjusted",
@@ -205,8 +207,8 @@ def adjust(
       A trained algorithm's dataset, as returned by `train`.
     dsim : xr.Dataset
       Simulated timeseries, projected period.
-    simulation_period : list
-      [start, end] of the simulation period. or list of list if we want to adjust different period one at a time.
+    simulation_periods : list
+      List of [start, end] of the simulation periods to be adjusted (to adjust different period (one at a time).
     xclim_adjust_args : dict
       Dict of arguments to pass to the `.adjust` of the adjustment object.
     to_level : str, optional
@@ -266,14 +268,25 @@ def adjust(
         sim = convert_calendar(sim, mincal, align_on=align_on)
 
     xclim_adjust_args = xclim_adjust_args or {}
+    if simulation_period is not None:
+        warnings.warn(
+            "The argument 'simulation_period' has been replaced by 'simulation_periods' (plural), which is always a list of lists. "
+            "Other formats have been deprecated and will be abandoned in a future release.",
+            category=FutureWarning,
+        )
+        simulation_periods = simulation_periods or simulation_period
     # do the adjustment for all the simulation_period lists
-    if isinstance(
-        simulation_period[0], str
+    if not isinstance(
+        simulation_periods[0], list
     ):  # if only one period, turn it into a list of list
-        simulation_period = [simulation_period]
+        warnings.warn(
+            "The argument 'simulation_periods' should be a list of lists. Other formats have been deprecated and will be abandoned in a future release.",
+            category=FutureWarning,
+        )
+        simulation_periods = [simulation_periods]
     slices = []
-    for period in simulation_period:
-        sim = sim.sel(time=slice(period[0], period[1]))
+    for period in simulation_periods:
+        sim = sim.sel(time=slice(str(period[0]), str(period[1])))
 
         # adjust
         ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)

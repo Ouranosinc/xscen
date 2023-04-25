@@ -1561,7 +1561,7 @@ def subset_file_coverage(
     coverage: float = 0.99,
     duplicates_ok: bool = False,
 ) -> pd.DataFrame:
-    """Return a subset of files that overlap with the target period(s).
+    """Return a subset of files that overlap with the target periods.
 
     The minimum resolution for periods is 1 hour.
 
@@ -1571,7 +1571,7 @@ def subset_file_coverage(
       List of files to be evaluated, with at least a date_start and date_end column,
       which are expected to be `pd.Period` objects with `freq='H'`.
     periods : list
-      [start, end] of the period to be evaluated (or a list of lists)
+      list of [start, end] for the periods to be evaluated.
     coverage : float
       Percentage of hours that need to be covered in a given period for the dataset to be valid. Use 0 to ignore this checkup.
     duplicates_ok: bool
@@ -1580,9 +1580,13 @@ def subset_file_coverage(
     Returns
     -------
     pd.DataFrame
-      Subset of files that overlap the targetted period(s)
+      Subset of files that overlap the targetted periods
     """
     if not isinstance(periods[0], list):
+        warnings.warn(
+            "The argument 'periods' should be a list of lists. Other formats have been deprecated and will be abandoned in a future release.",
+            category=FutureWarning,
+        )
         periods = [periods]
 
     # Create an Interval for each file

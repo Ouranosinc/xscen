@@ -109,7 +109,7 @@ def extract_dataset(
         If None, it will be read from catalog._requested_variables and catalog._requested_variable_freqs
         (set by `variables_and_freqs` in `search_data_catalogs`)
     periods : list
-        [start, end] of the period to be evaluated (or a list of lists)
+        list of [start, end] for the periods to be evaluated.
         Will be read from catalog._requested_periods if None. Leave both None to extract everything.
     region : dict, optional
         Description of the region and the subsetting method (required fields listed in the Notes) used in `xscen.spatial.subset`.
@@ -313,6 +313,10 @@ def extract_dataset(
             periods = catalog._requested_periods
         if periods is not None and "time" in ds:
             if not isinstance(periods[0], list):
+                warnings.warn(
+                    "The argument 'periods' should be a list of lists. Other formats have been deprecated and will be abandoned in a future release.",
+                    category=FutureWarning,
+                )
                 periods = [periods]
             slices = []
             for period in periods:
@@ -532,7 +536,7 @@ def search_data_catalogs(
     match_hist_and_fut: bool, optional
         If True, historical and future simulations will be combined into the same line, and search results lacking one of them will be rejected.
     periods : list
-        [start, end] of the period to be evaluated (or a list of lists).
+        list of [start, end] for the periods to be evaluated.
     id_columns : list, optional
         List of columns used to create a id column. If None is given, the original
         "id" is left.
@@ -799,6 +803,10 @@ def search_data_catalogs(
                 catalogs[sim_id] = concat_data_catalogs(*varcats)
                 if periods is not None:
                     if not isinstance(periods[0], list):
+                        warnings.warn(
+                            "The argument 'periods' should be a list of lists. Other formats have been deprecated and will be abandoned in a future release.",
+                            category=FutureWarning,
+                        )
                         periods = [periods]
                     catalogs[sim_id]._requested_periods = periods
 
@@ -844,7 +852,7 @@ def subset_warming_level(
     window : int
        Size of the rolling window in years over which to compute the warming level.
     tas_baseline_period : list
-       Base period. The warming is calculated with respect to this period. The default is ["1850", "1900"].
+       [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
     ignore_member : bool
        Whether to ignore the member when searching for the model run in tas_csv.
     tas_csv : str
@@ -911,7 +919,9 @@ def subset_warming_level(
     )
 
     # compute reference temperature for the warming
-    mean_base = right_column.loc[tas_baseline_period[0] : tas_baseline_period[1]].mean()
+    mean_base = right_column.loc[
+        str(tas_baseline_period[0]) : str(tas_baseline_period[1])
+    ].mean()
 
     yearly_diff = right_column - mean_base  # difference from reference
 
@@ -960,8 +970,8 @@ def subset_warming_level(
                 "warminglevel": [
                     wl_dim.format(
                         wl=wl,
-                        period0=tas_baseline_period[0],
-                        period1=tas_baseline_period[1],
+                        period0=str(tas_baseline_period[0]),
+                        period1=str(tas_baseline_period[1]),
                     )
                 ]
             },
@@ -973,7 +983,9 @@ def subset_warming_level(
 
     if to_level is not None:
         ds_wl.attrs["cat:processing_level"] = to_level.format(
-            wl=wl, period0=tas_baseline_period[0], period1=tas_baseline_period[1]
+            wl=wl,
+            period0=str(tas_baseline_period[0]),
+            period1=str(tas_baseline_period[1]),
         )
 
     return ds_wl
