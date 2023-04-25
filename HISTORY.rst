@@ -25,6 +25,7 @@ New features and enhancements
 * New masking feature in ``extract_dataset``. (:issue:`180`, :pull:`182`).
 * New function ``xs.spatial.subset`` to replace ``xs.extract.clisops_subset`` and add method "sel". (:issue:`180`, :pull:`182`).
 * Add long_name attribute to diagnostics. ( :pull:`189`).
+* Added a new YAML-centric notebook (:issue:`8`, :pull:`191`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -56,6 +57,7 @@ Internal changes
 * The top-level Makefile now includes a `linkcheck` recipe, and the ReadTheDocs configuration no longer reinstalls the `llvmlite` compiler library. (:pull:`173`).
 * The checkups on coverage and duplicates can now be skipped in `subset_file_coverage`. (:pull:`170`).
 * Changed the `ProjectCatalog` docstrings to make it more obvious that it needs to be created empty. (:issue:`99`, :pull:`184`).
+* Added parse_directory to the functions in xscen.spatial and to reduce_ensemble (:pull:`191`).
 
 v0.5.0 (2023-02-28)
 -------------------
