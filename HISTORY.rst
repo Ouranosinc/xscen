@@ -57,7 +57,7 @@ Internal changes
 * The top-level Makefile now includes a `linkcheck` recipe, and the ReadTheDocs configuration no longer reinstalls the `llvmlite` compiler library. (:pull:`173`).
 * The checkups on coverage and duplicates can now be skipped in `subset_file_coverage`. (:pull:`170`).
 * Changed the `ProjectCatalog` docstrings to make it more obvious that it needs to be created empty. (:issue:`99`, :pull:`184`).
-* Added parse_config to the functions in xscen.spatial and to reduce_ensemble (:pull:`191`).
+* Added parse_config to `creep_fill`, `creep_weights`, and `reduce_ensemble` (:pull:`191`).
 
 v0.5.0 (2023-02-28)
 -------------------
