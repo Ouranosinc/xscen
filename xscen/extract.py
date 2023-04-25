@@ -513,6 +513,7 @@ def search_data_catalogs(
     exclusions: dict = None,
     match_hist_and_fut: bool = False,
     periods: list = None,
+    coverage_kwargs: dict = None,
     id_columns: Optional[List[str]] = None,
     allow_resampling: bool = False,
     allow_conversion: bool = False,
@@ -537,6 +538,8 @@ def search_data_catalogs(
         If True, historical and future simulations will be combined into the same line, and search results lacking one of them will be rejected.
     periods : list
         list of [start, end] for the periods to be evaluated.
+    coverage_kwargs : dict
+        If required, arguments to pass to subset_file_coverage (only used when periods is not None).
     id_columns : list, optional
         List of columns used to create a id column. If None is given, the original
         "id" is left.
@@ -666,6 +669,8 @@ def search_data_catalogs(
         logger.warning("Found no match corresponding to the 'other' search criteria.")
         return {}
 
+    coverage_kwargs = coverage_kwargs or {}
+
     logger.info(f"Iterating over {len(catalog.unique('id'))} potential datasets.")
     # Loop on each dataset to assess whether they have all required variables
     # And select best freq/timedelta for each
@@ -762,7 +767,9 @@ def search_data_catalogs(
                                 + ["variable"]
                             ):
                                 valid_tp.append(
-                                    subset_file_coverage(group, periods)
+                                    subset_file_coverage(
+                                        group, periods, **coverage_kwargs
+                                    )
                                 )  # If valid, this returns the subset of files that cover the time period
                             varcat.esmcat._df = pd.concat(valid_tp)
 
