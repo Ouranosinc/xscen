@@ -24,6 +24,7 @@ New features and enhancements
 * Allow searching and extracting multiple frequencies for a given variable. (:issue:`168`, :pull:`170`).
 * New masking feature in ``extract_dataset``. (:issue:`180`, :pull:`182`).
 * New function ``xs.spatial.subset`` to replace ``xs.extract.clisops_subset`` and add method "sel". (:issue:`180`, :pull:`182`).
+* Add long_name attribute to diagnostics. ( :pull:`189`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
