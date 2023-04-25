@@ -123,7 +123,6 @@ def creep_fill(da, w):
     )
 
 
-@parse_config
 def subset(
     ds: xr.Dataset,
     region: dict = None,
