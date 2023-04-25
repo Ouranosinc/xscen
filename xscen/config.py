@@ -49,6 +49,7 @@ import warnings
 from copy import deepcopy
 from functools import wraps
 from pathlib import Path
+import types
 from typing import Any, Tuple
 
 import xarray as xr
@@ -213,6 +214,7 @@ def parse_config(func_or_cls):  # noqa: D103
 
         return func(*args, **kwargs)
 
+    _wrapper.configurable = True
     if isinstance(func_or_cls, type):
         func_or_cls.__init__ = _wrapper
         return func_or_cls
@@ -234,3 +236,18 @@ def _setup_external(module, config):
                 warnings.simplefilter(action)
             elif issubclass(getattr(builtins, category), builtins.Warning):
                 warnings.simplefilter(action, category=getattr(builtins, category))
+
+
+def get_configurable():
+    """Return a dictionary of all configurable functions and classes of xscen."""
+    import xscen as xs
+
+    configurable = {}
+    for module in dir(xs):
+        modobj = getattr(xs, module)
+        if isinstance(modobj, types.ModuleType):
+            for func in dir(modobj):
+                funcobj = getattr(modobj, func)
+                if getattr(funcobj, 'configurable', False) or getattr(getattr(funcobj, '__init__', None), 'configurable', False):
+                    configurable[f'xscen.{module}.{func}'] = funcobj
+    return configurable
