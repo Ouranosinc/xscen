@@ -53,7 +53,7 @@ if __name__ == "__main__":
     # --- EXTRACT---
     if "extract" in CONFIG["tasks"]:
         # iterate on types to extract (reconstruction, simulation)
-        for type, type_dict in CONFIG["extract"].items():
+        for source_type, type_dict in CONFIG["extract"].items():
             # filter catalog for data that we want
             cat = xs.search_data_catalogs(**type_dict["search_data_catalogs"])
 

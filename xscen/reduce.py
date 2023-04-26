@@ -75,6 +75,7 @@ def build_reduction_data(
     return criteria
 
 
+@parse_config
 def reduce_ensemble(data: xr.DataArray, method: str, kwargs: dict):  # noqa: D401
     """Wrapper for the ensemble reduction methods in xclim.ensembles.
 
