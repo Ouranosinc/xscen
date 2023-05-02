@@ -28,7 +28,7 @@ from .indicators import load_xclim_module, registry_from_module
 from .spatial import subset
 from .utils import CV
 from .utils import ensure_correct_time as _ensure_correct_time
-from .utils import natural_sort
+from .utils import natural_sort, standardize_periods
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ def extract_dataset(
         If None, it will be read from catalog._requested_variables and catalog._requested_variable_freqs
         (set by `variables_and_freqs` in `search_data_catalogs`)
     periods : list
-        list of [start, end] for the periods to be evaluated.
+        Either [start, end] or list of [start, end] for the periods to be evaluated.
         Will be read from catalog._requested_periods if None. Leave both None to extract everything.
     region : dict, optional
         Description of the region and the subsetting method (required fields listed in the Notes) used in `xscen.spatial.subset`.
@@ -309,18 +309,14 @@ def extract_dataset(
             ds.attrs["cat:frequency"] = CV.xrfreq_to_frequency(xrfreq)
 
         # Subset time on the periods
-        if periods is None and hasattr(catalog, "_requested_periods"):
-            periods = catalog._requested_periods
-        if periods is not None and "time" in ds:
-            if not isinstance(periods[0], list):
-                warnings.warn(
-                    "The argument 'periods' should be a list of lists. Other formats have been deprecated and will be abandoned in a future release.",
-                    category=FutureWarning,
-                )
-                periods = [periods]
+        periods_extract = deepcopy(periods)
+        if periods_extract is None and hasattr(catalog, "_requested_periods"):
+            periods_extract = catalog._requested_periods
+        if periods_extract is not None and "time" in ds:
+            periods_extract = standardize_periods(periods_extract)
             slices = []
-            for period in periods:
-                slices.extend([ds.sel({"time": slice(str(period[0]), str(period[1]))})])
+            for period in periods_extract:
+                slices.extend([ds.sel({"time": slice(period[0], period[1])})])
             ds = xr.concat(slices, dim="time", **xr_combine_kwargs)
 
         # subset to the region
@@ -537,7 +533,7 @@ def search_data_catalogs(
     match_hist_and_fut: bool, optional
         If True, historical and future simulations will be combined into the same line, and search results lacking one of them will be rejected.
     periods : list
-        list of [start, end] for the periods to be evaluated.
+        Either [start, end] or list of [start, end] for the periods to be evaluated.
     coverage_kwargs : dict
         If required, arguments to pass to subset_file_coverage (only used when periods is not None).
     id_columns : list, optional
@@ -670,6 +666,7 @@ def search_data_catalogs(
         return {}
 
     coverage_kwargs = coverage_kwargs or {}
+    periods = standardize_periods(periods)
 
     logger.info(f"Iterating over {len(catalog.unique('id'))} potential datasets.")
     # Loop on each dataset to assess whether they have all required variables
@@ -809,12 +806,6 @@ def search_data_catalogs(
             else:
                 catalogs[sim_id] = concat_data_catalogs(*varcats)
                 if periods is not None:
-                    if not isinstance(periods[0], list):
-                        warnings.warn(
-                            "The argument 'periods' should be a list of lists. Other formats have been deprecated and will be abandoned in a future release.",
-                            category=FutureWarning,
-                        )
-                        periods = [periods]
                     catalogs[sim_id]._requested_periods = periods
 
     if len(catalogs) > 0:
@@ -884,6 +875,7 @@ def subset_warming_level(
     """
     if tas_baseline_period is None:
         tas_baseline_period = ["1850", "1900"]
+    tas_baseline_period = standardize_periods(tas_baseline_period, multiple=False)
 
     if tas_csv is None:
         tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
@@ -926,9 +918,7 @@ def subset_warming_level(
     )
 
     # compute reference temperature for the warming
-    mean_base = right_column.loc[
-        str(tas_baseline_period[0]) : str(tas_baseline_period[1])
-    ].mean()
+    mean_base = right_column.loc[tas_baseline_period[0] : tas_baseline_period[1]].mean()
 
     yearly_diff = right_column - mean_base  # difference from reference
 
@@ -977,8 +967,8 @@ def subset_warming_level(
                 "warminglevel": [
                     wl_dim.format(
                         wl=wl,
-                        period0=str(tas_baseline_period[0]),
-                        period1=str(tas_baseline_period[1]),
+                        period0=tas_baseline_period[0],
+                        period1=tas_baseline_period[1],
                     )
                 ]
             },
@@ -991,8 +981,8 @@ def subset_warming_level(
     if to_level is not None:
         ds_wl.attrs["cat:processing_level"] = to_level.format(
             wl=wl,
-            period0=str(tas_baseline_period[0]),
-            period1=str(tas_baseline_period[1]),
+            period0=tas_baseline_period[0],
+            period1=tas_baseline_period[1],
         )
 
     return ds_wl

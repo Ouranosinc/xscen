@@ -12,7 +12,7 @@ from xclim.sdba import construct_moving_yearly_window, unpack_moving_yearly_wind
 
 from .catalog import parse_from_ds
 from .config import parse_config
-from .utils import minimum_calendar
+from .utils import minimum_calendar, standardize_periods
 
 # TODO: Change all paths to PosixPath objects, including in the catalog?
 # TODO: Compute sometimes fails randomly (in debug, pretty much always). Also (detrend?) fails with pr. Investigate why.
@@ -127,8 +127,9 @@ def train(
         xclim_train_args.setdefault("nquantiles", 15)
 
     # cut out the right period
-    hist = hist.sel(time=slice(*map(str, reference_period)))
-    ref = ref.sel(time=slice(*map(str, reference_period)))
+    reference_period = standardize_periods(reference_period, multiple=False)
+    hist = hist.sel(time=slice(reference_period[0], reference_period[1]))
+    ref = ref.sel(time=slice(reference_period[0], reference_period[1]))
 
     # convert calendar if necessary
     simcal = get_calendar(hist)
@@ -191,7 +192,6 @@ def adjust(
     simulation_periods: list,
     xclim_adjust_args: dict,
     *,
-    simulation_period: list = None,
     to_level: str = "biasadjusted",
     bias_adjust_institution: str = None,
     bias_adjust_project: str = None,
@@ -208,9 +208,7 @@ def adjust(
     dsim : xr.Dataset
       Simulated timeseries, projected period.
     simulation_periods : list
-      List of [start, end] of the simulation periods to be adjusted (to adjust different period (one at a time).
-    simulation_period : list
-      Legacy argument. Use 'simulation_periods' instead.
+      Either [start, end] or list of [start, end] of the simulation periods to be adjusted (to adjust different period (one at a time).
     xclim_adjust_args : dict
       Dict of arguments to pass to the `.adjust` of the adjustment object.
     to_level : str, optional
@@ -270,25 +268,11 @@ def adjust(
         sim = convert_calendar(sim, mincal, align_on=align_on)
 
     xclim_adjust_args = xclim_adjust_args or {}
-    if simulation_period is not None:
-        warnings.warn(
-            "The argument 'simulation_period' has been replaced by 'simulation_periods' (plural), which is always a list of lists. "
-            "Other formats have been deprecated and will be abandoned in a future release.",
-            category=FutureWarning,
-        )
-        simulation_periods = simulation_periods or simulation_period
     # do the adjustment for all the simulation_period lists
-    if not isinstance(
-        simulation_periods[0], list
-    ):  # if only one period, turn it into a list of list
-        warnings.warn(
-            "The argument 'simulation_periods' should be a list of lists. Other formats have been deprecated and will be abandoned in a future release.",
-            category=FutureWarning,
-        )
-        simulation_periods = [simulation_periods]
+    simulation_periods = standardize_periods(simulation_periods)
     slices = []
     for period in simulation_periods:
-        sim = sim.sel(time=slice(str(period[0]), str(period[1])))
+        sim = sim.sel(time=slice(period[0], period[1]))
 
         # adjust
         ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)

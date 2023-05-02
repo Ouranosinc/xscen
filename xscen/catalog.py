@@ -30,7 +30,7 @@ from intake_esm.cat import ESMCatalogModel
 
 from .config import CONFIG, args_as_str, parse_config, recursive_update
 from .io import get_engine
-from .utils import CV, ensure_correct_time  # noqa
+from .utils import CV, ensure_correct_time, standardize_periods  # noqa
 
 logger = logging.getLogger(__name__)
 # Monkey patch for attribute names in the output of to_dataset_dict
@@ -277,6 +277,7 @@ class DataCatalog(intake_esm.esm_datastore):
         else:
             cat = self.__class__({"esmcat": self.esmcat.dict(), "df": self.esmcat._df})
         if periods is not False:
+            periods = standardize_periods(periods)
             cat.esmcat._df = subset_file_coverage(
                 cat.esmcat._df, periods=periods, coverage=0, duplicates_ok=True
             )
@@ -1571,7 +1572,7 @@ def subset_file_coverage(
       List of files to be evaluated, with at least a date_start and date_end column,
       which are expected to be `pd.Period` objects with `freq='H'`.
     periods : list
-      list of [start, end] for the periods to be evaluated.
+      Either [start, end] or list of [start, end] for the periods to be evaluated.
     coverage : float
       Percentage of hours that need to be covered in a given period for the dataset to be valid. Use 0 to ignore this checkup.
     duplicates_ok: bool
@@ -1582,12 +1583,7 @@ def subset_file_coverage(
     pd.DataFrame
       Subset of files that overlap the targetted periods
     """
-    if not isinstance(periods[0], list):
-        warnings.warn(
-            "The argument 'periods' should be a list of lists. Other formats have been deprecated and will be abandoned in a future release.",
-            category=FutureWarning,
-        )
-        periods = [periods]
+    periods = standardize_periods(periods)
 
     # Create an Interval for each file
     file_intervals = df.apply(
@@ -1608,8 +1604,8 @@ def subset_file_coverage(
     files_to_keep = np.zeros(len(file_intervals), dtype=bool)
     for period in periods:
         period_interval = pd.Interval(
-            left=date_parser(str(period[0]), freq="H").ordinal,
-            right=date_parser(str(period[1]), end_of_period=True, freq="H").ordinal,
+            left=date_parser(period[0], freq="H").ordinal,
+            right=date_parser(period[1], end_of_period=True, freq="H").ordinal,
             closed="both",
         )
         files_in_range = file_intervals.apply(lambda r: period_interval.overlaps(r))
@@ -1625,8 +1621,8 @@ def subset_file_coverage(
         if coverage > 0:
             # Number of hours in the requested period
             period_nb_hrs = date_parser(
-                str(period[1]), end_of_period=True, freq="H"
-            ) - date_parser(str(period[0]), freq="H")
+                period[1], end_of_period=True, freq="H"
+            ) - date_parser(period[0], freq="H")
 
             # Sum of hours in all selected files, restricted by the requested period
             guessed_nb_hrs_sum = (
@@ -1634,14 +1630,14 @@ def subset_file_coverage(
                     lambda x: np.min(
                         [
                             x["date_end"],
-                            date_parser(str(period[1]), end_of_period=True, freq="H"),
+                            date_parser(period[1], end_of_period=True, freq="H"),
                         ]
                     ),
                     axis=1,
                 )
                 - df[files_in_range].apply(
                     lambda x: np.max(
-                        [x["date_start"], date_parser(str(period[0]), freq="H")]
+                        [x["date_start"], date_parser(period[0], freq="H")]
                     ),
                     axis=1,
                 )
