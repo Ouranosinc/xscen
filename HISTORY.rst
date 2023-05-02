@@ -25,7 +25,8 @@ New features and enhancements
 * New masking feature in ``extract_dataset``. (:issue:`180`, :pull:`182`).
 * New function ``xs.spatial.subset`` to replace ``xs.extract.clisops_subset`` and add method "sel". (:issue:`180`, :pull:`182`).
 * Add long_name attribute to diagnostics. ( :pull:`189`).
-* New ``utils.standardize_periods`` to standardize that argument across multiple functions. (:pull:`192`).
+* New ``utils.standardize_periods`` to standardize that argument across multiple functions. (:issue:`87`, :pull:`192`).
+* New `coverage_kwargs` argument added to ``search_data_catalogs`` to allow modifying the default values of ``subset_file_coverage``. (:issue:`87`, :pull:`192`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -34,8 +35,8 @@ Breaking changes
 * The 'datasets' dimension of the output of ``diagnostics.measures_heatmap`` is renamed 'realization'. (:pull:`167`).
 * `_subset_file_coverage` was renamed `subset_file_coverage` and moved to ``catalog.py`` to prevent circular imports. (:pull:`170`).
 * `extract_dataset` doesn't fail when a variable is in the dataset, but not `variables_and_freqs`. (:pull:`185`).
-* The argument `period`, used in multiple function, is now always a single list, while `periods` is more flexible. (:pull:`192`).
-* The parameter `simulation_period` of ``xscen.adjust`` was renamed `simulation_periods` to respect the point above. (:pull:`192`).
+* The argument `period`, used in multiple function, is now always a single list, while `periods` is more flexible. (:issue:`87`, :pull:`192`).
+* The parameter `simulation_period` of ``xscen.adjust`` was renamed `simulation_periods` to respect the point above. (:issue:`87`, :pull:`192`).
 
 Bug fixes
 ^^^^^^^^^
