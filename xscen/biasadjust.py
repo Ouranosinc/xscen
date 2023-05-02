@@ -208,7 +208,7 @@ def adjust(
     dsim : xr.Dataset
       Simulated timeseries, projected period.
     simulation_periods : list
-      Either [start, end] or list of [start, end] of the simulation periods to be adjusted (to adjust different period (one at a time).
+      Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
     xclim_adjust_args : dict
       Dict of arguments to pass to the `.adjust` of the adjustment object.
     to_level : str, optional
@@ -272,7 +272,7 @@ def adjust(
     simulation_periods = standardize_periods(simulation_periods)
     slices = []
     for period in simulation_periods:
-        sim = sim.sel(time=slice(period[0], period[1]))
+        sim_sel = sim.sel(time=slice(period[0], period[1]))
 
         # adjust
         ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)
@@ -287,7 +287,7 @@ def adjust(
             xclim_adjust_args["detrend"] = getattr(sdba.detrending, name)(**kwargs)
 
         with xc.set_options(sdba_encode_cf=True, sdba_extra_output=False):
-            out = ADJ.adjust(sim, **xclim_adjust_args)
+            out = ADJ.adjust(sim_sel, **xclim_adjust_args)
             slices.extend([out])
     # put all the adjusted period back together
     dscen = xr.concat(slices, dim="time")

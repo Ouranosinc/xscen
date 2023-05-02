@@ -535,7 +535,7 @@ def search_data_catalogs(
     periods : list
         Either [start, end] or list of [start, end] for the periods to be evaluated.
     coverage_kwargs : dict
-        If required, arguments to pass to subset_file_coverage (only used when periods is not None).
+        Arguments to pass to subset_file_coverage (only used when periods is not None).
     id_columns : list, optional
         List of columns used to create a id column. If None is given, the original
         "id" is left.
