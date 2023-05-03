@@ -48,7 +48,7 @@ Bug fixes
 * `xscen.utils.unstack_fill_nan`` can now handle datasets that have non dimension coordinates. (:issue:`156`, :pull:`175`).
 * `extract_dataset` now skips a simulation way earlier if the frequency doesn't match. (:pull:`170`).
 * `extract_dataset` now correctly tries to extract in reverse timedelta order. (:pull:`170`).
-
+* `compute_deltas` no longer creates all NaN values if the input dataset is in a non-standard calendar. (:pull:`188`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
