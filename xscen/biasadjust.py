@@ -61,7 +61,7 @@ def train(
     dref: xr.Dataset,
     dhist: xr.Dataset,
     var: list,
-    reference_period: list,
+    period: list,
     *,
     method: str = "DetrendedQuantileMapping",
     group: Union[sdba.Grouper, str, dict] = {"group": "time.dayofyear", "window": 31},
@@ -83,6 +83,8 @@ def train(
       The timeseries to adjust, on the reference period.
     var : str
       Variable on which to do the adjustment
+    period : list
+      [start, end] of the reference period
     method : str
       Name of the `sdba.TrainAdjust` method of xclim.
     group : str or sdba.Grouper
@@ -92,8 +94,6 @@ def train(
     maximal_calendar: str
       Maximal calendar dhist can be. The hierarchy: 360_day < noleap < standard < all_leap.
       If dhist's calendar is higher than maximal calendar, it will be converted to the maximal calendar.
-    reference_period : list
-      [start, end] of the reference period
     adapt_freq: dict, optional
       If given, a dictionary of args to pass to the frequency adaptation function.
     jitter_under: dict, optional
@@ -127,9 +127,9 @@ def train(
         xclim_train_args.setdefault("nquantiles", 15)
 
     # cut out the right period
-    reference_period = standardize_periods(reference_period, multiple=False)
-    hist = hist.sel(time=slice(reference_period[0], reference_period[1]))
-    ref = ref.sel(time=slice(reference_period[0], reference_period[1]))
+    period = standardize_periods(period, multiple=False)
+    hist = hist.sel(time=slice(period[0], period[1]))
+    ref = ref.sel(time=slice(period[0], period[1]))
 
     # convert calendar if necessary
     simcal = get_calendar(hist)
@@ -189,7 +189,7 @@ def train(
 def adjust(
     dtrain: xr.Dataset,
     dsim: xr.Dataset,
-    simulation_periods: list,
+    periods: list,
     xclim_adjust_args: dict,
     *,
     to_level: str = "biasadjusted",
@@ -207,7 +207,7 @@ def adjust(
       A trained algorithm's dataset, as returned by `train`.
     dsim : xr.Dataset
       Simulated timeseries, projected period.
-    simulation_periods : list
+    periods : list
       Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
     xclim_adjust_args : dict
       Dict of arguments to pass to the `.adjust` of the adjustment object.
@@ -269,9 +269,9 @@ def adjust(
 
     xclim_adjust_args = xclim_adjust_args or {}
     # do the adjustment for all the simulation_period lists
-    simulation_periods = standardize_periods(simulation_periods)
+    periods = standardize_periods(periods)
     slices = []
-    for period in simulation_periods:
+    for period in periods:
         sim_sel = sim.sel(time=slice(period[0], period[1]))
 
         # adjust
