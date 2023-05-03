@@ -7,6 +7,7 @@ from pathlib import Path, PosixPath
 from types import ModuleType
 from typing import Sequence, Tuple, Union
 
+import cftime
 import geopandas as gpd
 import numpy as np
 import pandas as pd
@@ -122,12 +123,29 @@ def climatological_mean(
         # get back to 1D time
         ds_rolling = ds_rolling.stack(time=("year", "month", "day"))
         # rebuild time coord
-        time_coord = [
-            pd.to_datetime(f"{y - window + 1}, {m}, {d}")
-            for y, m, d in zip(
-                ds_rolling.year.values, ds_rolling.month.values, ds_rolling.day.values
+        if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
+            time_coord = list(
+                pd.to_datetime(
+                    {
+                        "year": ds_rolling.year.values - window + 1,
+                        "month": ds_rolling.month.values,
+                        "day": ds_rolling.day.values,
+                    }
+                ).values
             )
-        ]
+        elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
+            time_coord = [
+                cftime.datetime(
+                    y - window + 1, m, d, calendar=ds.indexes["time"].calendar
+                )
+                for y, m, d in zip(
+                    ds_rolling.year.values,
+                    ds_rolling.month.values,
+                    ds_rolling.day.values,
+                )
+            ]
+        else:
+            raise ValueError("The type of 'time' could not be understood.")
         ds_rolling = ds_rolling.assign_coords(time=time_coord).transpose("time", ...)
 
         concats.extend([ds_rolling])
@@ -274,12 +292,26 @@ def compute_deltas(
         # get back to 1D time
         deltas = deltas.stack(time=("year", "month", "day"))
         # rebuild time coord
-        time_coord = [
-            pd.to_datetime(f"{y}, {m}, {d}")
-            for y, m, d in zip(
-                deltas.year.values, deltas.month.values, deltas.day.values
+        if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
+            time_coord = list(
+                pd.to_datetime(
+                    {
+                        "year": deltas.year.values,
+                        "month": deltas.month.values,
+                        "day": deltas.day.values,
+                    }
+                ).values
             )
-        ]
+        elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
+            time_coord = [
+                cftime.datetime(y, m, d, calendar=ds.indexes["time"].calendar)
+                for y, m, d in zip(
+                    deltas.year.values, deltas.month.values, deltas.day.values
+                )
+            ]
+        else:
+            raise ValueError("The type of 'time' could not be understood.")
+
         deltas = deltas.assign(time=time_coord).transpose("time", ...)
         deltas = deltas.reindex_like(ds)
 
