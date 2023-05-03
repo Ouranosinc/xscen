@@ -13,7 +13,7 @@ from yaml import safe_load
 
 from xscen.config import parse_config
 
-from .utils import CV
+from .utils import CV, standardize_periods
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ def compute_indicators(
         Can be the indicator module directly, or a sequence of indicators or a sequence of
         tuples (indicator name, indicator) as returned by `iter_indicators()`.
     periods : list
-        list of [start, end] of continuous periods over which to compute the indicators. This is needed when the time axis of ds contains some jumps in time.
+        Either [start, end] or list of [start, end] of continuous periods over which to compute the indicators. This is needed when the time axis of ds contains some jumps in time.
         If None, the dataset will be considered continuous.
     to_level : str, optional
         The processing level to assign to the output.
@@ -120,6 +120,8 @@ def compute_indicators(
             else ind.src_freq
         )
 
+    periods = standardize_periods(periods)
+
     out_dict = dict()
     for i, ind in enumerate(indicators, 1):
         if isinstance(ind, tuple):
@@ -146,7 +148,7 @@ def compute_indicators(
             concats = []
             for period in periods:
                 # Make the call to xclim
-                ds_subset = ds.sel(time=slice(str(period[0]), str(period[1])))
+                ds_subset = ds.sel(time=slice(period[0], period[1]))
                 tmp = ind(ds=ds_subset)
 
                 # Infer the indicator's frequency

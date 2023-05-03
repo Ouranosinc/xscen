@@ -1,5 +1,6 @@
 # noqa: D100
 import logging
+import warnings
 from copy import deepcopy
 from typing import Optional, Union
 
@@ -11,7 +12,7 @@ from xclim.sdba import construct_moving_yearly_window, unpack_moving_yearly_wind
 
 from .catalog import parse_from_ds
 from .config import parse_config
-from .utils import minimum_calendar
+from .utils import minimum_calendar, standardize_periods
 
 # TODO: Change all paths to PosixPath objects, including in the catalog?
 # TODO: Compute sometimes fails randomly (in debug, pretty much always). Also (detrend?) fails with pr. Investigate why.
@@ -60,7 +61,7 @@ def train(
     dref: xr.Dataset,
     dhist: xr.Dataset,
     var: list,
-    reference_period: list,
+    period: list,
     *,
     method: str = "DetrendedQuantileMapping",
     group: Union[sdba.Grouper, str, dict] = {"group": "time.dayofyear", "window": 31},
@@ -82,6 +83,8 @@ def train(
       The timeseries to adjust, on the reference period.
     var : str
       Variable on which to do the adjustment
+    period : list
+      [start, end] of the reference period
     method : str
       Name of the `sdba.TrainAdjust` method of xclim.
     group : str or sdba.Grouper
@@ -91,8 +94,6 @@ def train(
     maximal_calendar: str
       Maximal calendar dhist can be. The hierarchy: 360_day < noleap < standard < all_leap.
       If dhist's calendar is higher than maximal calendar, it will be converted to the maximal calendar.
-    reference_period : list
-      [start, end] of the reference period
     adapt_freq: dict, optional
       If given, a dictionary of args to pass to the frequency adaptation function.
     jitter_under: dict, optional
@@ -126,8 +127,9 @@ def train(
         xclim_train_args.setdefault("nquantiles", 15)
 
     # cut out the right period
-    hist = hist.sel(time=slice(*map(str, reference_period)))
-    ref = ref.sel(time=slice(*map(str, reference_period)))
+    period = standardize_periods(period, multiple=False)
+    hist = hist.sel(time=slice(period[0], period[1]))
+    ref = ref.sel(time=slice(period[0], period[1]))
 
     # convert calendar if necessary
     simcal = get_calendar(hist)
@@ -187,7 +189,7 @@ def train(
 def adjust(
     dtrain: xr.Dataset,
     dsim: xr.Dataset,
-    simulation_period: list,
+    periods: list,
     xclim_adjust_args: dict,
     *,
     to_level: str = "biasadjusted",
@@ -205,8 +207,8 @@ def adjust(
       A trained algorithm's dataset, as returned by `train`.
     dsim : xr.Dataset
       Simulated timeseries, projected period.
-    simulation_period : list
-      [start, end] of the simulation period. or list of list if we want to adjust different period one at a time.
+    periods : list
+      Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
     xclim_adjust_args : dict
       Dict of arguments to pass to the `.adjust` of the adjustment object.
     to_level : str, optional
@@ -267,13 +269,10 @@ def adjust(
 
     xclim_adjust_args = xclim_adjust_args or {}
     # do the adjustment for all the simulation_period lists
-    if isinstance(
-        simulation_period[0], str
-    ):  # if only one period, turn it into a list of list
-        simulation_period = [simulation_period]
+    periods = standardize_periods(periods)
     slices = []
-    for period in simulation_period:
-        sim = sim.sel(time=slice(period[0], period[1]))
+    for period in periods:
+        sim_sel = sim.sel(time=slice(period[0], period[1]))
 
         # adjust
         ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)
@@ -288,7 +287,7 @@ def adjust(
             xclim_adjust_args["detrend"] = getattr(sdba.detrending, name)(**kwargs)
 
         with xc.set_options(sdba_encode_cf=True, sdba_extra_output=False):
-            out = ADJ.adjust(sim, **xclim_adjust_args)
+            out = ADJ.adjust(sim_sel, **xclim_adjust_args)
             slices.extend([out])
     # put all the adjusted period back together
     dscen = xr.concat(slices, dim="time")

@@ -151,7 +151,7 @@ biasadjust:
       type: reconstruction
       processing_level: extracted
     xscen_train:
-      reference_period: *ref_period
+      period: *ref_period
       method: DetrendedQuantileMapping
       group:
         group: time.dayofyear
@@ -160,7 +160,7 @@ biasadjust:
         kind: "*"
         nquantiles: 50
     xscen_adjust:
-      simulation_period: *sim_period
+      periods: *sim_period
       xclim_adjust_args:
         detrend:
           LoessDetrend:
@@ -180,7 +180,7 @@ biasadjust:
     sim_inputs: *sim_inputs
     ref_input: *ref_input
     xscen_train:
-      reference_period: *ref_period
+      period: *ref_period
       method: DetrendedQuantileMapping
       group:
         group: time.dayofyear
@@ -189,7 +189,7 @@ biasadjust:
         kind: "+"
         nquantiles: 50
     xscen_adjust:
-      simulation_period: *sim_period
+      periods: *sim_period
       xclim_adjust_args:
         detrend:
           LoessDetrend:
@@ -207,7 +207,7 @@ biasadjust:
     sim_inputs: *sim_inputs
     ref_input: *ref_input
     xscen_train:
-      reference_period: *ref_period
+      period: *ref_period
       method: DetrendedQuantileMapping
       group:
         group: time.dayofyear
@@ -218,7 +218,7 @@ biasadjust:
         kind: "*"
         nquantiles: 50
     xscen_adjust:
-      simulation_period: *sim_period
+      periods: *sim_period
       xclim_adjust_args:
         detrend:
           LoessDetrend:

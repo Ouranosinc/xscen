@@ -20,7 +20,7 @@ from xclim.core.indicator import Indicator
 from .config import parse_config
 from .indicators import compute_indicators
 from .spatial import subset
-from .utils import get_cat_attrs, unstack_dates
+from .utils import standardize_periods, unstack_dates
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ def climatological_mean(
     interval : int
         Interval (in years) at which to provide an output.
     periods : list
-        list of [start, end] of continuous periods to be considered. This is needed when the time axis of ds contains some jumps in time.
+        Either [start, end] or list of [start, end] of continuous periods to be considered. This is needed when the time axis of ds contains some jumps in time.
         If None, the dataset will be considered continuous.
     to_level : str, optional
         The processing level to assign to the output.
@@ -92,7 +92,9 @@ def climatological_mean(
 
     # Compute temporal means
     concats = []
-    periods = periods or [[int(ds_unstack.year[0]), int(ds_unstack.year[-1])]]
+    periods = standardize_periods(
+        periods or [[int(ds_unstack.year[0]), int(ds_unstack.year[-1])]]
+    )
 
     window = window or int(periods[0][1]) - int(periods[0][0]) + 1
 
@@ -103,7 +105,7 @@ def climatological_mean(
     for period in periods:
         # Rolling average
         ds_rolling = (
-            ds_unstack.sel(year=slice(str(period[0]), str(period[1])))
+            ds_unstack.sel(year=slice(period[0], period[1]))
             .rolling(year=window, min_periods=min_periods)
             .mean()
         )
@@ -656,7 +658,7 @@ def produce_horizon(
     indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
       Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     period: list
-      List of strings of format ['start_year', 'end_year'].
+      [start_year, end_year] of the period to be evaluated.
       If None, the whole time coordinate is used.
     to_level:
       The processing level to assign to the output.
@@ -672,7 +674,8 @@ def produce_horizon(
         warnings.warn(
             "Input dataset should only have `warminglevel` coordinate of length 1."
         )
-    if period:
+    if period is not None:
+        period = standardize_periods(period, multiple=False)
         ds = ds.sel(time=slice(period[0], period[1])).load()
         window = int(period[1]) - int(period[0]) + 1
         if to_level:
