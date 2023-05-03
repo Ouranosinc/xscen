@@ -124,12 +124,14 @@ def climatological_mean(
         ds_rolling = ds_rolling.stack(time=("year", "month", "day"))
         # rebuild time coord
         if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
-            time_coord = pd.to_datetime(
-                {
-                    "year": ds_rolling.year.values - window + 1,
-                    "month": ds_rolling.month.values,
-                    "day": ds_rolling.day.values,
-                }
+            time_coord = list(
+                pd.to_datetime(
+                    {
+                        "year": ds_rolling.year.values - window + 1,
+                        "month": ds_rolling.month.values,
+                        "day": ds_rolling.day.values,
+                    }
+                ).values
             )
         elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
             time_coord = [
@@ -291,12 +293,14 @@ def compute_deltas(
         deltas = deltas.stack(time=("year", "month", "day"))
         # rebuild time coord
         if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
-            time_coord = pd.to_datetime(
-                {
-                    "year": deltas.year.values,
-                    "month": deltas.month.values,
-                    "day": deltas.day.values,
-                }
+            time_coord = list(
+                pd.to_datetime(
+                    {
+                        "year": deltas.year.values,
+                        "month": deltas.month.values,
+                        "day": deltas.day.values,
+                    }
+                ).values
             )
         elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
             time_coord = [
