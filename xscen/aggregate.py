@@ -137,7 +137,7 @@ def climatological_mean(
             )
         elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
             time_coord = [
-                xclim.core.calendar.datetime_classes[ds.indexes["time"].calendar](
+                xclim.core.calendar.datetime_classes[ds.time.dt.calendar](
                     y - window + 1, m, d
                 )
                 for y, m, d in zip(
@@ -306,9 +306,7 @@ def compute_deltas(
             )
         elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
             time_coord = [
-                xclim.core.calendar.datetime_classes[ds.indexes["time"].calendar](
-                    y, m, d
-                )
+                xclim.core.calendar.datetime_classes[ds.time.dt.calendar](y, m, d)
                 for y, m, d in zip(
                     deltas.year.values, deltas.month.values, deltas.day.values
                 )
