@@ -7,7 +7,6 @@ from pathlib import Path, PosixPath
 from types import ModuleType
 from typing import Sequence, Tuple, Union
 
-import cftime
 import geopandas as gpd
 import numpy as np
 import pandas as pd
