@@ -7,12 +7,12 @@ from pathlib import Path, PosixPath
 from types import ModuleType
 from typing import Sequence, Tuple, Union
 
-import cftime
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pygeos
 import xarray as xr
+import xclim.core.calendar
 import xesmf as xe
 from shapely.geometry import Polygon
 from xclim.core.indicator import Indicator
@@ -137,8 +137,8 @@ def climatological_mean(
             )
         elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
             time_coord = [
-                cftime.datetime(
-                    y - window + 1, m, d, calendar=ds.indexes["time"].calendar
+                xclim.core.calendar.datetime_classes[ds.time.dt.calendar](
+                    y - window + 1, m, d
                 )
                 for y, m, d in zip(
                     ds_rolling.year.values,
@@ -306,7 +306,7 @@ def compute_deltas(
             )
         elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
             time_coord = [
-                cftime.datetime(y, m, d, calendar=ds.indexes["time"].calendar)
+                xclim.core.calendar.datetime_classes[ds.time.dt.calendar](y, m, d)
                 for y, m, d in zip(
                     deltas.year.values, deltas.month.values, deltas.day.values
                 )
