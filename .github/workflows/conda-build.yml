@@ -21,15 +21,11 @@ on:
 
 jobs:
   conda_deployment_with_tag:
-    name: Build conda package with Python${{ matrix.python-version }} (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: Build conda package with Python${{ matrix.python-version }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [macOS-latest, ubuntu-latest, windows-latest]
-        python-version: ["3.8", "3.9", "3.10"]
-    defaults:
-      run:
-        shell: bash -l {0}
+        python-version: ["3.8"]
     steps:
       - uses: actions/checkout@v3
         if: ${{ github.event.inputs.tag == '' }}
