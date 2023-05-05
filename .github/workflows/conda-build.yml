@@ -6,10 +6,11 @@ on:
       - released
       - prereleased
   workflow_dispatch:
-    tag:
-      description: 'Tag to be built and uploaded'
-      required: true
-      type: string
+    inputs:
+      tag:
+        description: 'Tag to be built and uploaded'
+        required: true
+        type: string
 
 jobs:
   conda_deployment_with_tag:
