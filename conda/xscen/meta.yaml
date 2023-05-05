@@ -1,13 +1,20 @@
 {% set name = "xscen" %}
-{% set version = "0.5.0" %}
 
 package:
   name: {{ name|lower }}
-  version: {{ version }}
+  version: {{ environ['GIT_DESCRIBE_TAG'] }}
 
 source:
   url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/xscen-{{ version }}.tar.gz
   sha256: f31df2cb52e87dd82d2fc7d340788e4edf14abccf04685a9249a2067594b721a
+
+channels:    # write here the list of channels to look for your library dependencies
+  - conda-forge
+  - defaults
+
+dependencies:   # Keep this block with only these two packages
+  - anaconda-client
+  - conda-build
 
 build:
   noarch: python

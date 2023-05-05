@@ -1,0 +1,46 @@
+name: Build and upload conda packages
+
+on:
+  release:
+    types:
+      - released
+      - prereleased
+  workflow_dispatch:
+    tag:
+      description: 'Tag to be built and uploaded'
+      required: true
+      type: string
+
+jobs:
+  conda_deployment_with_tag:
+    name: Conda deployment of package with Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10"]
+    steps:
+      - uses: actions/checkout@v3
+        if: ${{ github.event.inputs.tag == '' }}
+      - uses: actions/checkout@v3
+        if: ${{ github.event.inputs.tag != '' }}
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.tag }}
+      - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
+        uses: mamba-org/provision-with-micromamba@main
+        with:
+          cache-downloads: true
+          environment-file: environment.yml
+          extra-specs: |
+            python=${{ matrix.python-version }}
+      - name: Build and upload the conda packages
+        uses: uibcdf/action-build-and-upload-conda-packages@v1.2.0
+        with:
+          meta_yaml_dir: conda/xscen
+          python-version: ${{ matrix.python-version }}
+          platform_linux-64: true
+          platform_osx-64: true
+          platform_win-64: true
+          user: Ouranosinc
+          label: auto
+          token: ${{ secrets.ANACONDA_TOKEN }}
