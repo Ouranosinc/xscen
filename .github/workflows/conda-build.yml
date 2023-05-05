@@ -1,0 +1,36 @@
+name: Build and upload conda packages
+
+on:
+  release:
+    types:
+      - released
+      - prereleased
+  workflow_dispatch:
+
+jobs:
+  conda_deployment_with_new_tag:
+    name: Conda deployment of package with Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-latest, ubuntu-latest, windows-latest]
+        python-version: ["3.8", "3.9", "3.10"]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
+        uses: mamba-org/provision-with-micromamba@main
+        with:
+          cache-downloads: true
+          environment-file: environment.yml
+          extra-specs: |
+            python=${{ matrix.python-version }}
+      - name: Build and upload the conda packages
+        uses: uibcdf/action-build-and-upload-conda-packages@v1.2.0
+        with:
+          meta_yaml_dir: conda/xscen/meta.yaml
+          python-version: ${{ matrix.python-version }} # Values previously defined in `matrix`
+          user: Ouranosinc
+          label: auto
+          token: ${{ secrets.ANACONDA_TOKEN }}
