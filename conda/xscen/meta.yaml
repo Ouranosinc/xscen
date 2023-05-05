@@ -25,7 +25,7 @@ requirements:
     - cartopy
     - cftime
     - cf_xarray >=0.7.6
-    - clisops
+    - clisops >=0.9.5
     - dask-core
     - flox
     - fsspec
@@ -42,7 +42,7 @@ requirements:
     - pyyaml
     - rechunker
     - shapely
-    - xarray
+    - xarray <2023.3.0
     - xclim >=0.37
     - xesmf >=0.7
     - zarr
