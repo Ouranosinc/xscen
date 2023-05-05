@@ -14,10 +14,9 @@ on:
 jobs:
   conda_deployment_with_tag:
     name: Conda deployment of package with Python ${{ matrix.python-version }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [macOS-latest, ubuntu-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10"]
     steps:
       - uses: actions/checkout@v3
@@ -38,7 +37,10 @@ jobs:
         uses: uibcdf/action-build-and-upload-conda-packages@v1.2.0
         with:
           meta_yaml_dir: conda/xscen
-          python-version: ${{ matrix.python-version }} # Values previously defined in `matrix`
+          python-version: ${{ matrix.python-version }}
+          platform_linux-64: true
+          platform_osx-64: true
+          platform_win-64: true
           user: Ouranosinc
           label: auto
           token: ${{ secrets.ANACONDA_TOKEN }}
