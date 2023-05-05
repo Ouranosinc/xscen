@@ -11,15 +11,25 @@ on:
         description: 'Tag to be built and uploaded'
         required: true
         type: string
+      label:
+        description: 'The type of release'
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - main
 
 jobs:
   conda_deployment_with_tag:
-    name: Conda deployment of package with Python ${{ matrix.python-version }}
+    name: Build conda package with Python${{ matrix.python-version }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macOS-latest, ubuntu-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10"]
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - uses: actions/checkout@v3
         if: ${{ github.event.inputs.tag == '' }}
@@ -28,7 +38,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.tag }}
-      - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
+      - name: Setup Conda (Micromamba) with Python${{ matrix.python-version }}
         uses: mamba-org/provision-with-micromamba@main
         with:
           cache-downloads: true
@@ -37,11 +47,18 @@ jobs:
             python=${{ matrix.python-version }}
             anaconda-client
             conda-build
+      - name: Conditionally set label
+        uses: haya14busa/action-cond@v1
+        id: label
+        with:
+          cond: ${{ github.event_name == 'workflow_dispatch' }}
+          if_true: ${{ github.event.inputs.label }}
+          if_false: "auto"
       - name: Build and upload the conda packages
         uses: uibcdf/action-build-and-upload-conda-packages@v1.2.0
         with:
           meta_yaml_dir: conda/xscen
           python-version: ${{ matrix.python-version }}
           user: Ouranosinc
-          label: auto
+          label: ${{ steps.label.outputs.value }}
           token: ${{ secrets.ANACONDA_TOKEN }}
