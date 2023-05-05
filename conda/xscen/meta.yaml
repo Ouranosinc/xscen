@@ -5,8 +5,7 @@ package:
   version: {{ environ['GIT_DESCRIBE_TAG'] }}
 
 source:
-  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/xscen-{{ version }}.tar.gz
-  sha256: f31df2cb52e87dd82d2fc7d340788e4edf14abccf04685a9249a2067594b721a
+  path: ../../
 
 channels:
   - conda-forge
@@ -15,7 +14,7 @@ channels:
 build:
   noarch: python
   script: {{ PYTHON }} -m pip install . -vv
-  number: 1
+  number: 0
 
 requirements:
   host:

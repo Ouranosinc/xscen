@@ -15,9 +15,10 @@ on:
 jobs:
   conda_deployment_with_tag:
     name: Conda deployment of package with Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [macOS-latest, ubuntu-latest, windows-latest]
         python-version: ["3.8", "3.9", "3.10"]
     steps:
       - uses: actions/checkout@v3
@@ -31,7 +32,7 @@ jobs:
         uses: mamba-org/provision-with-micromamba@main
         with:
           cache-downloads: true
-          environment-file: environment.yml
+          channels: conda-forge,defaults
           extra-specs: |
             python=${{ matrix.python-version }}
             anaconda-client
@@ -41,9 +42,6 @@ jobs:
         with:
           meta_yaml_dir: conda/xscen
           python-version: ${{ matrix.python-version }}
-          platform_linux-64: true
-          platform_osx-64: true
-          platform_win-64: true
           user: Ouranosinc
           label: auto
           token: ${{ secrets.ANACONDA_TOKEN }}
