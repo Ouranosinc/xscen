@@ -1,9 +1,10 @@
 # noqa: D100
 import logging
+from collections.abc import Sequence
 from functools import partial
 from pathlib import Path, PosixPath
 from types import ModuleType
-from typing import Sequence, Tuple, Union
+from typing import Tuple, Union
 
 import xarray as xr
 import xclim as xc
@@ -60,7 +61,7 @@ def load_xclim_module(filename, reload=False) -> ModuleType:
 def compute_indicators(
     ds: xr.Dataset,
     indicators: Union[
-        str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
+        str, PosixPath, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
     ],
     *,
     periods: list = None,

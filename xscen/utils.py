@@ -3,11 +3,12 @@ import json
 import logging
 import os
 import re
+from collections.abc import Sequence
 from io import StringIO
 from itertools import chain
 from pathlib import Path
 from types import ModuleType
-from typing import Dict, Optional, Sequence, TextIO, Union
+from typing import Dict, Optional, TextIO, Union
 
 import flox.xarray
 import numpy as np
@@ -746,7 +747,7 @@ def publish_release_notes(
 
 def unstack_dates(
     ds: xr.Dataset,
-    seasons: Dict[int, str] = None,
+    seasons: dict[int, str] = None,
     new_dim: str = "season",
     winter_starts_year: bool = False,
 ):

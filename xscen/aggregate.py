@@ -2,16 +2,18 @@
 import datetime
 import logging
 import warnings
+from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path, PosixPath
 from types import ModuleType
-from typing import Sequence, Tuple, Union
+from typing import Tuple, Union
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pygeos
 import xarray as xr
+import xclim as xc
 import xclim.core.calendar
 import xesmf as xe
 from shapely.geometry import Polygon
@@ -211,6 +213,8 @@ def compute_deltas(
     """
     if isinstance(reference_horizon, str):
         # Separate the reference from the other horizons
+        if xc.core.utils.uses_dask(ds["horizon"]):
+            ds["horizon"].load()
         ref = ds.where(ds.horizon == reference_horizon, drop=True)
     elif isinstance(reference_horizon, xr.Dataset):
         ref = reference_horizon
@@ -640,7 +644,7 @@ def spatial_mean(
 def produce_horizon(
     ds: xr.Dataset,
     indicators: Union[
-        str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
+        str, PosixPath, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
     ],
     period: list = None,
     to_level: str = "climatology{period0}-{period1}",

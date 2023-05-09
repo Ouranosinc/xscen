@@ -117,7 +117,7 @@ def recursive_update(d, other):
     return d
 
 
-def args_as_str(*args: Tuple[Any, ...]) -> Tuple[str, ...]:
+def args_as_str(*args: tuple[Any, ...]) -> tuple[str, ...]:
     """Return arguments as strings."""
     new_args = []
     for i, arg in enumerate(*args):
