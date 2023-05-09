@@ -3,9 +3,7 @@ import shutil
 from functools import partial
 from pathlib import Path
 
-import pandas as pd
 import pytest
-import xarray as xr
 from xclim.testing.helpers import test_timeseries
 
 notebooks = Path().cwd().parent / "docs" / "notebooks"

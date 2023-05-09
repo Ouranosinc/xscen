@@ -26,7 +26,7 @@ dependencies:
   - rechunker
   - shapely
   - xarray <2023.3.0  # See https://github.com/Ouranosinc/xscen/pull/173
-  - xclim >=0.37
+  - xclim >=0.43  # Harder requirement because of xclim.testing.helpers.test_timeseries introduced in 0.43
   - xesmf >=0.7
   - zarr
   # To avoid bugs
