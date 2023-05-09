@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import pygeos
 import xarray as xr
+import xclim as xc
 import xclim.core.calendar
 import xesmf as xe
 from shapely.geometry import Polygon
@@ -212,6 +213,8 @@ def compute_deltas(
     """
     if isinstance(reference_horizon, str):
         # Separate the reference from the other horizons
+        if xc.core.utils.uses_dask("horizon"):
+            ds["horizon"].load()
         ref = ds.where(ds.horizon == reference_horizon, drop=True)
     elif isinstance(reference_horizon, xr.Dataset):
         ref = reference_horizon
