@@ -2,10 +2,11 @@
 import datetime
 import logging
 import warnings
+from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path, PosixPath
 from types import ModuleType
-from typing import Sequence, Tuple, Union
+from typing import Tuple, Union
 
 import geopandas as gpd
 import numpy as np
@@ -640,7 +641,7 @@ def spatial_mean(
 def produce_horizon(
     ds: xr.Dataset,
     indicators: Union[
-        str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
+        str, PosixPath, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
     ],
     period: list = None,
     to_level: str = "climatology{period0}-{period1}",

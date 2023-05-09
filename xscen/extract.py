@@ -501,7 +501,7 @@ def resample(
 @parse_config
 def search_data_catalogs(
     data_catalogs: Union[
-        Union[str, os.PathLike], List[Union[str, os.PathLike]], DataCatalog
+        Union[str, os.PathLike], list[Union[str, os.PathLike]], DataCatalog
     ],
     variables_and_freqs: dict,
     *,
@@ -510,7 +510,7 @@ def search_data_catalogs(
     match_hist_and_fut: bool = False,
     periods: list = None,
     coverage_kwargs: dict = None,
-    id_columns: Optional[List[str]] = None,
+    id_columns: Optional[list[str]] = None,
     allow_resampling: bool = False,
     allow_conversion: bool = False,
     conversion_yaml: str = None,

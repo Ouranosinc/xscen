@@ -1,9 +1,10 @@
 # noqa: D100
 import logging
 import warnings
+from collections.abc import Sequence
 from pathlib import Path, PosixPath
 from types import ModuleType
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import xarray as xr
@@ -78,7 +79,7 @@ def fix_unphysical_values(
 
 def _invert_unphysical_temperatures(
     tasmin: xr.DataArray, tasmax: xr.Dataset
-) -> Tuple[xr.DataArray, xr.DataArray, xr.DataArray]:
+) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray]:
     """
     Invert tasmin and tasmax points where tasmax <  tasmin.
 
@@ -109,7 +110,7 @@ def _invert_unphysical_temperatures(
 def properties_and_measures(
     ds: xr.Dataset,
     properties: Union[
-        str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType
+        str, PosixPath, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
     ],
     period: list = None,
     unstack: bool = False,
