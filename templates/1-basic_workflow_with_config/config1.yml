@@ -48,10 +48,9 @@ extract:
       region: &region
         name: test1
         method: bbox
-        buffer: 1.5
-        bbox:
-          lon_bnds: [ -80, -79 ]
-          lat_bnds: [ 44, 44.2 ]
+        tile_buffer: 1.5
+        lon_bnds: [ -80, -79 ]
+        lat_bnds: [ 44, 44.2 ]
     stack_drop_nans: &stack
       True
     save:
@@ -152,7 +151,7 @@ biasadjust:
       type: reconstruction
       processing_level: extracted
     xscen_train:
-      reference_period: *ref_period
+      period: *ref_period
       method: DetrendedQuantileMapping
       group:
         group: time.dayofyear
@@ -161,7 +160,7 @@ biasadjust:
         kind: "*"
         nquantiles: 50
     xscen_adjust:
-      simulation_period: *sim_period
+      periods: *sim_period
       xclim_adjust_args:
         detrend:
           LoessDetrend:
@@ -181,7 +180,7 @@ biasadjust:
     sim_inputs: *sim_inputs
     ref_input: *ref_input
     xscen_train:
-      reference_period: *ref_period
+      period: *ref_period
       method: DetrendedQuantileMapping
       group:
         group: time.dayofyear
@@ -190,7 +189,7 @@ biasadjust:
         kind: "+"
         nquantiles: 50
     xscen_adjust:
-      simulation_period: *sim_period
+      periods: *sim_period
       xclim_adjust_args:
         detrend:
           LoessDetrend:
@@ -208,7 +207,7 @@ biasadjust:
     sim_inputs: *sim_inputs
     ref_input: *ref_input
     xscen_train:
-      reference_period: *ref_period
+      period: *ref_period
       method: DetrendedQuantileMapping
       group:
         group: time.dayofyear
@@ -219,7 +218,7 @@ biasadjust:
         kind: "*"
         nquantiles: 50
     xscen_adjust:
-      simulation_period: *sim_period
+      periods: *sim_period
       xclim_adjust_args:
         detrend:
           LoessDetrend:
@@ -433,15 +432,15 @@ logging: # general logging args
       class : logging.StreamHandler
       formatter: default
       level : INFO
-    file:
-      class: logging.FileHandler
-      formatter: default
-      level : DEBUG
+#    file:
+#      class: logging.FileHandler
+#      formatter: default
+#      level : DEBUG
   loggers:
     xscen:
       propagate: False
       level: INFO
-      handlers: [file, console]
+      handlers: [console] # [file, console] could also be used to write the log to a file
 
 
 to_dataset_dict: # parameters to open datasets

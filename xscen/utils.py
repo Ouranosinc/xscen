@@ -31,6 +31,7 @@ __all__ = [
     "natural_sort",
     "publish_release_notes",
     "stack_drop_nans",
+    "standardize_periods",
     "translate_time_chunk",
     "unstack_fill_nan",
     "unstack_dates",
@@ -972,3 +973,32 @@ def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
             )
         ds["time"] = counts.time
     return ds
+
+
+def standardize_periods(periods, multiple=True):
+    """Reformats 'periods' to a list of strings [['start', 'end'], ['start', 'end']]."""
+    if periods is None:
+        return periods
+
+    if not isinstance(periods[0], list):
+        periods = [periods]
+
+    for i in range(len(periods)):
+        if len(periods[i]) != 2:
+            raise ValueError(
+                "Each instance of 'periods' should be comprised of two elements: [start, end]."
+            )
+        if int(periods[i][0]) > int(periods[i][1]):
+            raise ValueError(
+                f"'periods' should be in chronological order, received {periods[i]}."
+            )
+        periods[i] = [str(p) for p in periods[i]]
+
+    if multiple:
+        return periods
+    else:
+        if len(periods) > 1:
+            raise ValueError(
+                f"'period' should be a single instance of [start, end], received {len(periods)}."
+            )
+        return periods[0]

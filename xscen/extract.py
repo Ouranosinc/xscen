@@ -5,6 +5,7 @@ import os
 import re
 import warnings
 from collections import defaultdict
+from copy import deepcopy
 from pathlib import Path
 from typing import Callable, List, Optional, Union
 
@@ -27,13 +28,12 @@ from .indicators import load_xclim_module, registry_from_module
 from .spatial import subset
 from .utils import CV
 from .utils import ensure_correct_time as _ensure_correct_time
-from .utils import natural_sort
+from .utils import natural_sort, standardize_periods
 
 logger = logging.getLogger(__name__)
 
 
 __all__ = [
-    "clisops_subset",
     "extract_dataset",
     "resample",
     "search_data_catalogs",
@@ -76,7 +76,7 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
         category=FutureWarning,
     )
 
-    ds_subset = subset(ds, region)
+    ds_subset = subset(ds, region=region)
 
     return ds_subset
 
@@ -109,7 +109,7 @@ def extract_dataset(
         If None, it will be read from catalog._requested_variables and catalog._requested_variable_freqs
         (set by `variables_and_freqs` in `search_data_catalogs`)
     periods : list
-        [start, end] of the period to be evaluated (or a list of lists)
+        Either [start, end] or list of [start, end] for the periods to be evaluated.
         Will be read from catalog._requested_periods if None. Leave both None to extract everything.
     region : dict, optional
         Description of the region and the subsetting method (required fields listed in the Notes) used in `xscen.spatial.subset`.
@@ -156,10 +156,10 @@ def extract_dataset(
             Region name used to overwrite domain in the catalog.
         method: str
             ['gridpoint', 'bbox', shape', 'sel']
-        <method>: dict
-            Arguments specific to the method used.
-        buffer: float, optional
+        tile_buffer: float, optional
             Multiplier to apply to the model resolution.
+        kwargs
+            Arguments specific to the method used.
 
     See Also
     --------
@@ -309,19 +309,32 @@ def extract_dataset(
             ds.attrs["cat:frequency"] = CV.xrfreq_to_frequency(xrfreq)
 
         # Subset time on the periods
-        if periods is None and hasattr(catalog, "_requested_periods"):
-            periods = catalog._requested_periods
-        if periods is not None and "time" in ds:
-            if not isinstance(periods[0], list):
-                periods = [periods]
+        periods_extract = deepcopy(periods)
+        if periods_extract is None and hasattr(catalog, "_requested_periods"):
+            periods_extract = catalog._requested_periods
+        if periods_extract is not None and "time" in ds:
+            periods_extract = standardize_periods(periods_extract)
             slices = []
-            for period in periods:
-                slices.extend([ds.sel({"time": slice(str(period[0]), str(period[1]))})])
+            for period in periods_extract:
+                slices.extend([ds.sel({"time": slice(period[0], period[1])})])
             ds = xr.concat(slices, dim="time", **xr_combine_kwargs)
 
         # subset to the region
         if region is not None:
-            ds = subset(ds, region)
+            if (region["method"] in region) and (
+                isinstance(region[region["method"]], dict)
+            ):
+                warnings.warn(
+                    "You seem to be using a deprecated version of region. Please use the new formatting.",
+                    category=FutureWarning,
+                )
+                region = deepcopy(region)
+                if "buffer" in region:
+                    region["tile_buffer"] = region.pop("buffer")
+                _kwargs = region.pop(region["method"])
+                region.update(_kwargs)
+
+            ds = subset(ds, **region)
 
         # add relevant attrs
         ds.attrs["cat:processing_level"] = to_level
@@ -496,6 +509,7 @@ def search_data_catalogs(
     exclusions: dict = None,
     match_hist_and_fut: bool = False,
     periods: list = None,
+    coverage_kwargs: dict = None,
     id_columns: Optional[List[str]] = None,
     allow_resampling: bool = False,
     allow_conversion: bool = False,
@@ -519,7 +533,9 @@ def search_data_catalogs(
     match_hist_and_fut: bool, optional
         If True, historical and future simulations will be combined into the same line, and search results lacking one of them will be rejected.
     periods : list
-        [start, end] of the period to be evaluated (or a list of lists).
+        Either [start, end] or list of [start, end] for the periods to be evaluated.
+    coverage_kwargs : dict
+        Arguments to pass to subset_file_coverage (only used when periods is not None).
     id_columns : list, optional
         List of columns used to create a id column. If None is given, the original
         "id" is left.
@@ -649,6 +665,9 @@ def search_data_catalogs(
         logger.warning("Found no match corresponding to the 'other' search criteria.")
         return {}
 
+    coverage_kwargs = coverage_kwargs or {}
+    periods = standardize_periods(periods)
+
     logger.info(f"Iterating over {len(catalog.unique('id'))} potential datasets.")
     # Loop on each dataset to assess whether they have all required variables
     # And select best freq/timedelta for each
@@ -745,7 +764,9 @@ def search_data_catalogs(
                                 + ["variable"]
                             ):
                                 valid_tp.append(
-                                    subset_file_coverage(group, periods)
+                                    subset_file_coverage(
+                                        group, periods, **coverage_kwargs
+                                    )
                                 )  # If valid, this returns the subset of files that cover the time period
                             varcat.esmcat._df = pd.concat(valid_tp)
 
@@ -785,8 +806,6 @@ def search_data_catalogs(
             else:
                 catalogs[sim_id] = concat_data_catalogs(*varcats)
                 if periods is not None:
-                    if not isinstance(periods[0], list):
-                        periods = [periods]
                     catalogs[sim_id]._requested_periods = periods
 
     if len(catalogs) > 0:
@@ -831,7 +850,7 @@ def subset_warming_level(
     window : int
        Size of the rolling window in years over which to compute the warming level.
     tas_baseline_period : list
-       Base period. The warming is calculated with respect to this period. The default is ["1850", "1900"].
+       [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
     ignore_member : bool
        Whether to ignore the member when searching for the model run in tas_csv.
     tas_csv : str
@@ -856,6 +875,7 @@ def subset_warming_level(
     """
     if tas_baseline_period is None:
         tas_baseline_period = ["1850", "1900"]
+    tas_baseline_period = standardize_periods(tas_baseline_period, multiple=False)
 
     if tas_csv is None:
         tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
@@ -960,7 +980,9 @@ def subset_warming_level(
 
     if to_level is not None:
         ds_wl.attrs["cat:processing_level"] = to_level.format(
-            wl=wl, period0=tas_baseline_period[0], period1=tas_baseline_period[1]
+            wl=wl,
+            period0=tas_baseline_period[0],
+            period1=tas_baseline_period[1],
         )
 
     return ds_wl

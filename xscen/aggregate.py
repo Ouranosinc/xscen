@@ -12,14 +12,15 @@ import numpy as np
 import pandas as pd
 import pygeos
 import xarray as xr
+import xclim.core.calendar
 import xesmf as xe
 from shapely.geometry import Polygon
 from xclim.core.indicator import Indicator
 
 from .config import parse_config
-from .extract import clisops_subset
 from .indicators import compute_indicators
-from .utils import get_cat_attrs, unstack_dates
+from .spatial import subset
+from .utils import standardize_periods, unstack_dates
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ def climatological_mean(
     interval : int
         Interval (in years) at which to provide an output.
     periods : list
-        list of [start, end] of continuous periods to be considered. This is needed when the time axis of ds contains some jumps in time.
+        Either [start, end] or list of [start, end] of continuous periods to be considered. This is needed when the time axis of ds contains some jumps in time.
         If None, the dataset will be considered continuous.
     to_level : str, optional
         The processing level to assign to the output.
@@ -96,7 +97,9 @@ def climatological_mean(
 
     # Compute temporal means
     concats = []
-    periods = periods or [[int(ds_unstack.year[0]), int(ds_unstack.year[-1])]]
+    periods = standardize_periods(
+        periods or [[int(ds_unstack.year[0]), int(ds_unstack.year[-1])]]
+    )
 
     window = window or int(periods[0][1]) - int(periods[0][0]) + 1
 
@@ -107,7 +110,7 @@ def climatological_mean(
     for period in periods:
         # Rolling average
         ds_rolling = (
-            ds_unstack.sel(year=slice(str(period[0]), str(period[1])))
+            ds_unstack.sel(year=slice(period[0], period[1]))
             .rolling(year=window, min_periods=min_periods)
             .mean()
         )
@@ -127,12 +130,29 @@ def climatological_mean(
         # get back to 1D time
         ds_rolling = ds_rolling.stack(time=("year", "month", "day"))
         # rebuild time coord
-        time_coord = [
-            pd.to_datetime(f"{y - window + 1}, {m}, {d}")
-            for y, m, d in zip(
-                ds_rolling.year.values, ds_rolling.month.values, ds_rolling.day.values
+        if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
+            time_coord = list(
+                pd.to_datetime(
+                    {
+                        "year": ds_rolling.year.values - window + 1,
+                        "month": ds_rolling.month.values,
+                        "day": ds_rolling.day.values,
+                    }
+                ).values
             )
-        ]
+        elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
+            time_coord = [
+                xclim.core.calendar.datetime_classes[ds.time.dt.calendar](
+                    y - window + 1, m, d
+                )
+                for y, m, d in zip(
+                    ds_rolling.year.values,
+                    ds_rolling.month.values,
+                    ds_rolling.day.values,
+                )
+            ]
+        else:
+            raise ValueError("The type of 'time' could not be understood.")
         ds_rolling = ds_rolling.assign_coords(time=time_coord).transpose("time", ...)
 
         concats.extend([ds_rolling])
@@ -279,12 +299,26 @@ def compute_deltas(
         # get back to 1D time
         deltas = deltas.stack(time=("year", "month", "day"))
         # rebuild time coord
-        time_coord = [
-            pd.to_datetime(f"{y}, {m}, {d}")
-            for y, m, d in zip(
-                deltas.year.values, deltas.month.values, deltas.day.values
+        if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
+            time_coord = list(
+                pd.to_datetime(
+                    {
+                        "year": deltas.year.values,
+                        "month": deltas.month.values,
+                        "day": deltas.day.values,
+                    }
+                ).values
             )
-        ]
+        elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
+            time_coord = [
+                xclim.core.calendar.datetime_classes[ds.time.dt.calendar](y, m, d)
+                for y, m, d in zip(
+                    deltas.year.values, deltas.month.values, deltas.day.values
+                )
+            ]
+        else:
+            raise ValueError("The type of 'time' could not be understood.")
+
         deltas = deltas.assign(time=time_coord).transpose("time", ...)
         deltas = deltas.reindex_like(ds)
 
@@ -299,6 +333,7 @@ def spatial_mean(
     ds: xr.Dataset,
     method: str,
     *,
+    spatial_subset: bool = None,
     call_clisops: bool = False,
     region: dict = None,
     kwargs: dict = None,
@@ -317,8 +352,9 @@ def spatial_mean(
         'interp_centroid' will find the region's centroid (if coordinates are not fed through kwargs), then perform a .interp() over the spatial dimensions of the Dataset.
         The coordinate can also be directly fed to .interp() through the 'kwargs' argument below.
         'xesmf' will make use of xESMF's SpatialAverager. This will typically be more precise, especially for irregular regions, but can be much slower than other methods.
-    call_clisops : bool
-        If True, xscen.extraction.clisops_subset will be called prior to the other operations. This requires the 'region' argument.
+    spatial_subset : bool
+        If True, xscen.spatial.subset will be called prior to the other operations. This requires the 'region' argument.
+        If None, this will automatically become True if 'region' is provided and the subsetting method is either 'cos-lat' or 'mean'.
     region : dict
         Description of the region and the subsetting method (required fields listed in the Notes).
         If method=='interp_centroid', this is used to find the region's centroid.
@@ -344,12 +380,14 @@ def spatial_mean(
     Notes
     -----
     'region' required fields:
+        name: str
+            Region name used to overwrite domain in the catalog.
         method: str
-            ['gridpoint', 'bbox', shape']
-        <method>: dict
+            ['gridpoint', 'bbox', shape', 'sel']
+        tile_buffer: float, optional
+            Multiplier to apply to the model resolution. Only used if spatial_subset==True.
+        kwargs
             Arguments specific to the method used.
-        buffer: float, optional
-            Multiplier to apply to the model resolution. Only used if call_clisops==True.
 
     See Also
     --------
@@ -367,10 +405,39 @@ def spatial_mean(
             category=FutureWarning,
         )
         method = "interp_centroid"
-
-    # If requested, call xscen.extraction.clisops_subset prior to averaging
     if call_clisops:
-        ds = clisops_subset(ds, region)
+        warnings.warn(
+            "call_clisops has been renamed and is deprecated. Use spatial_subset instead.",
+            category=FutureWarning,
+        )
+        spatial_subset = call_clisops
+
+    if (
+        (region is not None)
+        and (region["method"] in region)
+        and (isinstance(region[region["method"]], dict))
+    ):
+        warnings.warn(
+            "You seem to be using a deprecated version of region. Please use the new formatting.",
+            category=FutureWarning,
+        )
+        region = deepcopy(region)
+        if "buffer" in region:
+            region["tile_buffer"] = region.pop("buffer")
+        _kwargs = region.pop(region["method"])
+        region.update(_kwargs)
+
+    if (
+        (region is not None)
+        and (spatial_subset is None)
+        and (method in ["mean", "cos-lat"])
+    ):
+        logger.info("Automatically turning spatial_subset to True based on inputs.")
+        spatial_subset = True
+
+    # If requested, call xscen.spatial.subset prior to averaging
+    if spatial_subset:
+        ds = subset(ds, **region)
 
     if method == "cos-lat":
         if "latitude" not in ds.cf.coordinates:
@@ -439,26 +506,26 @@ def spatial_mean(
                 kwargs[ds.cf.axes["Y"][0]] = ds[ds.cf.axes["Y"][0]].mean().values
         else:
             if region["method"] == "gridpoint":
-                if len(region["gridpoint"]["lon"] != 1):
+                if len(region["lon"] != 1):
                     raise ValueError(
                         "Only a single location should be used with interp_centroid."
                     )
                 centroid = {
-                    "lon": region["gridpoint"]["lon"],
-                    "lat": region["gridpoint"]["lat"],
+                    "lon": region["lon"],
+                    "lat": region["lat"],
                 }
 
             elif region["method"] == "bbox":
                 centroid = {
-                    "lon": np.mean(region["bbox"]["lon_bnds"]),
-                    "lat": np.mean(region["bbox"]["lat_bnds"]),
+                    "lon": np.mean(region["lon_bnds"]),
+                    "lat": np.mean(region["lat_bnds"]),
                 }
 
             elif region["method"] == "shape":
-                if not isinstance(region["shape"]["shape"], gpd.GeoDataFrame):
-                    s = gpd.read_file(region["shape"]["shape"])
+                if not isinstance(region["shape"], gpd.GeoDataFrame):
+                    s = gpd.read_file(region["shape"])
                 else:
-                    s = region["shape"]["shape"]
+                    s = region["shape"]
                 if len(s != 1):
                     raise ValueError(
                         "Only a single polygon should be used with interp_centroid."
@@ -484,16 +551,16 @@ def spatial_mean(
         # If the region is a bounding box, call shapely and geopandas to transform it into an input compatible with xesmf
         if region["method"] == "bbox":
             lon_point_list = [
-                region["bbox"]["lon_bnds"][0],
-                region["bbox"]["lon_bnds"][0],
-                region["bbox"]["lon_bnds"][1],
-                region["bbox"]["lon_bnds"][1],
+                region["lon_bnds"][0],
+                region["lon_bnds"][0],
+                region["lon_bnds"][1],
+                region["lon_bnds"][1],
             ]
             lat_point_list = [
-                region["bbox"]["lat_bnds"][0],
-                region["bbox"]["lat_bnds"][1],
-                region["bbox"]["lat_bnds"][1],
-                region["bbox"]["lat_bnds"][0],
+                region["lat_bnds"][0],
+                region["lat_bnds"][1],
+                region["lat_bnds"][1],
+                region["lat_bnds"][0],
             ]
 
             polygon_geom = Polygon(zip(lon_point_list, lat_point_list))
@@ -502,15 +569,15 @@ def spatial_mean(
             # Prepare the History field
             new_history = (
                 f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-                f"xesmf.SpatialAverager over {region['bbox']['lon_bnds']}{region['bbox']['lat_bnds']} - xESMF v{xe.__version__}"
+                f"xesmf.SpatialAverager over {region['lon_bnds']}{region['lat_bnds']} - xESMF v{xe.__version__}"
             )
 
         # If the region is a shapefile, open with geopandas
         elif region["method"] == "shape":
-            if not isinstance(region["shape"]["shape"], gpd.GeoDataFrame):
-                polygon = gpd.read_file(region["shape"]["shape"])
+            if not isinstance(region["shape"], gpd.GeoDataFrame):
+                polygon = gpd.read_file(region["shape"])
             else:
-                polygon = region["shape"]["shape"]
+                polygon = region["shape"]
 
             # Simplify the geometries to a given tolerance, if needed.
             # The simpler the polygons, the faster the averaging, but it will lose some precision.
@@ -522,7 +589,7 @@ def spatial_mean(
             # Prepare the History field
             new_history = (
                 f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-                f"xesmf.SpatialAverager over {Path(region['shape']['shape']).name} - xESMF v{xe.__version__}"
+                f"xesmf.SpatialAverager over {Path(region['shape']).name} - xESMF v{xe.__version__}"
             )
 
         else:
@@ -554,7 +621,7 @@ def spatial_mean(
 
     else:
         raise ValueError(
-            "Subsetting method should be ['mean', 'interp_coord', 'xesmf']"
+            "Subsetting method should be ['cos-lat', 'interp_coord', 'xesmf']"
         )
 
     # History
@@ -596,7 +663,7 @@ def produce_horizon(
     indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
       Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     period: list
-      List of strings of format ['start_year', 'end_year'].
+      [start_year, end_year] of the period to be evaluated.
       If None, the whole time coordinate is used.
     to_level:
       The processing level to assign to the output.
@@ -612,7 +679,8 @@ def produce_horizon(
         warnings.warn(
             "Input dataset should only have `warminglevel` coordinate of length 1."
         )
-    if period:
+    if period is not None:
+        period = standardize_periods(period, multiple=False)
         ds = ds.sel(time=slice(period[0], period[1])).load()
         window = int(period[1]) - int(period[0]) + 1
         if to_level:

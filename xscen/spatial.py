@@ -13,6 +13,8 @@ import xarray as xr
 import xclim as xc
 from xclim.core.utils import uses_dask
 
+from .config import parse_config
+
 __all__ = [
     "creep_weights",
     "creep_fill",
@@ -20,6 +22,7 @@ __all__ = [
 ]
 
 
+@parse_config
 def creep_weights(mask, n=1, mode="clip"):
     """Compute weights for the creep fill.
 
@@ -80,6 +83,7 @@ def creep_weights(mask, n=1, mode="clip"):
     )
 
 
+@parse_config
 def creep_fill(da, w):
     """Creep fill using pre-computed weights.
 
@@ -119,33 +123,38 @@ def creep_fill(da, w):
     )
 
 
-def subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
+def subset(
+    ds: xr.Dataset,
+    region: dict = None,
+    *,
+    name: str = None,
+    method: str = None,
+    tile_buffer: float = 0,
+    **kwargs,
+) -> xr.Dataset:
     """
     Subset the data to a region.
 
-    Either creates a slice and uses the .sel() method or customize a call to
+    Either creates a slice and uses the .sel() method, or customizes a call to
     clisops.subset() that allows for an automatic buffer around the region.
 
     Parameters
     ----------
     ds : xr.Dataset
-        Dataset to be subsetted
-    region : dict
-        Description of the region and the subsetting method (required fields listed in the Notes)
-
-    Notes
-    -----
-    'region' fields:
-        name: str
-            Region name used to overwrite domain in the catalog.
-        method: str
-            ['gridpoint', 'bbox', shape','sel']
-            If the method is `sel`, this is not a call to clisops but only a subsetting with the xarray .sel() fonction.
-            The keys are the dimensions to subset and the values are turned into a slice.
-        <method>: dict
-            Arguments specific to the method used.
-        buffer: float, optional
-            Multiplier to apply to the model resolution.
+        Dataset to be subsetted.
+    region: dict
+        Deprecated argument that is there for legacy reasons and will be abandoned eventually.
+    name: str
+        Used to rename the 'cat:domain' attribute.
+    method : str
+        ['gridpoint', 'bbox', shape','sel']
+        If the method is `sel`, this is not a call to clisops but only a subsetting with the xarray .sel() fonction.
+    tile_buffer : float
+        For ['bbox', shape'], uses an approximation of the grid cell size to add a buffer around the requested region.
+        This differs from clisops' 'buffer' argument in subset_shape().
+    kwargs : dict
+        Arguments to be sent to clisops.
+        If the method is `sel`, the keys are the dimensions to subset and the values are turned into a slice.
 
     Returns
     -------
@@ -156,10 +165,30 @@ def subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
     --------
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
+    if region is not None:
+        warnings.warn(
+            "The argument 'region' has been deprecated and will be abandoned in a future release.",
+            category=FutureWarning,
+        )
+        method = method or region.get("method")
+        if ("buffer" in region) and ("shape" in region):
+            warnings.warn(
+                "To avoid confusion with clisops' buffer argument, xscen's 'buffer' has been renamed 'tile_buffer'.",
+                category=FutureWarning,
+            )
+            tile_buffer = tile_buffer or region.get("buffer", 0)
+        else:
+            tile_buffer = tile_buffer or region.get("tile_buffer", 0)
+        kwargs = deepcopy(region[region["method"]])
+
     if uses_dask(ds.lon) or uses_dask(ds.lat):
         warnings.warn("Loading longitude and latitude for more efficient subsetting.")
         ds["lon"], ds["lat"] = dask.compute(ds.lon, ds.lat)
-    if "buffer" in region.keys():
+    if tile_buffer > 0:
+        if method not in ["bbox", "shape"]:
+            warnings.warn(
+                "tile_buffer has been specified, but is not used for the requested subsetting method.",
+            )
         # estimate the model resolution
         if len(ds.lon.dims) == 1:  # 1D lat-lon
             lon_res = np.abs(ds.lon.diff("lon")[0].values)
@@ -168,25 +197,23 @@ def subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
             lon_res = np.abs(ds.lon[0, 0].values - ds.lon[0, 1].values)
             lat_res = np.abs(ds.lat[0, 0].values - ds.lat[1, 0].values)
 
-    kwargs = deepcopy(region[region["method"]])
-
-    if region["method"] in ["gridpoint"]:
+    if method in ["gridpoint"]:
         ds_subset = clisops.core.subset_gridpoint(ds, **kwargs)
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{region['method']} spatial subsetting on {len(region['gridpoint']['lon'])} coordinates - clisops v{clisops.__version__}"
+            f"{method} spatial subsetting on {len(kwargs['lon'])} coordinates - clisops v{clisops.__version__}"
         )
 
-    elif region["method"] in ["bbox"]:
-        if "buffer" in region.keys():
+    elif method in ["bbox"]:
+        if tile_buffer > 0:
             # adjust the boundaries
             kwargs["lon_bnds"] = (
-                kwargs["lon_bnds"][0] - lon_res * region["buffer"],
-                kwargs["lon_bnds"][1] + lon_res * region["buffer"],
+                kwargs["lon_bnds"][0] - lon_res * tile_buffer,
+                kwargs["lon_bnds"][1] + lon_res * tile_buffer,
             )
             kwargs["lat_bnds"] = (
-                kwargs["lat_bnds"][0] - lat_res * region["buffer"],
-                kwargs["lat_bnds"][1] + lat_res * region["buffer"],
+                kwargs["lat_bnds"][0] - lat_res * tile_buffer,
+                kwargs["lat_bnds"][1] + lat_res * tile_buffer,
             )
 
         if xc.core.utils.uses_dask(ds.cf["longitude"]):
@@ -197,31 +224,33 @@ def subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
         ds_subset = clisops.core.subset_bbox(ds, **kwargs)
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{region['method']} spatial subsetting with {'buffer=' + str(region['buffer']) if 'buffer' in region else 'no buffer'}"
-            f", lon_bnds={np.array(region['bbox']['lon_bnds'])}, lat_bnds={np.array(region['bbox']['lat_bnds'])}"
+            f"{method} spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
+            f", lon_bnds={np.array(kwargs['lon_bnds'])}, lat_bnds={np.array(kwargs['lat_bnds'])}"
             f" - clisops v{clisops.__version__}"
         )
 
-    elif region["method"] in ["shape"]:
-        if "buffer" in region.keys():
-            kwargs["buffer"] = np.max([lon_res, lat_res]) * region["buffer"]
+    elif method in ["shape"]:
+        if tile_buffer > 0:
+            if kwargs.get("buffer") is not None:
+                raise NotImplementedError(
+                    "Both tile_buffer and clisops' buffer were requested. Use only one."
+                )
+            kwargs["buffer"] = np.max([lon_res, lat_res]) * tile_buffer
 
         ds_subset = clisops.core.subset_shape(ds, **kwargs)
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{region['method']} spatial subsetting with {'buffer=' + str(region['buffer']) if 'buffer' in region else 'no buffer'}"
-            f", shape={Path(region['shape']['shape']).name if isinstance(region['shape']['shape'], (str, Path)) else 'gpd.GeoDataFrame'}"
+            f"{method} spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
+            f", shape={Path(kwargs['shape']).name if isinstance(kwargs['shape'], (str, Path)) else 'gpd.GeoDataFrame'}"
             f" - clisops v{clisops.__version__}"
         )
 
-    elif region["method"] in ["sel"]:
-        arg_sel = {
-            dim: slice(*map(float, bounds)) for dim, bounds in region["sel"].items()
-        }
+    elif method in ["sel"]:
+        arg_sel = {dim: slice(*map(float, bounds)) for dim, bounds in kwargs.items()}
         ds_subset = ds.sel(**arg_sel)
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{region['method']} subsetting with arguments {arg_sel}"
+            f"{method} subsetting with arguments {arg_sel}"
         )
 
     else:
@@ -233,6 +262,7 @@ def subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
         else new_history
     )
     ds_subset.attrs["history"] = history
-    ds_subset.attrs["cat:domain"] = region["name"]
+    if name is not None:
+        ds_subset.attrs["cat:domain"] = name
 
     return ds_subset

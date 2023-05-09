@@ -13,7 +13,7 @@ from .catalog import DataCatalog
 from .config import parse_config
 from .indicators import load_xclim_module
 from .io import save_to_zarr
-from .utils import change_units, clean_up, unstack_fill_nan
+from .utils import change_units, clean_up, standardize_periods, unstack_fill_nan
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ def properties_and_measures(
         Path to a YAML file that instructs on how to calculate properties.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
         tuples (indicator name, indicator) as returned by `iter_indicators()`.
-    period : lst
+    period : list
         [start, end] of the period to be evaluated. The period will be selected on ds
         and dref_for_measure if it is given.
     unstack : bool
@@ -176,9 +176,10 @@ def properties_and_measures(
     else:
         logger.info(f"Computing {N} properties.")
 
+    period = standardize_periods(period, multiple=False)
     # select period for ds
     if period is not None and "time" in ds:
-        ds = ds.sel({"time": slice(str(period[0]), str(period[1]))})
+        ds = ds.sel({"time": slice(period[0], period[1])})
 
     # select periods for ref_measure
     if (
@@ -186,9 +187,7 @@ def properties_and_measures(
         and period is not None
         and "time" in dref_for_measure
     ):
-        dref_for_measure = dref_for_measure.sel(
-            {"time": slice(str(period[0]), str(period[1]))}
-        )
+        dref_for_measure = dref_for_measure.sel({"time": slice(period[0], period[1])})
 
     if unstack:
         ds = unstack_fill_nan(ds)
@@ -212,7 +211,7 @@ def properties_and_measures(
         vname = out.name
         prop[vname] = out
 
-        if period:
+        if period is not None:
             prop[vname].attrs["period"] = f"{period[0]}-{period[1]}"
 
         # calculate the measure if a reference dataset is given for the measure
@@ -313,6 +312,7 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
     )
     ds_hmap.attrs["cat:processing_level"] = to_level
     ds_hmap.attrs.pop("cat:variable", None)
+    ds_hmap["heatmap"].attrs["long_name"] = "Ranking of measure performance"
 
     return ds_hmap
 
@@ -368,6 +368,9 @@ def measures_improvement(
 
     ds_better = ds_better.to_dataset(name="improved_grid_points")
 
+    ds_better["improved_grid_points"].attrs[
+        "long_name"
+    ] = "Fraction of improved grid cells"
     ds_better.attrs = ds2.attrs
     ds_better.attrs["cat:processing_level"] = to_level
     ds_better.attrs.pop("cat:variable", None)
