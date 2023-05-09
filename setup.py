@@ -45,7 +45,7 @@ requirements = [
     "pyyaml",
     "rechunker",
     "shapely",
-    "xarray<2023.3.0",  # See https://github.com/Ouranosinc/xscen/pull/173
+    "xarray",
     "xclim>=0.37",
     "xesmf>=0.7",  # This is not available on pypi.
     "zarr",
