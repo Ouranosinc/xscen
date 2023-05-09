@@ -213,7 +213,7 @@ def compute_deltas(
     """
     if isinstance(reference_horizon, str):
         # Separate the reference from the other horizons
-        if xc.core.utils.uses_dask("horizon"):
+        if xc.core.utils.uses_dask(ds["horizon"]):
             ds["horizon"].load()
         ref = ds.where(ds.horizon == reference_horizon, drop=True)
     elif isinstance(reference_horizon, xr.Dataset):
