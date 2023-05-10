@@ -2,7 +2,31 @@
 History
 =======
 
-v0.6.0 (unreleased)
+v0.7.0 (unreleased)
+-------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+
+Announcements
+^^^^^^^^^^^^^
+* Dropped support for Python 3.8. (:pull:`199`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* N/A
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* N/A
+
+Bug fixes
+^^^^^^^^^
+* N/A
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Removed the pin on xarray's version. (:issue:`175`, :pull:`199`).
+
+v0.6.0 (2023-05-04)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 

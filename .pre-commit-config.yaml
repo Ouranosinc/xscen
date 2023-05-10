@@ -3,10 +3,10 @@ default_language_version:
 
 repos:
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.2
+    rev: v3.4.0
     hooks:
     -   id: pyupgrade
-        args: [--py38-plus]
+        args: [--py39-plus]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
@@ -57,9 +57,9 @@ repos:
     rev: 1.7.0
     hooks:
       - id: nbqa-pyupgrade
-        args: [ '--py38-plus' ]
+        args: [ '--py39-plus' ]
       - id: nbqa-black
-        args: [ '--target-version=py38' ]
+        args: [ '--target-version=py39' ]
       - id: nbqa-isort
         args: [ "--settings-file=setup.cfg" ]
   - repo: https://github.com/kynan/nbstripout

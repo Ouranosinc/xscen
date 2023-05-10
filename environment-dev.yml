@@ -2,7 +2,7 @@ name: xscen-dev
 channels:
   - conda-forge
 dependencies:
-  - python >=3.8
+  - python >=3.9
   # Don't forget to sync the changes here with environment.yml!
   # Some pins here are meant to accelerate conda and might not be related to real needs
   # Main packages
@@ -25,7 +25,7 @@ dependencies:
   - pyyaml
   - rechunker
   - shapely
-  - xarray <2023.3.0  # See https://github.com/Ouranosinc/xscen/pull/173
+  - xarray
   - xclim >=0.43  # Harder requirement because of xclim.testing.helpers.test_timeseries introduced in 0.43
   - xesmf >=0.7
   - zarr

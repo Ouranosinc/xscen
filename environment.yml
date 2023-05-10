@@ -2,7 +2,7 @@ name: xscen
 channels:
   - conda-forge
 dependencies:
-  - python >=3.8
+  - python >=3.9
   # Don't forget to sync the changes here with environment-dev.yml!
   # Main packages
   - cartopy
@@ -24,7 +24,7 @@ dependencies:
   - pyyaml
   - rechunker
   - shapely
-  - xarray <2023.3.0  # See https://github.com/Ouranosinc/xscen/pull/173
+  - xarray
   - xclim >=0.37
   - xesmf >=0.7
   - zarr

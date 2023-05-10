@@ -7,11 +7,12 @@ import os
 import re
 import subprocess
 import warnings
+from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from datetime import datetime
 from glob import glob
 from pathlib import Path, PosixPath
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import cftime
 import dask
@@ -223,11 +224,11 @@ class DataCatalog(intake_esm.esm_datastore):
         # Create the intake catalog
         return cls({"esmcat": esmdata, "df": df}, **intake_kwargs)
 
-    def __dir__(self) -> List[str]:  # noqa: D105
+    def __dir__(self) -> list[str]:  # noqa: D105
         rv = ["iter_unique", "drop_duplicates", "check_valid"]
         return super().__dir__() + rv
 
-    def _unique(self, columns) -> Dict:
+    def _unique(self, columns) -> dict:
         def _find_unique(series):
             values = series.dropna()
             if series.name in self.esmcat.columns_with_iterables:
@@ -283,7 +284,7 @@ class DataCatalog(intake_esm.esm_datastore):
             )
         return cat
 
-    def drop_duplicates(self, columns: Optional[List[str]] = None):  # noqa: D102
+    def drop_duplicates(self, columns: Optional[list[str]] = None):  # noqa: D102
         # In case variables are being added in an existing Zarr, append them
         if columns is None:
             columns = ["id", "path"]
@@ -364,8 +365,8 @@ class DataCatalog(intake_esm.esm_datastore):
 
     def to_dataset(
         self,
-        concat_on: Optional[Union[List[str], str]] = None,
-        create_ensemble_on: Optional[Union[List[str], str]] = None,
+        concat_on: Optional[Union[list[str], str]] = None,
+        create_ensemble_on: Optional[Union[list[str], str]] = None,
         calendar: Optional[str] = "standard",
         **kwargs,
     ) -> xr.Dataset:
@@ -1013,8 +1014,8 @@ def parse_directory(
     read_from_file: Union[
         bool,
         Sequence[str],
-        Tuple[Sequence[str], Sequence[str]],
-        Sequence[Tuple[Sequence[str], Sequence[str]]],
+        tuple[Sequence[str], Sequence[str]],
+        Sequence[tuple[Sequence[str], Sequence[str]]],
     ] = False,
     homogenous_info: dict = None,
     cvs: Union[str, PosixPath, dict] = None,
@@ -1481,7 +1482,7 @@ def date_parser(
     return date
 
 
-def _build_id(element: pd.Series, columns: List[str]):
+def _build_id(element: pd.Series, columns: list[str]):
     """Build an ID from a catalog's row and a list of columns."""
     return "_".join(map(str, filter(pd.notna, element[columns].values)))
 

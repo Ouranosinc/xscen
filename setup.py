@@ -45,7 +45,7 @@ requirements = [
     "pyyaml",
     "rechunker",
     "shapely",
-    "xarray<2023.3.0",  # See https://github.com/Ouranosinc/xscen/pull/173
+    "xarray",
     "xclim>=0.37",
     "xesmf>=0.7",  # This is not available on pypi.
     "zarr",
@@ -54,7 +54,7 @@ requirements = [
 setup(
     author="Gabriel Rondeau-Genesse",
     author_email="rondeau-genesse.gabriel@ouranos.ca",
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -62,7 +62,6 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Topic :: Scientific/Engineering :: Atmospheric Science",
@@ -83,6 +82,6 @@ setup(
     test_suite="tests",
     tests_require=["pytest", "pytest-cov"],
     url="https://github.com/Ouranosinc/xscen",
-    version="0.5.20-beta",
+    version="0.6.2-beta",
     zip_safe=False,
 )

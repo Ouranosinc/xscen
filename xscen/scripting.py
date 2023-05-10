@@ -39,7 +39,7 @@ def send_mail(
     server: str = "127.0.0.1",
     port: int = 25,
     attachments: Optional[
-        List[Union[Tuple[str, Union[Figure, os.PathLike]], Figure, os.PathLike]]
+        list[Union[tuple[str, Union[Figure, os.PathLike]], Figure, os.PathLike]]
     ] = None,
 ) -> None:
     """Send email.

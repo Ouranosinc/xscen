@@ -1,18 +1,20 @@
 {% set name = "xscen" %}
-{% set version = "0.5.0" %}
 
 package:
   name: {{ name|lower }}
-  version: {{ version }}
+  version: {{ environ['GIT_DESCRIBE_TAG'] }}
 
 source:
-  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/xscen-{{ version }}.tar.gz
-  sha256: f31df2cb52e87dd82d2fc7d340788e4edf14abccf04685a9249a2067594b721a
+  path: ../../
+
+channels:
+  - conda-forge
+  - defaults
 
 build:
   noarch: python
   script: {{ PYTHON }} -m pip install . -vv
-  number: 1
+  number: 0
 
 requirements:
   host:
@@ -23,7 +25,7 @@ requirements:
     - cartopy
     - cftime
     - cf_xarray >=0.7.6
-    - clisops
+    - clisops >=0.9.5
     - dask-core
     - flox
     - fsspec
@@ -40,7 +42,7 @@ requirements:
     - pyyaml
     - rechunker
     - shapely
-    - xarray
+    - xarray <2023.3.0
     - xclim >=0.37
     - xesmf >=0.7
     - zarr
