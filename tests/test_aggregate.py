@@ -149,16 +149,3 @@ class TestClimatologicalMean:
         out = xs.climatological_mean(ds)
 
         assert isinstance(out.time.values[0], cftime.DatetimeNoLeap)
-
-    # def test_monthly_all_default(self, tas_series):
-    #     ds = tas_series(
-    #         np.tile(np.arange(1, 13), 3), start="2001-01-01", freq="MS", as_dataset=True
-    #     )
-    #     out = xs.climatological_mean(ds)
-    #     assert out.attrs["cat:processing_level"] == "climatology"
-    #     np.testing.assert_array_equal(out.tas, np.arange(1, 13))
-
-    # test various options
-    # test not continuous
-    # test calendars
-    # test multiple periods
