@@ -222,11 +222,6 @@ def compute_deltas(
     xr.Dataset
         Returns a Dataset with the requested deltas.
     """
-    if xr.infer_freq(ds.time) == "D":
-        raise NotImplementedError(
-            "xs.climatological_mean does not currently support daily data."
-        )
-
     if isinstance(reference_horizon, str):
         # Separate the reference from the other horizons
         if xc.core.utils.uses_dask(ds["horizon"]):
@@ -249,6 +244,11 @@ def compute_deltas(
         )
 
     if "time" in ds:
+        if xr.infer_freq(ds.time) == "D":
+            raise NotImplementedError(
+                "xs.climatological_mean does not currently support daily data."
+            )
+
         # Remove references to 'year' in REF
         ind = pd.MultiIndex.from_arrays(
             [ref.time.dt.month.values, ref.time.dt.day.values], names=["month", "day"]
