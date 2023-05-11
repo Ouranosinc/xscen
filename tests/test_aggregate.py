@@ -2,7 +2,7 @@ import cftime
 import numpy as np
 import pytest
 import xarray as xr
-import xclim
+from xclim.core.calendar import convert_calendar
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
@@ -137,15 +137,7 @@ class TestClimatologicalMean:
             freq="AS-JAN",
             as_dataset=True,
         )
-        time_coord = [
-            xclim.core.calendar.datetime_classes["noleap"](y, m, d)
-            for y, m, d in zip(
-                ds.time.dt.year.values,
-                ds.time.dt.month.values,
-                ds.time.dt.day.values,
-            )
-        ]
-        ds["time"] = time_coord
+        ds = convert_calendar(ds, "noleap")
         out = xs.climatological_mean(ds)
 
         assert isinstance(out.time.values[0], cftime.DatetimeNoLeap)
