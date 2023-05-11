@@ -139,14 +139,16 @@ class TestClimatologicalMean:
         )
 
         assert isinstance(
-            xs.climatological_mean(convert_calendar(ds, "standard")),
+            xs.climatological_mean(convert_calendar(ds, "standard")).time.values[0],
             cftime.Datetime360Day,
         )
         assert isinstance(
-            xs.climatological_mean(convert_calendar(ds, "noleap")),
+            xs.climatological_mean(convert_calendar(ds, "noleap")).time.values[0],
             cftime.DatetimeNoLeap,
         )
         assert isinstance(
-            xs.climatological_mean(convert_calendar(ds, "360_day", align_on="random")),
+            xs.climatological_mean(
+                convert_calendar(ds, "360_day", align_on="random")
+            ).time.values[0],
             cftime.Datetime360Day,
         )
