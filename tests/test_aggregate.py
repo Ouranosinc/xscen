@@ -139,6 +139,10 @@ class TestClimatologicalMean:
         )
 
         assert isinstance(
+            xs.climatological_mean(convert_calendar(ds, "standard")),
+            cftime.Datetime360Day,
+        )
+        assert isinstance(
             xs.climatological_mean(convert_calendar(ds, "noleap")),
             cftime.DatetimeNoLeap,
         )
