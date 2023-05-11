@@ -137,7 +137,12 @@ class TestClimatologicalMean:
             freq="AS-JAN",
             as_dataset=True,
         )
-        ds = convert_calendar(ds, "noleap")
-        out = xs.climatological_mean(ds)
 
-        assert isinstance(out.time.values[0], cftime.DatetimeNoLeap)
+        assert isinstance(
+            xs.climatological_mean(convert_calendar(ds, "noleap")),
+            cftime.DatetimeNoLeap,
+        )
+        assert isinstance(
+            xs.climatological_mean(convert_calendar(ds, "360_day", align_on="random")),
+            cftime.Datetime360Day,
+        )
