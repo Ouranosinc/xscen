@@ -4,7 +4,7 @@ History
 
 v0.7.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user: `juliettelavoie`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -12,7 +12,7 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* N/A
+* New conversions: ``tasmin_from_dtr_and_tas`` and ``tasmax_from_dtr_and_tas``. (:pull:`200`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^

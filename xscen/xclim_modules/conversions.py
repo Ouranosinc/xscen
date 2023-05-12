@@ -30,7 +30,7 @@ def precipitation(prsn: xr.DataArray, prlp: xr.DataArray) -> xr.DataArray:
 
 
 @declare_units(dtr="[temperature]", tasmax="[temperature]")
-def tasmin_from_dtr(dtr: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
+def tasmin_from_dtr_and_tasmax(dtr: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
     """Tasmin computed from DTR and tasmax.
 
     Tasmin as dtr subtracted from tasmax.
@@ -54,7 +54,7 @@ def tasmin_from_dtr(dtr: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
 
 
 @declare_units(dtr="[temperature]", tasmin="[temperature]")
-def tasmax_from_dtr(dtr: xr.DataArray, tasmin: xr.DataArray) -> xr.DataArray:
+def tasmax_from_dtr_and_tasmin(dtr: xr.DataArray, tasmin: xr.DataArray) -> xr.DataArray:
     """Tasmax computed from DTR and tasmin.
 
     Tasmax as dtr added to tasmin.
@@ -101,3 +101,51 @@ def dtr(tasmin: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
     dtr = tasmax - tasmin
     dtr.attrs["units"] = "K"
     return dtr
+
+
+@declare_units(dtr="[temperature]", tas="[temperature]")
+def tasmax_from_dtr_and_tas(dtr: xr.DataArray, tas: xr.DataArray) -> xr.DataArray:
+    """Tasmax computed from DTR and tas.
+
+    Tasmax as half dtr added to tas.
+
+    Parameters
+    ----------
+    dtr: xr.DataArray
+      Daily temperature range
+    tas: xr.DataArray
+      Daily mean temperature.
+
+    Returns
+    -------
+    xr.DataArray, [same as tas]
+      Daily maximum temperature
+    """
+    dtr = convert_units_to(dtr, tas)
+    tasmax = tas + (0.5 * dtr)
+    tasmax.attrs["units"] = tas.units
+    return tasmax
+
+
+@declare_units(dtr="[temperature]", tas="[temperature]")
+def tasmin_from_dtr_and_tas(dtr: xr.DataArray, tas: xr.DataArray) -> xr.DataArray:
+    """Tasmin computed from DTR and tas.
+
+    Tasmin as half dtr removed from tas.
+
+    Parameters
+    ----------
+    dtr: xr.DataArray
+      Daily temperature range
+    tas: xr.DataArray
+      Daily mean temperature.
+
+    Returns
+    -------
+    xr.DataArray, [same as tas]
+      Daily minimum temperature
+    """
+    dtr = convert_units_to(dtr, tas)
+    tasmin = tas - (0.5 * dtr)
+    tasmin.attrs["units"] = tas.units
+    return tasmin

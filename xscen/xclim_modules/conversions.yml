@@ -71,21 +71,39 @@ indicators:
       description: Daily temperature range.
       cell_methods: "time: range within days"
       var_name: dtr
-  tasmin_from_dtr:
+  tasmin_from_dtr_and_tasmax:
     src_freq: D
-    compute: tasmin_from_dtr
+    compute: tasmin_from_dtr_and_tasmax
     cf_attrs:
       units: K
       standard_name: air_temperature
       description: Daily minimal temperature as computed from tasmax and dtr
       cell_methods: "time: minimum within days"
       var_name: tasmin
-  tasmax_from_dtr:
+  tasmax_from_dtr_and_tasmin:
     src_freq: D
-    compute: tasmax_from_dtr
+    compute: tasmax_from_dtr_and_tasmin
     cf_attrs:
       units: K
       standard_name: air_temperature
       description: Daily maximal temperature as computed from tasmin and dtr
+      cell_methods: "time: maximum within days"
+      var_name: tasmax
+  tasmin_from_dtr_and_tas:
+    src_freq: D
+    compute: tasmin_from_dtr_and_tas
+    cf_attrs:
+      units: K
+      standard_name: air_temperature
+      description: Daily minimal temperature as computed from tas and dtr
+      cell_methods: "time: minimum within days"
+      var_name: tasmin
+  tasmax_from_dtr_and_tas:
+    src_freq: D
+    compute: tasmax_from_dtr_and_tas
+    cf_attrs:
+      units: K
+      standard_name: air_temperature
+      description: Daily maximal temperature as computed from tas and dtr
       cell_methods: "time: maximum within days"
       var_name: tasmax
