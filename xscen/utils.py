@@ -868,8 +868,6 @@ def unstack_dates(
         calendar=calendar,
         use_cftime=use_cftime,
     )
-    new_coords = dict(ds.coords)
-    new_coords.update({"time": new_time, new_dim: seas_list})
 
     def reshape_da(da):
         if "time" not in da.dims:
