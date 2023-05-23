@@ -16,13 +16,8 @@ import xclim as xc
 from intake_esm.derived import DerivedVariableRegistry
 
 from .catalog import DataCatalog  # noqa
-from .catalog import (
-    ID_COLUMNS,
-    concat_data_catalogs,
-    generate_id,
-    parse_from_ds,
-    subset_file_coverage,
-)
+from .catalog import ID_COLUMNS, concat_data_catalogs, generate_id, subset_file_coverage
+from .catutils import parse_from_ds
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
 from .spatial import subset

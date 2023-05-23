@@ -10,7 +10,7 @@ from xclim import sdba
 from xclim.core.calendar import convert_calendar, get_calendar
 from xclim.sdba import construct_moving_yearly_window, unpack_moving_yearly_window
 
-from .catalog import parse_from_ds
+from .catutils import parse_from_ds
 from .config import parse_config
 from .utils import minimum_calendar, standardize_periods
 

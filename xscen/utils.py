@@ -4,12 +4,14 @@ import logging
 import os
 import re
 from collections.abc import Sequence
+from datetime import datetime
 from io import StringIO
 from itertools import chain
 from pathlib import Path
 from types import ModuleType
-from typing import Dict, Optional, TextIO, Union
+from typing import Optional, TextIO, Union
 
+import cftime
 import flox.xarray
 import numpy as np
 import pandas as pd
@@ -19,13 +21,14 @@ from xclim.core.calendar import convert_calendar, get_calendar, parse_offset
 from xclim.core.utils import uses_dask
 from xclim.testing.utils import show_versions as _show_versions
 
-from xscen.config import parse_config
+from .config import parse_config
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
     "change_units",
     "clean_up",
+    "date_parser",
     "get_cat_attrs",
     "maybe_unstack",
     "minimum_calendar",
@@ -37,6 +40,97 @@ __all__ = [
     "unstack_fill_nan",
     "unstack_dates",
 ]
+
+
+def date_parser(
+    date,
+    *,
+    end_of_period: bool = False,
+    out_dtype: str = "period",
+    strtime_format: str = "%Y-%m-%d",
+    freq: str = "H",
+) -> Union[str, pd.Period, pd.Timestamp]:
+    """Return a datetime from a string.
+
+    Parameters
+    ----------
+    date : str
+        Date to be converted
+    end_of_period : bool, optional
+        If True, the date will be the end of month or year depending on what's most appropriate
+    out_dtype : str, optional
+        Choices are 'period', 'datetime' or 'str'
+    strtime_format : str, optional
+        If out_dtype=='str', this sets the strftime format
+    freq : str
+        If out_dtype=='period', this sets the frequency of the period.
+
+    Returns
+    -------
+    pd.Period, pd.Timestamp, str
+        Parsed date
+    """
+    # Formats, ordered depending on string length
+    fmts = {
+        4: ["%Y"],
+        6: ["%Y%m"],
+        7: ["%Y-%m"],
+        8: ["%Y%m%d"],
+        10: ["%Y%m%d%H", "%Y-%m-%d"],
+        12: ["%Y%m%d%H%M"],
+        19: ["%Y-%m-%dT%H:%M:%S"],
+    }
+
+    def _parse_date(date, fmts):
+        for fmt in fmts:
+            try:
+                s = datetime.strptime(date, fmt)
+            except ValueError:
+                pass
+            else:
+                match = fmt
+                break
+        else:
+            raise ValueError(f"Can't parse date {date} with formats {fmts}.")
+        return s, match
+
+    fmt = None
+    if isinstance(date, str):
+        try:
+            date, fmt = _parse_date(date, fmts[len(date)])
+        except (KeyError, ValueError):
+            date = pd.NaT
+    elif isinstance(date, cftime.datetime):
+        for n in range(3):
+            try:
+                date = datetime.fromisoformat((date - pd.Timedelta(n)).isoformat())
+            except ValueError:  # We are NOT catching OutOfBoundsDatetime.
+                pass
+            else:
+                break
+        else:
+            raise ValueError(
+                "Unable to parse cftime date {date}, even when moving back 2 days."
+            )
+    elif isinstance(date, pd.Timestamp):
+        date = date.to_pydatetime()
+
+    if not isinstance(date, pd.Period):
+        date = pd.Period(date, freq=freq)
+
+    if end_of_period and fmt:
+        if "m" not in fmt:
+            date = date.asfreq("A-DEC").asfreq(freq)
+        elif "d" not in fmt:
+            date = date.asfreq("M").asfreq(freq)
+        # TODO: Implement subdaily ?
+
+    if out_dtype == "str":
+        return date.strftime(strtime_format)
+
+    if out_dtype == "datetime":
+        return date.to_timestamp()
+    return date
 
 
 def minimum_calendar(*calendars) -> str:
