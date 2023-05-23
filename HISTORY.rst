@@ -20,7 +20,7 @@ Breaking changes
 
 Bug fixes
 ^^^^^^^^^
-* N/A
+* Fix bug in ``unstack_dates`` with seasonal climatological mean. (:issue:`202`, :pull:`202`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
