@@ -680,7 +680,7 @@ def produce_horizon(
         )
     if period is not None:
         period = standardize_periods(period, multiple=False)
-        ds = ds.sel(time=slice(period[0], period[1])).load()
+        ds = ds.sel(time=slice(period[0], period[1]))  # .load()
         window = int(period[1]) - int(period[0]) + 1
         if to_level:
             to_level = to_level.format(period0=period[0], period1=period[1])
