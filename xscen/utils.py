@@ -892,9 +892,7 @@ def unstack_dates(
 
     # put horizon in the right time dimension
     if "horizon" in new_coords:
-        new_coords["horizon"] = (
-            reshape_da(new_coords["horizon"]).isel({new_dim: 0}).squeeze()
-        )
+        new_coords["horizon"] = reshape_da(new_coords["horizon"])
 
     if isinstance(ds, xr.Dataset):
         dso = dsp.map(reshape_da, keep_attrs=True)
