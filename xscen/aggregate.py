@@ -87,7 +87,6 @@ def climatological_mean(
         names=["year", "month", "day"],
     )
     ds_unstack = ds.assign(time=ind).unstack("time")
-
     # Rolling will ignore jumps in time, so we want to raise an exception beforehand
     if (not all(ds_unstack.year.diff(dim="year", n=1) == 1)) & (periods is None):
         raise ValueError("Data is not continuous. Use the 'periods' argument.")
@@ -150,8 +149,8 @@ def climatological_mean(
             ]
         else:
             raise ValueError("The type of 'time' could not be understood.")
+        ds_rolling = ds_rolling.drop_vars({"month", "year", "time", "day"})
         ds_rolling = ds_rolling.assign_coords(time=time_coord).transpose("time", ...)
-
         concats.extend([ds_rolling])
     ds_rolling = xr.concat(concats, dim="time", data_vars="minimal")
 
@@ -680,7 +679,7 @@ def produce_horizon(
         )
     if period is not None:
         period = standardize_periods(period, multiple=False)
-        ds = ds.sel(time=slice(period[0], period[1]))  # .load()
+        ds = ds.sel(time=slice(period[0], period[1]))
         window = int(period[1]) - int(period[0]) + 1
         if to_level:
             to_level = to_level.format(period0=period[0], period1=period[1])
