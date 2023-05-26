@@ -56,9 +56,7 @@ class TestClimatologicalMean:
             freq=xrfreq,
             as_dataset=True,
         )
-        out = xs.climatological_mean(
-            ds, window=15, interval=5, to_level="for_testing"
-        )
+        out = xs.climatological_mean(ds, window=15, interval=5, to_level="for_testing")
 
         np.testing.assert_array_equal(
             out.tas,
@@ -74,7 +72,9 @@ class TestClimatologicalMean:
             "15-year rolling average (non-centered) with a minimum of 15 years of data"
             in out.tas.attrs["history"]
         )
-        assert {"2001-2015", "2006-2020", "2011-2025", "2016-2030"}.issubset(out.horizon.values)
+        assert {"2001-2015", "2006-2020", "2011-2025", "2016-2030"}.issubset(
+            out.horizon.values
+        )
         assert out.attrs["cat:processing_level"] == "for_testing"
 
     def test_minperiods(self):
@@ -130,5 +130,5 @@ class TestClimatologicalMean:
             as_dataset=True,
         )
 
-        out = xs.climatological_mean(ds.convert_calendar(cal, align_on='date'))
+        out = xs.climatological_mean(ds.convert_calendar(cal, align_on="date"))
         assert out.time.dt.calendar == cal
