@@ -14,7 +14,10 @@ from pathlib import Path
 from traceback import format_exception
 from typing import List, Optional, Tuple, Union
 
-from matplotlib.figure import Figure
+try:
+    from matplotlib.figure import Figure
+except ImportError:
+    Figure = None
 
 from .config import parse_config
 
@@ -81,7 +84,7 @@ def send_mail(
         fname = None
         if isinstance(att, tuple):
             fname, att = att
-        if isinstance(att, Figure):
+        if Figure is not None and isinstance(att, Figure):
             data = BytesIO()
             att.savefig(data, format="png")
             data.seek(0)
