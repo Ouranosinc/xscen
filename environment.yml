@@ -20,6 +20,7 @@ dependencies:
   - netCDF4
   - numpy
   - pandas !=1.5.3
+  - parse
   - pygeos
   - pyyaml
   - rechunker

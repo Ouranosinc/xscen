@@ -3,6 +3,7 @@ import json
 import logging
 import operator as op
 import os
+import shutil as sh
 import string
 import warnings
 from collections.abc import Mapping, Sequence
@@ -25,7 +26,7 @@ from pandas import isna
 
 from .catalog import COLUMNS, DataCatalog, generate_id
 from .config import parse_config
-from .io import get_engine
+from .io import copy_dataset, get_engine
 from .utils import CV, date_parser, ensure_correct_time, standardize_periods  # noqa
 
 logger = logging.getLogger(__name__)
@@ -94,7 +95,6 @@ def _find_assets(
     """
     lengths = {patt.count(os.path.sep) for patt in patterns}
     exts = {os.path.splitext(patt)[-1] for patt in patterns}
-
     for root in root_paths:
         for top, alldirs, files in os.walk(root):
             # Remove zarr subdirectories from next iteration
@@ -103,7 +103,7 @@ def _find_assets(
                 if dr.endswith(".zarr"):
                     alldirs.remove(dr)
 
-            if (os.path.relpath(top, root).count(os.path.sep) + 2) not in lengths:
+            if (os.path.relpath(top, root).count(os.path.sep) + 1) not in lengths:
                 continue
 
             if dirglob is not None and not fnmatch(top, dirglob):
@@ -136,11 +136,11 @@ def _compile_pattern(pattern: str) -> parse.Parser:
     for pre, field, fmt, _ in string.Formatter().parse(pattern):
         if not fmt:
             fmt = "no_"
-        if field.startswith("?"):
-            field = "_" + field[1:]
-        if field == "DATES":
-            fmt = "datebounds"
         if field:
+            if field.startswith("?"):
+                field = "_" + field[1:]
+            if field == "DATES":
+                fmt = "datebounds"
             parts.extend([pre, "{", field, ":", fmt, "}"])
         else:
             parts.append(pre)
@@ -212,8 +212,8 @@ def _name_parser(
             d.update(fromfile)
 
     # files with a single year/month
-    if "dates" in d:
-        d["date_start"], d["date_end"] = d.pop("dates")
+    if "DATES" in d:
+        d["date_start"], d["date_end"] = d.pop("DATES")
 
     if "date_end" not in d and "date_start" in d:
         d["date_end"] = d["date_start"]
@@ -312,12 +312,12 @@ def parse_directory(
     """
     homogenous_info = homogenous_info or {}
     xr_open_kwargs = xr_open_kwargs or {}
-    patterns = [_compile_pattern(patt) for patt in patterns]
+    comp_patterns = [_compile_pattern(patt) for patt in patterns]
     if only_official_columns:
         columns = set(COLUMNS) - homogenous_info.keys()
         pattern_fields = {
             f
-            for f in set.union(*(patt.named_fields for patt in patterns))
+            for f in set.union(*(set(patt.named_fields) for patt in comp_patterns))
             if not f.startswith("_")
         } - {"DATES"}
         unrecognized = pattern_fields - set(COLUMNS)
@@ -353,7 +353,7 @@ def parse_directory(
         d = _name_parser(
             path,
             root,
-            patterns,
+            comp_patterns,
             read_from_file=read_from_file if not read_file_groups else None,
             attrs_map=attrs_map,
             xr_open_kwargs=xr_open_kwargs,
@@ -743,8 +743,13 @@ def restructure_files(
     folder: Union[str, os.PathLike] = ".",
     schema: Optional[Union[str, os.PathLike, dict]] = None,
     category: str = "raw",
-) -> Path:
-    """Build filepaths based on a schema.
+    copy: bool = True,
+    overwrite: bool = False,
+) -> Union[DataCatalog, pd.DataFrame]:
+    """Restructure datasets based on a schema.
+
+    If the "variable" field appears in the path, multi-variable datasets are split into single
+    variable datasets.
 
     Parameters
     ----------
@@ -754,16 +759,29 @@ def restructure_files(
         Parent folder on which to extend the filetree structure.
     schema : str or os.PathLike, optional
         Path to YAML schematic of database structure. If None, will use a basic schema.
+        See the comments in the `xscen/data/base_schema.yml` file for more details on its construction.
     category : {raw, derived}
         Category of the path. Not to be confused with "processing_level" which is more granular.
+    copy: bool
+        Whether to copy (True, default) or move (False) files into the new location.
+    overwrite: bool
+        If True, overwrite existing files. If False (default), an error is raised instead.
+
+    Notes
+    -----
+    If `copy` is True and the function fails during the copy, the destination is erased
+    before reraising the exception. The folder hierarchy will not be erased, only the final dataset (zarr or nc).
+    If `copy` is False, both source and destination could end up corrupted on an I/O failure.
 
     Returns
     -------
-    pd.Series
-      New paths.
+    same as `catalog`
+        A copy of the initial catalog with the new paths. Index will be inconsistent if multi-variables dataset have been splitted.
     """
     if isinstance(catalog, esm_datastore):
-        catalog = catalog.df
+        df = catalog.df
+    else:
+        df = catalog
 
     if not isinstance(schema, dict):
         if Path(schema).is_file():
@@ -781,8 +799,20 @@ def restructure_files(
 
     structures = schema[category]
 
-    def _parse_row(row):
-        tree, filename = parse_schema(row, structures)
-        return Path(folder).joinpath("/".join(tree)) / filename
+    for i, row in df.iterrows():
+        path_in = row.path
+        if isinstance(row.variable, (tuple, list)):
+            paths = {}
+            for variable in row.variable:
+                facets = dict(**row) | {"variable": variable}
+                p, f = parse_schema(facets, structures)
+                paths[variable] = Path(folder).joinpath("/".join(p)) / f
+            if len(set(paths.values())) == 1:
+                path_out = paths[variable]
+            else:
+                path_out = paths
+        else:
+            p, f = parse_schema(row, structures)
+            path_out = Path(folder).joinpath("/".join(p)) / f
 
-    return catalog.apply(_parse_row, axis=1)
+        copy_dataset(path_in, path_out)

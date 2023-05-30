@@ -4,7 +4,7 @@ History
 
 v0.7.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -12,11 +12,11 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* N/A
+* File re-structuration from catalogs with ``xscen.catutils.structure_datasets``. (:pull:`205`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* N/A
+* Folder parsing utilities (``parse_directory``) moved to ``xscen.catutils``. Signature changed : ``globpattern`` removed, ``dirglob`` added, new ``patterns`` specifications. (:pull:`205`).
 
 Bug fixes
 ^^^^^^^^^
@@ -25,6 +25,7 @@ Bug fixes
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Removed the pin on xarray's version. (:issue:`175`, :pull:`199`).
+* Folder parsing utilities now in pure python, platform independent. New dependency ``parse``. (:pull:`205`).
 
 v0.6.0 (2023-05-04)
 -------------------
