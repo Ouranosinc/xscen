@@ -842,7 +842,7 @@ def get_warming_level(
     ----------
     models : Union[xr.Dataset, str, list]
        Input dataset, string or list of strings indicating the models to be evaluated.
-       Strings should follow this formatting: mip-era_source_experiment_member. Regex wildcards (.*) are accepted.
+       Strings should follow this formatting: mip-era_source_experiment_member. Regex wildcards (.*) are accepted, but may lead to unexpected results.
        Datasets should include the attributes required to create such a string.
        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
     wl : float
