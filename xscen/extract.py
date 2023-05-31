@@ -834,7 +834,7 @@ def get_warming_level(
     tas_baseline_period: list = None,
     ignore_member: bool = False,
     tas_csv: str = None,
-    return_period: bool = True,
+    return_horizon: bool = True,
 ):
     """Use the IPCC Atlas method to return the window of time over which the requested level of global warming is first reached.
 
@@ -859,7 +859,7 @@ def get_warming_level(
        If None, it will default to data/IPCC_annual_global_tas.csv which was built from
        the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
        and extra data from pilot models of MRCC5 and ClimEx.
-    return_period: bool
+    return_horizon: bool
         If True, the output will be a list following the format ['start_yr', 'end_yr']
         If False, the output will be a string representing the middle of the period.
 
@@ -924,58 +924,62 @@ def get_warming_level(
                 "More than one column of the csv fits the dataset metadata. Choosing the first one."
             )
             right_column = pd.DataFrame(right_column.iloc[:, 0])
-        elif len(right_column.columns) == 0:
-            raise ValueError(
-                f"No columns fit the 'cat:' attributes of the input dataset ({model})."
+
+        if len(right_column.columns) == 0:
+            warnings.warn(
+                f"No columns fit the attributes of the input dataset ({model})."
             )
-
-        logger.info(
-            f"Computing warming level +{wl}°C for {model} from column: {right_column.columns[0]}."
-        )
-
-        # compute reference temperature for the warming
-        mean_base = right_column.loc[
-            tas_baseline_period[0] : tas_baseline_period[1]
-        ].mean()
-
-        yearly_diff = right_column - mean_base  # difference from reference
-
-        # get the start and end date of the window when the warming level is first reached
-
-        # shift(-1) is needed to reproduce IPCC results.
-        # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
-        if window % 2 == 0:  # Even window
-            rolling_diff = (
-                yearly_diff.rolling(window=window, min_periods=window, center=True)
-                .mean()
-                .shift(-1)
-            )
-        elif window % 2 == 1:  # Odd windows do not require the shift
-            rolling_diff = yearly_diff.rolling(
-                window=window, min_periods=window, center=True
-            ).mean()
+            out[model] = [None, None] if return_horizon else None
         else:
-            raise ValueError(f"window should be an integer, received {type(window)}")
-
-        yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
-        if yr is None:
-            start_yr = np.nan
-            end_yr = np.nan
-        else:
-            start_yr = int(yr - window / 2 + 1)
-            end_yr = int(yr + window / 2)
-
-        if np.isnan(start_yr):
             logger.info(
-                f"Global warming level of +{wl}C is not reached by the last year of the provided 'tas_csv' file for {model}."
+                f"Computing warming level +{wl}°C for {model} from column: {right_column.columns[0]}."
             )
-            out[model] = [None, None] if return_period else None
-        else:
-            out[model] = (
-                standardize_periods([start_yr, end_yr], multiple=False)
-                if return_period
-                else str(yr)
-            )
+
+            # compute reference temperature for the warming
+            mean_base = right_column.loc[
+                tas_baseline_period[0] : tas_baseline_period[1]
+            ].mean()
+
+            yearly_diff = right_column - mean_base  # difference from reference
+
+            # get the start and end date of the window when the warming level is first reached
+
+            # shift(-1) is needed to reproduce IPCC results.
+            # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
+            if window % 2 == 0:  # Even window
+                rolling_diff = (
+                    yearly_diff.rolling(window=window, min_periods=window, center=True)
+                    .mean()
+                    .shift(-1)
+                )
+            elif window % 2 == 1:  # Odd windows do not require the shift
+                rolling_diff = yearly_diff.rolling(
+                    window=window, min_periods=window, center=True
+                ).mean()
+            else:
+                raise ValueError(
+                    f"window should be an integer, received {type(window)}"
+                )
+
+            yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
+            if yr is None:
+                start_yr = np.nan
+                end_yr = np.nan
+            else:
+                start_yr = int(yr - window / 2 + 1)
+                end_yr = int(yr + window / 2)
+
+            if np.isnan(start_yr):
+                logger.info(
+                    f"Global warming level of +{wl}C is not reached by the last year of the provided 'tas_csv' file for {model}."
+                )
+                out[model] = [None, None] if return_horizon else None
+            else:
+                out[model] = (
+                    standardize_periods([start_yr, end_yr], multiple=False)
+                    if return_horizon
+                    else str(yr)
+                )
 
     if len(out) == 1:
         out = next(iter(out.values()))
@@ -1022,16 +1026,18 @@ def subset_warming_level(
             tas_baseline_period : list
             ignore_member : bool
             tas_csv : str
-            return_period: bool
+            return_horizon: bool
 
     Returns
     -------
     xr.Dataset
         Warming level dataset.
     """
-    start_yr, end_yr = get_warming_level(ds, wl=wl, return_period=True, **kwargs)
+    start_yr, end_yr = get_warming_level(ds, wl=wl, return_horizon=True, **kwargs)
 
-    if any(yr not in ds.time.dt.year for yr in range(int(start_yr), int(end_yr) + 1)):
+    if start_yr is None:
+        return None
+    elif any(yr not in ds.time.dt.year for yr in range(int(start_yr), int(end_yr) + 1)):
         logger.info(
             f"{ds.attrs.get('cat:id', 'The provided dataset')} does not sufficiently cover the time interval for +{wl}°C ({start_yr}, {end_yr})."
         )
