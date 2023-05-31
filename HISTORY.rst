@@ -4,7 +4,7 @@ History
 
 v0.7.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -20,11 +20,12 @@ Breaking changes
 
 Bug fixes
 ^^^^^^^^^
-* N/A
+* Added NotImplemented errors when trying to call `climatological_mean` and `compute_deltas` with daily data. (:pull:`187`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Removed the pin on xarray's version. (:issue:`175`, :pull:`199`).
+* Implemented a template to be used for unit tests. (:pull:`187`).
 
 v0.6.0 (2023-05-04)
 -------------------
