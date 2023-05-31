@@ -844,7 +844,7 @@ def get_warming_level(
        Input dataset, string or list of strings indicating the models to be evaluated.
        Strings should follow this formatting: mip-era_source_experiment_member. Regex wildcards (.*) are accepted.
        Datasets should include the attributes required to create such a string.
-
+       e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
     wl : float
        Warming level.
        e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
