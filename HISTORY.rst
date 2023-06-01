@@ -12,7 +12,7 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* N/A
+* `xscen` now tracks code coverage using `coveralls <https://coveralls.io/>`_. (:pull:`187`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -28,6 +28,7 @@ Internal changes
 * Removed the pin on xarray's version. (:issue:`175`, :pull:`199`).
 * Updated ReadTheDocs configuration to prevent ``--eager`` installation of xscen (:pull:`209`).
 * Implemented a template to be used for unit tests. (:pull:`187`).
+* Updated GitHub Actions to remove deprecation warnings. (:pull:`187`).
 
 v0.6.0 (2023-05-04)
 -------------------
