@@ -3,13 +3,15 @@ import json
 import logging
 import operator as op
 import os
-import shutil as sh
+import queue
 import string
+import threading
 import warnings
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from fnmatch import fnmatch
 from functools import partial, reduce
+from multiprocessing import Pool
 from pathlib import Path, PosixPath
 from typing import Any, Optional, Union
 from urllib.request import HTTPError, urlopen
@@ -65,62 +67,30 @@ EXTRA_PARSE_TYPES = {
 
 
 def _find_assets(
-    root_paths: list[os.PathLike],
-    patterns: list[str],
-    dirglob: Optional[str] = None,
-    check_perms: bool = False,
+    root: os.PathLike, exts: set[str], lengths: set[int], dirglob: Optional[str] = None
 ):
-    """Iterate over files in a list of directories, filtering according to basic pattern properties.
+    """Iterate over files in a directory, filtering according path depth and extensions."""
+    for top, alldirs, files in os.walk(root):
+        # Remove zarr subdirectories from next iteration
+        dirs = deepcopy(alldirs)
+        for dr in dirs:
+            if dr.endswith(".zarr"):
+                alldirs.remove(dr)
 
-    Parameters
-    ----------
-    root_paths: list of pathlike
-        Paths to walk through.
-    patterns: list of strings
-        Patterns that the files will be checked against. This function does not try to parse the names.
-        The extensions of the patterns are extracted and only paths with these are returned.
-        Also, the depths of the patterns are calculated and only paths of this depth under the root are returned.
-    dirglob: str
-        A glob pattern. If given, only parent folders matching this pattern are walked through.
-        This pattern can not include the asset's basename.
-    check_perms: bool
-        If True, only paths with reading permissions for the current user are returned.
+        if (os.path.relpath(top, root).count(os.path.sep) + 1) not in lengths:
+            continue
 
-    Yields
-    ------
-    root : str
-        The root folder being walked through.
-    path : str
-        A path matching a possible pattern depth and extension, candidate to parsing.
-    """
-    lengths = {patt.count(os.path.sep) for patt in patterns}
-    exts = {os.path.splitext(patt)[-1] for patt in patterns}
-    for root in root_paths:
-        for top, alldirs, files in os.walk(root):
-            # Remove zarr subdirectories from next iteration
-            dirs = deepcopy(alldirs)
-            for dr in dirs:
-                if dr.endswith(".zarr"):
-                    alldirs.remove(dr)
+        if dirglob is not None and not fnmatch(top, dirglob):
+            continue
 
-            if (os.path.relpath(top, root).count(os.path.sep) + 1) not in lengths:
-                continue
-
-            if dirglob is not None and not fnmatch(top, dirglob):
-                continue
-
-            if "zarr" in exts:
-                for dr in deepcopy(dirs):
-                    if os.path.splitext(dr)[-1] == ".zarr" and (
-                        not check_perms or os.access(os.path.join(top, dr), os.R_OK)
-                    ):
-                        yield root, os.path.join(top, dr)
-            else:
-                for file in files:
-                    if os.path.splitext(file)[-1] in exts and (
-                        not check_perms or os.access(os.path.join(top, file), os.R_OK)
-                    ):
-                        yield root, os.path.join(top, file)
+        if "zarr" in exts:
+            for dr in deepcopy(dirs):
+                if os.path.splitext(dr)[-1] == ".zarr":
+                    yield os.path.join(top, dr)
+        else:
+            for file in files:
+                if os.path.splitext(file)[-1] in exts:
+                    yield os.path.join(top, file)
 
 
 def _compile_pattern(pattern: str) -> parse.Parser:
@@ -196,20 +166,16 @@ def _name_parser(
             d = res.named
             break
     else:
-        return {"path": None}
+        return None
 
     d["path"] = abs_path
     d["format"] = path.suffix[1:]
 
     if read_from_file:
-        try:
-            fromfile = parse_from_ds(
-                abs_path, names=read_from_file, attrs_map=attrs_map, **xr_open_kwargs
-            )
-        except Exception:
-            pass
-        else:
-            d.update(fromfile)
+        fromfile = parse_from_ds(
+            abs_path, names=read_from_file, attrs_map=attrs_map, **xr_open_kwargs
+        )
+        d.update(fromfile)
 
     # files with a single year/month
     if "DATES" in d:
@@ -225,6 +191,104 @@ def _name_parser(
         for k, v in d.items()
         if not k.startswith("_")
     }
+
+
+def _parse_dir(
+    root: os.PathLike,
+    patterns: list[str],
+    dirglob: Optional[str] = None,
+    check_perms: bool = True,
+    read_from_file: Optional[Union[list[str], dict]] = None,
+    attrs_map: Optional[dict] = None,
+    xr_open_kwargs: Optional[dict] = None,
+    progress: bool = False,
+):
+    """Iterate and parses files in a directory, filtering according to basic pattern properties and optional checks.
+
+    Parameters
+    ----------
+    root: Pathlike
+        Path to walk through.
+    patterns: list of strings or compiled parsers
+        Patterns that the files will be checked against.
+        The extensions of the patterns are extracted and only paths with these are returned.
+        Also, the depths of the patterns are calculated and only paths of this depth under the root are returned.
+    dirglob: str
+        A glob pattern. If given, only parent folders matching this pattern are walked through.
+        This pattern can not include the asset's basename.
+    check_perms: bool
+        If True, only paths with reading permissions for the current user are returned.
+    read_from_file : list of string or dict, optional
+        If not None, passed directly to :py:func:`parse_from_ds` as `names`.
+        If None (default), only the path is parsed, the file is not opened.
+    attrs_map : dict, optional
+        If `read_from_file` is not None, passed directly to :py:func:`parse_from_ds`.
+    xr_open_kwargs : dict, optional
+        If `read_from_file` is not None, passed directly to :py:func:`parse_from_ds`.
+    progress: bool
+        If True, the number of found files is printed to stdout.
+
+    Return
+    ------
+    List of dictionaries
+        Metadata parsed from each found asset.
+    """
+    lengths = {patt.count(os.path.sep) for patt in patterns}
+    exts = {os.path.splitext(patt)[-1] for patt in patterns}
+    comp_patterns = list(map(_compile_pattern, patterns))
+
+    q_found = queue.Queue()
+    q_checked = queue.Queue()
+    parsed = []
+
+    def check_worker():
+        # Worker that processes the checks.
+        while True:
+            path = q_found.get()
+            valid = True
+            if check_perms:
+                valid = valid and os.access(path, os.R_OK)
+            if valid:
+                q_checked.put(path)
+            q_found.task_done()
+
+    def parse_worker():
+        # Worker that parses the paths
+        while True:
+            path = q_checked.get()
+            try:
+                d = _name_parser(
+                    path,
+                    root,
+                    comp_patterns,
+                    read_from_file=read_from_file,
+                    attrs_map=attrs_map,
+                    xr_open_kwargs=xr_open_kwargs,
+                )
+            except Exception as err:
+                logger.error(f"Parsing file {path} failed with {err}.")
+            else:
+                if d is not None:
+                    parsed.append(d)
+                    # Print number of files but on round numbers to limit the calls to stdout for large collections
+                    if progress and all(
+                        [(progress < N or (progress % N == 0)) for N in [10, 100, 1000]]
+                    ):
+                        print(f"Found {len(parsed)} files", end="\r")
+            q_checked.task_done()
+
+    CW = threading.Thread(target=check_worker, daemon=True)
+    CW.start()
+
+    PW = threading.Thread(target=parse_worker, daemon=True)
+    PW.start()
+
+    for path in _find_assets(root, exts, lengths, dirglob):
+        q_found.put(path)
+
+    q_found.join()
+    q_checked.join()
+    return parsed
 
 
 @parse_config
@@ -244,6 +308,8 @@ def parse_directory(
     dirglob: Optional[str] = None,
     xr_open_kwargs: Mapping[str, Any] = None,
     only_official_columns: bool = True,
+    progress: bool = False,
+    parallel_dirs: Union[bool, int] = False,
 ) -> pd.DataFrame:
     r"""Parse files in a directory and return them as a pd.DataFrame.
 
@@ -268,10 +334,11 @@ def parse_directory(
     homogenous_info : dict, optional
         Using the {column_name: description} format, information to apply to all files.
     cvs: str or PosixPath or dict, optional
-        Dictionary with mapping from parsed name to controlled names for each column.
+        Dictionary with mapping from parsed term to preffered terms for each column.
         May have an additional "attributes" entry which maps from attribute names in the files to
         official column names. The attribute translation is done before the rest.
         In the "variable" entry, if a name is mapped to None (null), that variable will not be listed in the catalog.
+        A term can map to another mapping from field name to values, so that a value on one column triggers the filling of other columns.
     dirglob : str, optional
         A glob pattern for path matching to accelerate the parsing of a directory tree if only a subtree is needed.
         Only folders matching the pattern are parsed to find datasets.
@@ -281,6 +348,12 @@ def parse_directory(
         If True (default), this ensures the final catalog only has the columns defined in :py:data:`COLUMNS`. Other fields in the patterns will raise an error.
         If False, the columns are those used in the patterns and the homogenous info. In that case, the column order is not determined.
         Path, format and id are always present in the output.
+    progress : bool
+        If True, a counter is shown in stdout when finding files on disk.
+        If parallel_dirs is not False nor 1, progress won't be of much help.
+    parallel_dirs: bool or int
+        If True, each directory is searched in parallel. If an int, it is the number of parallel searches.
+        This should only be significantly useful if the directories are on different disks.
 
     Notes
     -----
@@ -312,12 +385,13 @@ def parse_directory(
     """
     homogenous_info = homogenous_info or {}
     xr_open_kwargs = xr_open_kwargs or {}
-    comp_patterns = [_compile_pattern(patt) for patt in patterns]
     if only_official_columns:
         columns = set(COLUMNS) - homogenous_info.keys()
         pattern_fields = {
             f
-            for f in set.union(*(set(patt.named_fields) for patt in comp_patterns))
+            for f in set.union(
+                *(set(patt.named_fields) for patt in map(_compile_pattern, patterns))
+            )
             if not f.startswith("_")
         } - {"DATES"}
         unrecognized = pattern_fields - set(COLUMNS)
@@ -346,24 +420,35 @@ def parse_directory(
     else:
         attrs_map = {}
 
+    parse_kwargs = dict(
+        patterns=patterns,
+        dirglob=dirglob,
+        read_from_file=read_from_file if not read_file_groups else None,
+        attrs_map=attrs_map,
+        xr_open_kwargs=xr_open_kwargs,
+        progress=progress,
+    )
+
+    if parallel_dirs is True:
+        parallel_dirs = len(directories)
+
     parsed = []
-    for root, path in _find_assets(
-        directories, patterns, dirglob=dirglob, check_perms=False
-    ):
-        d = _name_parser(
-            path,
-            root,
-            comp_patterns,
-            read_from_file=read_from_file if not read_file_groups else None,
-            attrs_map=attrs_map,
-            xr_open_kwargs=xr_open_kwargs,
-        )
-        if d is not None:
-            parsed.append(d)
+    if parallel_dirs > 1:
+        with Pool(processes=parallel_dirs) as pool:
+            results = []
+            for directory in directories:
+                results.append(pool.apply_async(_parse_dir, (directory,), parse_kwargs))
+            for res in results:
+                parsed.extend(res.get())
+    else:
+        for directory in directories:
+            parsed.extend(_parse_dir(directory, **parse_kwargs))
 
     if not parsed:
         raise ValueError("No files found.")
     else:
+        if progress:
+            print()
         logger.info(f"Found and parsed {len(parsed)} files.")
 
     # Path has become NaN when some paths didn't fit any passed pattern
@@ -376,6 +461,7 @@ def parse_directory(
     # Parse attributes from one file per group
     def read_first_file(grp, cols):
         fromfile = parse_from_ds(grp.path.iloc[0], cols, attrs_map, **xr_open_kwargs)
+
         logger.info(f"Got {len(fromfile)} fields, applying to {len(grp)} entries.")
         out = grp.copy()
         for col, val in fromfile.items():
@@ -397,19 +483,36 @@ def parse_directory(
 
     # Replace entries by definitions found in CV
     if cvs:
-        # Read all CVs and replace values in catalog accordingly
-        df = df.replace(cvs)
-        if "variable" in cvs:
-            # Variable can be a tuple, we still want to replace individual names through the cvs
-            df["variable"] = df.variable.apply(
-                lambda vs: vs
-                if isinstance(vs, str) or pd.isnull(vs)
-                else tuple(
-                    cvs["variable"].get(v, v)
-                    for v in vs
-                    if cvs["variable"].get(v, v) is not None
-                )
-            )
+        for i in df.index:
+            for col, reps in cvs.items():
+                if col == "variable":
+                    # Variable can be a tuple, we still want to replace individual names through the cvs
+                    for oldvar, new in reps.items():
+                        if oldvar in df.loc[i, col]:
+                            if isinstance(new, dict):
+                                for name, newval in new.items():
+                                    if name == "variable":
+                                        df.at[i, name] = [
+                                            newval if v == oldvar else v
+                                            for v in df.loc[i, name]
+                                        ]
+                                    else:
+                                        df.at[i, name] = newval
+                            else:
+                                df.at[i, name] = [
+                                    new if v == oldvar else v for v in df.loc[i, name]
+                                ]
+                else:
+                    for oldval, new in reps.items():
+                        if oldval == df.loc[i, col]:
+                            if isinstance(new, dict):
+                                for name, newval in new.items():
+                                    if name == "variable":
+                                        df.at[i, name] = [newval]
+                                    else:
+                                        df.at[i, name] = newval
+                            else:
+                                df.at[i, name] = new
 
     # translate xrfreq into frequencies and vice-versa
     if {"xrfreq", "frequency"}.issubset(df.columns):
