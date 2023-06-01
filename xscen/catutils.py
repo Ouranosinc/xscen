@@ -10,7 +10,7 @@ from copy import deepcopy
 from fnmatch import fnmatch
 from functools import partial, reduce
 from pathlib import Path, PosixPath
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
 import cftime
 import netCDF4
@@ -24,7 +24,7 @@ from pandas import isna
 
 from .catalog import COLUMNS, DataCatalog, generate_id
 from .config import parse_config
-from .io import copy_dataset, get_engine
+from .io import get_engine
 from .utils import (  # noqa
     CV,
     date_parser,
@@ -654,6 +654,9 @@ def _parse_level(schema: Union[dict, str], facets: dict):
 
 
 def _parse_dates(facets):
+    if isinstance(facets['date_start'], str) and facets['date_start'].startswith('$$'):
+        return "$$DATES$$"
+
     if facets["xrfreq"] == "fx":
         return "fx"
 
@@ -707,13 +710,13 @@ def _parse_folders(schema: list, facets: dict) -> list:
 def _get_needed_fields(schema: dict, facets: dict):
     """Return the list of facets that is needed for a given schema."""
     fake_facets = {
-        f: f"$${f}$$" if not f.startswith("date") else v for f, v in facets.items()
+        f: f"$${f}$$" for f, v in facets.items()
     }
     fake_path = str(
-        Path(_parse_folders(schema["folders"], fake_facets))
+        Path(*_parse_folders(schema["folders"], fake_facets))
         / _parse_filename(schema["filename"], fake_facets)
     )
-    return {f for f, ftemplate in fake_facets if ftemplate in fake_path}
+    return {f for f, ftemplate in fake_facets.items() if ftemplate in fake_path}
 
 
 def _read_schemas(schemas):
@@ -738,34 +741,12 @@ def _read_schemas(schemas):
     return schemas
 
 
-def build_path(
+def _build_path(
     data: Union[dict, xr.Dataset, xr.DataArray, pd.Series],
-    schemas: Optional[Union[str, os.PathLike, list[dict], dict]] = None,
+    schemas: dict,
+    root: Path,
     **extra_facets,
 ) -> Path:
-    """Parse the schema from a configuration and construct path using a dictionary of facets.
-
-    Parameters
-    ----------
-    data : dict
-        Dict of facets. Or xarray object to read the facets from. In the latter case, variable and time-dependent
-        facets are read with :py:func:`parse_from_ds` and supplemented with all the object's attribute,
-        giving priority to the "official" xscen attributes (prefixed with `cat:`, see :py:func:`xscen.utils.get_cat_attrs`).
-    schemas : str or os.PathLike or list of dict or dict, optional
-        Path to YAML schematic of database schema. If None, will use a default schema.
-        See the comments in the `xscen/data/file_schema.yml` file for more details on its construction.
-        A list of dict schemas can be given (same as reading the yaml).
-        Or a single schema dict (single element of the yaml).
-    extra_facets : str
-        Extra facets to supplement or override metadadata missing from the first input.
-
-    Returns
-    -------
-    Path
-        Constructed path. If "format" is absent from the facets, it has no suffix.
-    """
-    schemas = _read_schemas(schemas)
-
     # Get all known metadata
     if isinstance(data, (xr.Dataset, xr.DataArray)):
         facets = (
@@ -778,7 +759,9 @@ def build_path(
         )
     elif isinstance(data, pd.Series):
         facets = dict(data)
+
     facets = facets | extra_facets
+
     # Scalar-ize variable if needed.
     if (
         "variable" in facets
@@ -805,10 +788,11 @@ def build_path(
                     "You can override the facet by passing `variable='varname'` directly."
                 )
 
-            out = Path(*_parse_folders(schema["folders"], facets)) / _parse_filename(
-                schema["filename"], facets
-            )
-            if "format" in facets:
+            out = Path(*_parse_folders(schema["folders"], facets))
+            out = out / _parse_filename(schema["filename"], facets)
+            if root is not None:
+                out = root / out
+            if "format" in facets:  # Add extension
                 return out.with_suffix("." + facets["format"])
             return out
 
@@ -816,70 +800,57 @@ def build_path(
 
 
 @parse_config
-def restructure_files(
-    catalog: Union[DataCatalog, pd.DataFrame],
-    folder: Union[str, os.PathLike] = ".",
+def build_path(
+    data: Union[dict, xr.Dataset, xr.DataArray, pd.Series, DataCatalog, pd.DataFrame],
     schemas: Optional[Union[str, os.PathLike, list[dict], dict]] = None,
-    copy: bool = True,
-    overwrite: bool = False,
-) -> Union[DataCatalog, pd.DataFrame]:
-    """Restructure datasets based on a schema.
-
-    If the "variable" field appears in the path, multi-variable datasets are split into single
-    variable datasets.
+    root: os.PathLike = None,
+    **extra_facets
+) -> Union[Path, DataCatalog, pd.DataFrame]:
+    """Parse the schema from a configuration and construct path using a dictionary of facets.
 
     Parameters
     ----------
-    catalog: DataCatalog
-        Catalog or DataFrame of files to restructure.
-    folder : str or os.PathLike
-        Parent folder on which to extend the filetree structure.
-    schemas : str or os.PathLike or list of dict or dict, optional
+    data : dict or catalog
+        Dict of facets. Or xarray object to read the facets from. In the latter case, variable and time-dependent
+        facets are read with :py:func:`parse_from_ds` and supplemented with all the object's attribute,
+        giving priority to the "official" xscen attributes (prefixed with `cat:`, see :py:func:`xscen.utils.get_cat_attrs`).
+        Can also be a catalog or a DataFrame, in which a "new_path" column is generated for each item.
+    schemas : Path or dict or dict of dicts, optional
         Path to YAML schematic of database schema. If None, will use a default schema.
         See the comments in the `xscen/data/file_schema.yml` file for more details on its construction.
-        A list of dict schemas can be given (same as reading the yaml).
-        Or a single schema dict (single element of the yaml), in which case all files will use the same schema.
-    split_time : str, optional
-        A frequency string to segment the files. For example, "YS" will produce one file per calendar year.
-        Assumes the schema will yield different paths for each time slice. The "DATES" helper field should not be used with frequencies finer than MS.
-        None (default) means no segmentation is done.
-    copy: bool
-        Whether to copy (True, default) or move (False) files into the new location.
-    overwrite: bool
-        If True, overwrite existing files. If False (default), an error is raised instead.
-
-    Notes
-    -----
-    If `copy` is True and the function fails during the copy, the destination is erased
-    before reraising the exception. The folder hierarchy will not be erased, only the final dataset (zarr or nc).
-    If `copy` is False, both source and destination could end up corrupted on an I/O failure.
+        A dict of dict schemas can be given (same as reading the yaml).
+        Or a single schema dict (single element of the yaml).
+    root : Path, optional
+        If given, the generated path(s) is given under this root one.
+    extra_facets : str
+        Extra facets to supplement or override metadadata missing from the first input.
 
     Returns
     -------
-    same as `catalog`
-        A copy of the initial catalog with the new paths. Index will be inconsistent if multi-variables dataset have been splitted.
+    Path or catalog
+        Constructed path. If "format" is absent from the facets, it has no suffix.
+        If `data` was a catalog, a copy with a "new_path" column is returned.
+
+    Examples
+    --------
+    To rename a full catalog, the simplest way is to do:
+
+    >>> import xscen as xs
+    >>> import shutil as sh
+    >>> new_cat = xs.catutils.build_path(old_cat)
+    >>> for i, row in new_cat.iterrows():
+    >>>     sh.move(row.path, row.new_path)
     """
-    if isinstance(catalog, esm_datastore):
-        df = catalog.df
-    else:
-        df = catalog
-
+    if root:
+        root = Path(root)
     schemas = _read_schemas(schemas)
-
-    for i, row in df.iterrows():
-        path_in = row.path
-        if isinstance(row.variable, (tuple, list)):
-            paths = {}
-            for variable in row.variable:
-                facets = dict(**row) | {"variable": variable}
-                p, f = _parse_schema(facets, schemas)
-                paths[variable] = Path(folder).joinpath("/".join(p)) / f
-            if len(set(paths.values())) == 1:
-                path_out = paths[variable]
-            else:
-                path_out = paths
+    if isinstance(data, (esm_datastore, pd.DataFrame)):
+        newcat = deepcopy(data)
+        if isinstance(data, esm_datastore):
+            df = newcat.df
         else:
-            p, f = _parse_schema(row, schemas)
-            path_out = Path(folder).joinpath("/".join(p)) / f
+            df = newcat
 
-        copy_dataset(path_in, path_out)
+        df['new_path'] = df.apply(_build_path, axis=1, schemas=schemas, root=root, **extra_facets).apply(str)
+        return newcat
+    return _build_path(data, schemas=schemas, root=root, **extra_facets)
