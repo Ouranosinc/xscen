@@ -35,7 +35,7 @@ jobs:
           tox -e black
 
   testing:
-    name: Smoke Test with Python${{ matrix.python-version }} (${{ matrix.tox-build }})
+    name: Smoke Test with Python${{ matrix.python-version }}
     needs: black
     runs-on: ubuntu-latest
     strategy:
@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/setup-micromamba@v1
         with:
           cache-downloads: true
           environment-file: environment.yml
