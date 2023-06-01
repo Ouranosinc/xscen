@@ -25,6 +25,7 @@ Bug fixes
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Removed the pin on xarray's version. (:issue:`175`, :pull:`199`).
+* Updated ReadTheDocs configuration to prevent ``--eager`` installation of xscen (:pull:`209`).
 
 v0.6.0 (2023-05-04)
 -------------------
