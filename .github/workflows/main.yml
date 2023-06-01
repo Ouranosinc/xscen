@@ -14,7 +14,7 @@ on:
 jobs:
   black:
     name: Code Style Compliance
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -l {0}
@@ -37,15 +37,15 @@ jobs:
   testing:
     name: Smoke Test with Python${{ matrix.python-version }} (${{ matrix.tox-build }})
     needs: black
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - python-version: "3.9"
-            tox-build: "py39"
+#            tox-build: "py39"
           - python-version: "3.10"
-            tox-build: "py310"
+#            tox-build: "py310"
     defaults:
       run:
         shell: bash -l {0}
@@ -56,7 +56,8 @@ jobs:
         with:
           cache-downloads: true
           environment-file: environment.yml
-          extra-specs: |
+          create-args: >-
+            coveralls
             mamba
             python=${{ matrix.python-version }}
             pytest
@@ -68,6 +69,15 @@ jobs:
       - name: Test with pytest
         run: |
           pytest --cov xscen
+      - name: Report coverage
+        run: |
+          coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
+          COVERALLS_PARALLEL: true
+          COVERALLS_SERVICE_NAME: github
+
 #      - name: Install tox-current-env
 #        run: |
 #          pip install tox tox-conda tox-current-env
@@ -77,3 +87,17 @@ jobs:
 #        env:
 #          CONDA_EXE: mamba
 #          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  finish:
+    needs:
+      - testing
+    runs-on: ubuntu-latest
+    container: python:3-slim
+    steps:
+      - name: Coveralls Finished
+        run: |
+          pip install --upgrade coveralls
+          coveralls --finish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_SERVICE_NAME: github
