@@ -63,9 +63,17 @@ jobs:
             pytest
             pytest-cov
             xdoctest
-      - name: Conda and mamba versions
+      - name: Conda and Mamba versions
         run: |
           mamba --version
+          echo "micromamba $(micromamba --version)"
+      - name: Install xscen
+        run: |
+          pip install --editable .
+      - name: Check versions
+        run: |
+          conda list
+          pip check
       - name: Test with pytest
         run: |
           pytest --cov xscen
