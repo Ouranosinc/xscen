@@ -3,7 +3,6 @@ import json
 import logging
 import operator as op
 import os
-import shutil as sh
 import string
 import warnings
 from collections.abc import Mapping, Sequence
@@ -11,8 +10,7 @@ from copy import deepcopy
 from fnmatch import fnmatch
 from functools import partial, reduce
 from pathlib import Path, PosixPath
-from typing import Any, Optional, Union
-from urllib.request import HTTPError, urlopen
+from typing import Any, List, Optional, Union
 
 import cftime
 import netCDF4
@@ -27,7 +25,13 @@ from pandas import isna
 from .catalog import COLUMNS, DataCatalog, generate_id
 from .config import parse_config
 from .io import copy_dataset, get_engine
-from .utils import CV, date_parser, ensure_correct_time, standardize_periods  # noqa
+from .utils import (  # noqa
+    CV,
+    date_parser,
+    ensure_correct_time,
+    get_cat_attrs,
+    standardize_periods,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -604,13 +608,6 @@ def _parse_from_nc(path: os.PathLike, get_vars=True, get_time=True):
 
 
 # ## Path building ## #
-
-# vv Functions below are almost identical to miranda vv
-# Differences:
-#  - The signature of `date_parser` is slightly different
-#  - We have access to `xrfreq` instead of `frequency`.
-
-
 def _parse_option(option: dict, facets: dict):
     """Parse an option element of the facet schema tree."""
     facet_value = facets[option["option"]]
@@ -698,7 +695,7 @@ def _parse_filename(schema: list, facets: dict) -> str:
     )
 
 
-def _parse_structure(schema: list, facets: dict) -> list:
+def _parse_folders(schema: list, facets: dict) -> list:
     folder_tree = list()
     for level in schema:
         part = _parse_level(level, facets)
@@ -707,42 +704,122 @@ def _parse_structure(schema: list, facets: dict) -> list:
     return folder_tree
 
 
-# ^^ Functions above are almost identical to miranda ^^
+def _get_needed_fields(schema: dict, facets: dict):
+    """Return the list of facets that is needed for a given schema."""
+    fake_facets = {
+        f: f"$${f}$$" if not f.startswith("date") else v for f, v in facets.items()
+    }
+    fake_path = str(
+        Path(_parse_folders(schema["folders"], fake_facets))
+        / _parse_filename(schema["filename"], fake_facets)
+    )
+    return {f for f, ftemplate in fake_facets if ftemplate in fake_path}
 
 
-def parse_schema(facets: dict, schema: list) -> tuple[list[str], str]:
+def _read_schemas(schemas):
+    if isinstance(schemas, dict) and {"with", "folders", "filename"}.issubset(
+        schemas.keys()
+    ):
+        # Single schema
+        # Remove any conditions (or insert empty one)
+        schemas["with"] = []
+        schemas = {"unnamed_schema": schemas}
+    elif not isinstance(schemas, dict):
+        if schemas is None:
+            schemas = Path(__file__).parent / "data" / "file_schema.yml"
+        with open(schemas) as f:
+            schemas = yaml.safe_load(f)
+    for name, schema in schemas.items():
+        missing_fields = {"with", "folders", "filename"} - set(schema.keys())
+        if missing_fields:
+            raise ValueError(
+                f"Invalid schema specification. Missing fields {missing_fields} in schema {name}."
+            )
+    return schemas
+
+
+def build_path(
+    data: Union[dict, xr.Dataset, xr.DataArray, pd.Series],
+    schemas: Optional[Union[str, os.PathLike, list[dict], dict]] = None,
+    **extra_facets,
+) -> Path:
     """Parse the schema from a configuration and construct path using a dictionary of facets.
 
     Parameters
     ----------
-    facets : dict
-    schema : List of structures.
+    data : dict
+        Dict of facets. Or xarray object to read the facets from. In the latter case, variable and time-dependent
+        facets are read with :py:func:`parse_from_ds` and supplemented with all the object's attribute,
+        giving priority to the "official" xscen attributes (prefixed with `cat:`, see :py:func:`xscen.utils.get_cat_attrs`).
+    schemas : str or os.PathLike or list of dict or dict, optional
+        Path to YAML schematic of database schema. If None, will use a default schema.
+        See the comments in the `xscen/data/file_schema.yml` file for more details on its construction.
+        A list of dict schemas can be given (same as reading the yaml).
+        Or a single schema dict (single element of the yaml).
+    extra_facets : str
+        Extra facets to supplement or override metadadata missing from the first input.
 
     Returns
     -------
-    list of folders, filename without suffix
+    Path
+        Constructed path. If "format" is absent from the facets, it has no suffix.
     """
-    for i, structure in enumerate(schema):
-        if {"with", "structure", "filename"} != set(structure.keys()):
-            raise ValueError("Invalid schema specification.")
+    schemas = _read_schemas(schemas)
 
+    # Get all known metadata
+    if isinstance(data, (xr.Dataset, xr.DataArray)):
+        facets = (
+            # Get non-attribute metadata
+            parse_from_ds(
+                data, ["frequency", "xrfreq", "date_start", "date_end", "variable"]
+            )
+            | data.attrs
+            | get_cat_attrs(data)
+        )
+    elif isinstance(data, pd.Series):
+        facets = dict(data)
+    facets = facets | extra_facets
+    # Scalar-ize variable if needed.
+    if (
+        "variable" in facets
+        and not isinstance(facets["variable"], str)
+        and len(facets["variable"]) == 1
+    ):
+        facets["variable"] = facets["variable"][0]
+
+    # Find the first fitting schema
+    for name, schema in schemas.items():
         match = reduce(
-            op.and_, map(partial(_parse_option, facets=facets), structure["with"])
+            op.and_, map(partial(_parse_option, facets=facets), schema["with"])
         )
         if match:
-            return (
-                _parse_structure(structure["structure"], facets),
-                _parse_filename(structure["filename"], facets),
+            # Checks
+            needed_fields = _get_needed_fields(schema, facets)
+            if missing_fields := needed_fields - set(facets.keys()):
+                raise ValueError(
+                    f"Missing facets {missing_fields} are needed to build the path according to selected schema {name}."
+                )
+            if "variable" in needed_fields and not isinstance(facets["variable"], str):
+                raise ValueError(
+                    f"Selected schema {name} is meant to be used with single-variable datasets. Got multiple: {facets['variable']}. "
+                    "You can override the facet by passing `variable='varname'` directly."
+                )
+
+            out = Path(*_parse_folders(schema["folders"], facets)) / _parse_filename(
+                schema["filename"], facets
             )
-    raise ValueError(f"This file doesn't match any structure. Facets:\n{facets}")
+            if "format" in facets:
+                return out.with_suffix("." + facets["format"])
+            return out
+
+    raise ValueError(f"This file doesn't match any schema. Facets:\n{facets}")
 
 
 @parse_config
 def restructure_files(
     catalog: Union[DataCatalog, pd.DataFrame],
     folder: Union[str, os.PathLike] = ".",
-    schema: Optional[Union[str, os.PathLike, dict]] = None,
-    category: str = "raw",
+    schemas: Optional[Union[str, os.PathLike, list[dict], dict]] = None,
     copy: bool = True,
     overwrite: bool = False,
 ) -> Union[DataCatalog, pd.DataFrame]:
@@ -757,11 +834,15 @@ def restructure_files(
         Catalog or DataFrame of files to restructure.
     folder : str or os.PathLike
         Parent folder on which to extend the filetree structure.
-    schema : str or os.PathLike, optional
-        Path to YAML schematic of database structure. If None, will use a basic schema.
-        See the comments in the `xscen/data/base_schema.yml` file for more details on its construction.
-    category : {raw, derived}
-        Category of the path. Not to be confused with "processing_level" which is more granular.
+    schemas : str or os.PathLike or list of dict or dict, optional
+        Path to YAML schematic of database schema. If None, will use a default schema.
+        See the comments in the `xscen/data/file_schema.yml` file for more details on its construction.
+        A list of dict schemas can be given (same as reading the yaml).
+        Or a single schema dict (single element of the yaml), in which case all files will use the same schema.
+    split_time : str, optional
+        A frequency string to segment the files. For example, "YS" will produce one file per calendar year.
+        Assumes the schema will yield different paths for each time slice. The "DATES" helper field should not be used with frequencies finer than MS.
+        None (default) means no segmentation is done.
     copy: bool
         Whether to copy (True, default) or move (False) files into the new location.
     overwrite: bool
@@ -783,21 +864,7 @@ def restructure_files(
     else:
         df = catalog
 
-    if not isinstance(schema, dict):
-        if Path(schema).is_file():
-            with open(schema).open() as f:
-                schema = yaml.safe_load(f)
-        else:
-            try:
-                res = urlopen(schema)
-            except HTTPError:
-                raise ValueError(
-                    f"Passed schema ({schema}) is neither an existing path or a valid url."
-                )
-            else:
-                schema = yaml.safe_load(res)
-
-    structures = schema[category]
+    schemas = _read_schemas(schemas)
 
     for i, row in df.iterrows():
         path_in = row.path
@@ -805,14 +872,14 @@ def restructure_files(
             paths = {}
             for variable in row.variable:
                 facets = dict(**row) | {"variable": variable}
-                p, f = parse_schema(facets, structures)
+                p, f = _parse_schema(facets, schemas)
                 paths[variable] = Path(folder).joinpath("/".join(p)) / f
             if len(set(paths.values())) == 1:
                 path_out = paths[variable]
             else:
                 path_out = paths
         else:
-            p, f = parse_schema(row, structures)
+            p, f = _parse_schema(row, schemas)
             path_out = Path(folder).joinpath("/".join(p)) / f
 
         copy_dataset(path_in, path_out)
