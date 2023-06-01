@@ -25,7 +25,7 @@ dependencies:
   - rechunker
   - shapely
   - xarray
-  - xclim >=0.37
+  - xclim >=0.43.0
   - xesmf >=0.7
   - zarr
   # Opt
