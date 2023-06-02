@@ -12,20 +12,21 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* File re-structuration from catalogs with ``xscen.catutils.structure_datasets``. (:pull:`205`).
+* File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* Folder parsing utilities (``parse_directory``) moved to ``xscen.catutils``. Signature changed : ``globpattern`` removed, ``dirglob`` added, new ``patterns`` specifications. (:pull:`205`).
+* Folder parsing utilities (``parse_directory``) moved to ``xscen.catutils``. Signature changed : ``globpattern`` removed, ``dirglob`` added, new ``patterns`` specifications. See doc for all changes. (:pull:`205`).
 
 Bug fixes
 ^^^^^^^^^
-* N/A
+* Fix bug in ``unstack_dates`` with seasonal climatological mean. (:issue:`202`, :pull:`202`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Removed the pin on xarray's version. (:issue:`175`, :pull:`199`).
 * Folder parsing utilities now in pure python, platform independent. New dependency ``parse``. (:pull:`205`).
+* Updated ReadTheDocs configuration to prevent ``--eager`` installation of xscen (:pull:`209`).
 
 v0.6.0 (2023-05-04)
 -------------------

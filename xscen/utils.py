@@ -962,8 +962,6 @@ def unstack_dates(
         calendar=calendar,
         use_cftime=use_cftime,
     )
-    new_coords = dict(ds.coords)
-    new_coords.update({"time": new_time, new_dim: seas_list})
 
     def reshape_da(da):
         if "time" not in da.dims:
@@ -982,6 +980,13 @@ def unstack_dates(
             # so the reshape operation can be performed blockwise
             da = flox.xarray.rechunk_for_blockwise(da, "time", years)
         return xr.DataArray(da.data.reshape(new_shape), dims=new_dims)
+
+    new_coords = dict(ds.coords)
+    new_coords.update({"time": new_time, new_dim: seas_list})
+
+    # put horizon in the right time dimension
+    if "horizon" in new_coords:
+        new_coords["horizon"] = reshape_da(new_coords["horizon"])
 
     if isinstance(ds, xr.Dataset):
         dso = dsp.map(reshape_da, keep_attrs=True)
