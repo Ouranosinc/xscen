@@ -92,7 +92,7 @@ def _find_assets(
             for dr in dirs:
                 if os.path.splitext(dr)[-1] == "zarr":
                     yield os.path.join(top, dr)
-        if (exts - {'zarr'}):  # There are more exts than
+        if exts - {"zarr"}:  # There are more exts than
             for file in files:
                 if os.path.splitext(file)[-1] in exts:
                     yield os.path.join(top, file)
@@ -264,14 +264,14 @@ def _parse_dir(
         while True:
             path = q_found.get()
             valid = True
-            if 'readable' in checks and not os.access(path, os.R_OK):
+            if "readable" in checks and not os.access(path, os.R_OK):
                 valid = False
-            if 'writable' in checks and not os.access(path, os.W_OK):
+            if "writable" in checks and not os.access(path, os.W_OK):
                 valid = False
-            if 'ncvalid' in checks:
+            if "ncvalid" in checks:
                 try:
                     eng = get_engine(path)
-                    if eng == 'netcdf4':
+                    if eng == "netcdf4":
                         with netCDF4.Dataset(path):
                             pass
                 except Exception:
@@ -323,14 +323,15 @@ def _parse_dir(
 
 def _get_new_item(name, newval, repval, oldval, fromcol, is_list):
     if is_list:
-        if name == col:  # We replace only the repval element of the list
+        if name == fromcol:  # We replace only the repval element of the list
             return tuple(newval if v == repval else v for v in oldval)
-        return (newval,)  # We must return a list, replace the whole list with a single element.
+        # We must return a tuple, replace the whole list with a single element.
+        return (newval,)
     return newval  # Simple replacement
 
 
 def _replace_in_row(oldrow: pd.Series, replacements: dict):
-    """Replaces values in Series (row) according to replacements mapping.
+    """Replace values in Series (row) according to replacements mapping.
 
     Replacements can be simple mappings, but also mapping to other fields.
     List-like fields are handled.
@@ -345,16 +346,22 @@ def _replace_in_row(oldrow: pd.Series, replacements: dict):
             if (col in list_cols and repval in row[col]) or repval == row[col]:
                 if isinstance(new, dict):  # Replacement is for multiple columns
                     for name, newval in new.items():
-                        row[name] = _get_new_item(name, newval, repval, row[col], col, name in list_cols)
+                        row[name] = _get_new_item(
+                            name, newval, repval, row[col], col, name in list_cols
+                        )
                 else:
-                    row[col] = _get_new_item(col, new, repval, row[col], col, col in list_cols)
+                    row[col] = _get_new_item(
+                        col, new, repval, row[col], col, col in list_cols
+                    )
     # Special case for "variable" where we remove Nones.
-    if 'variable' in row and None in row['variable']:
-        row['variable'] = tuple(v for v in row['variable'] if v is not None)
+    if "variable" in row and None in row["variable"]:
+        row["variable"] = tuple(v for v in row["variable"] if v is not None)
     return row
 
 
-def _parse_first_ds(grp: pd.DataFrame, cols: list[str], attrs_map: dict, xr_open_kwargs: dict):
+def _parse_first_ds(
+    grp: pd.DataFrame, cols: list[str], attrs_map: dict, xr_open_kwargs: dict
+):
     """Parse attributes from one file per group, apply them to the whole group."""
     fromfile = parse_from_ds(grp.path.iloc[0], cols, attrs_map, **xr_open_kwargs)
 
@@ -385,7 +392,7 @@ def parse_directory(
     only_official_columns: bool = True,
     progress: bool = False,
     parallel_dirs: Union[bool, int] = False,
-    file_checks: list[str] = None
+    file_checks: list[str] = None,
 ) -> pd.DataFrame:
     r"""Parse files in a directory and return them as a pd.DataFrame.
 
@@ -509,7 +516,7 @@ def parse_directory(
         attrs_map=attrs_map,
         xr_open_kwargs=xr_open_kwargs,
         progress=progress,
-        checks=file_checks
+        checks=file_checks,
     )
 
     if parallel_dirs is True:
@@ -545,7 +552,12 @@ def parse_directory(
         for group_cols, parse_cols in read_from_file:
             df = (
                 df.groupby(group_cols)
-                .apply(_parse_first_ds, cols=parse_cols, attrs_map=attrs_map, xr_open_kwargs=xr_open_kwargs)
+                .apply(
+                    _parse_first_ds,
+                    cols=parse_cols,
+                    attrs_map=attrs_map,
+                    xr_open_kwargs=xr_open_kwargs,
+                )
                 .reset_index(drop=True)
             )
 
