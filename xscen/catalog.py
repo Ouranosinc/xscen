@@ -102,10 +102,10 @@ esm_col_data = {
 
 
 def _parse_list_of_strings(elem):
-    """Parse an element of a csv in case it is a list of strings."""
+    """Parse an element of a csv in case it is a tuple of strings."""
     if elem.startswith("(") or elem.startswith("["):
         out = ast.literal_eval(elem)
-        return out
+        return tuple(out)
     return (elem,)
 
 

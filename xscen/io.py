@@ -17,12 +17,11 @@ from xclim.core.calendar import get_calendar
 from .config import parse_config
 from .scripting import TimeoutException
 from .utils import translate_time_chunk
-
 logger = logging.getLogger(__name__)
+
 
 __all__ = [
     "clean_incomplete",
-    "copy_dataset",
     "estimate_chunks",
     "get_engine",
     "rechunk",
@@ -31,72 +30,6 @@ __all__ = [
     "split_dataset",
     "subset_maxsize",
 ]
-
-
-def copy_dataset(
-    path_in: os.PathLike,
-    path_out: Union[os.PathLike, dict[str, os.PathLike]],
-    copy: bool = True,
-    overwrite: bool = False,
-    erase_on_error: bool = True,
-):
-    """Copy or move a dataset, splitting variables if needed.
-
-    Parameters
-    ----------
-    path_in: Path
-        Path to copy.
-    path_out: Path or dict of paths
-        Destination path. Can also be a dictionary mapping variable names to destination paths.
-        The input dataset will be splitted into these destinations. See :py:func:`split_dataset`.
-    copy: bool
-        If True (default), the data is copied. If False, it is moved.
-        If path_out is a dict, the data is copied then removed, otherwise it depends on the behaviour of :py:func:`shutil.move`.
-    overwrite: bool
-        If the destination already exists, an error is raised if overwrite is False (default).
-    erase_on_error: bool
-        If True (default), copy is True and the copy fails, the destination is erased before reraising the error.
-        Has no effect if copy is False.
-    """
-    path_in = Path(path_in)
-    if isinstance(path_out, dict):
-        path_out = {v: Path(p) for v, p in path_out.items()}
-    else:
-        path_out = Path(path_out)
-    zarr = get_engine(path_in) == "zarr"
-
-    if isinstance(path_out, dict):
-        logger.info(f"Splitting {path_in} into single-variable datasets {path_out}")
-        split_dataset(path_in, path_out, copy=copy, overwrite=overwrite)
-    elif path_out.exists() and not overwrite:
-        raise FileExistsError(
-            f"{path_in} cannot be moved to {path_out}, a dataset already exists."
-        )
-    elif copy:
-        logger.info(f"Copying {path_in} to {path_out}")
-        path_out.parent.mkdir(exist_ok=True, parents=True)
-        try:
-            if zarr:
-                sh.copytree(path_in, path_out)
-            else:
-                sh.copy2(path_in, path_out)
-        except Exception:
-            if zarr:
-                sh.rmtree(path_out)
-            else:
-                path_out.unlink(missing_ok=True)
-            raise ValueError(
-                f"Something went wrong when copying file {path_in} into {path_out}."
-            )
-    else:
-        logger.info(f"Moving {path_in} to {path_out}")
-        if zarr:
-            # Move into new folder
-            dest = sh.move(path_in, path_out.parent)
-            # Rename dataset itself
-            Path(dest).rename(path_out)
-        else:
-            sh.move(path_in, path_out)
 
 
 def split_dataset(

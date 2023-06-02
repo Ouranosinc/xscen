@@ -74,7 +74,7 @@ EXTRA_PARSE_TYPES = {
 def _find_assets(
     root: os.PathLike, exts: set[str], lengths: set[int], dirglob: Optional[str] = None
 ):
-    """Iterate over files in a directory, filtering according path depth and extensions."""
+    """Walk recursively over files in a directory, filtering according to a glob pattern, path depth and extensions."""
     for top, alldirs, files in os.walk(root):
         # Remove zarr subdirectories from next iteration
         dirs = deepcopy(alldirs)
@@ -89,10 +89,10 @@ def _find_assets(
             continue
 
         if "zarr" in exts:
-            for dr in deepcopy(dirs):
-                if os.path.splitext(dr)[-1] == ".zarr":
+            for dr in dirs:
+                if os.path.splitext(dr)[-1] == "zarr":
                     yield os.path.join(top, dr)
-        else:
+        if (exts - {'zarr'}):  # There are more exts than
             for file in files:
                 if os.path.splitext(file)[-1] in exts:
                     yield os.path.join(top, file)
@@ -202,7 +202,7 @@ def _parse_dir(
     root: os.PathLike,
     patterns: list[str],
     dirglob: Optional[str] = None,
-    check_perms: bool = True,
+    checks: list[str] = None,
     read_from_file: Optional[Union[list[str], dict]] = None,
     attrs_map: Optional[dict] = None,
     xr_open_kwargs: Optional[dict] = None,
@@ -221,8 +221,12 @@ def _parse_dir(
     dirglob: str
         A glob pattern. If given, only parent folders matching this pattern are walked through.
         This pattern can not include the asset's basename.
-    check_perms: bool
-        If True, only paths with reading permissions for the current user are returned.
+    checks: list of strings, optional
+        A list of checks to perform, available values are:
+        - "readable" : Check that the file is readable by the current user.
+        - "writable" : Check that the file is writable by the current user.
+        - "ncvalid" : For netCDF, check that it is valid (openable with netCDF4).
+        All checks will slow down the parsing.
     read_from_file : list of string or dict, optional
         If not None, passed directly to :py:func:`parse_from_ds` as `names`.
         If None (default), only the path is parsed, the file is not opened.
@@ -241,7 +245,16 @@ def _parse_dir(
     lengths = {patt.count(os.path.sep) for patt in patterns}
     exts = {os.path.splitext(patt)[-1] for patt in patterns}
     comp_patterns = list(map(_compile_pattern, patterns))
+    checks = checks = []
 
+    # Multithread, communicating via FIFO queues.
+    # This thread walks the directory
+    # Another thread runs the checks
+    # Another thread parses the path and file.
+    # In theory, for a local disk, walking a directory cannot be parallelized. This is not as true for network-mounted drives.
+    # Thus we parallelize the parsing steps.
+    # If the name-parsing step becomes blocking, we could try to increase the number of threads (but netCDF4 can't multithread...)
+    # Usually, the walking is the bottleneck.
     q_found = queue.Queue()
     q_checked = queue.Queue()
     parsed = []
@@ -251,8 +264,18 @@ def _parse_dir(
         while True:
             path = q_found.get()
             valid = True
-            if check_perms:
-                valid = valid and os.access(path, os.R_OK)
+            if 'readable' in checks and not os.access(path, os.R_OK):
+                valid = False
+            if 'writable' in checks and not os.access(path, os.W_OK):
+                valid = False
+            if 'ncvalid' in checks:
+                try:
+                    eng = get_engine(path)
+                    if eng == 'netcdf4':
+                        with netCDF4.Dataset(path):
+                            pass
+                except Exception:
+                    valid = False
             if valid:
                 q_checked.put(path)
             q_found.task_done()
@@ -288,12 +311,59 @@ def _parse_dir(
     PW = threading.Thread(target=parse_worker, daemon=True)
     PW.start()
 
+    # Skip the checks if none are requested (save some overhead)
+    q = q_found if checks else q_checked
     for path in _find_assets(root, exts, lengths, dirglob):
-        q_found.put(path)
+        q.put(path)
 
     q_found.join()
     q_checked.join()
     return parsed
+
+
+def _get_new_item(name, newval, repval, oldval, fromcol, is_list):
+    if is_list:
+        if name == col:  # We replace only the repval element of the list
+            return tuple(newval if v == repval else v for v in oldval)
+        return (newval,)  # We must return a list, replace the whole list with a single element.
+    return newval  # Simple replacement
+
+
+def _replace_in_row(oldrow: pd.Series, replacements: dict):
+    """Replaces values in Series (row) according to replacements mapping.
+
+    Replacements can be simple mappings, but also mapping to other fields.
+    List-like fields are handled.
+    """
+    row = oldrow.copy()
+    list_cols = [col for col in oldrow if isinstance(oldrow[col], (tuple, list))]
+    for col, reps in replacements.items():
+        if col not in row:
+            continue
+        for repval, new in reps.items():
+            # Either the field is a list containing the value to replace, or it is the value to replace.
+            if (col in list_cols and repval in row[col]) or repval == row[col]:
+                if isinstance(new, dict):  # Replacement is for multiple columns
+                    for name, newval in new.items():
+                        row[name] = _get_new_item(name, newval, repval, row[col], col, name in list_cols)
+                else:
+                    row[col] = _get_new_item(col, new, repval, row[col], col, col in list_cols)
+    # Special case for "variable" where we remove Nones.
+    if 'variable' in row and None in row['variable']:
+        row['variable'] = tuple(v for v in row['variable'] if v is not None)
+    return row
+
+
+def _parse_first_ds(grp: pd.DataFrame, cols: list[str], attrs_map: dict, xr_open_kwargs: dict):
+    """Parse attributes from one file per group, apply them to the whole group."""
+    fromfile = parse_from_ds(grp.path.iloc[0], cols, attrs_map, **xr_open_kwargs)
+
+    logger.info(f"Got {len(fromfile)} fields, applying to {len(grp)} entries.")
+    out = grp.copy()
+    for col, val in fromfile.items():
+        for i in grp.index:  # If val is an iterable we can't use loc.
+            out.at[i, col] = val
+    return out
 
 
 @parse_config
@@ -315,6 +385,7 @@ def parse_directory(
     only_official_columns: bool = True,
     progress: bool = False,
     parallel_dirs: Union[bool, int] = False,
+    file_checks: list[str] = None
 ) -> pd.DataFrame:
     r"""Parse files in a directory and return them as a pd.DataFrame.
 
@@ -359,6 +430,12 @@ def parse_directory(
     parallel_dirs: bool or int
         If True, each directory is searched in parallel. If an int, it is the number of parallel searches.
         This should only be significantly useful if the directories are on different disks.
+    file_checks: list of str, optional
+        A list of file checks to run on the parsed files. Available values are:
+        - "readable" : Check that the file is readable by the current user.
+        - "writable" : Check that the file is writable by the current user.
+        - "ncvalid" : For netCDF, check that it is valid (openable with netCDF4).
+        Any check will slow down the parsing.
 
     Notes
     -----
@@ -432,6 +509,7 @@ def parse_directory(
         attrs_map=attrs_map,
         xr_open_kwargs=xr_open_kwargs,
         progress=progress,
+        checks=file_checks
     )
 
     if parallel_dirs is True:
@@ -463,61 +541,22 @@ def parse_directory(
         for col in set(COLUMNS) - set(df.columns):
             df[col] = None
 
-    # Parse attributes from one file per group
-    def read_first_file(grp, cols):
-        fromfile = parse_from_ds(grp.path.iloc[0], cols, attrs_map, **xr_open_kwargs)
-
-        logger.info(f"Got {len(fromfile)} fields, applying to {len(grp)} entries.")
-        out = grp.copy()
-        for col, val in fromfile.items():
-            for i in grp.index:  # If val is an iterable we can't use loc.
-                out.at[i, col] = val
-        return out
-
-    if read_file_groups:
+    if read_file_groups:  # Read fields from file, but only one per group.
         for group_cols, parse_cols in read_from_file:
             df = (
                 df.groupby(group_cols)
-                .apply(read_first_file, cols=parse_cols)
+                .apply(_parse_first_ds, cols=parse_cols, attrs_map=attrs_map, xr_open_kwargs=xr_open_kwargs)
                 .reset_index(drop=True)
             )
 
+    # Everything below could be wrapped in a function to be applied to each row maybe allowing some basic parallelization with dask (or else).
     # Add homogeous info
     for key, val in homogenous_info.items():
         df[key] = val
 
     # Replace entries by definitions found in CV
     if cvs:
-        for i in df.index:
-            for col, reps in cvs.items():
-                if col == "variable":
-                    # Variable can be a tuple, we still want to replace individual names through the cvs
-                    for oldvar, new in reps.items():
-                        if oldvar in df.loc[i, col]:
-                            if isinstance(new, dict):
-                                for name, newval in new.items():
-                                    if name == "variable":
-                                        df.at[i, name] = [
-                                            newval if v == oldvar else v
-                                            for v in df.loc[i, name]
-                                        ]
-                                    else:
-                                        df.at[i, name] = newval
-                            else:
-                                df.at[i, name] = [
-                                    new if v == oldvar else v for v in df.loc[i, name]
-                                ]
-                else:
-                    for oldval, new in reps.items():
-                        if oldval == df.loc[i, col]:
-                            if isinstance(new, dict):
-                                for name, newval in new.items():
-                                    if name == "variable":
-                                        df.at[i, name] = [newval]
-                                    else:
-                                        df.at[i, name] = newval
-                            else:
-                                df.at[i, name] = new
+        df = df.apply(_replace_in_row, axis=1, replacements=cvs)
 
     # translate xrfreq into frequencies and vice-versa
     if {"xrfreq", "frequency"}.issubset(df.columns):
@@ -534,7 +573,7 @@ def parse_directory(
     if "date_end" in df.columns:
         df["date_end"] = df["date_end"].apply(date_parser, end_of_period=True)
 
-    # Checks
+    # # Checks
     if {"date_start", "date_end", "xrfreq", "frequency"}.issubset(df.columns):
         # All NaN dates correspond to a fx frequency.
         invalid = (
@@ -551,12 +590,10 @@ def parse_directory(
             logger.debug(f"Paths: {df.path[invalid].values}")
             df = df[~invalid]
 
-    # todo
-    # - Vocabulary check on xrfreq and other columns
-    # - Format is understood
-
     # Create id from user specifications
     df["id"] = generate_id(df, id_columns)
+
+    # TODO: ensure variable is a tuple ?
 
     # ensure path is a string
     df["path"] = df.path.apply(str)
