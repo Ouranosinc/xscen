@@ -39,36 +39,66 @@ from .utils import (  # noqa
 logger = logging.getLogger(__name__)
 
 
-__all__ = ["parse_directory", "parse_from_ds"]
+__all__ = ["build_path", "parse_directory", "parse_from_ds", "register_parse_type"]
 # ## File finding and path parsing ## #
 
 
-@parse.with_pattern(r"([^\_\/\\]*)", regex_group_count=1)
+EXTRA_PARSE_TYPES = {}
+"""Extra parse types to add to parse's default.
+
+Add your own types with the :py:func:`register_parse_type` decorator.
+"""
+
+
+def register_parse_type(name, regex=r"([^\_\/\\]*)", group_count=1):
+    r"""Register a new parse type to be available in :py:func:`parse_directory` patterns.
+
+    Function decorated by this will be registered in :py:data:`EXTRA_PARSE_TYPES`.
+    The function must take a single string and should return a single string.
+    If you return a different type, it may interfere with the other steps of `parse_directory`.
+
+    Parameters
+    ----------
+    name: str
+        The type name. To make use of this type, put "{field:name}" in your pattern.
+    regex: str
+        A regex string to determine what can be matched by this type.
+        The default matches anything but / \ and _, same as the default parse type.
+    group_count: int
+        The number of regex groups in the previous regex string.
+    """
+
+    def _register_parse_type(func):
+        EXTRA_PARSE_TYPES[name] = parse.with_pattern(
+            regex, regex_group_count=group_count
+        )(func)
+        return func
+
+    return _register_parse_type
+
+
+@register_parse_type("no_", regex=r"([^\_\/\\]*)", group_count=1)
 def _parse_word(text: str) -> str:
     r"""Parse helper to match strings with anything except / \ or _."""
     return text
 
 
-@parse.with_pattern(r"([^\/\\]*)", regex_group_count=1)
+@register_parse_type("_", regex=r"([^\/\\]*)", group_count=1)
 def _parse_level(text: str) -> str:
     r"""Parse helper to match strings with anything except / or \."""
     return text
 
 
-@parse.with_pattern(r"(([\d]{4,8}(\-[\d]{4,8})?)|fx)", regex_group_count=3)
+@register_parse_type(
+    "datebounds", regex=r"(([\d]{4,8}(\-[\d]{4,8})?)|fx)", group_count=3
+)
 def _parse_datebounds(text: str) -> tuple[str, str]:
+    """Parse helper to translate date bounds, used in the special DATES field."""
     if "-" in text:
         return text.split("-")
     if text == "fx":
         return None, None
     return text, text
-
-
-EXTRA_PARSE_TYPES = {
-    "_": _parse_level,
-    "no_": _parse_word,
-    "datebounds": _parse_datebounds,
-}
 
 
 def _find_assets(
@@ -245,7 +275,7 @@ def _parse_dir(
     lengths = {patt.count(os.path.sep) for patt in patterns}
     exts = {os.path.splitext(patt)[-1] for patt in patterns}
     comp_patterns = list(map(_compile_pattern, patterns))
-    checks = checks = []
+    checks = checks or []
 
     # Multithread, communicating via FIFO queues.
     # This thread walks the directory
@@ -269,9 +299,10 @@ def _parse_dir(
             if "writable" in checks and not os.access(path, os.W_OK):
                 valid = False
             if "ncvalid" in checks:
-                try:
-                    eng = get_engine(path)
-                    if eng == "netcdf4":
+                try:  # Simple check that the file is openable
+                    if get_engine(path) == "netcdf4":
+                        # if get_engine is "h5netcdf", it means h5py was able to recognize it.
+                        # TODO: testing for zarr validity is not implemented
                         with netCDF4.Dataset(path):
                             pass
                 except Exception:
@@ -298,11 +329,12 @@ def _parse_dir(
             else:
                 if d is not None:
                     parsed.append(d)
+                    n = len(parsed)
                     # Print number of files but on round numbers to limit the calls to stdout for large collections
                     if progress and all(
-                        [(progress < N or (progress % N == 0)) for N in [10, 100, 1000]]
+                        [(n < N or (n % N == 0)) for N in [10, 100, 1000]]
                     ):
-                        print(f"Found {len(parsed)} files", end="\r")
+                        print(f"Found {n:7d} files", end="\r")
             q_checked.task_done()
 
     CW = threading.Thread(target=check_worker, daemon=True)
@@ -337,7 +369,7 @@ def _replace_in_row(oldrow: pd.Series, replacements: dict):
     List-like fields are handled.
     """
     row = oldrow.copy()
-    list_cols = [col for col in oldrow if isinstance(oldrow[col], (tuple, list))]
+    list_cols = [col for col in oldrow.index if isinstance(oldrow[col], (tuple, list))]
     for col, reps in replacements.items():
         if col not in row:
             continue
@@ -354,7 +386,7 @@ def _replace_in_row(oldrow: pd.Series, replacements: dict):
                         col, new, repval, row[col], col, col in list_cols
                     )
     # Special case for "variable" where we remove Nones.
-    if "variable" in row and None in row["variable"]:
+    if "variable" in row and "variable" in list_cols and None in row["variable"]:
         row["variable"] = tuple(v for v in row["variable"] if v is not None)
     return row
 
@@ -453,10 +485,12 @@ def parse_directory(
     - Not all column names have to be present, but "xrfreq" (obtainable through "frequency"), "variable",
         "date_start" and "processing_level" are necessary for a workable catalog.
     - 'patterns' should highlight the columns with braces.
-        This acts like the reverse operation of `format()`. Fields will match alphanumeric parts of the path,
-        excluding the "_", "/" and "\" characters. The "_" format spec will allow underscores.
-        Field names prefixed by "?" will match normally, but will not be included in the output.
-        See the documentation of :py:mod:`parse` for more format spec options.
+        This acts like the reverse operation of `format()`. It is a template string with `{field name:type}` elements.
+        The default "type" will match alphanumeric parts of the path, excluding the "_", "/" and "\" characters.
+        The "_" type will allow underscores.
+        Field names prefixed by "?" will not be included in the output.
+        See the documentation of :py:mod:`parse` for more type options.
+        You can also add your own types using the :py:func:`register_parse_type` decorator.
 
         The "DATES" field is special as it will only match dates, either as a single date (YYYY, YYYYMM, YYYYMMDD)
         assigned to "{date_start}" (with "date_end" automatically inferred) or two dates of the same format as "{date_start}-{date_end}".
@@ -761,7 +795,7 @@ def _parse_from_nc(path: os.PathLike, get_vars=True, get_time=True):
 
 
 # ## Path building ## #
-def _parse_option(option: dict, facets: dict):
+def _schema_option(option: dict, facets: dict):
     """Parse an option element of the facet schema tree."""
     facet_value = facets[option["option"]]
     if "value" in option:
@@ -779,10 +813,10 @@ def _parse_option(option: dict, facets: dict):
     return answer
 
 
-def _parse_level(schema: Union[dict, str], facets: dict):
+def _schema_level(schema: Union[dict, str], facets: dict):
     if isinstance(schema, str):
         if schema == "DATES":
-            return _parse_dates(facets)
+            return _schema_dates(facets)
 
         # A single facet:
         if isna(facets[schema]):
@@ -791,22 +825,22 @@ def _parse_level(schema: Union[dict, str], facets: dict):
     if isinstance(schema, list):
         parts = []
         for element in schema:
-            part = _parse_level(element, facets)
+            part = _schema_level(element, facets)
             if not isna(part):
                 parts.append(part)
         return "_".join(parts)
     if "option" in schema:
-        answer = _parse_option(schema, facets)
+        answer = _schema_option(schema, facets)
         if isinstance(answer, bool) and not answer:
             # Test failed with no "else" value, we skip this level.
             return None
-        return _parse_level(answer, facets)
+        return _schema_level(answer, facets)
     if "text" in schema:
         return schema["text"]
     raise ValueError(f"Invalid schema : {schema}")
 
 
-def _parse_dates(facets):
+def _schema_dates(facets):
     if isinstance(facets["date_start"], str) and facets["date_start"].startswith("$$"):
         return "$$DATES$$"
 
@@ -841,20 +875,20 @@ def _parse_dates(facets):
     return f"{start:%Y%m%d}-{end:%Y%m%d}"
 
 
-def _parse_filename(schema: list, facets: dict) -> str:
+def _schema_filename(schema: list, facets: dict) -> str:
     return "_".join(
         [
-            facets[element] if element != "DATES" else _parse_dates(facets)
+            facets[element] if element != "DATES" else _schema_dates(facets)
             for element in schema
             if element == "DATES" or not isna(facets[element])
         ]
     )
 
 
-def _parse_folders(schema: list, facets: dict) -> list:
+def _schema_folders(schema: list, facets: dict) -> list:
     folder_tree = list()
     for level in schema:
-        part = _parse_level(level, facets)
+        part = _schema_level(level, facets)
         if not isna(part):
             folder_tree.append(part)
     return folder_tree
@@ -864,8 +898,8 @@ def _get_needed_fields(schema: dict, facets: dict):
     """Return the list of facets that is needed for a given schema."""
     fake_facets = {f: f"$${f}$$" for f, v in facets.items()}
     fake_path = str(
-        Path(*_parse_folders(schema["folders"], fake_facets))
-        / _parse_filename(schema["filename"], fake_facets)
+        Path(*_schema_folders(schema["folders"], fake_facets))
+        / _schema_filename(schema["filename"], fake_facets)
     )
     return {f for f, ftemplate in fake_facets.items() if ftemplate in fake_path}
 
@@ -924,7 +958,7 @@ def _build_path(
     # Find the first fitting schema
     for name, schema in schemas.items():
         match = reduce(
-            op.and_, map(partial(_parse_option, facets=facets), schema["with"])
+            op.and_, map(partial(_schema_option, facets=facets), schema["with"])
         )
         if match:
             # Checks
@@ -939,8 +973,8 @@ def _build_path(
                     "You can override the facet by passing `variable='varname'` directly."
                 )
 
-            out = Path(*_parse_folders(schema["folders"], facets))
-            out = out / _parse_filename(schema["filename"], facets)
+            out = Path(*_schema_folders(schema["folders"], facets))
+            out = out / _schema_filename(schema["filename"], facets)
             if root is not None:
                 out = root / out
             if "format" in facets:  # Add extension

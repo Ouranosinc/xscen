@@ -610,7 +610,7 @@ def search_data_catalogs(
         isinstance(dc, str) for dc in data_catalogs
     ):
         data_catalogs = [
-            DataCatalog(path) if path.endswith(".json") else DataCatalog.from_csv(path)
+            DataCatalog(path) if path.endswith(".json") else DataCatalog.from_df(path)
             for path in data_catalogs
         ]
         catalog = DataCatalog(

@@ -164,9 +164,9 @@ class DataCatalog(intake_esm.esm_datastore):
             self.drop_duplicates()
 
     @classmethod
-    def from_csv(
+    def from_df(
         cls,
-        paths: Union[os.PathLike, Sequence[os.PathLike]],
+        data: Union[pd.DataFrame, os.PathLike, Sequence[os.PathLike]],
         esmdata: Optional[Union[os.PathLike, dict]] = None,
         *,
         read_csv_kwargs: Mapping[str, Any] = None,
@@ -177,11 +177,11 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Parameters
         ----------
-        paths: paths or sequence of paths
-          One or more paths to csv files.
+        data: DataFrame or path or sequence of path
+          A DataFrame or one or more paths to csv files.
         esmdata: path or dict, optional
           The "ESM collection data" as a path to a json file or a dict.
-          If None (default), :py:data:`esm_col_data` is used.
+          If None (default), xscen's default :py:data:`esm_col_data` is used.
         read_csv_kwargs : dict, optional
           Extra kwargs to pass to `pd.read_csv`, in addition to the ones in :py:data:`csv_kwargs`.
         name: str, optional
@@ -191,8 +191,17 @@ class DataCatalog(intake_esm.esm_datastore):
         --------
         pandas.read_csv
         """
-        if isinstance(paths, os.PathLike):
-            paths = [paths]
+        if isinstance(data, pd.DataFrame):
+            df = data
+        else:
+            if isinstance(data, os.PathLike):
+                data = [data]
+
+            read_csv_kwargs = recursive_update(csv_kwargs.copy(), read_csv_kwargs or {})
+
+            df = pd.concat(
+                [pd.read_csv(pth, **read_csv_kwargs) for pth in data]
+            ).reset_index(drop=True)
 
         if isinstance(esmdata, os.PathLike):
             with open(esmdata) as f:
@@ -201,12 +210,6 @@ class DataCatalog(intake_esm.esm_datastore):
             esmdata = deepcopy(esm_col_data)
         if "id" not in esmdata:
             esmdata["id"] = name
-
-        read_csv_kwargs = recursive_update(csv_kwargs.copy(), read_csv_kwargs or {})
-
-        df = pd.concat([pd.read_csv(p, **read_csv_kwargs) for p in paths]).reset_index(
-            drop=True
-        )
 
         # Create the intake catalog
         return cls({"esmcat": esmdata, "df": df}, **intake_kwargs)
