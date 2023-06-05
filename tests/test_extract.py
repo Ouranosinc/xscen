@@ -131,6 +131,21 @@ class TestSubsetWarmingLevel:
         assert ds_sub.warminglevel.attrs["baseline"] == "1850-1900"
         assert ds_sub.attrs["cat:processing_level"] == "warminglevel-2vs1850-1900"
 
+    def test_kwargs(self):
+        ds_sub = xs.subset_warming_level(
+            TestSubsetWarmingLevel.ds,
+            wl=1,
+            window=25,
+            tas_baseline_period=["1981", "2010"],
+            to_level="tests",
+        )
+
+        np.testing.assert_array_equal(ds_sub.time.dt.year[0], 2009)
+        np.testing.assert_array_equal(ds_sub.time.dt.year[-1], 2033)
+        np.testing.assert_array_equal(ds_sub.warminglevel[0], "+1Cvs1981-2010")
+        assert ds_sub.warminglevel.attrs["baseline"] == "1981-2010"
+        assert ds_sub.attrs["cat:processing_level"] == "tests"
+
     def test_outofrange(self):
         assert xs.subset_warming_level(TestSubsetWarmingLevel.ds, wl=5) is None
 
