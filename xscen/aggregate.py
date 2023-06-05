@@ -163,6 +163,7 @@ def climatological_mean(
             ]
         else:
             raise ValueError("The type of 'time' could not be understood.")
+        ds_rolling = ds_rolling.drop_vars({"month", "year", "time", "day"})
         ds_rolling = ds_rolling.assign_coords(time=time_coord).transpose("time", ...)
 
         concats.extend([ds_rolling])
@@ -697,7 +698,7 @@ def produce_horizon(
         )
     if period is not None:
         period = standardize_periods(period, multiple=False)
-        ds = ds.sel(time=slice(period[0], period[1])).load()
+        ds = ds.sel(time=slice(period[0], period[1]))
         window = int(period[1]) - int(period[0]) + 1
         if to_level:
             to_level = to_level.format(period0=period[0], period1=period[1])

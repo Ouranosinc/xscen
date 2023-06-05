@@ -117,6 +117,7 @@ class TestClimatologicalMean:
             freq="AS-JAN",
             as_dataset=True,
         )
+
         ds = xr.concat([ds1, ds2], dim="time")
         with pytest.raises(ValueError):
             xs.climatological_mean(ds)
