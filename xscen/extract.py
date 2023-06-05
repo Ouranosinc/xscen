@@ -827,7 +827,7 @@ def search_data_catalogs(
 
 @parse_config
 def get_warming_level(
-    models: Union[xr.Dataset, str, list],
+    realization: Union[xr.Dataset, str, list],
     wl: float,
     *,
     window: int = 20,
@@ -840,7 +840,7 @@ def get_warming_level(
 
     Parameters
     ----------
-    models : Union[xr.Dataset, str, list]
+    realization : Union[xr.Dataset, str, list]
        Input dataset, string or list of strings indicating the models to be evaluated.
        Strings should follow this formatting: mip-era_source_experiment_member. Regex wildcards (.*) are accepted, but may lead to unexpected results.
        Datasets should include the attributes required to create such a string.
@@ -876,20 +876,20 @@ def get_warming_level(
     if tas_csv is None:
         tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
 
-    if isinstance(models, xr.Dataset):
+    if isinstance(realization, xr.Dataset):
         # get info on ds
-        if pd.isna(models.attrs.get("cat:driving_model", None)):
-            source_ds = models.attrs["cat:source"]
+        if pd.isna(realization.attrs.get("cat:driving_model", None)):
+            source_ds = realization.attrs["cat:source"]
         else:
-            institution_ds = models.attrs.get("cat:driving_institution", None)
-            source_ds = models.attrs["cat:driving_model"]
+            institution_ds = realization.attrs.get("cat:driving_institution", None)
+            source_ds = realization.attrs["cat:driving_model"]
             if (institution_ds is not None) and (
                 source_ds[0 : len(institution_ds)] == institution_ds
             ):
                 source_ds = source_ds.replace(f"{institution_ds}-", "", 1)
-        exp_ds = models.attrs["cat:experiment"]
-        member_ds = models.attrs["cat:member"]
-        mip_era_ds = models.attrs["cat:mip_era"]
+        exp_ds = realization.attrs["cat:experiment"]
+        member_ds = realization.attrs["cat:member"]
+        mip_era_ds = realization.attrs["cat:mip_era"]
 
         info_models = [
             (
@@ -898,13 +898,13 @@ def get_warming_level(
                 else f"{mip_era_ds}_{source_ds}_{exp_ds}_{member_ds}"
             )
         ]
-    elif isinstance(models, str):
-        info_models = [models]
-    elif isinstance(models, list):
-        info_models = models
+    elif isinstance(realization, str):
+        info_models = [realization]
+    elif isinstance(realization, list):
+        info_models = realization
     else:
         raise ValueError(
-            f"'models' must be a Dataset, string or list. Received {type(models)}."
+            f"'realization' must be a Dataset, string or list. Received {type(realization)}."
         )
 
     # open csv
@@ -913,7 +913,7 @@ def get_warming_level(
     for model in info_models:
         if len(model.split("_")) != 4:
             raise ValueError(
-                "'models' should follow the format: 'mip-era_source_experiment_member'."
+                "'realization' should follow the format: 'mip-era_source_experiment_member'."
             )
 
         # choose colum based in ds cat attrs
