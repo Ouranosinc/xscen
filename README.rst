@@ -2,7 +2,7 @@
 xscen |logo|
 ============
 
-|pypi| |status| |build| |docs| |black| |pre-commit| |versions|
+|pypi| |status| |build| |coverage| |docs| |black| |pre-commit| |versions|
 
 A climate change scenario-building analysis framework, built with Intake-esm catalogs and xarray-based packages such as xclim and xESMF.
 
@@ -32,10 +32,15 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
 
 .. |logo| image:: https://raw.githubusercontent.com/Ouranosinc/xscen/main/docs/_static/_images/xscen-logo-small.png
         :target: https://github.com/Ouranosinc/xscen
+        :alt: xscen Logo
 
 .. |build| image:: https://github.com/Ouranosinc/xscen/actions/workflows/main.yml/badge.svg
         :target: https://github.com/Ouranosinc/xscen/actions/workflows/main.yml
         :alt: Build Status
+
+.. |coverage| image:: https://coveralls.io/repos/github/Ouranosinc/xscen/badge.svg
+        :target: https://coveralls.io/github/Ouranosinc/xscen
+        :alt: Code Coverage
 
 .. |pypi| image:: https://img.shields.io/pypi/v/xscen.svg
         :target: https://pypi.python.org/pypi/xscen
