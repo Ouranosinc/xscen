@@ -13,6 +13,7 @@ Announcements
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * `xscen` now tracks code coverage using `coveralls <https://coveralls.io/>`_. (:pull:`187`).
+* New function `get_warming_level` to search within the IPCC CMIP global temperatures CSV without requiring data. (:issue:`208`, :pull:`210`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
