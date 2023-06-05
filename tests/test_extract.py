@@ -23,9 +23,7 @@ class TestGetWarmingLevel:
             "CMIP6_CanESM5_ssp585_r1i1p1f1", wl=2, window=20, return_horizon=True
         )
         assert isinstance(out, list)
-        assert len(out) == 2
-        assert out[0] == "2013"
-        assert out[1] == "2032"
+        assert out == ["2013", "2032"]
 
     @pytest.mark.parametrize("attrs", ["global", "regional", "regional_w_institution"])
     def test_ds(self, attrs):
@@ -107,3 +105,34 @@ class TestGetWarmingLevel:
             xs.get_warming_level(
                 "CMIP6_CanESM5_ssp585_r1i1p1f1", wl=2, window=3.85, return_horizon=True
             )
+
+
+class TestSubsetWarmingLevel:
+    ds = timeseries(
+        np.tile(np.arange(1, 2), 50),
+        variable="tas",
+        start="2000-01-01",
+        freq="AS-JAN",
+        as_dataset=True,
+    )
+    ds.attrs = {
+        "cat:mip_era": "CMIP6",
+        "cat:source": "CanESM5",
+        "cat:experiment": "ssp585",
+        "cat:member": "r1i1p1f1",
+    }
+
+    def test_default(self):
+        ds_sub = xs.subset_warming_level(TestSubsetWarmingLevel.ds, wl=2)
+
+        np.testing.assert_array_equal(ds_sub.time.dt.year[0], 2013)
+        np.testing.assert_array_equal(ds_sub.time.dt.year[-1], 2032)
+        np.testing.assert_array_equal(ds_sub.warminglevel[0], "+2Cvs1850-1900")
+        assert ds_sub.warminglevel.attrs["baseline"] == "1850-1900"
+        assert ds_sub.attrs["cat:processing_level"] == "warminglevel-2vs1850-1900"
+
+    def test_outofrange(self):
+        assert xs.subset_warming_level(TestSubsetWarmingLevel.ds, wl=5) is None
+
+    def test_none(self):
+        assert xs.subset_warming_level(TestSubsetWarmingLevel.ds, wl=20) is None
