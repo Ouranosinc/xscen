@@ -186,7 +186,8 @@ def climatological_mean(
             else new_history
         )
         ds_rolling[vv].attrs["history"] = history
-    ds_rolling.attrs["cat:processing_level"] = to_level
+    if to_level is not None:
+        ds_rolling.attrs["cat:processing_level"] = to_level
 
     return ds_rolling
 
