@@ -889,16 +889,11 @@ def get_warming_level(
             ):
                 source_ds = source_ds.replace(f"{institution_ds}-", "", 1)
         exp_ds = realization.attrs["cat:experiment"]
-        member_ds = realization.attrs["cat:member"]
+        member_ds = ".*" if ignore_member else realization.attrs["cat:member"]
         mip_era_ds = realization.attrs["cat:mip_era"]
 
-        info_models = [
-            (
-                f"{mip_era_ds}_{source_ds}_{exp_ds}_.*"
-                if ignore_member
-                else f"{mip_era_ds}_{source_ds}_{exp_ds}_{member_ds}"
-            )
-        ]
+        info_models = [f"{mip_era_ds}_{source_ds}_{exp_ds}_{member_ds}"]
+
     elif isinstance(realization, str):
         info_models = [realization]
     elif isinstance(realization, list):
