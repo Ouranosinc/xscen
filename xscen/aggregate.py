@@ -73,6 +73,11 @@ def climatological_mean(
         Returns a Dataset of the climatological mean
 
     """
+    if xr.infer_freq(ds.time) == "D":
+        raise NotImplementedError(
+            "xs.climatological_mean does not currently support daily data."
+        )
+
     # there is one less occurrence when a period crosses years
     freq_across_year = [
         f"{f}-{mon}"
@@ -100,9 +105,17 @@ def climatological_mean(
 
     window = window or int(periods[0][1]) - int(periods[0][0]) + 1
 
-    if ds.attrs.get("cat:xrfreq") in freq_across_year and min_periods is None:
+    if (
+        any(
+            x in freq_across_year
+            for x in [ds.attrs.get("cat:xrfreq"), xr.infer_freq(ds.time)]
+        )
+        and min_periods is None
+    ):
         min_periods = window - 1
     min_periods = min_periods or window
+    if min_periods > window:
+        raise ValueError("'min_periods' should be smaller or equal to 'window'")
 
     for period in periods:
         # Rolling average
@@ -174,7 +187,6 @@ def climatological_mean(
             else new_history
         )
         ds_rolling[vv].attrs["history"] = history
-
     if to_level is not None:
         ds_rolling.attrs["cat:processing_level"] = to_level
 
@@ -234,6 +246,11 @@ def compute_deltas(
         )
 
     if "time" in ds:
+        if xr.infer_freq(ds.time) == "D":
+            raise NotImplementedError(
+                "xs.climatological_mean does not currently support daily data."
+            )
+
         # Remove references to 'year' in REF
         ind = pd.MultiIndex.from_arrays(
             [ref.time.dt.month.values, ref.time.dt.day.values], names=["month", "day"]
