@@ -4,7 +4,7 @@ History
 
 v0.7.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -12,6 +12,8 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* `xscen` now tracks code coverage using `coveralls <https://coveralls.io/>`_. (:pull:`187`).
+* New function `get_warming_level` to search within the IPCC CMIP global temperatures CSV without requiring data. (:issue:`208`, :pull:`210`).
 * File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`).
 
 Breaking changes
@@ -21,12 +23,15 @@ Breaking changes
 Bug fixes
 ^^^^^^^^^
 * Fix bug in ``unstack_dates`` with seasonal climatological mean. (:issue:`202`, :pull:`202`).
+* Added NotImplemented errors when trying to call `climatological_mean` and `compute_deltas` with daily data. (:pull:`187`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Removed the pin on xarray's version. (:issue:`175`, :pull:`199`).
 * Folder parsing utilities now in pure python, platform independent. New dependency ``parse``. (:pull:`205`).
 * Updated ReadTheDocs configuration to prevent ``--eager`` installation of xscen (:pull:`209`).
+* Implemented a template to be used for unit tests. (:pull:`187`).
+* Updated GitHub Actions to remove deprecation warnings. (:pull:`187`).
 
 v0.6.0 (2023-05-04)
 -------------------

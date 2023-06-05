@@ -32,6 +32,7 @@ __all__ = [
     "extract_dataset",
     "resample",
     "search_data_catalogs",
+    "get_warming_level",
     "subset_warming_level",
 ]
 
@@ -820,15 +821,170 @@ def search_data_catalogs(
 
 
 @parse_config
-def subset_warming_level(
-    ds: xr.Dataset,
+def get_warming_level(
+    realization: Union[xr.Dataset, str, list],
     wl: float,
+    *,
     window: int = 20,
     tas_baseline_period: list = None,
     ignore_member: bool = False,
     tas_csv: str = None,
+    return_horizon: bool = True,
+):
+    """Use the IPCC Atlas method to return the window of time over which the requested level of global warming is first reached.
+
+    Parameters
+    ----------
+    realization : Union[xr.Dataset, str, list]
+       Input dataset, string or list of strings indicating the models to be evaluated.
+       Strings should follow this formatting: mip-era_source_experiment_member. Regex wildcards (.*) are accepted, but may lead to unexpected results.
+       Datasets should include the catalogue attributes (starting by "cat:") required to create such a string: 'cat:mip_era', 'cat:experiment',
+       'cat:member', and either 'cat:source' for global models or 'cat:driving_institution' (optional) + 'cat:driving_model' for regional models.
+       e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
+    wl : float
+       Warming level.
+       e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
+    window : int
+       Size of the rolling window in years over which to compute the warming level.
+    tas_baseline_period : list
+       [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
+    ignore_member : bool
+       Only used for Datasets. Decides whether to ignore the member when searching for the model run in tas_csv.
+    tas_csv : str
+       Path to a csv of annual global mean temperature with a row for each year and a column for each dataset.
+       If None, it will default to data/IPCC_annual_global_tas.csv which was built from
+       the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
+       and extra data from pilot models of MRCC5 and ClimEx.
+    return_horizon: bool
+        If True, the output will be a list following the format ['start_yr', 'end_yr']
+        If False, the output will be a string representing the middle of the period.
+
+    Returns
+    -------
+    dict, list or str
+        If `models` is a Dataset or a string, the output will follow the format indicated by `return_period`.
+        If `models` is a list, the output will be a dictionary where the keys are the elements of `models`and the values follow the format indicated by `return_period`.
+    """
+    if tas_baseline_period is None:
+        tas_baseline_period = ["1850", "1900"]
+    tas_baseline_period = standardize_periods(tas_baseline_period, multiple=False)
+
+    if tas_csv is None:
+        tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
+
+    if isinstance(realization, xr.Dataset):
+        # get info on ds
+        if pd.isna(realization.attrs.get("cat:driving_model", None)):
+            source_ds = realization.attrs["cat:source"]
+        else:
+            institution_ds = realization.attrs.get("cat:driving_institution", None)
+            source_ds = realization.attrs["cat:driving_model"]
+            if (institution_ds is not None) and (
+                source_ds[0 : len(institution_ds)] == institution_ds
+            ):
+                source_ds = source_ds.replace(f"{institution_ds}-", "", 1)
+        exp_ds = realization.attrs["cat:experiment"]
+        member_ds = ".*" if ignore_member else realization.attrs["cat:member"]
+        mip_era_ds = realization.attrs["cat:mip_era"]
+
+        info_models = [f"{mip_era_ds}_{source_ds}_{exp_ds}_{member_ds}"]
+
+    elif isinstance(realization, str):
+        info_models = [realization]
+    elif isinstance(realization, list):
+        info_models = realization
+    else:
+        raise ValueError(
+            f"'realization' must be a Dataset, string or list. Received {type(realization)}."
+        )
+
+    # open csv
+    annual_tas = pd.read_csv(tas_csv, index_col="year")
+    out = dict()
+    for model in info_models:
+        if len(model.split("_")) != 4:
+            raise ValueError(
+                "'realization' should follow the format: 'mip-era_source_experiment_member'."
+            )
+
+        # choose colum based in ds cat attrs
+        right_column = annual_tas.filter(regex=re.compile(model, re.IGNORECASE), axis=1)
+
+        if len(right_column.columns) > 1:
+            logger.info(
+                "More than one column of the csv fits the dataset metadata. Choosing the first one."
+            )
+            right_column = pd.DataFrame(right_column.iloc[:, 0])
+
+        if len(right_column.columns) == 0:
+            warnings.warn(
+                f"No columns fit the attributes of the input dataset ({model})."
+            )
+            out[model] = [None, None] if return_horizon else None
+        else:
+            logger.info(
+                f"Computing warming level +{wl}°C for {model} from column: {right_column.columns[0]}."
+            )
+
+            # compute reference temperature for the warming
+            mean_base = right_column.loc[
+                tas_baseline_period[0] : tas_baseline_period[1]
+            ].mean()
+
+            yearly_diff = right_column - mean_base  # difference from reference
+
+            # get the start and end date of the window when the warming level is first reached
+
+            # shift(-1) is needed to reproduce IPCC results.
+            # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
+            if window % 2 == 0:  # Even window
+                rolling_diff = (
+                    yearly_diff.rolling(window=window, min_periods=window, center=True)
+                    .mean()
+                    .shift(-1)
+                )
+            elif window % 2 == 1:  # Odd windows do not require the shift
+                rolling_diff = yearly_diff.rolling(
+                    window=window, min_periods=window, center=True
+                ).mean()
+            else:
+                raise ValueError(
+                    f"window should be an integer, received {type(window)}"
+                )
+
+            yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
+            if yr is None:
+                start_yr = np.nan
+                end_yr = np.nan
+            else:
+                start_yr = int(yr - window / 2 + 1)
+                end_yr = int(yr + window / 2)
+
+            if np.isnan(start_yr):
+                logger.info(
+                    f"Global warming level of +{wl}C is not reached by the last year of the provided 'tas_csv' file for {model}."
+                )
+                out[model] = [None, None] if return_horizon else None
+            else:
+                out[model] = (
+                    standardize_periods([start_yr, end_yr], multiple=False)
+                    if return_horizon
+                    else str(yr)
+                )
+
+    if len(out) == 1:
+        out = next(iter(out.values()))
+
+    return out
+
+
+@parse_config
+def subset_warming_level(
+    ds: xr.Dataset,
+    wl: float,
     to_level: str = "warminglevel-{wl}vs{period0}-{period1}",
     wl_dim: str = "+{wl}Cvs{period0}-{period1}",
+    **kwargs,
 ):
     """Subsets the input dataset with only the window of time over which the requested level of global warming is first reached, using the IPCC Atlas method.
 
@@ -838,21 +994,10 @@ def subset_warming_level(
        Input dataset.
        The dataset should include attributes to help recognize it and find its
        warming levels - 'cat:mip_era', 'cat:experiment', 'cat:member', and either
-       'cat:source' for global models or 'cat:driving_model' for regional models.
+       'cat:source' for global models or 'cat:driving_institution' (optional) + 'cat:driving_model' for regional models.
     wl : float
        Warming level.
        eg. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
-    window : int
-       Size of the rolling window in years over which to compute the warming level.
-    tas_baseline_period : list
-       [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
-    ignore_member : bool
-       Whether to ignore the member when searching for the model run in tas_csv.
-    tas_csv : str
-       Path to a csv of annual global mean temperature with a row for each year and a column for each dataset.
-       If None, it will default to data/IPCC_annual_global_tas.csv which was built from
-       the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
-       and extra data from pilot models of MRCC5 and ClimEx.
     to_level :
        The processing level to assign to the output.
        Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
@@ -863,99 +1008,36 @@ def subset_warming_level(
        `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
        If None, no new dimensions will be added.
 
+    kwargs
+        Instructions on how to search for warming levels.
+        The keyword arguments are passed to `get_warming_level()`
+
+        Valid keyword aguments are:
+            window : int
+            tas_baseline_period : list
+            ignore_member : bool
+            tas_csv : str
+            return_horizon: bool
+
     Returns
     -------
     xr.Dataset
         Warming level dataset.
     """
-    if tas_baseline_period is None:
-        tas_baseline_period = ["1850", "1900"]
-    tas_baseline_period = standardize_periods(tas_baseline_period, multiple=False)
+    start_yr, end_yr = get_warming_level(ds, wl=wl, return_horizon=True, **kwargs)
 
-    if tas_csv is None:
-        tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
-
-    # get info on ds
-    id_ds = ds.attrs["cat:id"]
-    source_ds = (
-        ds.attrs["cat:source"]
-        if pd.isna(ds.attrs.get("cat:driving_model", None))
-        else ds.attrs["cat:driving_model"]
-    )
-    exp_ds = ds.attrs["cat:experiment"]
-    member_ds = ds.attrs["cat:member"]
-    mip_era_ds = ds.attrs["cat:mip_era"]
-
-    info_ds = (
-        f"{mip_era_ds}_{source_ds}_{exp_ds}_.*"
-        if ignore_member
-        else f"{mip_era_ds}_{source_ds}_{exp_ds}_{member_ds}"
-    )
-
-    # open csv
-    annual_tas = pd.read_csv(tas_csv, index_col="year")
-
-    # choose colum based in ds cat attrs
-    right_column = annual_tas.filter(regex=re.compile(info_ds, re.IGNORECASE), axis=1)
-
-    if len(right_column.columns) > 1:
-        logger.info(
-            "More than one column of the csv fits the dataset metadata. Choosing the first one."
-        )
-        right_column = pd.DataFrame(right_column.iloc[:, 0])
-    elif len(right_column.columns) == 0:
-        raise ValueError(
-            f"No columns fit the 'cat:' attributes of the input dataset ({info_ds})."
-        )
-
-    logger.info(
-        f"Computing warming level +{wl}C for id: {id_ds} from column: {right_column.columns[0]}."
-    )
-
-    # compute reference temperature for the warming
-    mean_base = right_column.loc[tas_baseline_period[0] : tas_baseline_period[1]].mean()
-
-    yearly_diff = right_column - mean_base  # difference from reference
-
-    # get the start and end date of the window when the warming level is first reached
-
-    # shift(-1) is needed to reproduce IPCC results.
-    # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
-    if window % 2 == 0:  # Even window
-        rolling_diff = (
-            yearly_diff.rolling(window=window, min_periods=window, center=True)
-            .mean()
-            .shift(-1)
-        )
-    elif window % 2 == 1:  # Odd windows do not require the shift
-        rolling_diff = yearly_diff.rolling(
-            window=window, min_periods=window, center=True
-        ).mean()
-    else:
-        raise ValueError(f"window should be an integer, received {type(window)}")
-
-    yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
-    if yr is None:
-        start_yr = np.nan
-        end_yr = np.nan
-    else:
-        start_yr = int(yr - window / 2 + 1)
-        end_yr = int(yr + window / 2)
-
-    if np.isnan(start_yr):
-        logger.info(
-            f"Global warming level of +{wl}C is not reached by the last year of the provided 'tas_csv' file for {id_ds}."
-        )
+    if start_yr is None:
         return None
-    elif any(yr not in ds.time.dt.year for yr in range(start_yr, end_yr + 1)):
+    elif any(yr not in ds.time.dt.year for yr in range(int(start_yr), int(end_yr) + 1)):
         logger.info(
-            f"{id_ds} does not sufficiently cover the time interval for +{wl}C ({start_yr}, {end_yr})."
+            f"{ds.attrs.get('cat:id', 'The provided dataset')} does not sufficiently cover the time interval for +{wl}°C ({start_yr}, {end_yr})."
         )
         return None
 
     # cut the window selected above
-    ds_wl = ds.sel(time=slice(str(start_yr), str(end_yr)))
+    ds_wl = ds.sel(time=slice(start_yr, end_yr))
 
+    tas_baseline_period = kwargs.get("tas_baseline_period", ["1850", "1900"])
     if wl_dim:
         ds_wl = ds_wl.expand_dims(
             dim={

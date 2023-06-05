@@ -26,7 +26,12 @@ from .catalog import DataCatalog, ProjectCatalog  # noqa
 from .config import CONFIG, load_config  # noqa
 from .diagnostics import properties_and_measures
 from .ensembles import *
-from .extract import extract_dataset, search_data_catalogs, subset_warming_level  # noqa
+from .extract import (  # noqa
+    extract_dataset,
+    get_warming_level,
+    search_data_catalogs,
+    subset_warming_level,
+)
 from .indicators import compute_indicators  # noqa
 from .io import save_to_netcdf, save_to_zarr  # noqa
 from .reduce import build_reduction_data, reduce_ensemble
@@ -42,7 +47,7 @@ from .utils import clean_up
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.6.4-beta"
+__version__ = "0.6.6-beta"
 
 
 # monkeypatch so that warnings.warn() doesn't mention itself

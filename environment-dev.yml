@@ -27,7 +27,7 @@ dependencies:
   - rechunker
   - shapely
   - xarray
-  - xclim >=0.37
+  - xclim >=0.43.0
   - xesmf >=0.7
   - zarr
   # Opt
@@ -35,6 +35,7 @@ dependencies:
   - pyarrow >=1.0.0  # For lighter in-memory catalogs
   # Dev
   - bumpversion
+  - coveralls
   - ipykernel
   - ipython
   - jupyter_client
