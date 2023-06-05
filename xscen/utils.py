@@ -78,7 +78,8 @@ def date_parser(
         8: ["%Y%m%d"],
         10: ["%Y%m%d%H", "%Y-%m-%d"],
         12: ["%Y%m%d%H%M"],
-        19: ["%Y-%m-%dT%H:%M:%S"],
+        16: ["%Y-%m-%d %H:%M"],
+        19: ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"],
     }
 
     def _parse_date(date, fmts):

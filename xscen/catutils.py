@@ -797,7 +797,7 @@ def _parse_from_nc(path: os.PathLike, get_vars=True, get_time=True):
 # ## Path building ## #
 def _schema_option(option: dict, facets: dict):
     """Parse an option element of the facet schema tree."""
-    facet_value = facets[option["option"]]
+    facet_value = facets.get(option["option"])
     if "value" in option:
         if isinstance(option["value"], str):
             answer = facet_value == option["value"]
@@ -819,7 +819,7 @@ def _schema_level(schema: Union[dict, str], facets: dict):
             return _schema_dates(facets)
 
         # A single facet:
-        if isna(facets[schema]):
+        if isna(facets.get(schema)):
             return None
         return facets[schema]
     if isinstance(schema, list):
@@ -840,9 +840,28 @@ def _schema_level(schema: Union[dict, str], facets: dict):
     raise ValueError(f"Invalid schema : {schema}")
 
 
+class KeyRecorder:
+    """A dummy object but recording requested keys.
+
+    Bracket-access (a[key]) returns the key as-is, but adds it to the `keys` property.
+    """
+
+    def __init__(self):
+        self.keys = set()
+
+    def __getitem__(self, k):
+        self.keys.add(k)
+        return k
+
+    def get(self, k):
+        return None
+
+
 def _schema_dates(facets):
-    if isinstance(facets["date_start"], str) and facets["date_start"].startswith("$$"):
-        return "$$DATES$$"
+    if isinstance(facets, KeyRecorder):
+        # Record that these three fields are needed
+        facets["date_start"], facets["date_end"], facets["xrfreq"]
+        return "dates"
 
     if facets["xrfreq"] == "fx":
         return "fx"
@@ -878,9 +897,9 @@ def _schema_dates(facets):
 def _schema_filename(schema: list, facets: dict) -> str:
     return "_".join(
         [
-            facets[element] if element != "DATES" else _schema_dates(facets)
+            facets.get(element) if element != "DATES" else _schema_dates(facets)
             for element in schema
-            if element == "DATES" or not isna(facets[element])
+            if element == "DATES" or not isna(facets.get(element))
         ]
     )
 
@@ -896,18 +915,14 @@ def _schema_folders(schema: list, facets: dict) -> list:
 
 def _get_needed_fields(schema: dict, facets: dict):
     """Return the list of facets that is needed for a given schema."""
-    fake_facets = {f: f"$${f}$$" for f, v in facets.items()}
-    fake_path = str(
-        Path(*_schema_folders(schema["folders"], fake_facets))
-        / _schema_filename(schema["filename"], fake_facets)
-    )
-    return {f for f, ftemplate in fake_facets.items() if ftemplate in fake_path}
+    facet_rec = KeyRecorder()
+    _schema_folders(schema["folders"], facet_rec)
+    _schema_filename(schema["filename"], facet_rec)
+    return facet_rec.keys
 
 
 def _read_schemas(schemas):
-    if isinstance(schemas, dict) and {"with", "folders", "filename"}.issubset(
-        schemas.keys()
-    ):
+    if isinstance(schemas, dict) and {"folders", "filename"}.issubset(schemas.keys()):
         # Single schema
         # Remove any conditions (or insert empty one)
         schemas["with"] = []
@@ -930,6 +945,7 @@ def _build_path(
     data: Union[dict, xr.Dataset, xr.DataArray, pd.Series],
     schemas: dict,
     root: Path,
+    strict: bool = False,
     **extra_facets,
 ) -> Path:
     # Get all known metadata
@@ -957,13 +973,16 @@ def _build_path(
 
     # Find the first fitting schema
     for name, schema in schemas.items():
-        match = reduce(
-            op.and_, map(partial(_schema_option, facets=facets), schema["with"])
-        )
+        if not schema["with"]:
+            match = True
+        else:
+            match = reduce(
+                op.and_, map(partial(_schema_option, facets=facets), schema["with"])
+            )
         if match:
             # Checks
             needed_fields = _get_needed_fields(schema, facets)
-            if missing_fields := needed_fields - set(facets.keys()):
+            if strict and (missing_fields := needed_fields - set(facets.keys())):
                 raise ValueError(
                     f"Missing facets {missing_fields} are needed to build the path according to selected schema {name}."
                 )
@@ -972,7 +991,6 @@ def _build_path(
                     f"Selected schema {name} is meant to be used with single-variable datasets. Got multiple: {facets['variable']}. "
                     "You can override the facet by passing `variable='varname'` directly."
                 )
-
             out = Path(*_schema_folders(schema["folders"], facets))
             out = out / _schema_filename(schema["filename"], facets)
             if root is not None:
@@ -989,6 +1007,7 @@ def build_path(
     data: Union[dict, xr.Dataset, xr.DataArray, pd.Series, DataCatalog, pd.DataFrame],
     schemas: Optional[Union[str, os.PathLike, list[dict], dict]] = None,
     root: os.PathLike = None,
+    strict: bool = False,
     **extra_facets,
 ) -> Union[Path, DataCatalog, pd.DataFrame]:
     """Parse the schema from a configuration and construct path using a dictionary of facets.
@@ -1007,6 +1026,9 @@ def build_path(
         Or a single schema dict (single element of the yaml).
     root : Path, optional
         If given, the generated path(s) is given under this root one.
+    strict : bool
+        If True, the data must include all facets referred in the schema.
+        If False (default), the output paths might be inconsistent if some fields are missing.
     extra_facets : str
         Extra facets to supplement or override metadadata missing from the first input.
 
@@ -1030,14 +1052,20 @@ def build_path(
         root = Path(root)
     schemas = _read_schemas(schemas)
     if isinstance(data, (esm_datastore, pd.DataFrame)):
-        newcat = deepcopy(data)
         if isinstance(data, esm_datastore):
-            df = newcat.df
+            df = data.df
         else:
-            df = newcat
+            df = data
+
+        df = df.copy()
 
         df["new_path"] = df.apply(
-            _build_path, axis=1, schemas=schemas, root=root, **extra_facets
+            _build_path,
+            axis=1,
+            schemas=schemas,
+            root=root,
+            strict=strict,
+            **extra_facets,
         ).apply(str)
-        return newcat
+        return df
     return _build_path(data, schemas=schemas, root=root, **extra_facets)
