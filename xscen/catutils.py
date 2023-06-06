@@ -448,19 +448,22 @@ def parse_directory(
         It can also be a list of those tuples.
     homogenous_info : dict, optional
         Using the {column_name: description} format, information to apply to all files.
+        These are applied before the `cvs`.
     cvs: str or PosixPath or dict, optional
         Dictionary with mapping from parsed term to preffered terms for each column.
         May have an additional "attributes" entry which maps from attribute names in the files to
         official column names. The attribute translation is done before the rest.
         In the "variable" entry, if a name is mapped to None (null), that variable will not be listed in the catalog.
         A term can map to another mapping from field name to values, so that a value on one column triggers the filling of other columns.
+        In the latter case, that other column must exist beforehand, whether it was in the pattern or in the homogenous_info.
     dirglob : str, optional
         A glob pattern for path matching to accelerate the parsing of a directory tree if only a subtree is needed.
         Only folders matching the pattern are parsed to find datasets.
     xr_open_kwargs: dict
         If needed, arguments to send xr.open_dataset() when opening the file to read the attributes.
     only_official_columns: bool
-        If True (default), this ensures the final catalog only has the columns defined in :py:data:`COLUMNS`. Other fields in the patterns will raise an error.
+        If True (default), this ensures the final catalog only has the columns defined in :py:data:`xscen.catalog.COLUMNS`.
+        Other fields in the patterns will raise an error.
         If False, the columns are those used in the patterns and the homogenous info. In that case, the column order is not determined.
         Path, format and id are always present in the output.
     progress : bool
@@ -996,7 +999,8 @@ def _build_path(
             if root is not None:
                 out = root / out
             if "format" in facets:  # Add extension
-                return out.with_suffix("." + facets["format"])
+                # Can't use `with_suffix` in case there are dots in the name
+                return out.parent / f"{out.name}.{facets['format']}"
             return out
 
     raise ValueError(f"This file doesn't match any schema. Facets:\n{facets}")
