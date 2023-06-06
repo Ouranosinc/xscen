@@ -444,13 +444,15 @@ def parse_directory(
         If False (default), files are never opened.
         If a tuple of 2 lists of strings, only the first file of groups defined by the
         first list of columns is read and the second list of columns is parsed from the
-        file and applied to the whole group.
+        file and applied to the whole group. For example, `(["source"],["institution", "activity"])` will find a
+        group with all the files that have the same source, open only one of the files to read the institution
+        and activity, and write this information in the catalog for all filles of the group.
         It can also be a list of those tuples.
     homogenous_info : dict, optional
         Using the {column_name: description} format, information to apply to all files.
         These are applied before the `cvs`.
     cvs: str or PosixPath or dict, optional
-        Dictionary with mapping from parsed term to preffered terms for each column.
+        Dictionary with mapping from parsed term to preffered terms (Controlled VocabularieS) for each column.
         May have an additional "attributes" entry which maps from attribute names in the files to
         official column names. The attribute translation is done before the rest.
         In the "variable" entry, if a name is mapped to None (null), that variable will not be listed in the catalog.
