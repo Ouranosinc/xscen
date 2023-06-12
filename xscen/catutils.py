@@ -22,6 +22,7 @@ import parse
 import xarray
 import xarray as xr
 import yaml
+import zarr
 from intake_esm import esm_datastore
 from pandas import isna
 
@@ -89,9 +90,7 @@ def _parse_level(text: str) -> str:
     return text
 
 
-@register_parse_type(
-    "datebounds", regex=r"(([\d]{4,8}(\-[\d]{4,8})?)|fx)", group_count=3
-)
+@register_parse_type("datebounds", regex=r"(([\d]+(\-[\d]+)?)|fx)", group_count=3)
 def _parse_datebounds(text: str) -> tuple[str, str]:
     """Parse helper to translate date bounds, used in the special DATES field."""
     if "-" in text:
@@ -102,27 +101,31 @@ def _parse_datebounds(text: str) -> tuple[str, str]:
 
 
 def _find_assets(
-    root: os.PathLike, exts: set[str], lengths: set[int], dirglob: Optional[str] = None
+    root: str, exts: set[str], lengths: set[int], dirglob: Optional[str] = None
 ):
     """Walk recursively over files in a directory, filtering according to a glob pattern, path depth and extensions."""
+    root = str(root)  # to be sure
     for top, alldirs, files in os.walk(root):
-        # Remove zarr subdirectories from next iteration
-        dirs = deepcopy(alldirs)
-        for dr in dirs:
+        # Split zarr subdirectories from next iteration
+        zarrs = []
+        for dr in deepcopy(alldirs):
             if dr.endswith(".zarr"):
+                zarrs.append(dr)
                 alldirs.remove(dr)
 
-        if (os.path.relpath(top, root).count(os.path.sep) + 1) not in lengths:
+        if (
+            top != root
+            and (os.path.relpath(top, root).count(os.path.sep) + 1) not in lengths
+        ):
             continue
 
         if dirglob is not None and not fnmatch(top, dirglob):
             continue
 
-        if "zarr" in exts:
-            for dr in dirs:
-                if os.path.splitext(dr)[-1] == "zarr":
-                    yield os.path.join(top, dr)
-        if exts - {"zarr"}:  # There are more exts than
+        if ".zarr" in exts:
+            for zr in zarrs:
+                yield os.path.join(top, zr)
+        if exts - {".zarr"}:  # There are more exts than
             for file in files:
                 if os.path.splitext(file)[-1] in exts:
                     yield os.path.join(top, file)
@@ -206,6 +209,9 @@ def _name_parser(
     d["path"] = abs_path
     d["format"] = path.suffix[1:]
 
+    if "DATES" in d:
+        d["date_start"], d["date_end"] = d.pop("DATES")
+
     if read_from_file:
         fromfile = parse_from_ds(
             abs_path, names=read_from_file, attrs_map=attrs_map, **xr_open_kwargs
@@ -213,9 +219,6 @@ def _name_parser(
         d.update(fromfile)
 
     # files with a single year/month
-    if "DATES" in d:
-        d["date_start"], d["date_end"] = d.pop("DATES")
-
     if "date_end" not in d and "date_start" in d:
         d["date_end"] = d["date_start"]
 
@@ -236,7 +239,7 @@ def _parse_dir(
     read_from_file: Optional[Union[list[str], dict]] = None,
     attrs_map: Optional[dict] = None,
     xr_open_kwargs: Optional[dict] = None,
-    progress: bool = False,
+    progress: Union[bool, callable] = False,
 ):
     """Iterate and parses files in a directory, filtering according to basic pattern properties and optional checks.
 
@@ -335,6 +338,8 @@ def _parse_dir(
                         [(n < N or (n % N == 0)) for N in [10, 100, 1000]]
                     ):
                         print(f"Found {n:7d} files", end="\r")
+                else:
+                    logger.debug(f"File {path} didn't match any pattern.")
             q_checked.task_done()
 
     CW = threading.Thread(target=check_worker, daemon=True)
@@ -452,7 +457,7 @@ def parse_directory(
         Using the {column_name: description} format, information to apply to all files.
         These are applied before the `cvs`.
     cvs: str or PosixPath or dict, optional
-        Dictionary with mapping from parsed term to preffered terms (Controlled VocabularieS) for each column.
+        Dictionary with mapping from parsed term to preferred terms (Controlled VocabularieS) for each column.
         May have an additional "attributes" entry which maps from attribute names in the files to
         official column names. The attribute translation is done before the rest.
         In the "variable" entry, if a name is mapped to None (null), that variable will not be listed in the catalog.
@@ -469,8 +474,7 @@ def parse_directory(
         If False, the columns are those used in the patterns and the homogenous info. In that case, the column order is not determined.
         Path, format and id are always present in the output.
     progress : bool
-        If True, a counter is shown in stdout when finding files on disk.
-        If parallel_dirs is not False nor 1, progress won't be of much help.
+        If True, a counter is shown in stdout when finding files on disk. Does nothing if `parallel_dirs` is not False.
     parallel_dirs: bool or int
         If True, each directory is searched in parallel. If an int, it is the number of parallel searches.
         This should only be significantly useful if the directories are on different disks.
@@ -554,7 +558,6 @@ def parse_directory(
         read_from_file=read_from_file if not read_file_groups else None,
         attrs_map=attrs_map,
         xr_open_kwargs=xr_open_kwargs,
-        progress=progress,
         checks=file_checks,
     )
 
@@ -571,7 +574,7 @@ def parse_directory(
                 parsed.extend(res.get())
     else:
         for directory in directories:
-            parsed.extend(_parse_dir(directory, **parse_kwargs))
+            parsed.extend(_parse_dir(directory, progress=progress, **parse_kwargs))
 
     if not parsed:
         raise ValueError("No files found.")
@@ -624,19 +627,23 @@ def parse_directory(
     if "date_end" in df.columns:
         df["date_end"] = df["date_end"].apply(date_parser, end_of_period=True)
 
-    # # Checks
+    # Checks
     if {"date_start", "date_end", "xrfreq", "frequency"}.issubset(df.columns):
         # All NaN dates correspond to a fx frequency.
-        invalid = (
-            df.date_start.isnull()
-            & df.date_end.isnull()
-            & (df.xrfreq != "fx")
-            & (df.frequency != "fx")
-        )
+        invalid = df.date_start.isnull() & df.date_end.isnull() & (df.xrfreq != "fx")
         n = invalid.sum()
         if n > 0:
             warnings.warn(
                 f"{n} invalid entries where the start and end dates are Null but the frequency is not 'fx'."
+            )
+            logger.debug(f"Paths: {df.path[invalid].values}")
+            df = df[~invalid]
+        # Exact opposite
+        invalid = df.date_start.notnull() & df.date_end.notnull() & (df.xrfreq == "fx")
+        n = invalid.sum()
+        if n > 0:
+            warnings.warn(
+                f"{n} invalid entries where the start and end dates are given but the frequency is 'fx'."
             )
             logger.debug(f"Paths: {df.path[invalid].values}")
             df = df[~invalid]
@@ -679,10 +686,11 @@ def parse_from_ds(
     if not isinstance(obj, xr.Dataset):
         obj = Path(obj)
 
-    if isinstance(obj, Path) and obj.suffixes[-1] == ".zarr" and not get_time:
+    if isinstance(obj, Path) and obj.suffixes[-1] == ".zarr":
         logger.info(f"Parsing attributes from Zarr {obj}.")
-        ds_attrs, variables = _parse_from_zarr(obj, get_vars="variable" in names)
-        time = None
+        ds_attrs, variables, time = _parse_from_zarr(
+            obj, get_vars="variable" in names, get_time=get_time
+        )
     elif isinstance(obj, Path) and obj.suffixes[-1] == ".nc":
         logger.info(f"Parsing attributes with netCDF4 from {obj}.")
         ds_attrs, variables, time = _parse_from_nc(
@@ -731,8 +739,10 @@ def parse_from_ds(
     return attrs
 
 
-def _parse_from_zarr(path: os.PathLike, get_vars=True):
-    """Obtain the list of variables and the list of global attributes from a zarr dataset, reading the JSON files directly.
+def _parse_from_zarr(path: os.PathLike, get_vars=True, get_time=True):
+    """Obtain the list of variables, the time coordinate and the list of global attributes from a zarr dataset.
+
+    Vars and attrs from reading the JSON files directly, time by reading the data with zarr.
 
     Variables are those
     - where .zattrs/_ARRAY_DIMENSIONS is not empty
@@ -768,7 +778,17 @@ def _parse_from_zarr(path: os.PathLike, get_vars=True):
             for varpath in path.iterdir()
             if varpath.name not in coords and varpath.is_dir()
         ]
-    return ds_attrs, variables
+    time = None
+    if get_time and (path / "time").is_dir():
+        ds = zarr.open(path)
+        time = xr.CFTimeIndex(
+            cftime.num2date(
+                ds.time[:],
+                calendar=ds.time.attrs["calendar"],
+                units=ds.time.attrs["units"],
+            )
+        )
+    return ds_attrs, variables, time
 
 
 def _parse_from_nc(path: os.PathLike, get_vars=True, get_time=True):
@@ -887,7 +907,7 @@ def _schema_dates(facets):
         if start.year == end.year:
             return f"{start:%Y}"
         return f"{start:%Y}-{end:%Y}"
-    # Full months : Starts on the 1st and is either montly or ends on the last day
+    # Full months : Starts on the 1st and is either monthly or ends on the last day
     if start.day == 1 and (
         freq >= pd.Timedelta(CV.xrfreq_to_timedelta("M")) or end.day > 27
     ):

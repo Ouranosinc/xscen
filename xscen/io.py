@@ -4,7 +4,7 @@ import os
 import shutil as sh
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 import h5py
 import netCDF4
@@ -28,37 +28,8 @@ __all__ = [
     "rechunk",
     "save_to_netcdf",
     "save_to_zarr",
-    "split_dataset",
     "subset_maxsize",
 ]
-
-
-def split_dataset(
-    path_in: os.PathLike,
-    paths_out: dict[str, os.PathLike],
-    copy: bool = True,
-    overwrite: bool = False,
-    erase_on_error: bool = True,
-):
-    """Copy or move a dataset by splitting its variables accross various destinations.
-
-    Parameters
-    ----------
-    path_in: Path
-        Path to copy.
-    path_out: dict of paths
-        Destination paths for each data variables. Can also be a dictionary mapping variable names to destination paths.
-        The input dataset will be splitted into these destinations. See :py:func:`split_dataset`.
-    copy: bool
-        If True (default), the data is copied. If False, it is moved.
-        If path_out is a dict, the data is copied then removed, otherwise it depends on the behaviour of :py:func:`shutil.move`.
-    overwrite: bool
-        If the destination already exists, an error is raised if overwrite is False (default).
-    erase_on_error: bool
-        If True (default), copy is True and the copy fails, the destination is erased before reraising the error.
-        Has no effect if copy is False.
-    """
-    pass
 
 
 def get_engine(file: str) -> str:
