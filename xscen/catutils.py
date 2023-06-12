@@ -844,7 +844,7 @@ def _schema_level(schema: Union[dict, str], facets: dict):
             return _schema_dates(facets)
 
         # A single facet:
-        if isna(facets.get(schema)):
+        if isna(facets[schema]):
             return None
         return facets[schema]
     if isinstance(schema, list):
@@ -938,7 +938,7 @@ def _schema_folders(schema: list, facets: dict) -> list:
     return folder_tree
 
 
-def _get_needed_fields(schema: dict, facets: dict):
+def _get_needed_fields(schema: dict):
     """Return the list of facets that is needed for a given schema."""
     facet_rec = KeyRecorder()
     _schema_folders(schema["folders"], facet_rec)
@@ -985,6 +985,8 @@ def _build_path(
         )
     elif isinstance(data, pd.Series):
         facets = dict(data)
+    else:
+        raise NotImplementedError(f"Can't buld path with object of type {type(data)}")
 
     facets = facets | extra_facets
 
@@ -1006,7 +1008,7 @@ def _build_path(
             )
         if match:
             # Checks
-            needed_fields = _get_needed_fields(schema, facets)
+            needed_fields = _get_needed_fields(schema)
             if strict and (missing_fields := needed_fields - set(facets.keys())):
                 raise ValueError(
                     f"Missing facets {missing_fields} are needed to build the path according to selected schema {name}."
