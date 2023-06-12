@@ -844,7 +844,7 @@ def _schema_level(schema: Union[dict, str], facets: dict):
             return _schema_dates(facets)
 
         # A single facet:
-        if isna(facets.get(schema)):
+        if isna(facets[schema]):
             return None
         return facets[schema]
     if isinstance(schema, list):
@@ -879,7 +879,7 @@ class KeyRecorder:
         return k
 
     def get(self, k):
-        return self[k]
+        return None
 
 
 def _schema_dates(facets):
