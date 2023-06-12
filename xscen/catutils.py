@@ -239,7 +239,7 @@ def _parse_dir(
     read_from_file: Optional[Union[list[str], dict]] = None,
     attrs_map: Optional[dict] = None,
     xr_open_kwargs: Optional[dict] = None,
-    progress: Union[bool, callable] = False,
+    progress: bool = False,
 ):
     """Iterate and parses files in a directory, filtering according to basic pattern properties and optional checks.
 
