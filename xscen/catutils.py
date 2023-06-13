@@ -19,7 +19,6 @@ import cftime
 import netCDF4
 import pandas as pd
 import parse
-import xarray
 import xarray as xr
 import yaml
 import zarr
@@ -1074,7 +1073,8 @@ def build_path(
     >>> import shutil as sh
     >>> new_cat = xs.catutils.build_path(old_cat)
     >>> for i, row in new_cat.iterrows():
-    >>>     sh.move(row.path, row.new_path)
+    ...     sh.move(row.path, row.new_path)
+    ...
     """
     if root:
         root = Path(root)
