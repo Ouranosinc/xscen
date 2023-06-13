@@ -26,8 +26,8 @@ Acknowledgments
 ---------------
 This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pypackage`_ project template.
 
-.. _Cookiecutter: https://github.com/audreyfeldroy/cookiecutter-pypackage
-.. _`Ouranosinc/cookiecutter-pypackage`: https://github.com/Ouranosinc/cookiecutter-pypackage
+.. _Cookiecutter: https://github.com/cookiecutter/cookiecutter
+.. _Ouranosinc/cookiecutter-pypackage: https://github.com/Ouranosinc/cookiecutter-pypackage
 .. _installation docs: https://xscen.readthedocs.io/en/latest/installation.html
 
 .. |logo| image:: https://raw.githubusercontent.com/Ouranosinc/xscen/main/docs/_static/_images/xscen-logo-small.png

@@ -137,7 +137,7 @@ def load_config(*elements, reset=False, verbose=False):
     * `logging` : Everything passed to :py:func:`logging.config.dictConfig`.
     * `xarray` : Passed to :py:func:`xarray.set_options`.
     * `xclim` : Passed to :py:func:`xclim.set_options`.
-    * `warning` : Mappings where the key is a Warning category (or "all") and the value an action to passe to :py:func:`warnings.simplefilter`.
+    * `warning` : Mappings where the key is a Warning category (or "all") and the value an action to pass to :py:func:`warnings.simplefilter`.
 
     Parameters
     ----------

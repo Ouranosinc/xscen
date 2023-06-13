@@ -145,7 +145,7 @@ Before you submit a pull request, check that it meets these guidelines:
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
 3. The pull request should not break the templates.
-4. The pull request should work for Python 3.9 and 3.10.
+4. The pull request should work for Python 3.9, 3.10, and 3.11. Check that the tests pass for all supported Python versions.
 
 Tips
 ----
