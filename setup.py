@@ -40,6 +40,7 @@ requirements = [
     "netCDF4",
     "numpy",
     "pandas!=1.5.3",
+    "parse",
     "pyarrow",  # Used when opening catalogs.
     "pygeos",
     "pyyaml",
@@ -47,7 +48,7 @@ requirements = [
     "shapely",
     "xarray",
     "xclim>=0.37",
-    "xesmf>=0.7",  # This is not available on pypi.
+    "xesmf>=0.7",
     "zarr",
 ]
 

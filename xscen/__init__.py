@@ -6,6 +6,7 @@ from . import (
     aggregate,
     biasadjust,
     catalog,
+    catutils,
     config,
     diagnostics,
     ensembles,
@@ -23,6 +24,7 @@ from . import (
 from .aggregate import *
 from .biasadjust import *
 from .catalog import DataCatalog, ProjectCatalog  # noqa
+from .catutils import build_path, parse_directory
 from .config import CONFIG, load_config  # noqa
 from .diagnostics import properties_and_measures
 from .ensembles import *

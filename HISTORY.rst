@@ -4,7 +4,7 @@ History
 
 v0.7.0 (unreleased)
 -------------------
-Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -14,10 +14,11 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * `xscen` now tracks code coverage using `coveralls <https://coveralls.io/>`_. (:pull:`187`).
 * New function `get_warming_level` to search within the IPCC CMIP global temperatures CSV without requiring data. (:issue:`208`, :pull:`210`).
+* File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* N/A
+* Folder parsing utilities (``parse_directory``) moved to ``xscen.catutils``. Signature changed : ``globpattern`` removed, ``dirglob`` added, new ``patterns`` specifications. See doc for all changes. (:pull:`205`).
 
 Bug fixes
 ^^^^^^^^^
@@ -27,6 +28,7 @@ Bug fixes
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Removed the pin on xarray's version. (:issue:`175`, :pull:`199`).
+* Folder parsing utilities now in pure python, platform independent. New dependency ``parse``. (:pull:`205`).
 * Updated ReadTheDocs configuration to prevent ``--eager`` installation of xscen (:pull:`209`).
 * Implemented a template to be used for unit tests. (:pull:`187`).
 * Updated GitHub Actions to remove deprecation warnings. (:pull:`187`).
