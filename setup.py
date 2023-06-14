@@ -65,7 +65,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
+        # "Programming Language :: Python :: 3.11",
         "Topic :: Scientific/Engineering :: Atmospheric Science",
     ],
     description="A climate change scenario-building analysis framework, built with xclim/xarray.",
