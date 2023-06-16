@@ -2,7 +2,7 @@ name: xscen-dev
 channels:
   - conda-forge
 dependencies:
-  - python >=3.9,<3.11
+  - python >=3.9,<3.11 # FIXME: CLISOPS is blocking Python3.11
   # Don't forget to sync the changes here with environment.yml!
   # Some pins here are meant to accelerate conda and might not be related to real needs
   # Main packages
@@ -50,8 +50,13 @@ dependencies:
   - sphinx-autoapi
   - sphinx_rtd_theme
   - sphinxcontrib-napoleon
+  - sphinx-codeautolink
+  - sphinx-copybutton
   - xdoctest
   - pip
   # Testing
   - tox <4.0 # 2022-12-12: tox v4.0 is incompatible with tox-conda plugin
   - tox-conda >=0.10.2
+  # packaging
+  - build
+  - wheel

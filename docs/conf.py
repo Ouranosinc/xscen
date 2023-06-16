@@ -42,16 +42,18 @@ xarray.Dataset.__module__ = "xarray"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.viewcode",
+    "sphinx.ext.autosectionlabel",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.coverage",
+    "sphinx.ext.extlinks",
+    "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "sphinx.ext.coverage",
     "sphinx.ext.todo",
-    "sphinx.ext.autosectionlabel",
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.autosummary",
-    "sphinx.ext.extlinks",
+    "sphinx.ext.viewcode",
     "nbsphinx",
+    "sphinx_codeautolink",
+    "sphinx_copybutton"
 ]
 
 # To ensure that underlined fields (e.g. `_field`) are shown in the docs.

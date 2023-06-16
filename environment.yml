@@ -2,7 +2,7 @@ name: xscen
 channels:
   - conda-forge
 dependencies:
-  - python >=3.9,<3.11
+  - python >=3.9,<3.11 # FIXME: CLISOPS is blocking Python3.11
   # Don't forget to sync the changes here with environment-dev.yml!
   # Main packages
   - cartopy

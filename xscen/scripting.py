@@ -12,7 +12,7 @@ from email.message import EmailMessage
 from io import BytesIO
 from pathlib import Path
 from traceback import format_exception
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 from matplotlib.figure import Figure
 
@@ -191,7 +191,7 @@ def send_mail_on_exit(
     field was given in the config.
 
     >>> import atexit
-    >>> atexit.register(send_mail_on_exit, subject='Woups', on_error_only=True)
+    >>> atexit.register(send_mail_on_exit, subject="Woups", on_error_only=True)
     """
     subject = subject or "Workflow"
     msg_err = msg_err or "Workflow exited with some errors."
@@ -308,11 +308,13 @@ def skippable(seconds: int = 2, task: str = "", logger: logging.Logger = None):
     this catches it, prints to the log and gives a timeout during which a subsequent
     interruption will stop the script. Otherwise, the context exits normally.
 
-    This is meant to be used within a loop so we can skip some iterations:
+    This is meant to be used within a loop so that we can skip some iterations:
 
-    >>> for i in iterable:
-    >>>    with skippable(2, i):
-    >>>         ... skippable code ...
+    .. code-block:: python
+
+        for i in iterable:
+            with skippable(2, i):
+                some_skippable_code()
 
     Parameters
     ----------

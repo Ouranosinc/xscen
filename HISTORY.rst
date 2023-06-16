@@ -32,6 +32,7 @@ Internal changes
 * Updated ReadTheDocs configuration to prevent ``--eager`` installation of xscen (:pull:`209`).
 * Implemented a template to be used for unit tests. (:pull:`187`).
 * Updated GitHub Actions to remove deprecation warnings. (:pull:`187`).
+* Updated the cookiecutter used to generate boilerplate documentation and code via `cruft`. (:pull:`212`).
 
 v0.6.0 (2023-05-04)
 -------------------

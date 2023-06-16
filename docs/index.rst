@@ -44,4 +44,4 @@ Features
    :maxdepth: 2
    :caption: Package Structure
 
-   modules
+    apidoc/modules
