@@ -9,17 +9,14 @@ from setuptools import find_packages, setup
 with open("README.rst") as readme_file:
     readme = readme_file.read()
 
-with open("HISTORY.rst") as history_file:
-    history = history_file.read()
-
 # Copied from xclim. Needed for replacing roles with hyperlinks in documentation on PyPI
-hyperlink_replacements = {
-    r":issue:`([0-9]+)`": r"`GH/\1 <https://github.com/Ouranosinc/xscen/issues/\1>`_",
-    r":pull:`([0-9]+)`": r"`PR/\1 <https://github.com/Ouranosinc/xscen/pull/\1>`_",
-    r":user:`([a-zA-Z0-9_.-]+)`": r"`@\1 <https://github.com/\1>`_",
-}
-for search, replacement in hyperlink_replacements.items():
-    history = re.sub(search, replacement, history)
+# hyperlink_replacements = {
+#     r":issue:`([0-9]+)`": r"`GH/\1 <https://github.com/Ouranosinc/xscen/issues/\1>`_",
+#     r":pull:`([0-9]+)`": r"`PR/\1 <https://github.com/Ouranosinc/xscen/pull/\1>`_",
+#     r":user:`([a-zA-Z0-9_.-]+)`": r"`@\1 <https://github.com/\1>`_",
+# }
+# for search, replacement in hyperlink_replacements.items():
+#     history = re.sub(search, replacement, history)
 
 # This list are the minimum requirements for xscen
 # this is only meant to make `pip check` work
@@ -70,7 +67,7 @@ setup(
     ],
     description="A climate change scenario-building analysis framework, built with xclim/xarray.",
     install_requires=requirements,
-    long_description=readme + "\n\n" + history,
+    long_description=readme,
     long_description_content_type="text/x-rst",
     include_package_data=True,
     keywords="xscen",
