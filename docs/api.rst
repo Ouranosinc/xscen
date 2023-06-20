@@ -8,6 +8,10 @@ Catalog
    :members:
    :noindex:
 
+.. automodule:: xscen.catutils
+   :members:
+   :noindex:
+
 Extraction
 ----------
 
