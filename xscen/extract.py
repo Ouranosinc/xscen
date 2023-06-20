@@ -668,26 +668,21 @@ def search_data_catalogs(
     # Loop on each dataset to assess whether they have all required variables
     # And select best freq/timedelta for each
     catalogs = {}
-    print(len(catalog))
     if len(catalog) > 0:
         for (sim_id,), scat in catalog.iter_unique("id"):
-            print(sim_id)
             # Find all the entries that match search parameters
             varcats = []
             for var_id, xrfreqs in variables_and_freqs.items():
                 if isinstance(xrfreqs, str):
                     xrfreqs = [xrfreqs]
                 for xrfreq in xrfreqs:
-                    print(sim_id, var_id, xrfreq)
                     if xrfreq == "fx":
                         varcat = scat.search(
                             xrfreq=xrfreq,
                             variable=var_id,
                             require_all_on=["id", "xrfreq"],
                         )
-                        print("here")
                         if len(varcat) == 0:
-                            print("and there too")
                             # Try searching in other experiments or members
                             scat_id = {
                                 i: scat.df[i].iloc[0]
@@ -702,8 +697,6 @@ def search_data_catalogs(
                                 variable=var_id,
                                 require_all_on=["id", "xrfreq"],
                             )
-                            print(scat_id)
-                            print(len(varcat))
                             if len(varcat) > 1:
                                 varcat.esmcat._df = varcat.df.iloc[[0]]
                             if len(varcat) == 1:
