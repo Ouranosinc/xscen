@@ -23,7 +23,7 @@ from .indicators import load_xclim_module, registry_from_module
 from .spatial import subset
 from .utils import CV
 from .utils import ensure_correct_time as _ensure_correct_time
-from .utils import natural_sort, standardize_periods
+from .utils import get_cat_attrs, natural_sort, standardize_periods
 
 logger = logging.getLogger(__name__)
 
@@ -668,21 +668,26 @@ def search_data_catalogs(
     # Loop on each dataset to assess whether they have all required variables
     # And select best freq/timedelta for each
     catalogs = {}
+    print(len(catalog))
     if len(catalog) > 0:
         for (sim_id,), scat in catalog.iter_unique("id"):
+            print(sim_id)
             # Find all the entries that match search parameters
             varcats = []
             for var_id, xrfreqs in variables_and_freqs.items():
                 if isinstance(xrfreqs, str):
                     xrfreqs = [xrfreqs]
                 for xrfreq in xrfreqs:
+                    print(sim_id, var_id, xrfreq)
                     if xrfreq == "fx":
                         varcat = scat.search(
                             xrfreq=xrfreq,
                             variable=var_id,
                             require_all_on=["id", "xrfreq"],
                         )
+                        print("here")
                         if len(varcat) == 0:
+                            print("and there too")
                             # Try searching in other experiments or members
                             scat_id = {
                                 i: scat.df[i].iloc[0]
@@ -697,6 +702,8 @@ def search_data_catalogs(
                                 variable=var_id,
                                 require_all_on=["id", "xrfreq"],
                             )
+                            print(scat_id)
+                            print(len(varcat))
                             if len(varcat) > 1:
                                 varcat.esmcat._df = varcat.df.iloc[[0]]
                             if len(varcat) == 1:
@@ -822,7 +829,7 @@ def search_data_catalogs(
 
 @parse_config
 def get_warming_level(
-    realization: Union[xr.Dataset, str, list],
+    realization: Union[xr.Dataset, dict, str, list],
     wl: float,
     *,
     window: int = 20,
@@ -835,11 +842,13 @@ def get_warming_level(
 
     Parameters
     ----------
-    realization : Union[xr.Dataset, str, list]
-       Input dataset, string or list of strings indicating the models to be evaluated.
-       Strings should follow this formatting: mip-era_source_experiment_member. Regex wildcards (.*) are accepted, but may lead to unexpected results.
+    realization : xr.Dataset, dict, str or list of those
+       Model to be evaluated. Needs the four fields mip_era, source, experiment and member,
+       as a dict or in a Dataset's attributes. Strings should follow this formatting: {mip_era}_{source}_{experiment}_{member}.
+       Lists of dicts, strings or Datasets are also accepted, in which case the output will be a dict.
+       Regex wildcards (.*) are accepted, but may lead to unexpected results.
        Datasets should include the catalogue attributes (starting by "cat:") required to create such a string: 'cat:mip_era', 'cat:experiment',
-       'cat:member', and either 'cat:source' for global models or 'cat:driving_institution' (optional) + 'cat:driving_model' for regional models.
+       'cat:member', and either 'cat:source' for global models or 'cat:driving_model' for regional models.
        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
     wl : float
        Warming level.
@@ -862,119 +871,128 @@ def get_warming_level(
     Returns
     -------
     dict, list or str
-        If `models` is a Dataset or a string, the output will follow the format indicated by `return_period`.
-        If `models` is a list, the output will be a dictionary where the keys are the elements of `models`and the values follow the format indicated by `return_period`.
+        If `realization` is a Dataset, a dict or a string, the output will follow the format indicated by `return_period`.
+        If `realization` is a list, the output will be a dictionary where the keys are the selected columns from the csv and the values follow the format indicated by `return_period`.
     """
-    if tas_baseline_period is None:
-        tas_baseline_period = ["1850", "1900"]
-    tas_baseline_period = standardize_periods(tas_baseline_period, multiple=False)
+    tas_baseline_period = standardize_periods(
+        tas_baseline_period or ["1850", "1900"], multiple=False
+    )
+
+    if (window % 2) not in {0, 1}:
+        raise ValueError(f"window should be an integer, received {type(window)}")
+
+    FIELDS = ["mip_era", "source", "experiment", "member"]
 
     if tas_csv is None:
-        tas_csv = Path(__file__).parent / "data/IPCC_annual_global_tas.csv"
+        tas_csv = Path(__file__).parent / "data" / "IPCC_annual_global_tas.csv"
 
-    if isinstance(realization, xr.Dataset):
-        # get info on ds
-        if pd.isna(realization.attrs.get("cat:driving_model", None)):
-            source_ds = realization.attrs["cat:source"]
+    info = {}
+    if isinstance(realization, (xr.Dataset, str, dict)):
+        realization = [realization]
+    info_models = []
+    for real in realization:
+        info = {}
+        if isinstance(real, xr.Dataset):
+            attrs = get_cat_attrs(real)
+            # get info on ds
+            if attrs.get("driving_model") is None:
+                info["source"] = attrs["source"]
+            else:
+                info["source"] = attrs["driving_model"]
+            info["experiment"] = attrs["experiment"]
+            info["member"] = ".*" if ignore_member else attrs["member"]
+            info["mip_era"] = attrs["mip_era"]
+        elif isinstance(real, str):
+            (
+                info["mip_era"],
+                info["source"],
+                info["experiment"],
+                info["member"],
+            ) = real.split("_")
+        elif isinstance(real, dict) and set(real.keys()).issuperset(FIELDS):
+            info = real
         else:
-            institution_ds = realization.attrs.get("cat:driving_institution", None)
-            source_ds = realization.attrs["cat:driving_model"]
-            if (institution_ds is not None) and (
-                source_ds[0 : len(institution_ds)] == institution_ds
-            ):
-                source_ds = source_ds.replace(f"{institution_ds}-", "", 1)
-        exp_ds = realization.attrs["cat:experiment"]
-        member_ds = ".*" if ignore_member else realization.attrs["cat:member"]
-        mip_era_ds = realization.attrs["cat:mip_era"]
-
-        info_models = [f"{mip_era_ds}_{source_ds}_{exp_ds}_{member_ds}"]
-
-    elif isinstance(realization, str):
-        info_models = [realization]
-    elif isinstance(realization, list):
-        info_models = realization
-    else:
-        raise ValueError(
-            f"'realization' must be a Dataset, string or list. Received {type(realization)}."
-        )
-
-    # open csv
-    annual_tas = pd.read_csv(tas_csv, index_col="year")
-    out = dict()
-    for model in info_models:
-        if len(model.split("_")) != 4:
             raise ValueError(
-                "'realization' should follow the format: 'mip-era_source_experiment_member'."
+                f"'realization' must be a Dataset, dict, string or list. Received {type(real)}."
             )
+        info_models.append(info)
 
+    # open csv, split column names for easier usage
+    annual_tas = pd.read_csv(tas_csv, index_col="year")
+    models = pd.DataFrame.from_records(
+        [c.split("_") for c in annual_tas.columns],
+        index=annual_tas.columns,
+        columns=FIELDS,
+    )
+
+    out = {}
+    for model in info_models:
         # choose colum based in ds cat attrs
-        right_column = annual_tas.filter(regex=re.compile(model, re.IGNORECASE), axis=1)
+        mip = models.mip_era.str.match(model["mip_era"])
+        src = models.source.str.match(model["source"])
+        if not src.any():
+            # Maybe it's an RCM, then source may contain the institute
+            src = models.source.apply(lambda s: model["source"].endswith(s))
+        exp = models.experiment.str.match(model["experiment"])
+        mem = models.member.str.match(model["member"])
 
-        if len(right_column.columns) > 1:
-            logger.info(
-                "More than one column of the csv fits the dataset metadata. Choosing the first one."
-            )
-            right_column = pd.DataFrame(right_column.iloc[:, 0])
-
-        if len(right_column.columns) == 0:
+        candidates = models[mip & src & exp & mem]
+        if candidates.empty:
             warnings.warn(
                 f"No columns fit the attributes of the input dataset ({model})."
             )
-            out[model] = [None, None] if return_horizon else None
-        else:
+            selected = "_".join([model[c] for c in FIELDS])
+            out[selected] = [None, None] if return_horizon else None
+            continue
+        if len(candidates) > 1:
             logger.info(
-                f"Computing warming level +{wl}°C for {model} from column: {right_column.columns[0]}."
+                "More than one column of the csv fits the dataset metadata. Choosing the first one."
+            )
+        selected = candidates.index[0]
+        right_column = annual_tas.loc[:, selected]
+
+        logger.debug(
+            f"Computing warming level +{wl}°C for {model} from column: {selected}."
+        )
+
+        # compute reference temperature for the warming
+        mean_base = right_column.loc[
+            tas_baseline_period[0] : tas_baseline_period[1]
+        ].mean()
+
+        yearly_diff = right_column - mean_base  # difference from reference
+
+        # get the start and end date of the window when the warming level is first reached
+        # shift(-1) is needed to reproduce IPCC results.
+        # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
+        if window % 2 == 0:  # Even window
+            rolling_diff = (
+                yearly_diff.rolling(window=window, min_periods=window, center=True)
+                .mean()
+                .shift(-1)
+            )
+        else:  # window % 2 == 1:  # Odd windows do not require the shift
+            rolling_diff = yearly_diff.rolling(
+                window=window, min_periods=window, center=True
+            ).mean()
+
+        yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
+        if yr is None:
+            logger.info(
+                f"Global warming level of +{wl}C is not reached by the last year of the provided 'tas_csv' file for {selected}."
+            )
+            out[selected] = [None, None] if return_horizon else None
+        else:
+            start_yr = int(yr - window / 2 + 1)
+            end_yr = int(yr + window / 2)
+            out[selected] = (
+                standardize_periods([start_yr, end_yr], multiple=False)
+                if return_horizon
+                else str(yr)
             )
 
-            # compute reference temperature for the warming
-            mean_base = right_column.loc[
-                tas_baseline_period[0] : tas_baseline_period[1]
-            ].mean()
-
-            yearly_diff = right_column - mean_base  # difference from reference
-
-            # get the start and end date of the window when the warming level is first reached
-
-            # shift(-1) is needed to reproduce IPCC results.
-            # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
-            if window % 2 == 0:  # Even window
-                rolling_diff = (
-                    yearly_diff.rolling(window=window, min_periods=window, center=True)
-                    .mean()
-                    .shift(-1)
-                )
-            elif window % 2 == 1:  # Odd windows do not require the shift
-                rolling_diff = yearly_diff.rolling(
-                    window=window, min_periods=window, center=True
-                ).mean()
-            else:
-                raise ValueError(
-                    f"window should be an integer, received {type(window)}"
-                )
-
-            yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
-            if yr is None:
-                start_yr = np.nan
-                end_yr = np.nan
-            else:
-                start_yr = int(yr - window / 2 + 1)
-                end_yr = int(yr + window / 2)
-
-            if np.isnan(start_yr):
-                logger.info(
-                    f"Global warming level of +{wl}C is not reached by the last year of the provided 'tas_csv' file for {model}."
-                )
-                out[model] = [None, None] if return_horizon else None
-            else:
-                out[model] = (
-                    standardize_periods([start_yr, end_yr], multiple=False)
-                    if return_horizon
-                    else str(yr)
-                )
-
     if len(out) == 1:
-        out = next(iter(out.values()))
-
+        out = out.popitem()[1]
     return out
 
 
