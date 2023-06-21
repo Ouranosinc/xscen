@@ -349,7 +349,7 @@ def skippable(seconds: int = 2, task: str = "", logger: logging.Logger = None):
 def save_and_update(
     ds: xr.Dataset,
     pcat: ProjectCatalog,
-    path: str | os.PathLike = None,
+    path: Union[str, os.PathLike] = None,
     file_format: str = None,
     build_path_kwargs: dict = None,
     save_kwargs: dict = None,
