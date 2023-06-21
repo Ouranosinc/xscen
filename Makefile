@@ -68,7 +68,7 @@ test-all: ## run tests on every Python version with tox
 	tox
 
 autodoc: clean-docs ## create sphinx-apidoc files
-	sphinx-apidoc -o docs/apidoc/ --module-first xscen
+	sphinx-apidoc -o docs/apidoc --module-first xscen
 
 linkcheck: autodoc ## run checks over all external links found throughout the documentation
 	env SKIP_NOTEBOOKS=1 $(MAKE) -C docs linkcheck

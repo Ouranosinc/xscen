@@ -41,7 +41,7 @@ Features
     history
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Package Structure
+    :maxdepth: 2
+    :caption: Package Structure
 
     apidoc/modules
