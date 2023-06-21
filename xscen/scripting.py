@@ -19,7 +19,6 @@ import xarray as xr
 from matplotlib.figure import Figure
 
 from .catalog import ProjectCatalog
-from .catutils import build_path
 from .config import parse_config
 from .utils import get_cat_attrs
 
@@ -399,6 +398,8 @@ def save_and_update(
         path = path.format(**get_cat_attrs(ds))  # fill path with attrs
     else:  # if path is not given build it
         build_path_kwargs.setdefault("format", file_format)
+        from .catutils import build_path
+
         path = build_path(ds, **build_path_kwargs)
 
     # save
