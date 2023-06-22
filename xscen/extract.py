@@ -902,8 +902,12 @@ def get_warming_level(
                 info["experiment"],
                 info["member"],
             ) = real.split("_")
-        elif isinstance(real, dict) and set(real.keys()).issuperset(FIELDS):
+        elif isinstance(real, dict) and set(real.keys()).issuperset(
+            (set(FIELDS) - {"member"}) if ignore_member else FIELDS
+        ):
             info = real
+            if ignore_member:
+                info["member"] = ".*"
         else:
             raise ValueError(
                 f"'realization' must be a Dataset, dict, string or list. Received {type(real)}."
@@ -984,7 +988,12 @@ def get_warming_level(
                 else str(yr)
             )
 
-    if len(out) == 1:
+    if len(out) != len(realization):
+        warnings.warn(
+            "Two or more input model specifications pointed towards the same column in the CSV, "
+            "the length of the output is different from the input."
+        )
+    if len(realization) == 1:
         out = out.popitem()[1]
     return out
 
