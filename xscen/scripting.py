@@ -388,7 +388,7 @@ def save_and_update(
     # try to guess file format if not given.
     if file_format is None:
         file_format = build_path_kwargs.get("format", None)
-        if path is not None and "." in path:
+        if path is not None and Path(path).suffix:
             file_format = Path(path).suffix.split(".")[-1]
         else:
             file_format = ds.attrs.get("cat:format", "zarr")
