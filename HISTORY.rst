@@ -4,7 +4,7 @@ History
 
 v0.7.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -15,6 +15,7 @@ New features and enhancements
 * `xscen` now tracks code coverage using `coveralls <https://coveralls.io/>`_. (:pull:`187`).
 * New function `get_warming_level` to search within the IPCC CMIP global temperatures CSV without requiring data. (:issue:`208`, :pull:`210`).
 * File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`).
+* New scripting functions `save_and_update` and `move_and_delete`. (:pull:`214`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -33,6 +34,7 @@ Internal changes
 * Implemented a template to be used for unit tests. (:pull:`187`).
 * Updated GitHub Actions to remove deprecation warnings. (:pull:`187`).
 * Updated the cookiecutter used to generate boilerplate documentation and code via `cruft`. (:pull:`212`).
+* A few changes to `subset_warming_level` so it doesn't need `driving_institution`. (:pull:`215`).
 
 v0.6.0 (2023-05-04)
 -------------------

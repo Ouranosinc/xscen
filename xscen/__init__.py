@@ -41,6 +41,8 @@ from .regrid import *
 from .scripting import (
     TimeoutException,
     measure_time,
+    move_and_delete,
+    save_and_update,
     send_mail,
     send_mail_on_exit,
     timeout,
@@ -49,7 +51,7 @@ from .utils import clean_up
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.6.9-beta"
+__version__ = "0.6.11-beta"
 
 
 # monkeypatch so that warnings.warn() doesn't mention itself
