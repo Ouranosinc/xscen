@@ -2,6 +2,7 @@
 import logging
 import mimetypes
 import os
+import shutil as sh
 import signal
 import smtplib
 import sys
@@ -14,9 +15,12 @@ from pathlib import Path
 from traceback import format_exception
 from typing import Optional, Union
 
+import xarray as xr
 from matplotlib.figure import Figure
 
+from .catalog import ProjectCatalog
 from .config import parse_config
+from .utils import get_cat_attrs
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +31,8 @@ __all__ = [
     "timeout",
     "TimeoutException",
     "skippable",
+    "save_and_update",
+    "move_and_delete",
 ]
 
 
@@ -338,3 +344,119 @@ def skippable(seconds: int = 2, task: str = "", logger: logging.Logger = None):
         err("Received SIGINT. Do it again to stop the script.")
         time.sleep(seconds)
         inf(f"Skipping {task}.")
+
+
+def save_and_update(
+    ds: xr.Dataset,
+    pcat: ProjectCatalog,
+    path: Union[str, os.PathLike] = None,
+    file_format: str = None,
+    build_path_kwargs: dict = None,
+    save_kwargs: dict = None,
+    update_kwargs: dict = None,
+):
+    """
+    Construct the path, save and delete.
+
+    This function can be used after each task of a workflow.
+
+    Parameters
+    ----------
+    ds: xr.Dataset
+        Dataset to save.
+    pcat: ProjectCatalog
+        Catalog to update after saving the dataset.
+    path: str | os.pathlike
+        Path where to save the dataset.
+        If the string contains variables in curly bracket. They will be filled by catalog attributes.
+        If None, the `catutils.build_path` fonction will be used to create a path.
+    file_format: {'nc', 'zarr'}
+        Format of the file.
+        If None, look for the following in order: build_path_kwargs['format'], a suffix in path, ds.attrs['cat:format'].
+        If nothing is found, it will default to zarr.
+    build_path_kwargs: dict
+        Arguments to pass to `build_path`.
+    save_kwargs:
+        Arguments to pass to `save_to_netcdf` or `save_to_zarr`.
+    update_kwargs: dict
+        Arguments to pass to `update_from_ds`.
+    """
+    build_path_kwargs = build_path_kwargs or {}
+    save_kwargs = save_kwargs or {}
+    update_kwargs = update_kwargs or {}
+
+    # try to guess file format if not given.
+    if file_format is None:
+        file_format = build_path_kwargs.get("format", None)
+        if path is not None and Path(path).suffix:
+            file_format = Path(path).suffix.split(".")[-1]
+        else:
+            file_format = ds.attrs.get("cat:format", "zarr")
+
+    # get path
+    if path is not None:
+        path = str(path).format(**get_cat_attrs(ds))  # fill path with attrs
+    else:  # if path is not given build it
+        build_path_kwargs.setdefault("format", file_format)
+        from .catutils import build_path
+
+        path = build_path(ds, **build_path_kwargs)
+
+    # save
+    if file_format == "zarr":
+        from .io import save_to_zarr
+
+        save_to_zarr(ds, path, **save_kwargs)
+    elif file_format == "nc":
+        from .io import save_to_netcdf
+
+        save_to_netcdf(ds, path, **save_kwargs)
+    else:
+        raise ValueError(f"file_format {file_format} is not valid. Use zarr or nc.")
+
+    # update catalog
+    pcat.update_from_ds(ds=ds, path=path, **update_kwargs)
+
+    logger.info(f"File {path} has saved succesfully and the catalog was updated.")
+
+
+def move_and_delete(moving, pcat, deleting):
+    """
+    First, move files, then update the catalog with new locations. Finally, delete directories.
+
+    This function can be used at the end of for loop in a workflow to clean temporary files.
+
+    Parameters
+    ----------
+    moving: list
+        list of lists of path of files to move with format: [[source 1, destination1], [source 2, destination2],...]
+    pcat: ProjectCatalog
+        Catalog to update with new destinations
+    deleting: list
+        list of directories to be deleted including all contents and recreated empty.
+        E.g. the working directory of a workflow.
+
+    """
+    if isinstance(moving, list) and isinstance(moving[0], list):
+        for files in moving:
+            source, dest = files[0], files[1]
+            if Path(source).exists():
+                logger.info(f"Moving {source} to {dest}.")
+                sh.move(source, dest)
+                if Path(dest).suffix in [".zarr", ".nc"]:
+                    ds = xr.open_dataset(dest)
+                    pcat.update_from_ds(ds=ds, path=dest)
+            else:
+                logger.info(f"You are trying to move {source}, but it does not exist.")
+    else:
+        raise ValueError("`moving` should be a list of lists.")
+
+    # erase workdir content if this is the last step
+    if isinstance(deleting, list):
+        for dir_to_delete in deleting:
+            if Path(dir_to_delete).exists() and Path(dir_to_delete).is_dir():
+                logger.info(f"Deleting content inside {dir_to_delete}.")
+                sh.rmtree(dir_to_delete)
+                os.mkdir(dir_to_delete)
+    else:
+        raise ValueError("`deleting` should be a list.")

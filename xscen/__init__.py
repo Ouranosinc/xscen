@@ -41,6 +41,8 @@ from .regrid import *
 from .scripting import (
     TimeoutException,
     measure_time,
+    move_and_delete,
+    save_and_update,
     send_mail,
     send_mail_on_exit,
     timeout,
