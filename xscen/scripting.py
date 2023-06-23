@@ -443,7 +443,7 @@ def move_and_delete(moving, pcat, deleting):
             if Path(source).exists():
                 logger.info(f"Moving {source} to {dest}.")
                 sh.move(source, dest)
-                if Path(dest).suffix in ["zarr", "nc"]:
+                if Path(dest).suffix in [".zarr", ".nc"]:
                     ds = xr.open_dataset(dest)
                     pcat.update_from_ds(ds=ds, path=dest)
             else:
