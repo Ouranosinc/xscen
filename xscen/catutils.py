@@ -890,8 +890,8 @@ def _schema_dates(facets):
     if facets["xrfreq"] == "fx":
         return "fx"
 
-    start = date_parser(facets["date_start"], out_dtype="datetime")
-    end = date_parser(facets["date_end"], out_dtype="datetime")
+    start = date_parser(facets["date_start"])
+    end = date_parser(facets["date_end"])
     freq = pd.Timedelta(CV.xrfreq_to_timedelta(facets["xrfreq"]))
 
     # Full years : Starts on Jan 1st and is either annual or ends on Dec 31st (accepting Dec 30 for 360 cals)
