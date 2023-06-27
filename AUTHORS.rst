@@ -19,5 +19,5 @@ Contributors
 
 * Travis Logan <logan.travis@ouranos.ca> `@tlogan2000 <https://github.com/tlogan2000>`_
 * Louis-Philippe Caron <caron.louis-philippe@ouranos.ca>
-* Sarah Gammon <gammon.sarah@ouranos.ca> `@sg2475962 <https://github.com/sg2475962>`_
+* Sarah Gammon <gammon.sarah@ouranos.ca> `@SarahG-579462 <https://github.com/SarahG-579462>`_
 * Yannick Rousseau

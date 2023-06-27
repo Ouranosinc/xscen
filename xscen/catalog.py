@@ -101,6 +101,22 @@ esm_col_data = {
 """Default ESM column data for the official catalogs."""
 
 
+# Patch Period.__format__ to act like strftime
+def _patch_period_format():
+    def __format__(self, fmt):
+        # same implementation as datetime.datetime.__format__
+        if not isinstance(fmt, str):
+            raise TypeError("must be str, not %s" % type(fmt).__name__)
+        if len(fmt) != 0:
+            return self.strftime(fmt.replace("%Y", "%4Y"))
+        return str(self)
+
+    pd.Period.__format__ = __format__
+
+
+_patch_period_format()
+
+
 def _parse_list_of_strings(elem):
     """Parse an element of a csv in case it is a tuple of strings."""
     if elem.startswith("(") or elem.startswith("["):

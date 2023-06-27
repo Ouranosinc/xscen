@@ -35,6 +35,7 @@ Internal changes
 * Updated GitHub Actions to remove deprecation warnings. (:pull:`187`).
 * Updated the cookiecutter used to generate boilerplate documentation and code via `cruft`. (:pull:`212`).
 * A few changes to `subset_warming_level` so it doesn't need `driving_institution`. (:pull:`215`).
+* Injection of a better ``__format__`` method in ``pd.Period``, allowing use of these in f-strings with strftime-like format strings. (:pull:`218`).
 
 v0.6.0 (2023-05-04)
 -------------------
@@ -99,7 +100,7 @@ Internal changes
 
 v0.5.0 (2023-02-28)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Sarah Gammon (:user:`sg2475962`) and Pascal Bourgault (:user:`aulemahal`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Sarah Gammon (:user:`SarahG-579462`) and Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
