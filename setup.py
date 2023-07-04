@@ -39,6 +39,7 @@ requirements = [
     "pandas!=1.5.3",
     "parse",
     "pyarrow",  # Used when opening catalogs.
+    "pydantic<2.0",  # See: https://github.com/intake/intake-esm/issues/617
     "pygeos",
     "pyyaml",
     "rechunker",
