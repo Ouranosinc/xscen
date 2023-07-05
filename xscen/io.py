@@ -304,22 +304,7 @@ def save_to_netcdf(
     xarray.Dataset.to_netcdf
     """
     if rechunk:
-        for rechunk_var in ds.data_vars:
-            # Support for chunks varying per variable
-            if rechunk_var in rechunk:
-                rechunk_dims = rechunk[rechunk_var]
-            else:
-                rechunk_dims = rechunk
-
-            ds[rechunk_var] = ds[rechunk_var].chunk(
-                {
-                    d: chnks
-                    for d, chnks in rechunk_dims.items()
-                    if d in ds[rechunk_var].dims
-                }
-            )
-            ds[rechunk_var].encoding.pop("chunksizes", None)
-            ds[rechunk_var].encoding.pop("chunks", None)
+        ds = _rechunk_for_saving(ds, rechunk)
 
     path = Path(filename)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -404,22 +389,7 @@ def save_to_zarr(
             ds[v].encoding.clear()
 
     if rechunk:
-        for rechunk_var in ds.data_vars:
-            # Support for chunks varying per variable
-            if rechunk_var in rechunk:
-                rechunk_dims = rechunk[rechunk_var]
-            else:
-                rechunk_dims = rechunk
-
-            ds[rechunk_var] = ds[rechunk_var].chunk(
-                {
-                    d: chnks
-                    for d, chnks in rechunk_dims.items()
-                    if d in ds[rechunk_var].dims
-                }
-            )
-            ds[rechunk_var].encoding.pop("chunksizes", None)
-            ds[rechunk_var].encoding.pop("chunks", None)
+        ds = _rechunk_for_saving(ds, rechunk)
 
     path = Path(filename)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -516,6 +486,33 @@ def save_to_zarr(
                 for name in ds.data_vars:
                     sh.rmtree(path / name)
             raise
+
+
+def _rechunk_for_saving(ds, rechunk):
+    """Do chunking before saving to .zarr or .nc, generalized as Y/X for different axes lat/lon, rlat/rlon"""
+    for rechunk_var in ds.data_vars:
+        # Support for chunks varying per variable
+        if rechunk_var in rechunk:
+            rechunk_dims = rechunk[rechunk_var].copy()
+        else:
+            rechunk_dims = rechunk.copy()
+
+        # get actual axes labels
+        if {'X', 'Y'}.issubset(rechunk_dims):
+            rechunk_dims[ds.cf.axes['X'][0]] = rechunk_dims.pop('X')
+            rechunk_dims[ds.cf.axes['Y'][0]] = rechunk_dims.pop('Y')
+
+        ds[rechunk_var] = ds[rechunk_var].chunk(
+            {
+                d: chnks
+                for d, chnks in rechunk_dims.items()
+                if d in ds[rechunk_var].dims
+            }
+        )
+        ds[rechunk_var].encoding.pop("chunksizes", None)
+        ds[rechunk_var].encoding.pop("chunks", None)
+
+    return ds
 
 
 @parse_config
