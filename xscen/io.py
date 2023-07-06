@@ -498,16 +498,12 @@ def _rechunk_for_saving(ds, rechunk):
             rechunk_dims = rechunk.copy()
 
         # get actual axes labels
-        if {'X', 'Y'}.issubset(rechunk_dims):
-            rechunk_dims[ds.cf.axes['X'][0]] = rechunk_dims.pop('X')
-            rechunk_dims[ds.cf.axes['Y'][0]] = rechunk_dims.pop('Y')
+        if {"X", "Y"}.issubset(rechunk_dims):
+            rechunk_dims[ds.cf.axes["X"][0]] = rechunk_dims.pop("X")
+            rechunk_dims[ds.cf.axes["Y"][0]] = rechunk_dims.pop("Y")
 
         ds[rechunk_var] = ds[rechunk_var].chunk(
-            {
-                d: chnks
-                for d, chnks in rechunk_dims.items()
-                if d in ds[rechunk_var].dims
-            }
+            {d: chnks for d, chnks in rechunk_dims.items() if d in ds[rechunk_var].dims}
         )
         ds[rechunk_var].encoding.pop("chunksizes", None)
         ds[rechunk_var].encoding.pop("chunks", None)
