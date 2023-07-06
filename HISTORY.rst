@@ -16,6 +16,7 @@ New features and enhancements
 * New function `get_warming_level` to search within the IPCC CMIP global temperatures CSV without requiring data. (:issue:`208`, :pull:`210`).
 * File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`).
 * New scripting functions `save_and_update` and `move_and_delete`. (:pull:`214`).
+* spatial dimensions can be generalized as X/Y when rechunking and will be mapped to rlon/rlat or lon/lat accordingly.
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
