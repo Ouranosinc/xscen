@@ -159,7 +159,7 @@ class DataCatalog(intake_esm.esm_datastore):
         super().__init__(*args, **kwargs)
 
         # Cast date columns into datetime (with ms reso, that's why we do it here and not in the `read_csv_kwargs`)
-        # Pandas >=2,<=2.0.3 support [ms] resolution, but can't parse strings with this resolution, so we need to go through numpy
+        # Pandas >=2 supports [ms] resolution, but can't parse strings with this resolution, so we need to go through numpy
         for datecol in ["date_start", "date_end"]:
             if datecol in self.df.columns and self.df[datecol].dtype == "O":
                 # Missing values in object columns are np.nan, which numpy can't convert to datetime64 (what's up with that numpy???)
