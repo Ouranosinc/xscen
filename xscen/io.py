@@ -498,9 +498,9 @@ def _rechunk_for_saving(ds, rechunk):
             rechunk_dims = rechunk.copy()
 
         # get actual axes labels
-        if "X"  in rechunk_dims and "X" not in ds.dims:
+        if "X" in rechunk_dims and "X" not in ds.dims:
             rechunk_dims[ds.cf.axes["X"][0]] = rechunk_dims.pop("X")
-        if "Y"  in rechunk_dims and "Y" not in ds.dims:
+        if "Y" in rechunk_dims and "Y" not in ds.dims:
             rechunk_dims[ds.cf.axes["Y"][0]] = rechunk_dims.pop("Y")
 
         ds[rechunk_var] = ds[rechunk_var].chunk(
