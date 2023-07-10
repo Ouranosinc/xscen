@@ -17,6 +17,7 @@ from typing import Any, Optional, Union
 
 import cftime
 import netCDF4
+import numpy as np
 import pandas as pd
 import parse
 import xarray as xr
@@ -621,11 +622,23 @@ def parse_directory(
         )
 
     # Parse dates
+    # If we don't do the to_numpy(na_value=np.datetime64('')).astype('<M8[ms]') trick,
+    # the dtype will be "object" if any of the dates are out-of-bounds.
+    # `na_values=np.datetime64('')` is needed because pandas' NaT does not translate to numpy's NaT, but to float.
     if "date_start" in df.columns:
-        df["date_start"] = df["date_start"].apply(date_parser)
+        df["date_start"] = (
+            df["date_start"]
+            .apply(date_parser)
+            .to_numpy(na_value=np.datetime64(""))
+            .astype("<M8[ms]")
+        )
     if "date_end" in df.columns:
-        df["date_end"] = df["date_end"].apply(date_parser, end_of_period=True)
-
+        df["date_end"] = (
+            df["date_end"]
+            .apply(date_parser, end_of_period=True)
+            .to_numpy(na_value=np.datetime64(""))
+            .astype("<M8[ms]")
+        )
     # Checks
     if {"date_start", "date_end", "xrfreq", "frequency"}.issubset(df.columns):
         # All NaN dates correspond to a fx frequency.
@@ -904,18 +917,18 @@ def _schema_dates(facets):
         )
     ):
         if start.year == end.year:
-            return f"{start:%Y}"
-        return f"{start:%Y}-{end:%Y}"
+            return f"{start:%4Y}"
+        return f"{start:%4Y}-{end:%4Y}"
     # Full months : Starts on the 1st and is either monthly or ends on the last day
     if start.day == 1 and (
         freq >= pd.Timedelta(CV.xrfreq_to_timedelta("M")) or end.day > 27
     ):
         # Full months
         if (start.year, start.month) == (end.year, end.month):
-            return f"{start:%Y%m}"
-        return f"{start:%Y%m}-{end:%Y%m}"
+            return f"{start:%4Y%m}"
+        return f"{start:%4Y%m}-{end:%4Y%m}"
     # The full range
-    return f"{start:%Y%m%d}-{end:%Y%m%d}"
+    return f"{start:%4Y%m%d}-{end:%4Y%m%d}"
 
 
 def _schema_filename(schema: list, facets: dict) -> str:

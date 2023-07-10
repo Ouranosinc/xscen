@@ -8,7 +8,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal
 
 Announcements
 ^^^^^^^^^^^^^
-* Dropped support for Python 3.8. (:pull:`199`).
+* Dropped support for Python 3.8, added support for 3.11. (:pull:`199`,:pull:`222`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -19,6 +19,9 @@ New features and enhancements
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
+* Columns ``date_start`` and ``date_end`` now use a ``datetime64[ms]`` dtype. (:pull:`222`).
+* The default output of ``date_parser`` is now ``pd.Timestamp`` (``output_dtype='datetime'``). (:pull:`222`).
+* ``driving_institution`` was removed from the "default" xscen columns. (:pull:`222`).
 * Folder parsing utilities (``parse_directory``) moved to ``xscen.catutils``. Signature changed : ``globpattern`` removed, ``dirglob`` added, new ``patterns`` specifications. See doc for all changes. (:pull:`205`).
 
 Bug fixes
@@ -35,7 +38,6 @@ Internal changes
 * Updated GitHub Actions to remove deprecation warnings. (:pull:`187`).
 * Updated the cookiecutter used to generate boilerplate documentation and code via `cruft`. (:pull:`212`).
 * A few changes to `subset_warming_level` so it doesn't need `driving_institution`. (:pull:`215`).
-* Injection of a better ``__format__`` method in ``pd.Period``, allowing use of these in f-strings with strftime-like format strings. (:pull:`218`).
 
 v0.6.0 (2023-05-04)
 -------------------

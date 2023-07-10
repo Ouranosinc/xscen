@@ -2,14 +2,15 @@ name: xscen-dev
 channels:
   - conda-forge
 dependencies:
-  - python >=3.9,<3.11 # FIXME: CLISOPS is blocking Python3.11
+  - python >=3.9
   # Don't forget to sync the changes here with environment.yml!
-  # Some pins here are meant to accelerate conda and might not be related to real needs
+  # FIXME pins
+  - pydantic < 2  # breaks intake-esm, See: https://github.com/intake/intake-esm/issues/617
   # Main packages
   - cartopy
   - cftime
   - cf_xarray >=0.7.6
-  - clisops >=0.9.5
+  - clisops >=0.10
   - dask
   - flox
   - fsspec
@@ -20,9 +21,8 @@ dependencies:
   - matplotlib
   - netCDF4
   - numpy
-  - pandas !=1.5.3
+  - pandas >= 2
   - parse
-  - pydantic <2.0  # See: https://github.com/intake/intake-esm/issues/617
   - pygeos
   - pyyaml
   - rechunker
