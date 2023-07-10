@@ -28,9 +28,6 @@ the four columns will be combined in a single Dataset when any of the first thre
 - ``activity``: Model Intercomparison Project (MIP) associated with the data. This is the same as `activity_id` in CMIP6 data. CMIP is the activity for the historical experiment and the DECK experiments.
     - E.g. "CMIP", "CORDEX", "HighResMIP"
 
-- ``driving_institution``: Institution of the driver model.
-    - E.g. "CCCma"
-
 - ``driving_model``: Name of the driver. Following the `driving_model` convention from ES-DOC, this is in the format "institution-model".
     - E.g. "CCCma-CanESM2"
 
@@ -58,11 +55,11 @@ the four columns will be combined in a single Dataset when any of the first thre
 - ``domain``: Name of the region covered by the dataset. It can also contain information on the grid.
     - E.g. "global", "NAM", "ARC-44",  "ARC-22"
 
-- ``date_start``: First date of the dataset. This a pd.Period object with an hourly frequency.
-    - E.g. "2022-06-03 00:00"
+- ``date_start``: First date of the dataset. This usually is a Datetime object with a ms resolution.
+    - E.g. "2022-06-03 00:00:00"
 
-- ``date_end``: Last date of the dataset. This a pd.Period object with an hourly frequency.
-    - E.g. "2022-06-03 00:00"
+- ``date_end``: Last date of the dataset. This usually is a Datetime object with a ms resolution.
+    - E.g. "2022-06-03 00:00:00"
 
 - ``version``: Version of the dataset.
     - E.g. "1.0"

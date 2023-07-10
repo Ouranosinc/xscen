@@ -46,7 +46,7 @@ def date_parser(
     date,
     *,
     end_of_period: bool = False,
-    out_dtype: str = "period",
+    out_dtype: str = "datetime",
     strtime_format: str = "%Y-%m-%d",
     freq: str = "H",
 ) -> Union[str, pd.Period, pd.Timestamp]:
@@ -54,12 +54,13 @@ def date_parser(
 
     Parameters
     ----------
-    date : str
+    date : str, cftime.datetime, pd.Timestamp, datetime.datetime, pd.Period
         Date to be converted
-    end_of_period : bool, optional
-        If True, the date will be the end of month or year depending on what's most appropriate
+    end_of_period : bool, str, optional
+        If 'Y' or 'M', the returned date will be the end of the year or month that contains the received date.
+        If True, the period is inferred from the date's precision, but `date` must be a string, otherwise nothing is done.
     out_dtype : str, optional
-        Choices are 'period', 'datetime' or 'str'
+        Choices are 'datetime', 'period' or 'str'
     strtime_format : str, optional
         If out_dtype=='str', this sets the strftime format
     freq : str
@@ -67,7 +68,7 @@ def date_parser(
 
     Returns
     -------
-    pd.Period, pd.Timestamp, str
+    pd.Timestamp, pd.Period, str
         Parsed date
     """
     # Formats, ordered depending on string length
@@ -85,6 +86,7 @@ def date_parser(
     def _parse_date(date, fmts):
         for fmt in fmts:
             try:
+                # `pd.to_datetime` fails with out-of-bounds
                 s = datetime.strptime(date, fmt)
             except ValueError:
                 pass
@@ -96,15 +98,21 @@ def date_parser(
         return s, match
 
     fmt = None
+    # Timestamp can parse a few date formats by default, but not the ones without spaces
+    # So we try a few known formats first, then a plain call
+    # Also we need "fmt" to know the precision of the string (if end_of_period is True)
     if isinstance(date, str):
         try:
             date, fmt = _parse_date(date, fmts[len(date)])
         except (KeyError, ValueError):
-            date = pd.NaT
+            try:
+                date = pd.Timestamp(date)
+            except pd._libs.tslibs.parsing.DateParseError:
+                date = pd.NaT
     elif isinstance(date, cftime.datetime):
         for n in range(3):
             try:
-                date = datetime.fromisoformat((date - pd.Timedelta(n)).isoformat())
+                date = pd.Timestamp((date - pd.Timedelta(n, "D")).isoformat())
             except ValueError:  # We are NOT catching OutOfBoundsDatetime.
                 pass
             else:
@@ -113,24 +121,25 @@ def date_parser(
             raise ValueError(
                 "Unable to parse cftime date {date}, even when moving back 2 days."
             )
-    elif isinstance(date, pd.Timestamp):
-        date = date.to_pydatetime()
+    elif isinstance(date, pd.Period):
+        # Pandas, you're a mess: Period.to_timestamp() fails for out-of-bounds dates (<1677, > 2242), but not when parsing a string...
+        date = pd.Timestamp(date.strftime("%Y-%m-%dT%H:%M:%S"))
 
-    if not isinstance(date, pd.Period):
-        date = pd.Period(date, freq=freq)
+    if not isinstance(date, pd.Timestamp):
+        date = pd.Timestamp(date)
 
-    if end_of_period and fmt:
-        if "m" not in fmt:
-            date = date.asfreq("A-DEC").asfreq(freq)
-        elif "d" not in fmt:
-            date = date.asfreq("M").asfreq(freq)
+    if isinstance(end_of_period, str) or (end_of_period is True and fmt):
+        if end_of_period == "Y" or "m" not in fmt:
+            date = pd.tseries.frequencies.to_offset("A-DEC").rollforward(date)
+        elif end_of_period == "M" or "d" not in fmt:
+            date = pd.tseries.frequencies.to_offset("M").rollforward(date)
         # TODO: Implement subdaily ?
 
     if out_dtype == "str":
         return date.strftime(strtime_format)
 
-    if out_dtype == "datetime":
-        return date.to_timestamp()
+    if out_dtype == "period":
+        return date.to_period(freq)
     return date
 
 

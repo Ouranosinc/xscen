@@ -8,6 +8,8 @@ import re
 import warnings
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
+from functools import reduce
+from operator import or_
 from pathlib import Path
 from typing import Any, Optional, Union
 
@@ -49,7 +51,6 @@ COLUMNS = [
     "bias_adjust_project",
     "mip_era",
     "activity",
-    "driving_institution",
     "driving_model",
     "institution",
     "source",
@@ -101,22 +102,6 @@ esm_col_data = {
 """Default ESM column data for the official catalogs."""
 
 
-# Patch Period.__format__ to act like strftime
-def _patch_period_format():
-    def __format__(self, fmt):
-        # same implementation as datetime.datetime.__format__
-        if not isinstance(fmt, str):
-            raise TypeError("must be str, not %s" % type(fmt).__name__)
-        if len(fmt) != 0:
-            return self.strftime(fmt.replace("%Y", "%4Y"))
-        return str(self)
-
-    pd.Period.__format__ = __format__
-
-
-_patch_period_format()
-
-
 def _parse_list_of_strings(elem):
     """Parse an element of a csv in case it is a tuple of strings."""
     if elem.startswith("(") or elem.startswith("["):
@@ -146,8 +131,6 @@ csv_kwargs = {
     "converters": {
         "variable": _parse_list_of_strings,
     },
-    "parse_dates": ["date_start", "date_end"],
-    "date_parser": _parse_dates,
 }
 """Kwargs to pass to `pd.read_csv` when opening an official Ouranos catalog."""
 
@@ -174,6 +157,16 @@ class DataCatalog(intake_esm.esm_datastore):
         args = args_as_str(args)
 
         super().__init__(*args, **kwargs)
+
+        # Cast date columns into datetime (with ms reso, that's why we do it here and not in the `read_csv_kwargs`)
+        # Pandas >=2 supports [ms] resolution, but can't parse strings with this resolution, so we need to go through numpy
+        for datecol in ["date_start", "date_end"]:
+            if datecol in self.df.columns and self.df[datecol].dtype == "O":
+                # Missing values in object columns are np.nan, which numpy can't convert to datetime64 (what's up with that numpy???)
+                self.df[datecol] = (
+                    self.df[datecol].fillna("").to_numpy().astype("datetime64[ms]")
+                )
+
         if check_valid:
             self.check_valid()
         if drop_duplicates:
@@ -905,17 +898,17 @@ def subset_file_coverage(
 ) -> pd.DataFrame:
     """Return a subset of files that overlap with the target periods.
 
-    The minimum resolution for periods is 1 hour.
-
     Parameters
     ----------
     df : pd.DataFrame
       List of files to be evaluated, with at least a date_start and date_end column,
-      which are expected to be `pd.Period` objects with `freq='H'`.
+      which are expected to be `datetime64` objecs.
     periods : list
       Either [start, end] or list of [start, end] for the periods to be evaluated.
+      All periods must be covered, otherwise an empty subset is returned.
     coverage : float
       Percentage of hours that need to be covered in a given period for the dataset to be valid. Use 0 to ignore this checkup.
+      The coverage calculation is only valid if there are no overlapping periods in `df` (ensure with `duplicates_ok=False`).
     duplicates_ok: bool
       If True, no checkup is done on possible duplicates.
 
@@ -927,33 +920,30 @@ def subset_file_coverage(
     periods = standardize_periods(periods)
 
     # Create an Interval for each file
-    file_intervals = df.apply(
-        lambda r: pd.Interval(
-            left=r["date_start"].ordinal, right=r["date_end"].ordinal, closed="both"
-        ),
-        axis=1,
+    intervals = pd.IntervalIndex.from_arrays(
+        df["date_start"], df["date_end"], closed="both"
     )
 
     # Check for duplicated Intervals
-    if any(file_intervals.duplicated()) and duplicates_ok is False:
+    if duplicates_ok is False and intervals.is_overlapping:
         logging.warning(
             f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Time periods are overlapping."
         )
         return pd.DataFrame(columns=df.columns)
 
     # Create an array of True/False
-    files_to_keep = np.zeros(len(file_intervals), dtype=bool)
+    files_to_keep = []
     for period in periods:
         period_interval = pd.Interval(
-            left=date_parser(period[0], freq="H").ordinal,
-            right=date_parser(period[1], end_of_period=True, freq="H").ordinal,
+            date_parser(period[0]),
+            date_parser(period[1], end_of_period=True),
             closed="both",
         )
-        files_in_range = file_intervals.apply(lambda r: period_interval.overlaps(r))
+        files_in_range = intervals.overlaps(period_interval)
 
-        if len(df[files_in_range]) == 0:
+        if not files_in_range.any():
             logging.warning(
-                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage (no files in range)."
+                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage (no files in range {period})."
             )
             return pd.DataFrame(columns=df.columns)
 
@@ -961,38 +951,24 @@ def subset_file_coverage(
         # without having to open the files or checking day-by-day
         if coverage > 0:
             # Number of hours in the requested period
-            period_nb_hrs = date_parser(
-                period[1], end_of_period=True, freq="H"
-            ) - date_parser(period[0], freq="H")
-
+            period_length = period_interval.length
             # Sum of hours in all selected files, restricted by the requested period
-            guessed_nb_hrs_sum = (
-                df[files_in_range].apply(
-                    lambda x: np.min(
-                        [
-                            x["date_end"],
-                            date_parser(period[1], end_of_period=True, freq="H"),
-                        ]
-                    ),
-                    axis=1,
-                )
-                - df[files_in_range].apply(
-                    lambda x: np.max(
-                        [x["date_start"], date_parser(period[0], freq="H")]
-                    ),
-                    axis=1,
-                )
-            ).sum()
+            guessed_length = pd.IntervalIndex.from_arrays(
+                intervals[files_in_range].map(
+                    lambda x: max(x.left, period_interval.left)
+                ),
+                intervals[files_in_range].map(
+                    lambda x: min(x.right, period_interval.right)
+                ),
+            ).length
 
-            if guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos < coverage:
+            if guessed_length / period_length < coverage:
                 logging.warning(
                     f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage "
-                    f"(guessed at {guessed_nb_hrs_sum.nanos / period_nb_hrs.nanos:.1%})."
+                    f"(guessed at {guessed_length / period_length:.1%})."
                 )
                 return pd.DataFrame(columns=df.columns)
 
-            files_to_keep = files_to_keep | files_in_range
-        else:
-            files_to_keep = files_to_keep | files_in_range
+        files_to_keep.append(files_in_range)
 
-    return df[files_to_keep]
+    return df[reduce(or_, files_to_keep)]
