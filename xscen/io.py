@@ -489,7 +489,7 @@ def save_to_zarr(
 
 
 def _rechunk_for_saving(ds, rechunk):
-    """Do chunking before saving to .zarr or .nc, generalized as Y/X for different axes lat/lon, rlat/rlon"""
+    """Rechunk before saving to .zarr or .nc, generalized as Y/X for different axes lat/lon, rlat/rlon."""
     for rechunk_var in ds.data_vars:
         # Support for chunks varying per variable
         if rechunk_var in rechunk:
