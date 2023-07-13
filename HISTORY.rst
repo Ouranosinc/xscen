@@ -28,6 +28,7 @@ Bug fixes
 ^^^^^^^^^
 * Fix bug in ``unstack_dates`` with seasonal climatological mean. (:issue:`202`, :pull:`202`).
 * Added NotImplemented errors when trying to call `climatological_mean` and `compute_deltas` with daily data. (:pull:`187`).
+* Minor documentation fixes. (:pull:`225`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
