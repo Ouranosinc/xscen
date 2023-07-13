@@ -8,7 +8,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal
 
 Announcements
 ^^^^^^^^^^^^^
-* Dropped support for Python 3.8, added support for 3.11. (:pull:`199`,:pull:`222`).
+* Dropped support for Python 3.8, added support for 3.11. (:pull:`199`, :pull:`222`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
