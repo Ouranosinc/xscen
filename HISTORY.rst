@@ -8,7 +8,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal
 
 Announcements
 ^^^^^^^^^^^^^
-* Dropped support for Python 3.8, added support for 3.11. (:pull:`199`,:pull:`222`).
+* Dropped support for Python 3.8, added support for 3.11. (:pull:`199`, :pull:`222`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -28,6 +28,7 @@ Bug fixes
 ^^^^^^^^^
 * Fix bug in ``unstack_dates`` with seasonal climatological mean. (:issue:`202`, :pull:`202`).
 * Added NotImplemented errors when trying to call `climatological_mean` and `compute_deltas` with daily data. (:pull:`187`).
+* Minor documentation fixes. (:issue:`223`, :pull:`225`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
