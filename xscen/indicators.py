@@ -14,6 +14,7 @@ from yaml import safe_load
 
 from xscen.config import parse_config
 
+from .catutils import parse_from_ds
 from .utils import CV, standardize_periods
 
 logger = logging.getLogger(__name__)
@@ -196,6 +197,9 @@ def compute_indicators(
             # TODO: Double-check History, units, attrs, add missing variables (grid_mapping), etc.
             out_dict[key].attrs = ds.attrs
             out_dict[key].attrs.pop("cat:variable", None)
+            out_dict[key].attrs["cat:variable"] = parse_from_ds(
+                out_dict[key], ["variable"]
+            )["variable"]
             out_dict[key].attrs["cat:xrfreq"] = freq
             out_dict[key].attrs["cat:frequency"] = CV.xrfreq_to_frequency(freq, None)
             if to_level is not None:
