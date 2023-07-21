@@ -9,6 +9,7 @@ import sys
 import time
 import warnings
 from contextlib import contextmanager
+from distutils.dir_util import copy_tree
 from email.message import EmailMessage
 from io import BytesIO
 from pathlib import Path
@@ -420,7 +421,7 @@ def save_and_update(
     logger.info(f"File {path} has saved succesfully and the catalog was updated.")
 
 
-def move_and_delete(moving, pcat, deleting):
+def move_and_delete(moving, pcat, deleting=None, copy=False):
     """
     First, move files, then update the catalog with new locations. Finally, delete directories.
 
@@ -435,14 +436,20 @@ def move_and_delete(moving, pcat, deleting):
     deleting: list
         list of directories to be deleted including all contents and recreated empty.
         E.g. the working directory of a workflow.
+    copy_tree: bool
+        If True, copy directories instead of moving them.
 
     """
     if isinstance(moving, list) and isinstance(moving[0], list):
         for files in moving:
             source, dest = files[0], files[1]
             if Path(source).exists():
-                logger.info(f"Moving {source} to {dest}.")
-                sh.move(source, dest)
+                if copy:
+                    logger.info(f"Copying {source} to {dest}.")
+                    copy_tree(source, dest)
+                else:
+                    logger.info(f"Moving {source} to {dest}.")
+                    sh.move(source, dest)
                 if Path(dest).suffix in [".zarr", ".nc"]:
                     ds = xr.open_dataset(dest)
                     pcat.update_from_ds(ds=ds, path=dest)
@@ -458,5 +465,7 @@ def move_and_delete(moving, pcat, deleting):
                 logger.info(f"Deleting content inside {dir_to_delete}.")
                 sh.rmtree(dir_to_delete)
                 os.mkdir(dir_to_delete)
+    elif deleting is None:
+        pass
     else:
         raise ValueError("`deleting` should be a list.")
