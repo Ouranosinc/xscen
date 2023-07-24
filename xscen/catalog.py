@@ -935,8 +935,8 @@ def subset_file_coverage(
     files_to_keep = []
     for period in periods:
         period_interval = pd.Interval(
-            date_parser(period[0]),
-            date_parser(period[1], end_of_period=True),
+            date_parser(str(period[0])),
+            date_parser(str(period[1]), end_of_period=True),
             closed="both",
         )
         files_in_range = intervals.overlaps(period_interval)
@@ -960,7 +960,7 @@ def subset_file_coverage(
                 intervals[files_in_range].map(
                     lambda x: min(x.right, period_interval.right)
                 ),
-            ).length
+            ).length.sum()
 
             if guessed_length / period_length < coverage:
                 logging.warning(
