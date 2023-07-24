@@ -291,6 +291,8 @@ def save_to_netcdf(
         Name of the NetCDF file to be saved.
     rechunk : dict, optional
         This is a mapping from dimension name to new chunks (in any format understood by dask).
+        Spatial dimensions can be generalized as 'X' and 'Y' which will be mapped to the actual grid type's
+        dimension names.
         Rechunking is only done on *data* variables sharing dimensions with this argument.
     netcdf_kwargs : dict, optional
         Additional arguments to send to_netcdf()
@@ -356,6 +358,8 @@ def save_to_zarr(
       Name of the Zarr file to be saved.
     rechunk : dict, optional
       This is a mapping from dimension name to new chunks (in any format understood by dask).
+      Spatial dimensions can be generalized as 'X' and 'Y' which will be mapped to the actual grid type's
+      dimension names.
       Rechunking is only done on *data* variables sharing dimensions with this argument.
     zarr_kwargs : dict, optional
       Additional arguments to send to_zarr()
