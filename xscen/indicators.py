@@ -66,6 +66,7 @@ def compute_indicators(
     ],
     *,
     periods: list = None,
+    restrict_years: bool = True,
     to_level: str = "indicators",
 ) -> Union[dict, xr.Dataset]:
     """Calculate variables and indicators based on a YAML call to xclim.
@@ -86,6 +87,11 @@ def compute_indicators(
     periods : list
         Either [start, end] or list of [start, end] of continuous periods over which to compute the indicators. This is needed when the time axis of ds contains some jumps in time.
         If None, the dataset will be considered continuous.
+    restrict_years:
+        If True, cut the time axis to be within the same years as the input.
+        For QS-DEC, xclim starts on DJF with time previous_year-12-01 with a nan as values.
+        Here, this timestep is cut.
+        This should have no effect on YS and MS indicators.
     to_level : str, optional
         The processing level to assign to the output.
         If None, the processing level of the inputs is preserved.
@@ -176,7 +182,7 @@ def compute_indicators(
             if (out[c].attrs != ds[c].attrs) and (out[c].sizes == ds[c].sizes):
                 out[c].attrs = ds[c].attrs
 
-        if "time" in out.dims:
+        if restrict_years and "time" in out.dims:
             # cut the time axis to be within the same years as the input
             # for QS-DEC, xclim starts on DJF with time previous_year-12-01 with a nan as values. We want to cut this.
             # this should have no effect on YS and MS indicators
@@ -196,7 +202,6 @@ def compute_indicators(
 
             # TODO: Double-check History, units, attrs, add missing variables (grid_mapping), etc.
             out_dict[key].attrs = ds.attrs
-            out_dict[key].attrs.pop("cat:variable", None)
             out_dict[key].attrs["cat:variable"] = parse_from_ds(
                 out_dict[key], ["variable"]
             )["variable"]

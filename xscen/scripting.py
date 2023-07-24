@@ -396,7 +396,9 @@ def save_and_update(
 
     # get path
     if path is not None:
-        path = str(path).format(**get_cat_attrs(ds))  # fill path with attrs
+        path = str(path).format(
+            **get_cat_attrs(ds, as_str=True)
+        )  # fill path with attrs
     else:  # if path is not given build it
         build_path_kwargs.setdefault("format", file_format)
         from .catutils import build_path
@@ -446,7 +448,15 @@ def move_and_delete(moving, pcat, deleting=None, copy=False):
             if Path(source).exists():
                 if copy:
                     logger.info(f"Copying {source} to {dest}.")
-                    copy_tree(source, dest)
+                    copied_files = copy_tree(source, dest)
+                    for f in copied_files:
+                        # copied files don't include zarr files
+                        if f[-16:] == ".zarr/.zmetadata":
+                            ds = xr.open_dataset(f[:-11])
+                            pcat.update_from_ds(ds=ds, path=f[:-11])
+                        if f[-3:] == ".nc":
+                            ds = xr.open_dataset(f)
+                            pcat.update_from_ds(ds=ds, path=f)
                 else:
                     logger.info(f"Moving {source} to {dest}.")
                     sh.move(source, dest)
