@@ -496,19 +496,19 @@ def save_to_zarr(
 def rechunk_for_saving(ds, rechunk):
     """Rechunk before saving to .zarr or .nc, generalized as Y/X for different axes lat/lon, rlat/rlon.
 
-        Parameters
-        ----------
-        ds : xr.Dataset
-            The xr.Dataset to be rechunked.
-        rechunk : dict
-            A dictionary with the dimension names of ds and the new chunk size. Spatial dimensions
-            can be provided as X/Y.
+    Parameters
+    ----------
+    ds : xr.Dataset
+        The xr.Dataset to be rechunked.
+    rechunk : dict
+        A dictionary with the dimension names of ds and the new chunk size. Spatial dimensions
+        can be provided as X/Y.
 
-        Returns
-        -------
-        xr.Dataset
-            The dataset with new chunking.
-        """
+    Returns
+    -------
+    xr.Dataset
+        The dataset with new chunking.
+    """
     for rechunk_var in ds.data_vars:
         # Support for chunks varying per variable
         if rechunk_var in rechunk:
