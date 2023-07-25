@@ -4,10 +4,7 @@ from xclim.testing.helpers import test_timeseries as timeseries
 import pandas as pd
 import xarray as xr
 import numpy as np
-
 import xscen as xs
-
-import xclim.xclim.sdba.measures
 
 
 class TestGenericRechunkingDims:
@@ -36,17 +33,12 @@ class TestGenericRechunkingDims:
                     [3.4, 23.5, 15.1]],
                    [[8.5, 12.4, 25.8],
                     [14.5, 5.8, 15.3]]]
-            # pr = [[[9.81, 0.00, 8.88],
-            #        [0.00, 8.81, 1.22]],
-            #       [[2.76, 3.31, 2.21],
-            #        [6.16, 6.03, 3.35]]]
             lon = [-88.83, -88.32]
             lat = [44.25, 44.21]
             time = pd.date_range("2010-10-18", periods=3)
         ds = xr.Dataset(
             data_vars=dict(
                 tas=(["lat", "lon", "time"], tas, {'standard_name': 'air_temperature'}),
-                # pr=(["lat", "lon", "time"], pr, {'standard_name': 'precipitation'}),
             ),
             coords=dict(
                 lon=(["lon"], lon, {'standard_name': 'Longitude', 'axis': 'X'}),
@@ -75,7 +67,7 @@ class TestGenericRechunkingDims:
 
         ds = self.get_test_dataset(np.random.random((30, 30, 50)))
         new_chunks = {'lat': 10, 'lon': 10, 'time': 20}
-        ds_ch = xs.io._rechunk_for_saving(ds, new_chunks)
+        ds_ch = xs.io.rechunk_for_saving(ds, new_chunks)
         for dim, chunks in ds_ch.chunks.items():
             assert chunks[0] == new_chunks[dim]
 
@@ -83,7 +75,7 @@ class TestGenericRechunkingDims:
 
         ds = self.get_test_dataset(np.random.random((30, 30, 50)))
         new_chunks = {'X': 10, 'Y': 10, 'time': 20}
-        ds_ch = xs.io._rechunk_for_saving(ds, new_chunks)
+        ds_ch = xs.io.rechunk_for_saving(ds, new_chunks)
         for dim, chunks in zip(['X', 'Y', 'time'], ds_ch.chunks.values()):
             assert chunks[0] == new_chunks[dim]
 
@@ -91,7 +83,7 @@ class TestGenericRechunkingDims:
 
         ds = self.get_test_dataset_rlat_rlon(np.random.random((30, 30, 50)))
         new_chunks = {'rlat': 10, 'rlon': 10, 'time': 20}
-        ds_ch = xs.io._rechunk_for_saving(ds, new_chunks)
+        ds_ch = xs.io.rechunk_for_saving(ds, new_chunks)
         for dim, chunks in ds_ch.chunks.items():
             assert chunks[0] == new_chunks[dim]
 
@@ -99,8 +91,8 @@ class TestGenericRechunkingDims:
 
         ds = self.get_test_dataset_rlat_rlon(np.random.random((30, 30, 50)))
         new_chunks = {'X': 10, 'Y': 10, 'time': 20}
-        ds_ch = xs.io._rechunk_for_saving(ds, new_chunks)
+        ds_ch = xs.io.rechunk_for_saving(ds, new_chunks)
         for dim, chunks in zip(['X', 'Y', 'time'], ds_ch.chunks.values()):
             assert chunks[0] == new_chunks[dim]
 
-        
+

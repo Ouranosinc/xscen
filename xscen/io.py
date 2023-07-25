@@ -29,6 +29,7 @@ __all__ = [
     "save_to_netcdf",
     "save_to_zarr",
     "subset_maxsize",
+    "rechunk_for_saving",
 ]
 
 
@@ -306,7 +307,7 @@ def save_to_netcdf(
     xarray.Dataset.to_netcdf
     """
     if rechunk:
-        ds = _rechunk_for_saving(ds, rechunk)
+        ds = rechunk_for_saving(ds, rechunk)
 
     path = Path(filename)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -393,7 +394,7 @@ def save_to_zarr(
             ds[v].encoding.clear()
 
     if rechunk:
-        ds = _rechunk_for_saving(ds, rechunk)
+        ds = rechunk_for_saving(ds, rechunk)
 
     path = Path(filename)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -492,8 +493,22 @@ def save_to_zarr(
             raise
 
 
-def _rechunk_for_saving(ds, rechunk):
-    """Rechunk before saving to .zarr or .nc, generalized as Y/X for different axes lat/lon, rlat/rlon."""
+def rechunk_for_saving(ds, rechunk):
+    """Rechunk before saving to .zarr or .nc, generalized as Y/X for different axes lat/lon, rlat/rlon.
+
+        Parameters
+        ----------
+        ds : xr.Dataset
+            The xr.Dataset to be rechunked.
+        rechunk : dict
+            A dictionary with the dimension names of ds and the new chunk size. Spatial dimensions
+            can be provided as X/Y.
+
+        Returns
+        -------
+        xr.Dataset
+            The dataset with new chunking.
+        """
     for rechunk_var in ds.data_vars:
         # Support for chunks varying per variable
         if rechunk_var in rechunk:
