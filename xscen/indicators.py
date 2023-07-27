@@ -61,7 +61,7 @@ def load_xclim_module(filename, reload=False) -> ModuleType:
 def compute_indicators(
     ds: xr.Dataset,
     indicators: Union[
-        str, PosixPath, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
+        str, Path, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
     ],
     *,
     periods: list = None,
@@ -77,7 +77,7 @@ def compute_indicators(
     ----------
     ds : xr.Dataset
         Dataset to use for the indicators.
-    indicators : Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+    indicators : Union[str, Path, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
         Path to a YAML file that instructs on how to calculate missing variables.
         Can also be only the "stem", if translations and custom indices are implemented.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
@@ -135,6 +135,13 @@ def compute_indicators(
             # Make the call to xclim
             out = ind(ds=ds)
 
+            # In the case of multiple outputs, merge them into a single dataset
+            if isinstance(out, tuple):
+                out = xr.merge(out)
+                out.attrs = {}
+            else:
+                out = out.to_dataset()
+
             # Infer the indicator's frequency
             if "time" in out.dims:
                 if len(out.time) < 3:
@@ -143,6 +150,8 @@ def compute_indicators(
                     freq = xr.infer_freq(out.time)
             else:
                 freq = "fx"
+            if freq == "YS":
+                freq = "AS-JAN"  # To fix an inconsistency in xclim default 'freq'
 
         else:
             # Multiple time periods to concatenate
@@ -151,6 +160,13 @@ def compute_indicators(
                 # Make the call to xclim
                 ds_subset = ds.sel(time=slice(period[0], period[1]))
                 tmp = ind(ds=ds_subset)
+
+                # In the case of multiple outputs, merge them into a single dataset
+                if isinstance(tmp, tuple):
+                    tmp = xr.merge(tmp)
+                    tmp.attrs = {}
+                else:
+                    tmp = tmp.to_dataset()
 
                 # Infer the indicator's frequency
                 if "time" in tmp.dims:
@@ -161,11 +177,13 @@ def compute_indicators(
                 else:
                     freq = "fx"
 
+                if freq == "YS":
+                    freq = "AS-JAN"  # To fix an inconsistency in xclim default 'freq'
                 # In order to concatenate time periods, the indicator still needs a time dimension
                 if freq == "fx":
                     tmp = tmp.assign_coords({"time": ds_subset.time[0]})
 
-                concats.extend(tmp)
+                concats.append(tmp)
             out = xr.concat(concats, dim="time")
 
         # Make sure that attributes have been kept for the dimensions and coordinates. Fixes a bug in xarray.
@@ -188,11 +206,7 @@ def compute_indicators(
         # Create the dictionary key
         key = freq
         if key not in out_dict:
-            if isinstance(out, tuple):  # In the case of multiple outputs
-                out_dict[key] = xr.merge(o for o in out if o.name in indicators)
-            else:
-                out_dict[key] = out.to_dataset()
-
+            out_dict[key] = out
             # TODO: Double-check History, units, attrs, add missing variables (grid_mapping), etc.
             out_dict[key].attrs = ds.attrs
             out_dict[key].attrs.pop("cat:variable", None)
@@ -202,12 +216,8 @@ def compute_indicators(
                 out_dict[key].attrs["cat:processing_level"] = to_level
 
         else:
-            if isinstance(out, tuple):  # In the case of multiple outputs
-                for o in out:
-                    if o.name in indicators:
-                        out_dict[key][o.name] = o
-            else:
-                out_dict[key][out.name] = out
+            for v in out.data_vars:
+                out_dict[key][v] = out[v]
 
     return out_dict
 
