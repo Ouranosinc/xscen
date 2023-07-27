@@ -4,7 +4,7 @@ import logging
 import warnings
 from collections.abc import Sequence
 from copy import deepcopy
-from pathlib import Path, PosixPath
+from pathlib import Path
 from types import ModuleType
 from typing import Tuple, Union
 
@@ -73,7 +73,7 @@ def climatological_mean(
         Returns a Dataset of the climatological mean
 
     """
-    if xr.infer_freq(ds.time) == "D":
+    if len(ds.time) > 3 and xr.infer_freq(ds.time) == "D":
         raise NotImplementedError(
             "xs.climatological_mean does not currently support daily data."
         )
@@ -108,7 +108,10 @@ def climatological_mean(
     if (
         any(
             x in freq_across_year
-            for x in [ds.attrs.get("cat:xrfreq"), xr.infer_freq(ds.time)]
+            for x in [
+                ds.attrs.get("cat:xrfreq"),
+                (xr.infer_freq(ds.time) if len(ds.time) > 3 else None),
+            ]
         )
         and min_periods is None
     ):
@@ -225,6 +228,10 @@ def compute_deltas(
         Returns a Dataset with the requested deltas.
     """
     if isinstance(reference_horizon, str):
+        if reference_horizon not in ds.horizon:
+            raise ValueError(
+                f"The reference horizon {reference_horizon} is not in the dataset."
+            )
         # Separate the reference from the other horizons
         if xc.core.utils.uses_dask(ds["horizon"]):
             ds["horizon"].load()
@@ -292,7 +299,9 @@ def compute_deltas(
                 deltas[v_name] = 100 * (other_hz[vv] - ref[vv]) / ref[vv]
                 deltas[v_name].attrs["units"] = "%"
             else:
-                raise ValueError("Delta 'kind' not understood.")
+                raise ValueError(
+                    f"Delta 'kind' not understood. Should be '+', '/' or '%', received {kind}."
+                )
 
         # modify attrs and history
         deltas[v_name].attrs["delta_kind"] = _kind
@@ -336,7 +345,11 @@ def compute_deltas(
         else:
             raise ValueError("The type of 'time' could not be understood.")
 
-        deltas = deltas.assign(time=time_coord).transpose("time", ...)
+        deltas = (
+            deltas.drop_vars({"year", "day", "month", "time"})
+            .assign(time=time_coord)
+            .transpose("time", ...)
+        )
         deltas = deltas.reindex_like(ds)
 
     if to_level is not None:
@@ -662,7 +675,7 @@ def spatial_mean(
 def produce_horizon(
     ds: xr.Dataset,
     indicators: Union[
-        str, PosixPath, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
+        str, Path, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
     ],
     period: list = None,
     to_level: str = "climatology{period0}-{period1}",
@@ -677,7 +690,7 @@ def produce_horizon(
     ----------
     ds: xr.Dataset
       Input dataset with a time dimension.
-    indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+    indicators:  Union[str, Path, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
       Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     period: list
       [start_year, end_year] of the period to be evaluated.
@@ -693,7 +706,7 @@ def produce_horizon(
         Horizon dataset.
     """
     if "warminglevel" in ds and len(ds.warminglevel) != 1:
-        warnings.warn(
+        raise ValueError(
             "Input dataset should only have `warminglevel` coordinate of length 1."
         )
     if period is not None:
@@ -732,9 +745,8 @@ def produce_horizon(
             elif "MS" in freq:
                 new_dim = "month"
             else:
-                new_dim = "period"
-                warnings.warn(
-                    f"Frequency {freq} is not supported. Setting name of the new dimension to 'period'."
+                raise ValueError(
+                    f"Frequency {freq} is not supported or recognized. Please use annual (AS), seasonal (QS), monthly (MS), or fixed (fx) frequency."
                 )
             ds_mean = unstack_dates(
                 ds_mean,
@@ -750,7 +762,11 @@ def produce_horizon(
 
         else:
             ds_mean = ds_mean.expand_dims(
-                dim={"horizon": [f"{ds.time.dt.year[0]}-{ds.time.dt.year[-1]}"]}
+                dim={
+                    "horizon": [
+                        f"{ds.time.dt.year[0].item()}-{ds.time.dt.year[-1].item()}"
+                    ]
+                }
             )
             ds_mean["horizon"] = ds_mean["horizon"].astype(str)
 

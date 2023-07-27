@@ -12,9 +12,8 @@ from .conftest import notebooks
 
 class TestComputeIndicators:
     yaml_file = notebooks / "samples" / "indicators.yml"
-    values = np.ones(365 * 3)
     ds = timeseries(
-        values, variable="tas", start="2001-01-01", freq="D", as_dataset=True
+        np.ones(365 * 3), variable="tas", start="2001-01-01", freq="D", as_dataset=True
     )
 
     @pytest.mark.parametrize("reload", [True, False])
