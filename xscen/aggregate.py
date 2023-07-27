@@ -311,7 +311,7 @@ def compute_deltas(
             if hasattr(other_hz[vv], a):
                 deltas[v_name].attrs[
                     a
-                ] = f"{other_hz[vv].attrs[a]}: {_kind} delta compared to {reference_horizon.replace('-', '_')}."
+                ] = f"{other_hz[vv].attrs[a]}: {_kind} delta compared to {reference_horizon}."
 
         new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {_kind} delta vs. {reference_horizon} - xarray v{xr.__version__}"
         history = (

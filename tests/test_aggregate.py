@@ -201,7 +201,7 @@ class TestComputeDeltas:
         # Test metadata
         assert (
             deltas[variable].attrs["description"]
-            == f"{self.ds.tas.attrs['description']}: {delta_kind} delta compared to 1981_2010."
+            == f"{self.ds.tas.attrs['description']}: {delta_kind} delta compared to 1981-2010."
         )
         assert f"{delta_kind} delta vs. 1981-2010" in deltas[variable].attrs["history"]
         # Test variable
