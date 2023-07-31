@@ -11,7 +11,7 @@
       "project_slug": "xscen",
       "project_short_description": "A climate change scenario-building analysis framework, built with xclim/xarray.",
       "pypi_username": "RondeauG",
-      "version": "0.6.15-beta",
+      "version": "0.6.16-beta",
       "use_pytest": "y",
       "use_black": "y",
       "add_pyup_badge": "n",
