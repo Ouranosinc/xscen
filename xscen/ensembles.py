@@ -163,12 +163,7 @@ def generate_weights(
     xr.DataArray
         Weights along the 'realization' dimension.
     """
-    # Create a structure based on user input
-    if independence_level == "all":
-        struct = ["driving_model", "source"]
-    elif independence_level in ["GCM", "institution"]:
-        struct = ["driving_model", "source", "member"]
-    else:
+    if independence_level not in ["all", "GCM", "institution"]:
         raise ValueError(
             f"'independence_level' should be between 'GCM' and 'all', received {independence_level}."
         )
@@ -184,121 +179,108 @@ def generate_weights(
         "member": None,
     }
     info = {key: dict(defdict, **get_cat_attrs(datasets[key])) for key in keys}
-
-    if split_experiments:
-        if any(info[k]["experiment"] is None for k in info):
-            raise ValueError(
-                "The 'cat:experiment' attribute is missing from some simulations. 'split_experiments' cannot be True."
-            )
-        else:
-            struct = ["experiment"] + struct
-
     # More easily manage GCMs and RCMs
     for k in info:
         if info[k]["driving_model"] is None:
             info[k]["driving_model"] = info[k]["source"]
+    # Combine the member and experiment attributes
+    for k in info:
+        info[k]["member-exp"] = info[k]["member"] + "-" + info[k]["experiment"]
+
+    # Verifications
+    if any(info[k]["driving_model"] is None for k in info):
+        raise ValueError(
+            "The 'cat:source' or 'cat:driving_model' attribute is missing from some simulations."
+        )
+    if split_experiments and any(info[k]["experiment"] is None for k in info):
+        raise ValueError(
+            "The 'cat:experiment' attribute is missing from some simulations. 'split_experiments' cannot be True."
+        )
+    if any(info[k]["member"] is None for k in info):
+        warnings.warn(
+            "The 'cat:member' attribute is missing from some simulations. Results may be incorrect."
+        )
 
     # Build the weights according to the independence structure
-    weights = xr.DataArray(
-        np.zeros(len(info.keys())),
-        dims=["realization"],
-        coords={"realization": list(info.keys())},
-    )
+    if include_nan:
+        extra_dim = [
+            h for h in ["time", "horizon"] if h in datasets[list(keys)[0]].dims
+        ]
+        if len(extra_dim) != 1:
+            raise ValueError(
+                f"Expected either 'time' or 'horizon' as an extra dimension, found {extra_dim}."
+            )
+        weights = xr.DataArray(
+            np.zeros(
+                (len(info.keys()), len(datasets[list(keys)[0]].coords[extra_dim[0]]))
+            ),
+            dims=["realization", extra_dim[0]],
+            coords={
+                "realization": list(info.keys()),
+                extra_dim[0]: datasets[list(keys)[0]].coords[extra_dim[0]],
+            },
+        )
+    else:
+        weights = xr.DataArray(
+            np.zeros(len(info.keys())),
+            dims=["realization"],
+            coords={"realization": list(info.keys())},
+        )
     for i in range(len(info)):
-        # Weight == 0 means it hasn't been processed yet
-        if weights[i] == 0:
-            sim = info[list(keys)[i]]
+        sim = info[list(keys)[i]]
 
-            if independence_level != "all":
-                # Do one member at a time, but keep track ofhow many models ran it.
-                larger_struct = [k for k in struct if k != "source"]
-                larger_group = [
-                    k
-                    for k in info.keys()
-                    if all([info[k][s] == sim[s] for s in larger_struct])
-                ]
-            else:
-                larger_group = ["a"]
-            if independence_level == "institution":
-                n_models = len(
-                    {
-                        info[k]["driving_model"]
-                        for k in info
-                        if (
-                            (info[k]["institution"] == sim["institution"])
-                            and (
-                                info[k]["experiment"] == sim["experiment"]
-                                if split_experiments
-                                else True
-                            )
-                        )
-                    }
-                )
-            else:
-                n_models = 1
-
-            # Exact group corresponding to the current simulation
-            group = [
-                k for k in info.keys() if all([info[k][s] == sim[s] for s in struct])
+        # Number of models running a given realization of a driving model
+        models_struct = (
+            ["source", "driving_model", "member-exp"]
+            if independence_level == "all"
+            else ["driving_model", "member-exp"]
+        )
+        n_models = len(
+            [
+                k
+                for k in info.keys()
+                if all([info[k][s] == sim[s] for s in models_struct])
             ]
+        )
 
-            # Divide the weight equally between the group
-            divisor = 1 / len(group) / len(larger_group) / n_models
+        # Number of realizations of a given driving model
+        if independence_level == "all":
+            realization_struct = (
+                ["source", "driving_model", "experiment"]
+                if split_experiments
+                else ["source", "driving_model"]
+            )
+        else:
+            realization_struct = (
+                ["driving_model", "experiment"]
+                if split_experiments
+                else ["driving_model"]
+            )
+        n_realizations = len(
+            {
+                info[k]["member-exp"]
+                for k in info.keys()
+                if all([info[k][s] == sim[s] for s in realization_struct])
+            }
+        )
 
-            weights = weights.where(~weights.realization.isin(group), divisor)
+        # Number of driving models run by a given institution
+        institution_struct = (
+            ["institution", "experiment"] if split_experiments else ["institution"]
+        )
+        n_institutions = (
+            len(
+                {
+                    info[k]["driving_model"]
+                    for k in info.keys()
+                    if all([info[k][s] == sim[s] for s in institution_struct])
+                }
+            )
+            if independence_level == "institution"
+            else 1
+        )
 
-    # # Prepare an array of 0s, with size == nb. realization
-    # weights = xr.DataArray(
-    #     [0] * len(keys), coords={"realization": ("realization", list(keys))}
-    # )
-    #
-    # for r in weights.realization.values:
-    #     # Weight == 0 means it hasn't been processed yet
-    #     if weights.sel(realization=r) == 0:
-    #         sim = info[r]
-    #
-    #         # Exact group corresponding to the current simulation
-    #         group = [
-    #             k
-    #             for k in info.keys()
-    #             if (info[k].get("source", None) == sim.get("source", None))
-    #             and (
-    #                 info[k].get("driving_model", None) == sim.get("driving_model", None)
-    #             )
-    #             and (info[k].get("activity", None) == sim.get("activity", None))
-    #         ]
-    #
-    #         if independence_level == "GCM":
-    #             if ("driving_model" in sim.keys()) and not (
-    #                 pd.isna(sim.get("driving_model"))
-    #             ):
-    #                 gcm = sim.get("driving_model", None)
-    #             else:
-    #                 gcm = sim.get("source", None)
-    #
-    #             # Global models
-    #             group_g = [k for k, v in info.items() if v.get("source") == gcm]
-    #             # Regional models with the same GCM
-    #             group_r = [k for k, v in info.items() if v.get("driving_model") == gcm]
-    #
-    #             # Divide the weight equally between the GCMs and RCMs
-    #             divisor = 1 / ((len(group_g) > 0) + (len(group_r) > 0))
-    #
-    #             # For regional models, divide between them
-    #             if r in group_r:
-    #                 divisor = divisor / len({info[k].get("source") for k in group_r})
-    #
-    #         elif independence_level == "all":
-    #             divisor = 1
-    #
-    #         else:
-    #             raise ValueError(
-    #                 f"'independence_level' should be between 'GCM' and 'all', received {independence_level}."
-    #             )
-    #
-    #         weights = weights.where(
-    #             ~weights.realization.isin(group),
-    #             divisor / len(group),
-    #         )
+        # Divide the weight equally between the group
+        weights[i] = 1 / n_models / n_realizations / n_institutions
 
     return weights

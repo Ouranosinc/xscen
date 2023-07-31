@@ -206,7 +206,15 @@ class TestGenerateWeights:
         return out
 
     @pytest.mark.parametrize(
-        "independence_level, split_exp", [("all", True), ("all", False)]
+        "independence_level, split_exp",
+        [
+            ("all", True),
+            ("all", False),
+            ("GCM", True),
+            ("GCM", False),
+            ("institution", True),
+            ("institution", False),
+        ],
     )
     def test_generate_weights(self, independence_level, split_exp):
         ens = self.make_ensemble()
@@ -220,58 +228,114 @@ class TestGenerateWeights:
             "CanESM2-rcp45-x2": {
                 "all-True": [1 / 2] * 2,
                 "all-False": [1 / 4] * 2,
+                "GCM-True": [1 / 3 / 3] + [1 / 3],
+                "GCM-False": [1 / 3 / 56] + [1 / 56],
+                "institution-True": [1 / 3 / 3] + [1 / 3],
+                "institution-False": [1 / 3 / 56] + [1 / 56],
             },
             "CSIRO-Mk3-rcp45-x10": {
                 "all-True": [1 / 10] * 10,
                 "all-False": [1 / 10] * 10,
+                "GCM-True": [1 / 10] * 10,
+                "GCM-False": [1 / 10] * 10,
+                "institution-True": [1 / 10] * 10,
+                "institution-False": [1 / 10 / 2] * 10,
             },
             "GFDL-ESM2G-x2": {
                 "all-True": [1 / 2] * 2,
                 "all-False": [1 / 2] * 2,
+                "GCM-True": [1 / 2] * 2,
+                "GCM-False": [1 / 2] * 2,
+                "institution-True": [1 / 2 / 2] * 2,
+                "institution-False": [1 / 2 / 2] * 2,
             },
             "GFDL-ESM2M-x1": {
                 "all-True": [1],
                 "all-False": [1],
+                "GCM-True": [1 / 2],
+                "GCM-False": [1 / 2],
+                "institution-True": [1 / 2 / 2],
+                "institution-False": [1 / 2 / 2],
             },
             "CanESM2-rcp85-x2": {
                 "all-True": [1 / 2] * 2,
                 "all-False": [1 / 4] * 2,
+                "GCM-True": [1 / 3 / 53] + [1 / 53],
+                "GCM-False": [1 / 3 / 56] + [1 / 56],
+                "institution-True": [1 / 3 / 53] + [1 / 53],
+                "institution-False": [1 / 3 / 56] + [1 / 56],
             },
             "CSIRO2-rcp85-x1": {
                 "all-True": [1],
                 "all-False": [1],
+                "GCM-True": [1],
+                "GCM-False": [1],
+                "institution-True": [1],
+                "institution-False": [1 / 2],
             },
             "CanESM2-CRCM5-rcp45-x1": {
                 "all-True": [1],
                 "all-False": [1 / 52],
+                "GCM-True": [1 / 3 / 3],
+                "GCM-False": [1 / 3 / 56],
+                "institution-True": [1 / 3 / 3],
+                "institution-False": [1 / 3 / 56],
             },
             "CanESM2-CanRCM4-rcp45-x2": {
                 "all-True": [1 / 2] * 2,
                 "all-False": [1 / 4] * 2,
+                "GCM-True": [1 / 3 / 3] + [1 / 3],
+                "GCM-False": [1 / 3 / 56] + [1 / 56],
+                "institution-True": [1 / 3 / 3] + [1 / 3],
+                "institution-False": [1 / 3 / 56] + [1 / 56],
             },
             "GFDL-ESM2M-HIRHAM5-x1": {
                 "all-True": [1],
                 "all-False": [1],
+                "GCM-True": [1 / 2],
+                "GCM-False": [1 / 2],
+                "institution-True": [1 / 2 / 2],
+                "institution-False": [1 / 2 / 2],
             },
             "CanESM2-CRCM5-rcp85-x1": {
                 "all-True": [1 / 51],
                 "all-False": [1 / 52],
+                "GCM-True": [1 / 3 / 53],
+                "GCM-False": [1 / 3 / 56],
+                "institution-True": [1 / 3 / 53],
+                "institution-False": [1 / 3 / 56],
             },
             "CanESM2-CanRCM4-rcp85-x2": {
                 "all-True": [1 / 2] * 2,
                 "all-False": [1 / 4] * 2,
+                "GCM-True": [1 / 3 / 53] + [1 / 53],
+                "GCM-False": [1 / 3 / 56] + [1 / 56],
+                "institution-True": [1 / 3 / 53] + [1 / 53],
+                "institution-False": [1 / 3 / 56] + [1 / 56],
             },
             "EC-EARTH-HIRHAM5-x1": {
                 "all-True": [1],
                 "all-False": [1],
+                "GCM-True": [1 / 2],
+                "GCM-False": [1 / 2],
+                "institution-True": [1 / 2],
+                "institution-False": [1 / 2],
             },
             "EC-EARTH-RegCM4-x1": {
                 "all-True": [1],
                 "all-False": [1],
+                "GCM-True": [1 / 2],
+                "GCM-False": [1 / 2],
+                "institution-True": [1 / 2],
+                "institution-False": [1 / 2],
             },
             "ClimEx-CanESM2-CRCM5-rcp85-x50": {
                 "all-True": [1 / 51] * 50,
                 "all-False": [1 / 52] * 50,
+                "GCM-True": [1 / 53] * 50,
+                "GCM-False": [1 / 56] * 50,
+                "institution-True": [1 / 53] * 50,
+                "institution-False": [1 / 56] * 50,
             },
         }
 
