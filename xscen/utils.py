@@ -733,7 +733,12 @@ def clean_up(
                     del ds.attrs[a_key]
 
         # generate a new id
-        ds.attrs["cat:id"] = generate_id(ds).iloc[0]
+        try:
+            ds.attrs["cat:id"] = generate_id(ds).iloc[0]
+        except IndexError as err:
+            logger.warning(f"Unable to generate a new id for the dataset. Got {err}.")
+            if "cat:id" in ds.attrs:
+                del ds.attrs["cat:id"]
 
     if to_level:
         ds.attrs["cat:processing_level"] = to_level

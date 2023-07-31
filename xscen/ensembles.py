@@ -6,6 +6,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Union
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 from xclim import ensembles
@@ -27,7 +28,6 @@ def ensemble_stats(
     weights: xr.DataArray = None,
     common_attrs_only: bool = True,
     to_level: str = "ensemble",
-    stats_kwargs=None,
 ) -> xr.Dataset:
     """Create an ensemble and computes statistics on it.
 
@@ -40,7 +40,7 @@ def ensemble_stats(
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
     statistics : dict
         xclim.ensembles statistics to be called. Dictionary in the format {function: arguments}.
-        If a function requires 'ref', the dictionary entry should be the inputs of a .loc[], e.g. {"ref": {"horizons": "1981-2010"}}
+        If a function requires 'ref', the dictionary entry should be the inputs of a .loc[], e.g. {"ref": {"horizon": "1981-2010"}}
     create_kwargs : dict
         Dictionary of arguments for xclim.ensembles.create_ensemble.
     weights : xr.DataArray
@@ -62,15 +62,6 @@ def ensemble_stats(
 
     """
     create_kwargs = create_kwargs or {}
-
-    if isinstance(statistics, str) and isinstance(stats_kwargs, dict):
-        warnings.warn(
-            "The usage of 'statistics: str' with 'stats_kwargs: dict' will be abandoned. "
-            "Please use 'statistics: dict' instead.",
-            category=FutureWarning,
-        )
-        statistics = {statistics: stats_kwargs}
-        stats_kwargs = None
 
     # if input files are .zarr, change the engine automatically
     if isinstance(datasets, list) and isinstance(datasets[0], (str, Path)):
@@ -100,18 +91,26 @@ def ensemble_stats(
                     deltak = ens[v].attrs.get("delta_kind", None)
                     if stats_kwargs.get("ref") is not None and deltak is not None:
                         raise ValueError(
-                            "{v} is a delta, but 'ref' was still specified."
+                            f"{v} is a delta, but 'ref' was still specified."
                         )
                     if deltak in ["relative", "*", "/"]:
                         logging.info(
-                            "Relative delta detected for {v}. Applying 'v - 1' before change_significance."
+                            f"Relative delta detected for {v}. Applying 'v - 1' before change_significance."
                         )
                         ens_v = ens[v] - 1
                     else:
                         ens_v = ens[v]
-                    ens_stats[f"{v}_change_frac"], ens_stats[f"{v}_pos_frac"] = getattr(
-                        ensembles, stat
-                    )(ens_v, **stats_kwargs)
+                    tmp = getattr(ensembles, stat)(ens_v, **stats_kwargs)
+                    if len(tmp) == 2:
+                        ens_stats[f"{v}_change_frac"], ens_stats[f"{v}_pos_frac"] = tmp
+                    elif len(tmp) == 3:
+                        (
+                            ens_stats[f"{v}_change_frac"],
+                            ens_stats[f"{v}_pos_frac"],
+                            ens_stats[f"{v}_p_vals"],
+                        ) = tmp
+                    else:
+                        raise ValueError(f"Unexpected number of outputs from {stat}.")
         else:
             ens_stats = ens_stats.merge(getattr(ensembles, stat)(ens, **stats_kwargs))
 
@@ -141,7 +140,10 @@ def ensemble_stats(
 
 def generate_weights(
     datasets: Union[dict, list],
+    *,
     independence_level: str = "all",
+    split_experiments: bool = False,
+    include_nan: bool = True,
 ) -> xr.DataArray:
     """Use realization attributes to automatically generate weights along the 'realization' dimension.
 
@@ -161,70 +163,142 @@ def generate_weights(
     xr.DataArray
         Weights along the 'realization' dimension.
     """
-    # TODO: 2-D weights along the horizon dimension
-
-    if (isinstance(datasets, list)) and (isinstance(datasets[0], (str, Path))):
+    # Create a structure based on user input
+    if independence_level == "all":
+        struct = ["driving_model", "source"]
+    elif independence_level in ["GCM", "institution"]:
+        struct = ["driving_model", "source", "member"]
+    else:
         raise ValueError(
-            "explicit weights are required if the dataset is a list of paths"
+            f"'independence_level' should be between 'GCM' and 'all', received {independence_level}."
         )
 
     # Use metadata to identify the simulation attributes
     keys = datasets.keys() if isinstance(datasets, dict) else range(len(datasets))
-    defdict = {"source": None, "activity": None, "driving_model": None}
+    defdict = {
+        "experiment": None,
+        "activity": None,
+        "institution": None,
+        "driving_model": None,
+        "source": None,
+        "member": None,
+    }
     info = {key: dict(defdict, **get_cat_attrs(datasets[key])) for key in keys}
 
-    # Prepare an array of 0s, with size == nb. realization
-    weights = xr.DataArray(
-        [0] * len(keys), coords={"realization": ("realization", list(keys))}
-    )
+    if split_experiments:
+        if any(info[k]["experiment"] is None for k in info):
+            raise ValueError(
+                "The 'cat:experiment' attribute is missing from some simulations. 'split_experiments' cannot be True."
+            )
+        else:
+            struct = ["experiment"] + struct
 
-    for r in weights.realization.values:
+    # More easily manage GCMs and RCMs
+    for k in info:
+        if info[k]["driving_model"] is None:
+            info[k]["driving_model"] = info[k]["source"]
+
+    # Build the weights according to the independence structure
+    weights = xr.DataArray(
+        np.zeros(len(info.keys())),
+        dims=["realization"],
+        coords={"realization": list(info.keys())},
+    )
+    for i in range(len(info)):
         # Weight == 0 means it hasn't been processed yet
-        if weights.sel(realization=r) == 0:
-            sim = info[r]
+        if weights[i] == 0:
+            sim = info[list(keys)[i]]
+
+            if independence_level != "all":
+                # Do one member at a time, but keep track ofhow many models ran it.
+                larger_struct = [k for k in struct if k != "source"]
+                larger_group = [
+                    k
+                    for k in info.keys()
+                    if all([info[k][s] == sim[s] for s in larger_struct])
+                ]
+            else:
+                larger_group = ["a"]
+            if independence_level == "institution":
+                n_models = len(
+                    {
+                        info[k]["driving_model"]
+                        for k in info
+                        if (
+                            (info[k]["institution"] == sim["institution"])
+                            and (
+                                info[k]["experiment"] == sim["experiment"]
+                                if split_experiments
+                                else True
+                            )
+                        )
+                    }
+                )
+            else:
+                n_models = 1
 
             # Exact group corresponding to the current simulation
             group = [
-                k
-                for k in info.keys()
-                if (info[k].get("source", None) == sim.get("source", None))
-                and (
-                    info[k].get("driving_model", None) == sim.get("driving_model", None)
-                )
-                and (info[k].get("activity", None) == sim.get("activity", None))
+                k for k in info.keys() if all([info[k][s] == sim[s] for s in struct])
             ]
 
-            if independence_level == "GCM":
-                if ("driving_model" in sim.keys()) and not (
-                    pd.isna(sim.get("driving_model"))
-                ):
-                    gcm = sim.get("driving_model", None)
-                else:
-                    gcm = sim.get("source", None)
+            # Divide the weight equally between the group
+            divisor = 1 / len(group) / len(larger_group) / n_models
 
-                # Global models
-                group_g = [k for k, v in info.items() if v.get("source") == gcm]
-                # Regional models with the same GCM
-                group_r = [k for k, v in info.items() if v.get("driving_model") == gcm]
+            weights = weights.where(~weights.realization.isin(group), divisor)
 
-                # Divide the weight equally between the GCMs and RCMs
-                divisor = 1 / ((len(group_g) > 0) + (len(group_r) > 0))
-
-                # For regional models, divide between them
-                if r in group_r:
-                    divisor = divisor / len({info[k].get("source") for k in group_r})
-
-            elif independence_level == "all":
-                divisor = 1
-
-            else:
-                raise ValueError(
-                    f"'independence_level' should be between 'GCM' and 'all', received {independence_level}."
-                )
-
-            weights = weights.where(
-                ~weights.realization.isin(group),
-                divisor / len(group),
-            )
+    # # Prepare an array of 0s, with size == nb. realization
+    # weights = xr.DataArray(
+    #     [0] * len(keys), coords={"realization": ("realization", list(keys))}
+    # )
+    #
+    # for r in weights.realization.values:
+    #     # Weight == 0 means it hasn't been processed yet
+    #     if weights.sel(realization=r) == 0:
+    #         sim = info[r]
+    #
+    #         # Exact group corresponding to the current simulation
+    #         group = [
+    #             k
+    #             for k in info.keys()
+    #             if (info[k].get("source", None) == sim.get("source", None))
+    #             and (
+    #                 info[k].get("driving_model", None) == sim.get("driving_model", None)
+    #             )
+    #             and (info[k].get("activity", None) == sim.get("activity", None))
+    #         ]
+    #
+    #         if independence_level == "GCM":
+    #             if ("driving_model" in sim.keys()) and not (
+    #                 pd.isna(sim.get("driving_model"))
+    #             ):
+    #                 gcm = sim.get("driving_model", None)
+    #             else:
+    #                 gcm = sim.get("source", None)
+    #
+    #             # Global models
+    #             group_g = [k for k, v in info.items() if v.get("source") == gcm]
+    #             # Regional models with the same GCM
+    #             group_r = [k for k, v in info.items() if v.get("driving_model") == gcm]
+    #
+    #             # Divide the weight equally between the GCMs and RCMs
+    #             divisor = 1 / ((len(group_g) > 0) + (len(group_r) > 0))
+    #
+    #             # For regional models, divide between them
+    #             if r in group_r:
+    #                 divisor = divisor / len({info[k].get("source") for k in group_r})
+    #
+    #         elif independence_level == "all":
+    #             divisor = 1
+    #
+    #         else:
+    #             raise ValueError(
+    #                 f"'independence_level' should be between 'GCM' and 'all', received {independence_level}."
+    #             )
+    #
+    #         weights = weights.where(
+    #             ~weights.realization.isin(group),
+    #             divisor / len(group),
+    #         )
 
     return weights
