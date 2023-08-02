@@ -26,6 +26,7 @@ Breaking changes
 * The default output of ``date_parser`` is now ``pd.Timestamp`` (``output_dtype='datetime'``). (:pull:`222`).
 * ``driving_institution`` was removed from the "default" xscen columns. (:pull:`222`).
 * Folder parsing utilities (``parse_directory``) moved to ``xscen.catutils``. Signature changed : ``globpattern`` removed, ``dirglob`` added, new ``patterns`` specifications. See doc for all changes. (:pull:`205`).
+* ``compute_indicators`` now returns all outputs produced by indicators with multiple outputs (such as `rain_season`). (:pull:`228`).
 * In ``generate_weights``, independence_level `all` was renamed `model`. (:pull:`231`).
 * In response to a bugfix, results for ``generate_weights(independence_level='GCM')`` are significantly altered. (:issue:`230`, :pull:`231`).
 * Legacy support for `stats_kwargs` in ``ensemble_stats`` was dropped. (:pull:`231`).
@@ -35,6 +36,7 @@ Bug fixes
 * Fix bug in ``unstack_dates`` with seasonal climatological mean. (:issue:`202`, :pull:`202`).
 * Added NotImplemented errors when trying to call `climatological_mean` and `compute_deltas` with daily data. (:pull:`187`).
 * Minor documentation fixes. (:issue:`223`, :pull:`225`).
+* Fixed a bug in ``unstack_dates`` where it failed for anything other than seasons. (:pull:`228`).
 * ``cleanup`` with `common_attrs_only` now works even when no `cat` attribute is present in the datasets. (:pull:`231`).
 
 Internal changes
@@ -46,6 +48,8 @@ Internal changes
 * Updated GitHub Actions to remove deprecation warnings. (:pull:`187`).
 * Updated the cookiecutter used to generate boilerplate documentation and code via `cruft`. (:pull:`212`).
 * A few changes to `subset_warming_level` so it doesn't need `driving_institution`. (:pull:`215`).
+* Added more tests. (:pull:`228`).
+* In ``compute_indicators``, the logic to manage indicators returning multiple outputs was simplified. (:pull:`228`).
 
 v0.6.0 (2023-05-04)
 -------------------
