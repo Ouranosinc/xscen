@@ -205,9 +205,9 @@ class TestGenerateWeights:
                             out[
                                 f"{institution}-CSIRO2-{member}-{ds2.attrs['cat:experiment']}-CSIRO2"
                             ] = ds2
-        return deepcopy({o: out[o] for o in sorted(out)})
+        return {o: out[o] for o in sorted(out)}
 
-    ens = make_ensemble()
+    ens = make_ensemble.__func__()
 
     @staticmethod
     def make_answer(independence_level, split_exp, skipna):
