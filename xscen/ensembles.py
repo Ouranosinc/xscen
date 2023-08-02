@@ -3,11 +3,11 @@ import inspect
 import logging
 import warnings
 from copy import deepcopy
+from itertools import chain
 from pathlib import Path
 from typing import Any, Union
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 from xclim import ensembles
 
@@ -141,9 +141,10 @@ def ensemble_stats(
 def generate_weights(
     datasets: Union[dict, list],
     *,
-    independence_level: str = "all",
+    independence_level: str = "model",
     split_experiments: bool = False,
-    include_nan: bool = True,
+    skipna: bool = True,
+    v_for_skipna: str = None,
 ) -> xr.DataArray:
     """Use realization attributes to automatically generate weights along the 'realization' dimension.
 
@@ -151,28 +152,57 @@ def generate_weights(
     ----------
     datasets : dict
         List of Dataset objects that will be included in the ensemble.
-        The datasets should include attributes to help recognize them - 'cat:activity','cat:source', and 'cat:driving_model' for regional models.
+        The datasets should include the necessary attributes to understand their metadata - See 'Notes' below.
         A dictionary can be passed instead of a list, in which case the keys are used for the 'realization' coordinate.
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
     independence_level : str
-        'all': Weights using the method '1 model - 1 Vote', where every unique combination of 'source' and 'driving_model' is considered a model.
+        'model': Weights using the method '1 model - 1 Vote', where every unique combination of 'source' and 'driving_model' is considered a model.
         'GCM': Weights using the method '1 GCM - 1 Vote'
+        'institution': Weights using the method '1 institution - 1 Vote'
+    split_experiments : bool
+        If True, the 'cat:experiment' attribute is used to split the weights between experiments.
+    skipna : bool
+        If True, weights will be computed from attributes only. If False, weights will be computed from the number of non-missing values.
+        skipna=False requires either a 'time' or 'horizon' dimension in the datasets.
+    v_for_skipna : str
+        Variable to use for skipna=False. If None, the first variable in the first dataset is used.
+
+    Notes
+    -----
+    The following attributes are required for the function to work:
+        - 'cat:source' in all datasets
+        - 'cat:driving_model' in regional climate models
+        - 'cat:institution' in all datasets if independence_level='institution'
+        - 'cat:experiment' in all datasets if split_experiments=True
+
+    Even when not required, the 'cat:member' and 'cat:experiment' attributes are strongly recommended to ensure the weights are computed correctly.
 
     Returns
     -------
     xr.DataArray
-        Weights along the 'realization' dimension.
+        Weights along the 'realization' dimension, or 2D weights along the 'realization' and 'time/horizon' dimensions if skipna=False.
     """
-    if independence_level not in ["all", "GCM", "institution"]:
+    if independence_level == "all":
+        warnings.warn(
+            "The independence level 'all' is deprecated and will be removed in a future version. Use 'model' instead.",
+            category=FutureWarning,
+        )
+        independence_level = "model"
+
+    if independence_level not in ["model", "GCM", "institution"]:
         raise ValueError(
-            f"'independence_level' should be between 'GCM' and 'all', received {independence_level}."
+            f"'independence_level' should be between 'model', 'GCM', and 'institution', received {independence_level}."
+        )
+    if skipna is False and v_for_skipna is None:
+        v_for_skipna = list(datasets[list(datasets.keys())[0]].data_vars)[0]
+        logger.info(
+            f"Using '{v_for_skipna}' as the variable to check for missing values."
         )
 
     # Use metadata to identify the simulation attributes
     keys = datasets.keys() if isinstance(datasets, dict) else range(len(datasets))
     defdict = {
         "experiment": None,
-        "activity": None,
         "institution": None,
         "driving_model": None,
         "source": None,
@@ -181,70 +211,113 @@ def generate_weights(
     info = {key: dict(defdict, **get_cat_attrs(datasets[key])) for key in keys}
     # More easily manage GCMs and RCMs
     for k in info:
-        if info[k]["driving_model"] is None:
+        if info[k]["driving_model"] is None or len(info[k]["driving_model"]) == 0:
             info[k]["driving_model"] = info[k]["source"]
-    # Combine the member and experiment attributes
-    for k in info:
-        info[k]["member-exp"] = info[k]["member"] + "-" + info[k]["experiment"]
 
     # Verifications
-    if any(info[k]["driving_model"] is None for k in info):
+    if any(
+        (info[k]["driving_model"] is None or len(info[k]["driving_model"]) == 0)
+        for k in info
+    ):
         raise ValueError(
             "The 'cat:source' or 'cat:driving_model' attribute is missing from some simulations."
         )
-    if split_experiments and any(info[k]["experiment"] is None for k in info):
+    if split_experiments and any(
+        (info[k]["experiment"] is None or len(info[k]["experiment"]) == 0) for k in info
+    ):
         raise ValueError(
             "The 'cat:experiment' attribute is missing from some simulations. 'split_experiments' cannot be True."
         )
-    if any(info[k]["member"] is None for k in info):
-        warnings.warn(
-            "The 'cat:member' attribute is missing from some simulations. Results may be incorrect."
+    if independence_level == "institution" and any(
+        (info[k]["institution"] is None or len(info[k]["institution"]) == 0)
+        for k in info
+    ):
+        raise ValueError(
+            "The 'cat:institution' attribute is missing from some simulations. 'independence_level' cannot be 'institution'."
+        )
+    for attr in ["member", "experiment"]:
+        if any(info[k][attr] is None for k in info):
+            if all(info[k][attr] is None for k in info):
+                warnings.warn(
+                    f"The 'cat:{attr}' attribute is missing from all datasets. Make sure the results are correct."
+                )
+            else:
+                warnings.warn(
+                    f"The 'cat:{attr}' attribute is inconsistent across datasets. Results are likely to be incorrect."
+                )
+
+    # Combine the member and experiment attributes
+    for k in info:
+        info[k]["member-exp"] = (
+            str(info[k]["member"]) + "-" + str(info[k]["experiment"])
         )
 
     # Build the weights according to the independence structure
-    if include_nan:
-        extra_dim = [
-            h for h in ["time", "horizon"] if h in datasets[list(keys)[0]].dims
-        ]
-        if len(extra_dim) != 1:
-            raise ValueError(
-                f"Expected either 'time' or 'horizon' as an extra dimension, found {extra_dim}."
-            )
-        weights = xr.DataArray(
-            np.zeros(
-                (len(info.keys()), len(datasets[list(keys)[0]].coords[extra_dim[0]]))
-            ),
-            dims=["realization", extra_dim[0]],
-            coords={
-                "realization": list(info.keys()),
-                extra_dim[0]: datasets[list(keys)[0]].coords[extra_dim[0]],
-            },
-        )
-    else:
+    if skipna:
         weights = xr.DataArray(
             np.zeros(len(info.keys())),
             dims=["realization"],
             coords={"realization": list(info.keys())},
         )
+    else:
+        # Get the name of the extra dimension
+        extra_dim = [
+            [h for h in ["time", "horizon"] if h in datasets[list(keys)[d]].dims]
+            for d in range(len(keys))
+        ]
+        extra_dim = list(set(chain.from_iterable(extra_dim)))
+        if len(extra_dim) != 1:
+            raise ValueError(
+                f"Expected either 'time' or 'horizon' as an extra dimension, found {extra_dim}."
+            )
+        extra_dim = extra_dim[0]
+
+        # Check that the extra dimension is the same for all datasets
+        if not all(
+            [
+                datasets[list(keys)[0]][extra_dim].equals(
+                    datasets[list(keys)[d]][extra_dim]
+                )
+                for d in range(len(keys))
+            ]
+        ):
+            raise ValueError(
+                f"The dimension '{extra_dim}' is not the same for all datasets."
+            )
+
+        weights = xr.DataArray(
+            np.zeros(
+                (len(info.keys()), len(datasets[list(keys)[0]].coords[extra_dim]))
+            ),
+            dims=["realization", extra_dim],
+            coords={
+                "realization": list(info.keys()),
+                extra_dim: datasets[list(keys)[0]].coords[extra_dim],
+            },
+        )
+
     for i in range(len(info)):
         sim = info[list(keys)[i]]
 
         # Number of models running a given realization of a driving model
         models_struct = (
             ["source", "driving_model", "member-exp"]
-            if independence_level == "all"
+            if independence_level == "model"
             else ["driving_model", "member-exp"]
         )
-        n_models = len(
-            [
-                k
-                for k in info.keys()
-                if all([info[k][s] == sim[s] for s in models_struct])
-            ]
-        )
+        models = [
+            k for k in info.keys() if all([info[k][s] == sim[s] for s in models_struct])
+        ]
+
+        if skipna:
+            n_models = len(models)
+        else:
+            n_models = xr.concat(
+                [datasets[k][v_for_skipna].notnull() for k in models], dim="realization"
+            ).sum(dim="realization")
 
         # Number of realizations of a given driving model
-        if independence_level == "all":
+        if independence_level == "model":
             realization_struct = (
                 ["source", "driving_model", "experiment"]
                 if split_experiments
@@ -256,31 +329,71 @@ def generate_weights(
                 if split_experiments
                 else ["driving_model"]
             )
-        n_realizations = len(
-            {
-                info[k]["member-exp"]
-                for k in info.keys()
-                if all([info[k][s] == sim[s] for s in realization_struct])
-            }
-        )
+        realizations = {
+            info[k]["member-exp"]
+            for k in info.keys()
+            if all([info[k][s] == sim[s] for s in realization_struct])
+        }
+
+        if skipna:
+            n_realizations = len(realizations)
+        else:
+            n_realizations = xr.zeros_like(datasets[list(keys)[0]][v_for_skipna])
+            r_models = dict()
+            for r in realizations:
+                r_models[r] = [
+                    k
+                    for k in info.keys()
+                    if (
+                        all([info[k][s] == sim[s] for s in realization_struct])
+                        and (info[k]["member-exp"] == r)
+                    )
+                ]
+                n_realizations = n_realizations + (
+                    xr.concat(
+                        [datasets[k][v_for_skipna].notnull() for k in r_models[r]],
+                        dim="realization",
+                    ).sum(dim="realization")
+                    > 0
+                )
 
         # Number of driving models run by a given institution
-        institution_struct = (
-            ["institution", "experiment"] if split_experiments else ["institution"]
-        )
-        n_institutions = (
-            len(
-                {
-                    info[k]["driving_model"]
-                    for k in info.keys()
-                    if all([info[k][s] == sim[s] for s in institution_struct])
-                }
+        if independence_level == "institution":
+            institution_struct = (
+                ["institution", "experiment"] if split_experiments else ["institution"]
             )
-            if independence_level == "institution"
-            else 1
-        )
+            institution = {
+                info[k]["driving_model"]
+                for k in info.keys()
+                if all([info[k][s] == sim[s] for s in institution_struct])
+            }
+
+            if skipna:
+                n_institutions = len(institution)
+            else:
+                n_institutions = xr.zeros_like(datasets[list(keys)[0]][v_for_skipna])
+                i_models = dict()
+                for ii in institution:
+                    i_models[ii] = [
+                        k
+                        for k in info.keys()
+                        if (
+                            all([info[k][s] == sim[s] for s in institution_struct])
+                            and (info[k]["driving_model"] == ii)
+                        )
+                    ]
+                    n_institutions = n_institutions + (
+                        xr.concat(
+                            [datasets[k][v_for_skipna].notnull() for k in i_models[ii]],
+                            dim="realization",
+                        ).sum(dim="realization")
+                        > 0
+                    )
+        else:
+            n_institutions = 1
 
         # Divide the weight equally between the group
-        weights[i] = 1 / n_models / n_realizations / n_institutions
+        w = 1 / n_models / n_realizations / n_institutions
+        weights[i] = xr.where(np.isfinite(w), w, 0)
 
     return weights
