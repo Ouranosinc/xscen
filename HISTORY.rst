@@ -17,6 +17,8 @@ New features and enhancements
 * File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`).
 * New scripting functions `save_and_update` and `move_and_delete`. (:pull:`214`).
 * Spatial dimensions can be generalized as X/Y when rechunking and will be mapped to rlon/rlat or lon/lat accordingly. (:pull:`221`).
+* ``generate_weights`` now allows to split weights between experiments, and make them vary along the time/horizon axis. (:issue:`108`, :pull:`231`).
+* New independence_level, `institution`, added to ``generate_weights``. (:pull:`231`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -24,12 +26,16 @@ Breaking changes
 * The default output of ``date_parser`` is now ``pd.Timestamp`` (``output_dtype='datetime'``). (:pull:`222`).
 * ``driving_institution`` was removed from the "default" xscen columns. (:pull:`222`).
 * Folder parsing utilities (``parse_directory``) moved to ``xscen.catutils``. Signature changed : ``globpattern`` removed, ``dirglob`` added, new ``patterns`` specifications. See doc for all changes. (:pull:`205`).
+* In ``generate_weights``, independence_level `all` was renamed `model`. (:pull:`231`).
+* In response to a bugfix, results for ``generate_weights(independence_level='GCM')`` are significantly altered. (:issue:`230`, :pull:`231`).
+* Legacy support for `stats_kwargs` in ``ensemble_stats`` was dropped. (:pull:`231`).
 
 Bug fixes
 ^^^^^^^^^
 * Fix bug in ``unstack_dates`` with seasonal climatological mean. (:issue:`202`, :pull:`202`).
 * Added NotImplemented errors when trying to call `climatological_mean` and `compute_deltas` with daily data. (:pull:`187`).
 * Minor documentation fixes. (:issue:`223`, :pull:`225`).
+* ``cleanup`` with `common_attrs_only` now works even when no `cat` attribute is present in the datasets. (:pull:`231`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
