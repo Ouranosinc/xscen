@@ -395,9 +395,8 @@ ensembles:
     - delta
   ensemble_stats: # automatically passed to the function
     statistics:
-      ensemble_percentiles: {}
-    stats_kwargs:
-      split: False
+      ensemble_percentiles:
+        split: False
     common_attrs_only: True
   save:
     mode: o
