@@ -261,38 +261,44 @@ def generate_weights(
         )
     else:
         # Get the name of the extra dimension
-        extra_dim = [
-            [h for h in ["time", "horizon"] if h in datasets[list(keys)[d]].dims]
-            for d in range(len(keys))
-        ]
-        extra_dim = list(set(chain.from_iterable(extra_dim)))
-        if len(extra_dim) != 1:
+        extra_dim = list(
+            chain.from_iterable(
+                [
+                    [
+                        datasets[list(keys)[d]][h]
+                        for h in ["time", "horizon"]
+                        if h in datasets[list(keys)[d]].dims
+                    ]
+                    for d in range(len(keys))
+                ]
+            )
+        )
+        if len({e.name for e in extra_dim}) != 1:
             raise ValueError(
                 f"Expected either 'time' or 'horizon' as an extra dimension, found {extra_dim}."
             )
-        extra_dim = extra_dim[0]
 
-        # Check that the extra dimension is the same for all datasets
-        if not all(
-            [
-                datasets[list(keys)[0]][extra_dim].equals(
-                    datasets[list(keys)[d]][extra_dim]
-                )
-                for d in range(len(keys))
-            ]
-        ):
-            raise ValueError(
-                f"The dimension '{extra_dim}' is not the same for all datasets."
+        # Combine the extra dimension and remove duplicates
+        extra_dimension = xr.concat(extra_dim, dim=extra_dim[0].name).drop_duplicates(
+            extra_dim[0].name
+        )
+
+        # Check that the extra dimension is the same for all datasets. If not, modify the datasets to make them the same.
+        if not all(extra_dimension.equals(extra_dim[d]) for d in range(len(extra_dim))):
+            warnings.warn(
+                f"Extra dimension {extra_dimension.name} is not the same for all datasets. Reindexing."
             )
+            for d in datasets.keys():
+                datasets[d] = datasets[d].reindex(
+                    {extra_dimension.name: extra_dimension}
+                )
 
         weights = xr.DataArray(
-            np.zeros(
-                (len(info.keys()), len(datasets[list(keys)[0]].coords[extra_dim]))
-            ),
-            dims=["realization", extra_dim],
+            np.zeros((len(info.keys()), len(extra_dimension))),
+            dims=["realization", extra_dimension.name],
             coords={
                 "realization": list(info.keys()),
-                extra_dim: datasets[list(keys)[0]].coords[extra_dim],
+                extra_dimension.name: extra_dimension,
             },
         )
 

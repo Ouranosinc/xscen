@@ -464,6 +464,33 @@ class TestGenerateWeights:
         answer = self.make_answer(independence_level, split_exp, skipna)
         np.testing.assert_array_almost_equal(out, answer, decimal=4)
 
+    def test_changing_horizon(self):
+        ens = deepcopy(self.ens)
+        ds = ens["CCCma-CanESM2-rcp45-r1i1p1-CanESM2"]
+        hz = xr.DataArray(
+            ["1981-2010", "2041-2070", "+2C", "not_the_same"], dims="horizon"
+        )
+        ens["CCCma-CanESM2-rcp45-r1i1p1-CanESM2"] = ds.assign_coords({"horizon": hz})
+
+        out = xs.generate_weights(ens, skipna=False)
+        assert len(out.horizon) == 5
+        # Should all be 0s, except for CCCma-CanESM2-rcp45-r1i1p1-CanESM2
+        np.testing.assert_array_equal(
+            out.sel(
+                realization="CCCma-CanESM2-rcp45-r1i1p1-CanESM2", horizon="not_the_same"
+            ),
+            1,
+        )
+        assert all(
+            out.sel(
+                realization=~out.realization.isin(
+                    ["CCCma-CanESM2-rcp45-r1i1p1-CanESM2"]
+                ),
+                horizon="not_the_same",
+            )
+            == 0
+        )
+
     def test_errors(self):
         # Bad input
         with pytest.raises(ValueError, match="'independence_level' should be between"):
@@ -476,19 +503,6 @@ class TestGenerateWeights:
         with pytest.raises(
             ValueError,
             match="Expected either 'time' or 'horizon' as an extra dimension",
-        ):
-            xs.generate_weights(ens2, skipna=False)
-        xs.generate_weights(ens2, skipna=True)  # Should work
-
-        ens2 = deepcopy(self.ens)
-        ds = ens2["CCCma-CanESM2-rcp45-r1i1p1-CanESM2"]
-        hz = xr.DataArray(
-            ["1981-2010", "2041-2070", "+2C", "not_the_same"], dims="horizon"
-        )
-        ens2["CCCma-CanESM2-rcp45-r1i1p1-CanESM2"] = ds.assign_coords({"horizon": hz})
-        with pytest.raises(
-            ValueError,
-            match="The dimension 'horizon' is not the same for all datasets.",
         ):
             xs.generate_weights(ens2, skipna=False)
         xs.generate_weights(ens2, skipna=True)  # Should work
