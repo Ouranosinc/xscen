@@ -194,9 +194,7 @@ class TestComputeDeltas:
         assert variable in deltas.data_vars
         assert len(deltas.data_vars) == 1
         assert deltas.attrs["cat:processing_level"] == (
-            "for_testing"
-            if to_level is not None
-            else f"delta_{self.ds.attrs['cat:processing_level']}"
+            "for_testing" if to_level is not None else "deltas"
         )
         # Test metadata
         assert (
