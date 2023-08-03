@@ -32,7 +32,7 @@ Breaking changes
 * In response to a bugfix, results for ``generate_weights(independence_level='GCM')`` are significantly altered. (:issue:`230`, :pull:`231`).
 * Legacy support for `stats_kwargs` in ``ensemble_stats`` was dropped. (:pull:`231`).
 * `period` in ``produce_horizon`` has been deprecated and replaced with `periods`. (:pull:`231`).
-* Some automated `to_level` were updated to reflect more recent changes.
+* Some automated `to_level` were updated to reflect more recent changes. (:pull:`231`).
 
 Bug fixes
 ^^^^^^^^^
