@@ -19,6 +19,7 @@ New features and enhancements
 * Spatial dimensions can be generalized as X/Y when rechunking and will be mapped to rlon/rlat or lon/lat accordingly. (:pull:`221`).
 * ``generate_weights`` now allows to split weights between experiments, and make them vary along the time/horizon axis. (:issue:`108`, :pull:`231`).
 * New independence_level, `institution`, added to ``generate_weights``. (:pull:`231`).
+* Updated ``produce_horizon`` so it can accept multiple periods or warming levels. (:pull:`231`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -30,6 +31,8 @@ Breaking changes
 * In ``generate_weights``, independence_level `all` was renamed `model`. (:pull:`231`).
 * In response to a bugfix, results for ``generate_weights(independence_level='GCM')`` are significantly altered. (:issue:`230`, :pull:`231`).
 * Legacy support for `stats_kwargs` in ``ensemble_stats`` was dropped. (:pull:`231`).
+* `period` in ``produce_horizon`` has been deprecated and replaced with `periods`. (:pull:`231`).
+* Some automated `to_level` were updated to reflect more recent changes.
 
 Bug fixes
 ^^^^^^^^^
