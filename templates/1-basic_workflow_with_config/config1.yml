@@ -16,6 +16,7 @@
 #      function:
 #        argument: value
 #    This only works on functions that are decorated with @parse_config in the xscen code.
+#    In these sections, you can add all the arguments you want to pass to the function.
 #    In this file, those instances are marked by "# automatically passed to the function."
 # You can learn more about how the config works here: https://xscen.readthedocs.io/en/latest/notebooks/6_config.html
 
@@ -46,7 +47,7 @@ extract:
       n_workers: 2
       threads_per_worker: 3
       memory_limit: 15GB
-    # This is NOT auto because the format is module: other word: function.
+    # This is NOT automatically passed to the function because the format is module: other word: function.
     # It has to be passed manually in workflow1.py.
     search_data_catalogs:
       variables_and_freqs: &var_and_freq # this is an anchor. more on anchors:  https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/
@@ -144,7 +145,7 @@ regrid:
   output:
     type: reconstruction
     processing_level: extracted
-  regrid_dataset: # auto
+  regrid_dataset: # automatically passed to the function (module name is regrid)
     regridder_kwargs:
       method: bilinear
       extrap_method: inverse_dist
@@ -364,7 +365,7 @@ diagnostics:
         rechunk:
           lat: -1
           lon: -1
-  measures_heatmap: {} # automatically passed to the function (module name is diagnostics)
+  measures_heatmap: {} # automatically passed to the function
   measures_improvement: {}   # automatically passed to the function
 
 
