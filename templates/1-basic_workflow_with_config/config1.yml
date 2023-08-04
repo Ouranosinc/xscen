@@ -5,6 +5,20 @@
 # It looks if the result of a task exists in the project catalog before executing the task.
 # The workflow does NOT automatically remove intermediate files. You might run out of space.
 
+
+# Note the information in the CONFIG is used in two different ways:
+# 1) Manually accessing it like a dictionary in the code (e.g. CONFIG["regrid"]["inputs"])
+# There format is free and can be anything you want. It is often easier to put them under
+# module or task name to find them more easily.
+# 2) Automatically passing arguments to xscen functions (e.g. CONFIG["regrid"]["regrid_dataset"]).
+#    For this to work, the CONFIG must follow a specific structure.
+#    module:
+#      function:
+#        argument: value
+#    This only works on functions that are decorated with @parse_config in the xscen code.
+#    In this file, those instances are marked by "# automatically passed to the function."
+# You can learn more about how the config works here: https://xscen.readthedocs.io/en/latest/notebooks/6_config.html
+
 # List of task to accomplish in the workflow
 # Each task will iterate over all simulations before moving on to the next task.
 # It might be useful to start by running it once over all tasks on a single simulation
@@ -22,6 +36,8 @@ tasks:
   - delta # Compute the deltas of the climatological means.
   - ensembles # Compute the ensemble statistics on indicators, climatology and deltas.
 
+
+
 # Task Arguments
 
 extract:
@@ -30,6 +46,8 @@ extract:
       n_workers: 2
       threads_per_worker: 3
       memory_limit: 15GB
+    # This is NOT auto because the format is module: other word: function.
+    # It has to be passed manually in workflow1.py.
     search_data_catalogs:
       variables_and_freqs: &var_and_freq # this is an anchor. more on anchors:  https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/
         tasmax: D
@@ -126,7 +144,7 @@ regrid:
   output:
     type: reconstruction
     processing_level: extracted
-  regrid_dataset: # this will be automatically passed to the function.
+  regrid_dataset: # auto
     regridder_kwargs:
       method: bilinear
       extrap_method: inverse_dist
@@ -346,7 +364,7 @@ diagnostics:
         rechunk:
           lat: -1
           lon: -1
-  measures_heatmap: {} # automatically passed to the function
+  measures_heatmap: {} # automatically passed to the function (module name is diagnostics)
   measures_improvement: {}   # automatically passed to the function
 
 

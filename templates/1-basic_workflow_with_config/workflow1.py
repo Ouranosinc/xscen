@@ -11,6 +11,9 @@ import xscen as xs
 from xscen.config import CONFIG
 
 # Load configuration
+# paths1.yml should contain private information and not be pushed to a public github repo
+# config1.yml contains the rest of the configuration
+# both will be merge into CONFIG
 xs.load_config(
     "paths1.yml", "config1.yml", verbose=(__name__ == "__main__"), reset=True
 )
