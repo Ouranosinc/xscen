@@ -4,7 +4,7 @@ History
 
 v0.7.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -16,9 +16,11 @@ New features and enhancements
 * New function `get_warming_level` to search within the IPCC CMIP global temperatures CSV without requiring data. (:issue:`208`, :pull:`210`).
 * File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`).
 * New scripting functions `save_and_update` and `move_and_delete`. (:pull:`214`).
+* Spatial dimensions can be generalized as X/Y when rechunking and will be mapped to rlon/rlat or lon/lat accordingly. (:pull:`221`).
 * New argument `var_as_string` for `get_cat_attrs` to return variable names as strings. (:pull:`233`).
 * New argument `copy` for `move_and_delete`. (:pull:`233`).
 * New argument `restrict_year` for `compute_indicators`. (:pull:`233`).
+
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -26,12 +28,14 @@ Breaking changes
 * The default output of ``date_parser`` is now ``pd.Timestamp`` (``output_dtype='datetime'``). (:pull:`222`).
 * ``driving_institution`` was removed from the "default" xscen columns. (:pull:`222`).
 * Folder parsing utilities (``parse_directory``) moved to ``xscen.catutils``. Signature changed : ``globpattern`` removed, ``dirglob`` added, new ``patterns`` specifications. See doc for all changes. (:pull:`205`).
+* ``compute_indicators`` now returns all outputs produced by indicators with multiple outputs (such as `rain_season`). (:pull:`228`).
 
 Bug fixes
 ^^^^^^^^^
 * Fix bug in ``unstack_dates`` with seasonal climatological mean. (:issue:`202`, :pull:`202`).
 * Added NotImplemented errors when trying to call `climatological_mean` and `compute_deltas` with daily data. (:pull:`187`).
 * Minor documentation fixes. (:issue:`223`, :pull:`225`).
+* Fixed a bug in ``unstack_dates`` where it failed for anything other than seasons. (:pull:`228`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -42,6 +46,8 @@ Internal changes
 * Updated GitHub Actions to remove deprecation warnings. (:pull:`187`).
 * Updated the cookiecutter used to generate boilerplate documentation and code via `cruft`. (:pull:`212`).
 * A few changes to `subset_warming_level` so it doesn't need `driving_institution`. (:pull:`215`).
+* Added more tests. (:pull:`228`).
+* In ``compute_indicators``, the logic to manage indicators returning multiple outputs was simplified. (:pull:`228`).
 
 v0.6.0 (2023-05-04)
 -------------------

@@ -913,7 +913,7 @@ def unstack_dates(
             "to pad missing dates and reset the time coordinate."
         )
     first, last = ds.indexes["time"][[0, -1]]
-    use_cftime = xr.coding.times.contains_cftime_datetimes(ds.time)
+    use_cftime = xr.coding.times.contains_cftime_datetimes(ds.time.variable)
     calendar = ds.time.dt.calendar
     mult, base, isstart, anchor = parse_offset(freq)
 
@@ -995,7 +995,7 @@ def unstack_dates(
         # Replace (A,'time',B) by (A,'time', 'season',B) in both the new shape and the new dims
         new_dims = list(
             chain.from_iterable(
-                [d] if d != "time" else ["time", "season"] for d in da.dims
+                [d] if d != "time" else ["time", new_dim] for d in da.dims
             )
         )
         new_shape = [len(new_coords[d]) for d in new_dims]

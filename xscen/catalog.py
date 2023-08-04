@@ -960,7 +960,7 @@ def subset_file_coverage(
                 intervals[files_in_range].map(
                     lambda x: min(x.right, period_interval.right)
                 ),
-            ).length
+            ).length.sum()
 
             if guessed_length / period_length < coverage:
                 logging.warning(
