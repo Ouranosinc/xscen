@@ -55,6 +55,7 @@ class TestScripting:
         "cat:type": "simulation",
         "cat:processing_level": "raw",
         "cat:variable": ("tas",),
+        "dog:source": "CanESM5",
     }
 
     @pytest.mark.parametrize(
@@ -76,4 +77,4 @@ class TestScripting:
                 "variable": ("tas",),
             }
         elif prefix == "dog:":
-            assert out == {}
+            assert out == {"source": "CanESM5"}
