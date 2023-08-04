@@ -16,9 +16,9 @@ New features and enhancements
 * New function `get_warming_level` to search within the IPCC CMIP global temperatures CSV without requiring data. (:issue:`208`, :pull:`210`).
 * File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`).
 * New scripting functions `save_and_update` and `move_and_delete`. (:pull:`214`).
-* New argument `var_as_string` for `get_cat_attrs` to return variable names as strings. (:pull:``).
-* New argument `copy` for `move_and_delete`. (:pull:``).
-* New argument `restrict_year` for `compute_indicators`. (:pull:``).
+* New argument `var_as_string` for `get_cat_attrs` to return variable names as strings. (:pull:`233`).
+* New argument `copy` for `move_and_delete`. (:pull:`233`).
+* New argument `restrict_year` for `compute_indicators`. (:pull:`233`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
