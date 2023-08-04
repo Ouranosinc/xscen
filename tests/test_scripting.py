@@ -79,6 +79,20 @@ class TestScripting:
         )
         cat.update()
 
-        # f2 should be moved to dir2 and f1 should be deleted (not in row 0  anymore)
+        # f2 should be moved to dir2 and dir1 should be deleted (not in row 0  anymore)
         assert cat.df.path[0] == root + "/dir2/test_r1i1p1f2.zarr"
         assert len(cat.df) == 1  # only one file left
+
+        sc.move_and_delete(
+            moving=[
+                [root + "/dir2/test_r1i1p1f2.zarr", root + "/dir1/test_r1i1p1f2.zarr"]
+            ],
+            pcat=cat,
+            copy=True,
+        )
+        cat.update()
+
+        # f2 should be copied to dir1 and f1 should still exist
+        assert cat.df.path[0] == root + "/dir2/test_r1i1p1f2.zarr"
+        assert cat.df.path[1] == root + "/dir1/test_r1i1p1f2.zarr"
+        assert len(cat.df) == 2  # only one file left

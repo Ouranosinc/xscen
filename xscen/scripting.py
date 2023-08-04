@@ -397,7 +397,7 @@ def save_and_update(
     # get path
     if path is not None:
         path = str(path).format(
-            **get_cat_attrs(ds, as_str=True)
+            **get_cat_attrs(ds, var_as_str=True)
         )  # fill path with attrs
     else:  # if path is not given build it
         build_path_kwargs.setdefault("format", file_format)
