@@ -851,7 +851,7 @@ def get_warming_level(
     tas_baseline_period : list
        [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
     ignore_member : bool
-       Only used for Datasets. Decides whether to ignore the member when searching for the model run in tas_csv.
+       Decides whether to ignore the member when searching for the model run in tas_csv.
     tas_csv : str
        Path to a csv of annual global mean temperature with a row for each year and a column for each dataset.
        If None, it will default to data/IPCC_annual_global_tas.csv which was built from
@@ -902,6 +902,8 @@ def get_warming_level(
                 info["experiment"],
                 info["member"],
             ) = real.split("_")
+            if ignore_member:
+                info["member"] = ".*"
         elif isinstance(real, dict) and set(real.keys()).issuperset(
             (set(FIELDS) - {"member"}) if ignore_member else FIELDS
         ):
@@ -1354,7 +1356,7 @@ def _restrict_wl(df, restrictions: dict):
     # open csv
     annual_tas = pd.read_csv(tas_csv, index_col="year")
 
-    if restrictions["ignore_member"]:
+    if restrictions["ignore_member"] and "wl" not in restrictions:
         df["csv_name"] = df["mip_era"].str.cat(
             [df["source"], df["experiment"]], sep="_"
         )
@@ -1365,7 +1367,15 @@ def _restrict_wl(df, restrictions: dict):
         )
         csv_source = list(annual_tas.columns[1:])
 
-    to_keep = df["csv_name"].isin(csv_source)
+    if "wl" in restrictions:
+        to_keep = pd.Series(
+            [
+                get_warming_level(x, **restrictions)[0] is not None
+                for x in df["csv_name"]
+            ]
+        )
+    else:
+        to_keep = df["csv_name"].isin(csv_source)
     removed = pd.unique(df[~to_keep]["id"])
 
     df = df[to_keep]

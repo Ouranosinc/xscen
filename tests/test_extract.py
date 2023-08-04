@@ -6,6 +6,188 @@ from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
 
+from .conftest import notebooks
+
+
+class TestSearchDataCatalogs:
+    small_cat = xs.DataCatalog(notebooks / "samples" / "tutorial-catalog.json")
+    big_cat = xs.DataCatalog(notebooks / "samples" / "pangeo-cmip6.json")
+
+    @pytest.mark.parametrize(
+        "variables_and_freqs, other_arg",
+        [
+            ({"tas": "D"}, None),
+            ({"sftlf": "fx"}, "other"),
+            ({"tas": "D", "sftlf": "fx"}, "exclusion"),
+            ({"tas": "D", "sftlf": "fx"}, "other2"),
+        ],
+    )
+    def test_basic(self, variables_and_freqs, other_arg):
+        if "other" in other_arg:
+            other_arg = "other"
+            # fdsfs TODO find nothing
+        else:
+            out = xs.search_data_catalogs(
+                data_catalogs=self.small_cat,
+                variables_and_freqs=variables_and_freqs,
+                other_search_criteria={"experiment": ["ssp370"]}
+                if other_arg == "other"
+                else None,
+                exclusions={"member": "r2.*"} if other_arg == "exclusion" else None,
+            )
+        assert len(out) == 5 if other_arg is None else 1 if other_arg == "other" else 4
+
+    @pytest.mark.parametrize(
+        "periods, coverage_kwargs",
+        [
+            ([["2020", "2030"], ["2035", "2040"]], None),
+            ([["1900", "2030"], ["2035", "2040"]], None),
+            ([["2020", "2080"]], None),
+            ([["2020", "2080"]], {"coverage": 0.5}),
+        ],
+    )
+    def test_periods(self, periods, coverage_kwargs):
+        out = xs.search_data_catalogs(
+            data_catalogs=self.small_cat,
+            variables_and_freqs={"tas": "D"},
+            periods=periods,
+            coverage_kwargs=coverage_kwargs,
+        )
+        assert len(out) == (
+            5
+            if ((periods[0] == ["2020", "2030"]) or coverage_kwargs is not None)
+            else 0
+        )
+
+    def test_ids(self):
+        out = xs.search_data_catalogs(
+            data_catalogs=deepcopy(self.small_cat),
+            variables_and_freqs={"tas": "D"},
+            id_columns=["source"],
+        )
+        assert len(out) == 1
+        assert len(out["NorESM2-MM"].df) == 5
+
+        # TODO: missing id
+
+    @pytest.mark.parametrize("allow_resampling", [True, False])
+    def test_allow_resampling(self, allow_resampling):
+        out = xs.search_data_catalogs(
+            data_catalogs=deepcopy(self.small_cat),
+            variables_and_freqs={"tas": "YS"},
+            allow_resampling=allow_resampling,
+        )
+        assert len(out) == (5 if allow_resampling else 0)
+
+    @pytest.mark.parametrize(
+        "restrict_warming_level",
+        [
+            True,
+            {"ignore_member": True},
+            {"wl": 2},
+            {"wl": 3},
+            {"wl": 2, "ignore_member": True},
+        ],
+    )
+    def test_warminglevel(self, restrict_warming_level):
+        out = xs.search_data_catalogs(
+            data_catalogs=self.small_cat,
+            variables_and_freqs={"tas": "D"},
+            restrict_warming_level=restrict_warming_level,
+        )
+        assert (
+            out == 5
+            if restrict_warming_level == {"ignore_member": True}
+            else 4
+            if (
+                (restrict_warming_level is True)
+                or (restrict_warming_level == {"wl": 2, "ignore_member": True})
+            )
+            else 3
+            if restrict_warming_level == {"wl": 2}
+            else 2
+        )
+
+    @pytest.mark.parametrize("restrict_resolution", [None, "finest"])
+    def test_restrict_resolution(self, restrict_resolution):
+        out = xs.search_data_catalogs(
+            data_catalogs=self.big_cat,
+            variables_and_freqs={"tas": "D"},
+            other_search_criteria={
+                "institution": ["NOAA-GFDL"],
+                "experiment": ["ssp585"],
+            },
+            restrict_resolution=restrict_resolution,
+        )
+        assert len(out) == 3 if restrict_resolution is None else 2
+
+    @pytest.mark.parametrize("restrict_members", [None, {"ordered": 5}])
+    def test_restrict_members(self, restrict_members):
+        out = xs.search_data_catalogs(
+            data_catalogs=self.big_cat,
+            variables_and_freqs={"tas": "D"},
+            other_search_criteria={"source": ["CanESM5"], "experiment": ["ssp585"]},
+            restrict_members=restrict_members,
+        )
+        assert len(out) == (50 if restrict_members is None else 5)
+        if restrict_members is not None:
+            assert all(
+                o in out.keys()
+                for o in [
+                    "ScenarioMIP_CCCma_CanESM5_ssp585_r1i1p2f1_gn",
+                    "ScenarioMIP_CCCma_CanESM5_ssp585_r1i1p1f1_gn",
+                    "ScenarioMIP_CCCma_CanESM5_ssp585_r2i1p1f1_gn",
+                    "ScenarioMIP_CCCma_CanESM5_ssp585_r2i1p2f1_gn",
+                    "ScenarioMIP_CCCma_CanESM5_ssp585_r3i1p1f1_gn",
+                ]
+            )
+
+        assert (
+            len(
+                xs.search_data_catalogs(
+                    data_catalogs=self.big_cat,
+                    variables_and_freqs={"tas": "D"},
+                    other_search_criteria={
+                        "institution": ["NOAA-GFDL"],
+                        "experiment": ["ssp585"],
+                    },
+                    restrict_members=restrict_members,
+                )
+            )
+            == 3
+        )
+
+    @pytest.mark.parametrize("allow_conversion", [True, False])
+    def test_allow_conversion(self, allow_conversion):
+        out = xs.search_data_catalogs(
+            data_catalogs=self.big_cat,
+            variables_and_freqs={"evspsblpot": "D"},
+            other_search_criteria={
+                "institution": ["NOAA-GFDL"],
+                "experiment": ["ssp585"],
+            },
+            allow_conversion=allow_conversion,
+        )
+        assert len(out) == (3 if allow_conversion else 0)
+        if allow_conversion:
+            assert all(
+                v in out[list(out.keys())[0]].unique("variable")
+                for v in ["tasmin", "tasmax"]
+            )
+            assert "evspsblpot" not in out[list(out.keys())[0]].unique("variable")
+
+    def test_no_match(self):
+        pass
+
+    def test_input_types(self):
+        pass
+
+    def test_match_histfut(self):
+        pass
+
+    def test_fx(self):
+        pass
+
 
 class TestGetWarmingLevel:
     def test_list(self):
