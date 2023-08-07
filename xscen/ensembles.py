@@ -145,6 +145,7 @@ def generate_weights(
     split_experiments: bool = False,
     skipna: bool = True,
     v_for_skipna: str = None,
+    standardize: bool = False,
 ) -> xr.DataArray:
     """Use realization attributes to automatically generate weights along the 'realization' dimension.
 
@@ -166,6 +167,8 @@ def generate_weights(
         skipna=False requires either a 'time' or 'horizon' dimension in the datasets.
     v_for_skipna : str
         Variable to use for skipna=False. If None, the first variable in the first dataset is used.
+    standardize : bool
+        If True, the weights are standardized to sum to 1.
 
     Notes
     -----
@@ -401,5 +404,8 @@ def generate_weights(
         # Divide the weight equally between the group
         w = 1 / n_models / n_realizations / n_institutions
         weights[i] = xr.where(np.isfinite(w), w, 0)
+
+    if standardize:
+        weights = weights / weights.sum(dim="realization")
 
     return weights
