@@ -76,6 +76,15 @@ extract:
       other_search_criteria:
         source: # put the reference you want here
           "ERA5-Land"
+      # below are more possible arguments for the function xs.search_data_catalogs,
+      #exclusions:
+      #match_hist_and_fut:
+      #coverage_kwargs:
+      #id_columns:
+      #conversion_yaml:
+      #restrict_resolution:
+      #restrict_members:
+      #restrict_warming_level:
     extract_dataset:
       region: &region
         name: test1
@@ -83,6 +92,11 @@ extract:
         tile_buffer: 1.5
         lon_bnds: [ -80, -79 ]
         lat_bnds: [ 44, 44.2 ]
+      #variables_and_freqs:
+      #periods:
+      #to_level:
+      #ensure_correct_time:
+      #xr_open_kwargs: dict = None, xr_combine_kwargs: dict = None, preprocess: Callable = None, resample_methods: Optional[dict] = None, mask: Union[bool, Dataset, DataArray] = False)
     stack_drop_nans: &stack
       True
     save:

@@ -55,13 +55,17 @@ if __name__ == "__main__":
         tdd = CONFIG["to_dataset_dict"]
 
     # --- EXTRACT---
+    # check if task in list of tasks from the config before doing it
     if "extract" in CONFIG["tasks"]:
         # iterate on types to extract (reconstruction, simulation)
+        # get dictionary of useful information for the task for the current type
         for source_type, type_dict in CONFIG["extract"].items():
             # filter catalog for data that we want
+            # in the dictionary for this type (type_dict), get argument for search_data_catalogs
             cat = xs.search_data_catalogs(**type_dict["search_data_catalogs"])
 
             # iterate over ids from the search
+            # ds_id is the id of the dataset, dc is the sub-catalog for this dataset
             for ds_id, dc in cat.items():
                 # attrs of current iteration that are relevant now
                 cur = {
@@ -71,6 +75,7 @@ if __name__ == "__main__":
                 }
                 # check if steps was already done
                 if not pcat.exists_in_cat(**cur):
+                    # set up dask client and measure time
                     with (
                         Client(**type_dict["dask"], **daskkws),
                         xs.measure_time(name=f"extract {ds_id}", logger=logger),
@@ -116,9 +121,10 @@ if __name__ == "__main__":
                     xs.measure_time(name=f"regrid {key_input}", logger=logger),
                 ):
                     # get output grid
-                    ds_grid = pcat.search(**CONFIG["regrid"]["output"]).to_dataset(
-                        **tdd
-                    )
+                    ds_grid = pcat.search(
+                        **CONFIG["regrid"]["output"]
+                        # other arguments are passed automatically from the config
+                    ).to_dataset(**tdd)
 
                     # do regridding
                     ds_regrid = xs.regrid_dataset(
