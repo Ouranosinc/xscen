@@ -58,11 +58,11 @@ extract:
   # the format is module:other_word:function (other_word=reconstruction).
   # It is dealt with manually in workflow1.py, building a loop over all entries below 'extract:'.
   reconstruction:
-    dask:
+    dask: # these arguments will be passed manually to the dask client
       n_workers: 2
       threads_per_worker: 3
       memory_limit: 15GB
-    search_data_catalogs:
+    search_data_catalogs: # these arguments will be passed manually to xs.search_data_catalogs
       variables_and_freqs: &var_and_freq # this is an anchor. more on anchors:  https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/
         tasmax: D
         tasmin: D
@@ -77,6 +77,7 @@ extract:
         source: # put the reference you want here
           "ERA5-Land"
       # below are more possible arguments for the function xs.search_data_catalogs,
+      # In this example, they are not needed in the config. The default values are used.
       #exclusions:
       #match_hist_and_fut:
       #coverage_kwargs:
@@ -85,7 +86,7 @@ extract:
       #restrict_resolution:
       #restrict_members:
       #restrict_warming_level:
-    extract_dataset:
+    extract_dataset: # these arguments will be passed manually to xs.extract_dataset
       region: &region
         name: test1
         method: bbox
@@ -96,10 +97,14 @@ extract:
       #periods:
       #to_level:
       #ensure_correct_time:
-      #xr_open_kwargs: dict = None, xr_combine_kwargs: dict = None, preprocess: Callable = None, resample_methods: Optional[dict] = None, mask: Union[bool, Dataset, DataArray] = False)
+      #xr_open_kwargs:
+      #xr_combine_kwargs:
+      #preprocess:
+      # resample_methods:
+      #mask:
     stack_drop_nans: &stack
       True
-    save:
+    save: # these arguments will be passed manually to xs.save_to_zarr
       mode: o
       encoding:
         tasmax: &f32
@@ -113,6 +118,10 @@ extract:
       rechunk:
         time: -1
         loc: 10
+      #zarr_kwargs:
+      #compute:
+      #itervar:
+      #timeout_cleanup:
   simulation:
     dask:
       n_workers: 2
