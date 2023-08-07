@@ -697,7 +697,7 @@ def produce_horizon(
     indicators:  Union[str, Path, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
         Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     periods: list
-        List of [start_year, end_year] for the period(s) to be evaluated.
+        Either [start, end] or list of [start_year, end_year] for the period(s) to be evaluated.
         If both periods and warminglevels are None, the full time series will be used.
     warminglevels: dict
         Dictionary of arguments to pass to `py:func:xscen.subset_warming_level`.
@@ -705,8 +705,8 @@ def produce_horizon(
         If both periods and warminglevels are None, the full time series will be used.
     to_level:
         The processing level to assign to the output.
-        Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
-        the first value of the `warminglevel` coord of ds if it exists, 'period[0]' and 'period[1]'.
+        If there is only one horizon, you can use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
+        that information in the processing level.
 
     Returns
     -------
@@ -729,7 +729,7 @@ def produce_horizon(
     if periods is not None:
         all_periods.extend(periods)
     if warminglevels is not None:
-        if isinstance(warminglevels["wl"], float):
+        if isinstance(warminglevels["wl"], (int, float)):
             all_periods.append(warminglevels)
         elif isinstance(warminglevels["wl"], list):
             template = deepcopy(warminglevels)
@@ -814,9 +814,6 @@ def produce_horizon(
                     ds_mean["horizon"] = wl
                     ds_mean["horizon"].attrs.update(wl_attrs)
 
-                    if to_level:
-                        to_level = to_level.format(wl=wl[0])
-
                 # put all indicators in one dataset
                 for var in ds_mean.data_vars:
                     ds_merge[var] = ds_mean[var]
@@ -848,6 +845,19 @@ def produce_horizon(
         out.attrs["cat:xrfreq"] = "fx"
         out.attrs["cat:frequency"] = "fx"
         if to_level:
+            if len(all_periods) == 1:
+                if (isinstance(all_periods[0], dict)) or (
+                    "warminglevel" in ds.dims and warminglevels is None
+                ):
+                    to_level = to_level.format(
+                        wl=ds_sub.warminglevel.values[0]
+                        if isinstance(all_periods[0], dict)
+                        else ds.warminglevel.values[0]
+                    )
+                else:
+                    to_level = to_level.format(
+                        period0=all_periods[0][0], period1=all_periods[0][1]
+                    )
             out.attrs["cat:processing_level"] = to_level
 
         return out

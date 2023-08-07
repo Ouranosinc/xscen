@@ -457,9 +457,11 @@ class TestProduceHorizon:
 
     def test_warminglevel_in_ds(self):
         ds = self.ds.copy().expand_dims({"warminglevel": ["+1Cvs1850-1900"]})
-        out = xs.produce_horizon(ds, indicators=self.yaml_file)
+        out = xs.produce_horizon(
+            ds, indicators=self.yaml_file, to_level="warminglevel{wl}"
+        )
         np.testing.assert_array_equal(out["horizon"], ds["warminglevel"])
-        assert out.attrs["cat:processing_level"] == "horizons"
+        assert out.attrs["cat:processing_level"] == "warminglevel+1Cvs1850-1900"
 
         # Multiple warming levels
         ds = self.ds.copy().expand_dims(
@@ -467,6 +469,19 @@ class TestProduceHorizon:
         )
         with pytest.raises(ValueError):
             xs.produce_horizon(ds, indicators=self.yaml_file)
+
+    def test_to_level(self):
+        out = xs.produce_horizon(
+            self.ds, indicators=self.yaml_file, to_level="horizon{period0}-{period1}"
+        )
+        assert out.attrs["cat:processing_level"] == "horizon1981-2010"
+        out = xs.produce_horizon(
+            self.ds,
+            indicators=self.yaml_file,
+            warminglevels={"wl": 1, "tas_baseline_period": ["1851", "1901"]},
+            to_level="warminglevel{wl}",
+        )
+        assert out.attrs["cat:processing_level"] == "warminglevel+1Cvs1851-1901"
 
     def test_errors(self):
         # FutureWarning
