@@ -6,18 +6,18 @@
 # The workflow does NOT automatically remove intermediate files. You might run out of space.
 
 
-# Note the information in the CONFIG is used in two different ways:
+# Note that the information listed in this configuration file is used in two different ways:
 # 1) Manually accessing it like a dictionary in the code (e.g. CONFIG["regrid"]["inputs"])
-# There format is free and can be anything you want. It is often easier to put them under
-# module or task name to find them more easily.
+# This is format-free and can be anything you want. It is often easier to put those entries under the
+# module or task name, to find them more easily once in your workflow.
 # 2) Automatically passing arguments to xscen functions (e.g. CONFIG["regrid"]["regrid_dataset"]).
 #    For this to work, the CONFIG must follow a specific structure.
 #    module:
 #      function:
 #        argument: value
 #    This only works on functions that are decorated with @parse_config in the xscen code.
-#    In these sections, you can add all the arguments you want to pass to the function.
-#    In this file, those instances are marked by "# automatically passed to the function."
+#    In these entries, you only need to specify arguments that differ from the function defaults.
+#    For this example configuration file, those instances are marked by "# automatically passed to the function."
 # You can learn more about how the config works here: https://xscen.readthedocs.io/en/latest/notebooks/6_config.html
 
 # List of task to accomplish in the workflow

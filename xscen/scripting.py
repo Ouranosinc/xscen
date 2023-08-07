@@ -438,7 +438,7 @@ def move_and_delete(moving, pcat, deleting=None, copy=False):
     deleting: list
         list of directories to be deleted including all contents and recreated empty.
         E.g. the working directory of a workflow.
-    copy_tree: bool
+    copy: bool
         If True, copy directories instead of moving them.
 
     """
