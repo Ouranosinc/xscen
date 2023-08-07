@@ -2,12 +2,12 @@
 
 # The contents of this file control the workflow. The highest level entries are the tasks to accomplish.
 # Below the task level are the elements required for the task. For example, the task 'extract' interates
-# over 'reconstruction' data and 'simulation' data, the two sections specifying what (data, variables, time periods) 
-# to extract and how (region, attributes, subsequent saving) to do that. For the 'regrid' tasks, among other, 
+# over 'reconstruction' data and 'simulation' data, the two sections specifying what (data, variables, time periods)
+# to extract and how (region, attributes, subsequent saving) to do that. For the 'regrid' tasks, among other,
 # the 'input' and 'output' data are specified along with the methodology for the regridding process.
 
-# Note that some information is 'outsourced' to a separate 'paths1_example.yml' file. The contents of the two are 
-# merged in the CONFIG dictionary when the configuration is loaded. The configuration also contains the names 
+# Note that some information is 'outsourced' to a separate 'paths1_example.yml' file. The contents of the two are
+# merged in the CONFIG dictionary when the configuration is loaded. The configuration also contains the names
 # of the 'properties1.yml' and 'indicators1.yml' files to draw their information for the respective tasks.
 
 # The workflow is made to be able to pick up it's processing in any case where the code is stopped.
@@ -18,7 +18,7 @@
 # The input information for the workflow listed in this configuration file is used in two different ways:
 #
 # 1) Direct 'manual' access in the code of the workflow, with usage like a dictionary (e.g. CONFIG["regrid"]["inputs"])
-#    No specific format is prescribed here, it can be anything you want. It would be good practice to put those entries 
+#    No specific format is prescribed here, it can be anything you want. It would be good practice to put those entries
 #    under the associated module or task name, to find them more easily in your workflow.
 #
 # 2) Arguments that will be automatically passed to xscen functions.
@@ -50,11 +50,11 @@ tasks:
   - climatology # Compute the climatological mean of the indicators
   - delta # Compute the deltas of the climatological means.
   - ensembles # Compute the ensemble statistics on indicators, climatology and deltas.
-  
+
 
 # Task Arguments
 extract:
-  # The following ('reconstruction') is NOT automatically passed to the function because 
+  # The following ('reconstruction') is NOT automatically passed to the function because
   # the format is module:other_word:function (other_word=reconstruction).
   # It is dealt with manually in workflow1.py, building a loop over all entries below 'extract:'.
   reconstruction:
