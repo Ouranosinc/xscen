@@ -89,7 +89,7 @@ def compute_indicators(
         If None, the dataset will be considered continuous.
     restrict_years:
         If True, cut the time axis to be within the same years as the input.
-        This is mostly useful for frequencies that do not start in January, such as QS-DEC. 
+        This is mostly useful for frequencies that do not start in January, such as QS-DEC.
         In that instance, `xclim` would start on previous_year-12-01 (DJF), with a NaN. `restrict_years` will cut that first timestep.
         This should have no effect on YS and MS indicators.
     to_level : str, optional
