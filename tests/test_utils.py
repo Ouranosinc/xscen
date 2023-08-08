@@ -4,6 +4,7 @@ import cftime
 import numpy as np
 import pandas as pd
 import pytest
+from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
 
@@ -40,3 +41,40 @@ class TestDateParser:
             assert pd.isna(out)
         else:
             assert out == exp
+
+
+class TestScripting:
+    ds = timeseries(
+        np.tile(np.arange(1, 2), 50),
+        variable="tas",
+        start="2000-01-01",
+        freq="AS-JAN",
+        as_dataset=True,
+    )
+    ds.attrs = {
+        "cat:type": "simulation",
+        "cat:processing_level": "raw",
+        "cat:variable": ("tas",),
+        "dog:source": "CanESM5",
+    }
+
+    @pytest.mark.parametrize(
+        "prefix, var_as_str", [["cat:", False], ["cat:", True], ["dog:", True]]
+    )
+    def test_get_cat_attrs(self, prefix, var_as_str):
+        out = xs.utils.get_cat_attrs(self.ds, prefix=prefix, var_as_str=var_as_str)
+
+        if var_as_str and prefix == "cat:":
+            assert out == {
+                "type": "simulation",
+                "processing_level": "raw",
+                "variable": "tas",
+            }
+        elif not var_as_str and prefix == "cat:":
+            assert out == {
+                "type": "simulation",
+                "processing_level": "raw",
+                "variable": ("tas",),
+            }
+        elif prefix == "dog:":
+            assert out == {"source": "CanESM5"}

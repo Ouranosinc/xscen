@@ -11,6 +11,10 @@ import xscen as xs
 from xscen.config import CONFIG
 
 # Load configuration
+# paths1.yml is used to add private information to your workflow, such as file paths, without running the risk of them being pushed to a public Github repo.
+# For this to work as intended, 'paths1.yml' should be included in your .gitignore.
+# config1.yml (or any number of those) can then contain the rest of the configuration.
+# All configuration files are merged together into a single CONFIG instance when you call xs.load_config
 xs.load_config(
     "paths1.yml", "config1.yml", verbose=(__name__ == "__main__"), reset=True
 )
