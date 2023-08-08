@@ -50,7 +50,7 @@ if __name__ == "__main__":
     # load project catalog
     pcat = xs.ProjectCatalog(CONFIG["paths"]["project_catalog"])
 
-    # set some recurrent variables
+    # set some useful recurrent variables
     if CONFIG.get("to_dataset_dict", False):
         tdd = CONFIG["to_dataset_dict"]
 
@@ -60,8 +60,9 @@ if __name__ == "__main__":
         # iterate on types to extract (reconstruction, simulation)
         # get dictionary of useful information for the task for the current type
         for source_type, type_dict in CONFIG["extract"].items():
-            # filter catalog for data that we want
-            # in the dictionary for this type (type_dict), get argument for search_data_catalogs
+            # Filter catalog for data that we want.
+            # In the dictionary for this type (type_dict), get arguments for search_data_catalogs and pass it manually to the function.
+            # Arguments are not passed automatically because they are different for each type (iteration of the loop).
             cat = xs.search_data_catalogs(**type_dict["search_data_catalogs"])
 
             # iterate over ids from the search
@@ -78,11 +79,12 @@ if __name__ == "__main__":
                     # set up dask client and measure time
                     with (
                         Client(**type_dict["dask"], **daskkws),
-                        xs.measure_time(name=f"extract {ds_id}", logger=logger),
+                        xs.measure_time(name=f"extract {cur}", logger=logger),
                     ):
                         # create dataset from sub-catalog with right domain and periods
                         ds_dict = xs.extract_dataset(
                             catalog=dc,
+                            # arguments to pass the function for this type of data are defined in the config.
                             **type_dict["extract_dataset"],
                         )
 
@@ -101,7 +103,10 @@ if __name__ == "__main__":
                                     .notnull(),
                                 )
                             # save to zarr
+                            # fill in the path defined in the config (in private paths1.yml) with the current information
                             path = CONFIG["paths"]["task"].format(**cur)
+                            # get arguments to pass the function for this type of data from the config
+                            # arguments are not passed automatically as they are different for each task.
                             xs.save_to_zarr(ds=ds, filename=path, **type_dict["save"])
                             pcat.update_from_ds(ds=ds, path=path)
 
@@ -118,7 +123,7 @@ if __name__ == "__main__":
             if not pcat.exists_in_cat(**cur):
                 with (
                     Client(**CONFIG["regrid"]["dask"], **daskkws),
-                    xs.measure_time(name=f"regrid {key_input}", logger=logger),
+                    xs.measure_time(name=f"{cur}", logger=logger),
                 ):
                     # get output grid
                     ds_grid = pcat.search(
@@ -153,9 +158,7 @@ if __name__ == "__main__":
                 if not pcat.exists_in_cat(**cur):
                     with (
                         Client(**ba_dict["dask"], **daskkws),
-                        xs.measure_time(
-                            name=f" bias adjust {var} {id_sim}", logger=logger
-                        ),
+                        xs.measure_time(name=f" {cur}", logger=logger),
                     ):
                         # get reference
                         ds_ref = pcat.search(**ba_dict["ref_input"]).to_dataset(**tdd)
@@ -195,7 +198,7 @@ if __name__ == "__main__":
             if not pcat.exists_in_cat(**cur):
                 with (
                     Client(**CONFIG["cleanup"]["dask"], **daskkws),
-                    xs.measure_time(name=f"clean {cu_id}", logger=logger),
+                    xs.measure_time(name=f"{cur}", logger=logger),
                 ):
                     # put the individually adjusted variables back together in one ds
                     freq_dict = xs.extract_dataset(catalog=cu_cat)
@@ -227,7 +230,7 @@ if __name__ == "__main__":
             if not pcat.exists_in_cat(**cur):
                 with (
                     Client(**CONFIG["rechunk"]["dask"], **daskkws),
-                    xs.measure_time(name=f"rechunk {key_input}", logger=logger),
+                    xs.measure_time(name=f"rechunk {cur}", logger=logger),
                 ):
                     # final path for the data
                     path_out = f"{CONFIG['paths']['task']}".format(**cur)
@@ -265,7 +268,7 @@ if __name__ == "__main__":
                 if not pcat.exists_in_cat(**cur):
                     with (
                         Client(**CONFIG["diagnostics"]["dask"], **daskkws),
-                        xs.measure_time(name=f"diagnostics {key_input}", logger=logger),
+                        xs.measure_time(name=f"{cur}", logger=logger),
                     ):
                         # get the reference for the measures
                         dref_for_measure = None
@@ -374,7 +377,7 @@ if __name__ == "__main__":
             if not pcat.exists_in_cat(**cur):
                 with (
                     Client(**CONFIG["aggregate"]["dask"], **daskkws),
-                    xs.measure_time(name=f"climatology {key_input}", logger=logger),
+                    xs.measure_time(name=f"{cur}", logger=logger),
                 ):
                     # compute climatological mean
                     ds_mean = xs.climatological_mean(ds=ds_input)
@@ -399,7 +402,7 @@ if __name__ == "__main__":
             if not pcat.exists_in_cat(**cur):
                 with (
                     Client(**CONFIG["aggregate"]["dask"], **daskkws),
-                    xs.measure_time(name=f"delta {key_input}", logger=logger),
+                    xs.measure_time(name=f"{cur}", logger=logger),
                 ):
                     # compute deltas
                     ds_delta = xs.aggregate.compute_deltas(ds=ds_input)
@@ -432,10 +435,7 @@ if __name__ == "__main__":
                     if not pcat.exists_in_cat(**cur):
                         with (
                             Client(**CONFIG["ensembles"]["dask"], **daskkws),
-                            xs.measure_time(
-                                name=f"ens-{processing_level} {experiment} {xrfreq}",
-                                logger=logger,
-                            ),
+                            xs.measure_time(name=f"{cur}", logger=logger),
                         ):
                             ens_stats = xs.ensemble_stats(
                                 datasets=ind_dict,

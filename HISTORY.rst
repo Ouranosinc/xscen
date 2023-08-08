@@ -20,7 +20,7 @@ New features and enhancements
 * New argument `var_as_string` for `get_cat_attrs` to return variable names as strings. (:pull:`233`).
 * New argument `copy` for `move_and_delete`. (:pull:`233`).
 * New argument `restrict_year` for `compute_indicators`. (:pull:`233`).
-* Add more comments in the template. (:pull:`233`, :issue:`232`).
+* Add more comments in the template. (:pull:`233`,:pull:`235`, :issue:`232`).
 
 
 Breaking changes
