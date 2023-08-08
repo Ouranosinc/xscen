@@ -22,7 +22,6 @@ New features and enhancements
 * New argument `restrict_year` for `compute_indicators`. (:pull:`233`).
 * Add more comments in the template. (:pull:`233`,:pull:`235`, :issue:`232`).
 
-
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * Columns ``date_start`` and ``date_end`` now use a ``datetime64[ms]`` dtype. (:pull:`222`).
