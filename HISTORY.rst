@@ -17,6 +17,10 @@ New features and enhancements
 * File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`).
 * New scripting functions `save_and_update` and `move_and_delete`. (:pull:`214`).
 * Spatial dimensions can be generalized as X/Y when rechunking and will be mapped to rlon/rlat or lon/lat accordingly. (:pull:`221`).
+* New argument `var_as_string` for `get_cat_attrs` to return variable names as strings. (:pull:`233`).
+* New argument `copy` for `move_and_delete`. (:pull:`233`).
+* New argument `restrict_year` for `compute_indicators`. (:pull:`233`).
+* Add more comments in the template. (:pull:`233`, :issue:`232`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
