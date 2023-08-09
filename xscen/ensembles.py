@@ -142,7 +142,7 @@ def generate_weights(
     datasets: Union[dict, list],
     *,
     independence_level: str = "model",
-    split_experiments: bool = False,
+    experiment_weights: bool = False,
     skipna: bool = True,
     v_for_skipna: str = None,
     standardize: bool = False,
@@ -160,8 +160,8 @@ def generate_weights(
         'model': Weights using the method '1 model - 1 Vote', where every unique combination of 'source' and 'driving_model' is considered a model.
         'GCM': Weights using the method '1 GCM - 1 Vote'
         'institution': Weights using the method '1 institution - 1 Vote'
-    split_experiments : bool
-        If True, the 'cat:experiment' attribute is used to split the weights between experiments.
+    experiment_weights : bool
+        If True, each experiment will be given a total weight of 1. This option requires the 'cat:experiment' attribute to be present in all datasets.
     skipna : bool
         If True, weights will be computed from attributes only. If False, weights will be computed from the number of non-missing values.
         skipna=False requires either a 'time' or 'horizon' dimension in the datasets.
@@ -225,11 +225,11 @@ def generate_weights(
         raise ValueError(
             "The 'cat:source' or 'cat:driving_model' attribute is missing from some simulations."
         )
-    if split_experiments and any(
+    if experiment_weights and any(
         (info[k]["experiment"] is None or len(info[k]["experiment"]) == 0) for k in info
     ):
         raise ValueError(
-            "The 'cat:experiment' attribute is missing from some simulations. 'split_experiments' cannot be True."
+            "The 'cat:experiment' attribute is missing from some simulations. 'experiment_weights' cannot be True."
         )
     if independence_level == "institution" and any(
         (info[k]["institution"] is None or len(info[k]["institution"]) == 0)
@@ -329,13 +329,13 @@ def generate_weights(
         if independence_level == "model":
             realization_struct = (
                 ["source", "driving_model", "experiment"]
-                if split_experiments
+                if experiment_weights
                 else ["source", "driving_model"]
             )
         else:
             realization_struct = (
                 ["driving_model", "experiment"]
-                if split_experiments
+                if experiment_weights
                 else ["driving_model"]
             )
         realizations = {
@@ -369,7 +369,7 @@ def generate_weights(
         # Number of driving models run by a given institution
         if independence_level == "institution":
             institution_struct = (
-                ["institution", "experiment"] if split_experiments else ["institution"]
+                ["institution", "experiment"] if experiment_weights else ["institution"]
             )
             institution = {
                 info[k]["driving_model"]
@@ -404,6 +404,22 @@ def generate_weights(
         # Divide the weight equally between the group
         w = 1 / n_models / n_realizations / n_institutions
         weights[i] = xr.where(np.isfinite(w), w, 0)
+
+    if experiment_weights:
+        # Divide the weight equally between the experiments
+        experiments = [info[k]["experiment"] for k in info.keys()]
+        weights = weights.assign_coords(
+            experiment=("realization", experiments),
+        )
+        expsum = weights.groupby("experiment").sum(dim="realization")
+
+        for e in expsum.experiment:
+            weights = weights.where(
+                weights.experiment != e, other=weights / expsum.sel(experiment=e)
+            )
+
+        # Drop the experiment coordinate
+        weights = weights.drop_vars("experiment")
 
     if standardize:
         weights = weights / weights.sum(dim="realization")

@@ -210,43 +210,50 @@ class TestGenerateWeights:
     ens = make_ensemble.__func__()
 
     @staticmethod
-    def make_answer(independence_level, split_exp, skipna):
+    def make_answer(independence_level, exp_weights, skipna):
         answers = {
-            "all-True": np.concatenate(
+            "model-True": np.concatenate(
                 (
                     np.array(
                         [
-                            [1] * 4,
-                            [0.5] * 4,
-                            [0.5] * 1 + [1] * 3,
-                            [0.5] * 4,
-                            [0.5] * 1 + [0] * 3,
+                            [0.14285, 0.14285, 0.16666, 0.2],
+                            [0.07142, 0.07142, 0.08333, 0.1],
+                            [0.07142, 0.14285, 0.16666, 0.2],
+                            [0.07142, 0.07142, 0.08333, 0.1],
+                            [0.07142, 0, 0, 0],
                         ]
                     ),  # CanESM2 family, RCP4.5
                     np.array(
                         [
-                            [0.09090] * 4,
-                            [0.5] * 4,
-                            [0.5] * 1 + [1] * 3,
-                            [0.5] * 4,
-                            [0.5] * 1 + [0] * 3,
+                            [0.01515, 0.01515, 0.01515, 0.03030],
+                            [0.08333, 0.08333, 0.08333, 0.16666],
+                            [0.08333, 0.16666, 0.16666, 0.33333],
+                            [0.08333, 0.08333, 0.08333, 0.16666],
+                            [0.08333, 0, 0, 0],
                         ]
                     ),  # CanESM2 family, RCP8.5
-                    np.repeat(np.array([[0.09090] * 4]), 10, 0),  # ClimEx
                     np.repeat(
-                        np.array([[0.2] * 3 + [0] * 1]), 5, 0
+                        np.array([[0.01515, 0.01515, 0.01515, 0.03030]]), 10, 0
+                    ),  # ClimEx
+                    np.repeat(
+                        np.array([[0.02857, 0.02857, 0.03333, 0]]), 5, 0
                     ),  # CSIRO-Mk6, RCP4.5
-                    np.array([[1] * 3 + [0] * 1]),  # CSIRO2, RCP8.5
+                    np.array([[0.16666, 0.16666, 0.16666, 0]]),  # CSIRO2, RCP8.5
                     np.array(
-                        [[1] * 3 + [0] * 1, [1] * 3 + [0] * 1]
+                        [[0.16666, 0.16666, 0.16666, 0], [0.16666, 0.16666, 0.16666, 0]]
                     ),  # EC-EARTH RCMs, RCP8.5
                     np.array(
-                        [[0.5] * 2 + [0] * 2, [0.5] * 2 + [0] * 2]
+                        [[0.07142, 0.07142, 0, 0], [0.07142, 0.07142, 0, 0]]
                     ),  # GFDL-ESM2G family, RCP4.5
-                    np.array([[1] * 4, [1] * 4]),  # GFDL-ESM2M family, RCP4.5
+                    np.array(
+                        [
+                            [0.14285, 0.14285, 0.16666, 0.2],
+                            [0.14285, 0.14285, 0.16666, 0.2],
+                        ]
+                    ),  # GFDL-ESM2M family, RCP4.5
                 )
             ),
-            "all-False": np.concatenate(
+            "model-False": np.concatenate(
                 (
                     np.array(
                         [
@@ -284,36 +291,38 @@ class TestGenerateWeights:
                 (
                     np.array(
                         [
-                            [0.11111] * 1 + [0.16666] * 3,
-                            [0.11111] * 1 + [0.16666] * 3,
-                            [0.11111] * 1 + [0.16666] * 3,
-                            [0.33333] * 1 + [0.5] * 3,
-                            [0.33333] * 1 + [0] * 3,
+                            [0.02777, 0.04166, 0.05555, 0.08333],
+                            [0.02777, 0.04166, 0.05555, 0.08333],
+                            [0.02777, 0.04166, 0.05555, 0.08333],
+                            [0.08333, 0.125, 0.16666, 0.25],
+                            [0.08333, 0, 0, 0],
                         ]
                     ),  # CanESM2 family, RCP4.5
                     np.array(
                         [
-                            [0.02564] * 1 + [0.02777] * 3,
-                            [0.02564] * 1 + [0.02777] * 3,
-                            [0.02564] * 1 + [0.02777] * 3,
-                            [0.07692] * 1 + [0.08333] * 3,
-                            [0.07692] * 1 + [0] * 3,
+                            [0.00854, 0.00925, 0.00925, 0.02777],
+                            [0.00854, 0.00925, 0.00925, 0.02777],
+                            [0.00854, 0.00925, 0.00925, 0.02777],
+                            [0.02564, 0.02777, 0.02777, 0.08333],
+                            [0.02564, 0, 0, 0],
                         ]
                     ),  # CanESM2 family, RCP8.5
                     np.repeat(
-                        np.array([[0.07692] * 1 + [0.08333] * 3]), 10, 0
+                        np.array([[0.02564, 0.02777, 0.02777, 0.08333]]), 10, 0
                     ),  # ClimEx
                     np.repeat(
-                        np.array([[0.2] * 3 + [0] * 1]), 5, 0
+                        np.array([[0.05, 0.05, 0.06666, 0]]), 5, 0
                     ),  # CSIRO-Mk6, RCP4.5
-                    np.array([[1] * 3 + [0] * 1]),  # CSIRO2, RCP8.5
+                    np.array([[0.33333, 0.33333, 0.33333, 0]]),  # CSIRO2, RCP8.5
                     np.array(
-                        [[0.5] * 3 + [0] * 1, [0.5] * 3 + [0] * 1]
+                        [[0.16666, 0.16666, 0.16666, 0], [0.16666, 0.16666, 0.16666, 0]]
                     ),  # EC-EARTH RCMs, RCP8.5
                     np.array(
-                        [[0.5] * 2 + [0] * 2, [0.5] * 2 + [0] * 2]
+                        [[0.125, 0.125, 0, 0], [0.125, 0.125, 0, 0]]
                     ),  # GFDL-ESM2G family, RCP4.5
-                    np.array([[0.5] * 4, [0.5] * 4]),  # GFDL-ESM2M family, RCP4.5
+                    np.array(
+                        [[0.125, 0.125, 0.16666, 0.25], [0.125, 0.125, 0.16666, 0.25]]
+                    ),  # GFDL-ESM2M family, RCP4.5
                 )
             ),
             "GCM-False": np.concatenate(
@@ -356,37 +365,40 @@ class TestGenerateWeights:
                 (
                     np.array(
                         [
-                            [0.11111] * 1 + [0.16666] * 3,
-                            [0.11111] * 1 + [0.16666] * 3,
-                            [0.11111] * 1 + [0.16666] * 3,
-                            [0.33333] * 1 + [0.5] * 3,
-                            [0.33333] * 1 + [0] * 3,
+                            [0.03703, 0.05555, 0.05555, 0.08333],
+                            [0.03703, 0.05555, 0.05555, 0.08333],
+                            [0.03703, 0.05555, 0.05555, 0.08333],
+                            [0.11111, 0.16666, 0.16666, 0.25],
+                            [0.11111, 0, 0, 0],
                         ]
                     ),  # CanESM2 family, RCP4.5
                     np.array(
                         [
-                            [0.02564] * 1 + [0.02777] * 3,
-                            [0.02564] * 1 + [0.02777] * 3,
-                            [0.02564] * 1 + [0.02777] * 3,
-                            [0.07692] * 1 + [0.08333] * 3,
-                            [0.07692] * 1 + [0] * 3,
+                            [0.00854, 0.00925, 0.00925, 0.02777],
+                            [0.00854, 0.00925, 0.00925, 0.02777],
+                            [0.00854, 0.00925, 0.00925, 0.02777],
+                            [0.02564, 0.02777, 0.02777, 0.08333],
+                            [0.02564, 0, 0, 0],
                         ]
                     ),  # CanESM2 family, RCP8.5
                     np.repeat(
-                        np.array([[0.07692] * 1 + [0.08333] * 3]), 10, 0
+                        np.array([[0.02564, 0.02777, 0.02777, 0.08333]]), 10, 0
                     ),  # ClimEx
                     np.repeat(
-                        np.array([[0.2] * 3 + [0] * 1]), 5, 0
+                        np.array([[0.06666, 0.06666, 0.06666, 0]]), 5, 0
                     ),  # CSIRO-Mk6, RCP4.5
-                    np.array([[1] * 3 + [0] * 1]),  # CSIRO2, RCP8.5
+                    np.array([[0.33333, 0.33333, 0.33333, 0]]),  # CSIRO2, RCP8.5
                     np.array(
-                        [[0.5] * 3 + [0] * 1, [0.5] * 3 + [0] * 1]
+                        [[0.16666, 0.16666, 0.16666, 0], [0.16666, 0.16666, 0.16666, 0]]
                     ),  # EC-EARTH RCMs, RCP8.5
                     np.array(
-                        [[0.25] * 2 + [0] * 2, [0.25] * 2 + [0] * 2]
+                        [[0.08333, 0.08333, 0, 0], [0.08333, 0.08333, 0, 0]]
                     ),  # GFDL-ESM2G family, RCP4.5
                     np.array(
-                        [[0.25] * 2 + [0.5] * 2, [0.25] * 2 + [0.5] * 2]
+                        [
+                            [0.08333, 0.08333, 0.16666, 0.25],
+                            [0.08333, 0.08333, 0.16666, 0.25],
+                        ]
                     ),  # GFDL-ESM2M family, RCP4.5
                 )
             ),
@@ -430,38 +442,38 @@ class TestGenerateWeights:
             ),
         }
 
-        answer = answers[f"{independence_level}-{split_exp}"]
+        answer = answers[f"{independence_level}-{exp_weights}"]
         if skipna:
             answer = answer[:, 0]
 
         return answer
 
     @pytest.mark.parametrize(
-        "independence_level, split_exp, skipna",
+        "independence_level, exp_weights, skipna",
         [
-            ("all", True, True),
-            ("all", False, True),
+            ("model", True, True),
+            ("model", False, True),
             ("GCM", True, True),
             ("GCM", False, True),
             ("institution", True, True),
             ("institution", False, True),
-            ("all", True, False),
-            ("all", False, False),
+            ("model", True, False),
+            ("model", False, False),
             ("GCM", True, False),
             ("GCM", False, False),
             ("institution", True, False),
             ("institution", False, False),
         ],
     )
-    def test_generate_weights(self, independence_level, split_exp, skipna):
+    def test_generate_weights(self, independence_level, exp_weights, skipna):
         out = xs.generate_weights(
             self.ens,
             independence_level=independence_level,
-            split_experiments=split_exp,
+            experiment_weights=exp_weights,
             skipna=skipna,
         )
 
-        answer = self.make_answer(independence_level, split_exp, skipna)
+        answer = self.make_answer(independence_level, exp_weights, skipna)
         np.testing.assert_array_almost_equal(out, answer, decimal=4)
 
     def test_changing_horizon(self):
@@ -490,6 +502,16 @@ class TestGenerateWeights:
             )
             == 0
         )
+
+    @pytest.mark.parametrize(
+        "standardize, skipna", [(True, True), (True, False), (False, True)]
+    )
+    def test_standardize(self, standardize, skipna):
+        out = xs.generate_weights(self.ens, standardize=standardize, skipna=skipna)
+        if standardize:
+            np.testing.assert_allclose(out.sum(), 1 if skipna else 4)
+        else:
+            np.testing.assert_allclose(out.sum(), 10)
 
     def test_errors(self):
         # Bad input
@@ -520,7 +542,7 @@ class TestGenerateWeights:
         with pytest.raises(
             ValueError, match="The 'cat:experiment' attribute is missing"
         ):
-            xs.generate_weights(ens2, split_experiments=True)
+            xs.generate_weights(ens2, experiment_weights=True)
         ens2 = deepcopy(self.ens)
         ens2["CCCma-CanESM2-rcp45-r1i1p1-CanESM2"].attrs["cat:institution"] = None
         with pytest.raises(
@@ -536,7 +558,7 @@ class TestGenerateWeights:
             UserWarning,
             match="The 'cat:experiment' attribute is missing from all datasets",
         ):
-            xs.generate_weights(ens2, split_experiments=False)
+            xs.generate_weights(ens2, experiment_weights=False)
         ens2 = deepcopy(self.ens)
         ens2["CCCma-CanESM2-rcp45-r1i1p1-CanESM2"].attrs["cat:member"] = None
         with pytest.warns(
