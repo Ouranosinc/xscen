@@ -185,6 +185,9 @@ def generate_weights(
     xr.DataArray
         Weights along the 'realization' dimension, or 2D weights along the 'realization' and 'time/horizon' dimensions if skipna=False.
     """
+    if isinstance(datasets, list):
+        datasets = {i: datasets[i] for i in range(len(datasets))}
+
     if independence_level == "all":
         warnings.warn(
             "The independence level 'all' is deprecated and will be removed in a future version. Use 'model' instead.",
@@ -196,14 +199,26 @@ def generate_weights(
         raise ValueError(
             f"'independence_level' should be between 'model', 'GCM', and 'institution', received {independence_level}."
         )
-    if skipna is False and v_for_skipna is None:
-        v_for_skipna = list(datasets[list(datasets.keys())[0]].data_vars)[0]
-        logger.info(
-            f"Using '{v_for_skipna}' as the variable to check for missing values."
-        )
+    if skipna is False:
+        if v_for_skipna is None:
+            v_for_skipna = list(datasets[list(datasets.keys())[0]].data_vars)[0]
+            logger.info(
+                f"Using '{v_for_skipna}' as the variable to check for missing values."
+            )
+        # Check if any dataset has dimensions that are not 'time' or 'horizon'
+        other_dims = {
+            k: [d for d in datasets[k].dims if d not in ["time", "horizon"]]
+            for k in datasets.keys()
+        }
+        for k in other_dims:
+            if len(other_dims[k]) > 0:
+                warnings.warn(
+                    f"Dataset {k} has dimensions that are not 'time' or 'horizon': {other_dims[k]}. The first indexes of these dimensions will be used to compute the weights."
+                )
+                datasets[k] = datasets[k].isel({d: 0 for d in other_dims[k]})
 
     # Use metadata to identify the simulation attributes
-    keys = datasets.keys() if isinstance(datasets, dict) else range(len(datasets))
+    keys = datasets.keys()
     defdict = {
         "experiment": None,
         "institution": None,

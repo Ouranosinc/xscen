@@ -513,6 +513,45 @@ class TestGenerateWeights:
         else:
             np.testing.assert_allclose(out.sum(), 10)
 
+    def test_spatial(self, datablock_3d):
+        a = datablock_3d(
+            np.random.rand(10, 10, 10), "tas", "lon", 0, "lat", 0, as_dataset=True
+        )
+        a.attrs = {
+            "cat:institution": "CCCma",
+            "cat:source": "CanESM5",
+            "cat:experiment": "ssp585",
+            "cat:member": "r1i1p1f1",
+        }
+        b = datablock_3d(
+            np.random.rand(10, 10, 10), "tas", "lon", 0, "lat", 0, as_dataset=True
+        )
+        b.attrs = {
+            "cat:institution": "CCCma",
+            "cat:source": "CanESM5",
+            "cat:experiment": "ssp585",
+            "cat:member": "r2i1p1f1",
+        }
+        c = datablock_3d(
+            np.random.rand(10, 10, 10), "tas", "lon", 0, "lat", 0, as_dataset=True
+        )
+        c.attrs = {
+            "cat:institution": "CSIRO",
+            "cat:source": "ACCESS-ESM1-5",
+            "cat:experiment": "ssp585",
+            "cat:member": "r1i1p1f1",
+        }
+        ens = [a, b, c]
+
+        np.testing.assert_allclose(
+            xs.generate_weights(ens, skipna=True), [0.5, 0.5, 1.0]
+        )
+        with pytest.warns(UserWarning, match="Dataset 0 has dimensions that are not "):
+            np.testing.assert_allclose(
+                xs.generate_weights(ens, skipna=False),
+                [[0.5] * 10, [0.5] * 10, [1.0] * 10],
+            )
+
     def test_errors(self):
         # Bad input
         with pytest.raises(ValueError, match="'independence_level' should be between"):
