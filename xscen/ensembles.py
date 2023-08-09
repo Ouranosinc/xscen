@@ -168,7 +168,7 @@ def generate_weights(
     v_for_skipna : str
         Variable to use for skipna=False. If None, the first variable in the first dataset is used.
     standardize : bool
-        If True, the weights are standardized to sum to 1.
+        If True, the weights are standardized to sum to 1 (per timestep/horizon, if skipna=False).
 
     Notes
     -----
