@@ -205,9 +205,14 @@ def generate_weights(
             logger.info(
                 f"Using '{v_for_skipna}' as the variable to check for missing values."
             )
+
         # Check if any dataset has dimensions that are not 'time' or 'horizon'
         other_dims = {
-            k: [d for d in datasets[k].dims if d not in ["time", "horizon"]]
+            k: [
+                d
+                for d in datasets[k][v_for_skipna].dims
+                if d not in ["time", "horizon"]
+            ]
             for k in datasets.keys()
         }
         for k in other_dims:
