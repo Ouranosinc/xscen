@@ -1,36 +1,37 @@
 # Example of a config file for the workflow
+# You have a lot of freedom in how you structure your config file, but keep in mind that the YAML will
+# be converted to a python dictionary. This means that you can't have two entries with the same name at the same level.
 
 # The contents of this file control the workflow. The highest level entries are the tasks to accomplish.
-# Below the task level are the elements required for the task. For example, the task 'extract' interates
+# Below the task level are the elements required for the task. For example, the task 'extract' iterates
 # over 'reconstruction' data and 'simulation' data, the two sections specifying what (data, variables, time periods)
 # to extract and how (region, attributes, subsequent saving) to do that. For the 'regrid' tasks, among other,
 # the 'input' and 'output' data are specified along with the methodology for the regridding process.
 
-# Note that some information is 'outsourced' to a separate 'paths1_example.yml' file. The contents of the two are
+# Note that some information is 'outsourced' to a separate 'paths1_example.yml' file. The contents of the two files will be
 # merged in the CONFIG dictionary when the configuration is loaded. The configuration also contains the names
 # of the 'properties1.yml' and 'indicators1.yml' files to draw their information for the respective tasks.
 
-# The workflow is made to be able to pick up it's processing in any case where the code is stopped.
-# To achieve this, it checks before executing a task if it's result exists in the project catalog.
-# When a task is completed, the produced data files are added to the project catalog.
-# The workflow does NOT automatically remove intermediate files. You might run out of space.
-
-# The input information for the workflow listed in this configuration file is used in two different ways:
+# The inputs listed in this configuration file are used in two different ways:
 #
-# 1) Direct 'manual' access in the code of the workflow, with usage like a dictionary (e.g. CONFIG["regrid"]["inputs"])
+# 1) Direct 'manual' access during the workflow, with usage like a dictionary (e.g. CONFIG["regrid"]["inputs"])
 #    No specific format is prescribed here, it can be anything you want. It would be good practice to put those entries
 #    under the associated module or task name, to find them more easily in your workflow.
+#    Only arguments that differ from the function defaults need to be specified.
+#    Example usage during the workflow: results = xscen.search_data_catalogs(**CONFIG["extract"]["reconstruction"]["search_data_catalogs"])
 #
 # 2) Arguments that will be automatically passed to xscen functions.
 #    For example the dictionary in CONFIG["regrid"]["regrid_dataset"] will be passed to xscen.regrid_dataset(...).
-#    For this to work, the CONFIG must follow a specific structure.
+#    For this to work, the CONFIG must follow a very specific structure.
 #    module:
 #      function:
 #        argument_1: value_a
 #        argument_2: value_b
 #    This only works on functions that are decorated with @parse_config in the xscen code.
-#    In these entries, only arguments that differ from the function defaults need to be specified.
+#    Only arguments that differ from the function defaults need to be specified.
 #    In this example configuration file, those instances are marked by "# automatically passed to the function."
+#    Example usage during the workflow: ds_regrid = xscen.regrid_dataset(ds)
+#    Note that you can always explicitly pass arguments to the function. These arguments will override the ones in the config.
 #
 # You can learn more about how the config works here: https://xscen.readthedocs.io/en/latest/notebooks/6_config.html
 
@@ -57,8 +58,9 @@ extract:
   # The following ('reconstruction') is NOT automatically passed to the function because
   # the format is module:other_word:function (other_word=reconstruction).
   # It is dealt with manually in workflow1.py, building a loop over all entries below 'extract:'.
+  # We do this here because we need a different set of arguments for the reconstruction and simulations.
   reconstruction:
-    dask: # these arguments will be passed manually to the dask client
+    dask: # these arguments will need to be passed manually to the dask client
       n_workers: 2
       threads_per_worker: 3
       memory_limit: 15GB
@@ -77,7 +79,7 @@ extract:
         source: # put the reference you want here
           "ERA5-Land"
       # below are more possible arguments for the function xs.search_data_catalogs,
-      # In this example, they are not needed in the config. The default values are used.
+      # In this example, they are not needed in the config. Only entries that differ from the function defaults need to be specified.
       #exclusions:
       #match_hist_and_fut:
       #coverage_kwargs:
