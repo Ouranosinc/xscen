@@ -22,7 +22,7 @@ from xclim.core.indicator import Indicator
 from .config import parse_config
 from .indicators import compute_indicators
 from .spatial import subset
-from .utils import standardize_periods, unstack_dates
+from .utils import standardize_periods, unstack_dates, update_attr
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,10 @@ __all__ = [
     "spatial_mean",
     "produce_horizon",
 ]
+
+
+def _(s):
+    return s
 
 
 @parse_config
@@ -172,10 +176,9 @@ def climatological_mean(
     # modify attrs and history
     for vv in ds_rolling.data_vars:
         for a in ["description", "long_name"]:
-            if hasattr(ds_rolling[vv], a):
-                ds_rolling[vv].attrs[
-                    a
-                ] = f"{window}-year mean of {ds_rolling[vv].attrs[a]}"
+            update_attr(
+                ds_rolling[vv], a, _("{window}-year mean of {attr}"), window=window
+            )
 
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {window}-year rolling average (non-centered) "
@@ -299,10 +302,14 @@ def compute_deltas(
         deltas[v_name].attrs["delta_reference"] = reference_horizon
 
         for a in ["description", "long_name"]:
-            if hasattr(other_hz[vv], a):
-                deltas[v_name].attrs[
-                    a
-                ] = f"{other_hz[vv].attrs[a]}: {_kind} delta compared to {reference_horizon.replace('-', '_')}."
+            update_attr(
+                deltas[v_name],
+                a,
+                _("{attr1}: {kind} delta compared to {refhoriz}."),
+                others=[other_hz[vv]],
+                refhoriz=reference_horizon.replace("-", "_"),
+                kind=_kind,
+            )
 
         new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {_kind} delta vs. {reference_horizon} - xarray v{xr.__version__}"
         history = (

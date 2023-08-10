@@ -1,8 +1,11 @@
 """Common utilities to be used in many places."""
+import fnmatch
+import gettext
 import json
 import logging
 import os
 import re
+from collections import defaultdict
 from collections.abc import Sequence
 from datetime import datetime
 from io import StringIO
@@ -21,7 +24,7 @@ from xclim.core.calendar import convert_calendar, get_calendar, parse_offset
 from xclim.core.utils import uses_dask
 from xclim.testing.utils import show_versions as _show_versions
 
-from .config import parse_config
+from .config import CONFIG, parse_config
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +36,40 @@ __all__ = [
     "maybe_unstack",
     "minimum_calendar",
     "natural_sort",
-    "publish_release_notes",
+    "publish_release_notes",  #
     "stack_drop_nans",
     "standardize_periods",
     "translate_time_chunk",
     "unstack_fill_nan",
     "unstack_dates",
 ]
+
+print(Path(__file__).parent / "data")
+TRANSLATOR = defaultdict(lambda: lambda s: s)
+for loc in (Path(__file__).parent / "data").iterdir():
+    if loc.is_dir() and len(loc.name) == 1:
+        TRANSLATOR[loc.name] = gettext.translation(
+            "xscen", localedir=loc.parent, languages=[loc.name]
+        ).gettext
+
+
+def update_attr(ds, attr, new, others=None, **fmt):
+    # EN, default
+    others = others or []
+    if attr in ds.attrs:
+        others = {f"attr{i}": dso.attrs[attr] for i, dso in enumerate(others, 1)}
+        ds.attrs[attr] = new.format(attr=ds.attrs[attr], **others, **fmt)
+    # All existing locales
+    for key in fnmatch.filter(ds.attrs.keys(), f"{attr}_??"):
+        loc = key[-2:]
+        others = {f"attr{i}": dso.attrs.get(key, "") for i, dso in enumerate(others, 1)}
+        ds.attrs[key] = TRANSLATOR[loc](new).format(attr=ds.attrs[key], **fmt)
+
+
+def add_attr(ds, attr, new, **fmt):
+    ds.attrs[attr] = new.format(**fmt)
+    for loc in CONFIG.get("locales", []):
+        ds.attrs[f"{attr}_{loc}"] = TRANSLATOR[loc](new).format(**fmt)
 
 
 def date_parser(
