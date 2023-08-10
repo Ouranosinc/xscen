@@ -4,7 +4,7 @@ import logging
 import warnings
 from collections.abc import Sequence
 from copy import deepcopy
-from pathlib import Path, PosixPath
+from pathlib import Path
 from types import ModuleType
 from typing import Tuple, Union
 
@@ -20,6 +20,7 @@ from shapely.geometry import Polygon
 from xclim.core.indicator import Indicator
 
 from .config import parse_config
+from .extract import subset_warming_level
 from .indicators import compute_indicators
 from .spatial import subset
 from .utils import standardize_periods, unstack_dates, update_attr
@@ -77,7 +78,7 @@ def climatological_mean(
         Returns a Dataset of the climatological mean
 
     """
-    if xr.infer_freq(ds.time) == "D":
+    if len(ds.time) > 3 and xr.infer_freq(ds.time) == "D":
         raise NotImplementedError(
             "xs.climatological_mean does not currently support daily data."
         )
@@ -112,7 +113,10 @@ def climatological_mean(
     if (
         any(
             x in freq_across_year
-            for x in [ds.attrs.get("cat:xrfreq"), xr.infer_freq(ds.time)]
+            for x in [
+                ds.attrs.get("cat:xrfreq"),
+                (xr.infer_freq(ds.time) if len(ds.time) > 3 else None),
+            ]
         )
         and min_periods is None
     ):
@@ -203,7 +207,7 @@ def compute_deltas(
     *,
     kind: Union[str, dict] = "+",
     rename_variables: bool = True,
-    to_level: str = "delta_climatology",
+    to_level: str = "deltas",
 ) -> xr.Dataset:
     """Compute deltas in comparison to a reference time period, respecting the temporal resolution of ds.
 
@@ -228,6 +232,10 @@ def compute_deltas(
         Returns a Dataset with the requested deltas.
     """
     if isinstance(reference_horizon, str):
+        if reference_horizon not in ds.horizon:
+            raise ValueError(
+                f"The reference horizon {reference_horizon} is not in the dataset."
+            )
         # Separate the reference from the other horizons
         if xc.core.utils.uses_dask(ds["horizon"]):
             ds["horizon"].load()
@@ -295,7 +303,9 @@ def compute_deltas(
                 deltas[v_name] = 100 * (other_hz[vv] - ref[vv]) / ref[vv]
                 deltas[v_name].attrs["units"] = "%"
             else:
-                raise ValueError("Delta 'kind' not understood.")
+                raise ValueError(
+                    f"Delta 'kind' not understood. Should be '+', '/' or '%', received {kind}."
+                )
 
         # modify attrs and history
         deltas[v_name].attrs["delta_kind"] = _kind
@@ -307,7 +317,7 @@ def compute_deltas(
                 a,
                 _("{attr1}: {kind} delta compared to {refhoriz}."),
                 others=[other_hz[vv]],
-                refhoriz=reference_horizon.replace("-", "_"),
+                refhoriz=reference_horizon,
                 kind=_kind,
             )
 
@@ -343,7 +353,11 @@ def compute_deltas(
         else:
             raise ValueError("The type of 'time' could not be understood.")
 
-        deltas = deltas.assign(time=time_coord).transpose("time", ...)
+        deltas = (
+            deltas.drop_vars({"year", "day", "month", "time"})
+            .assign(time=time_coord)
+            .transpose("time", ...)
+        )
         deltas = deltas.reindex_like(ds)
 
     if to_level is not None:
@@ -645,7 +659,7 @@ def spatial_mean(
 
     else:
         raise ValueError(
-            "Subsetting method should be ['cos-lat', 'interp_coord', 'xesmf']"
+            "Subsetting method should be ['cos-lat', 'interp_centroid', 'xesmf']"
         )
 
     # History
@@ -669,10 +683,13 @@ def spatial_mean(
 def produce_horizon(
     ds: xr.Dataset,
     indicators: Union[
-        str, PosixPath, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
+        str, Path, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
     ],
+    *,
+    periods: list = None,
+    warminglevels: dict = None,
+    to_level: str = "horizons",
     period: list = None,
-    to_level: str = "climatology{period0}-{period1}",
 ):
     """Compute indicators, then the climatological mean, and finally unstack dates in order to have a single dataset with all indicators of different frequencies.
 
@@ -683,16 +700,20 @@ def produce_horizon(
     Parameters
     ----------
     ds: xr.Dataset
-      Input dataset with a time dimension.
-    indicators:  Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
-      Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
-    period: list
-      [start_year, end_year] of the period to be evaluated.
-      If None, the whole time coordinate is used.
+        Input dataset with a time dimension.
+    indicators:  Union[str, Path, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+        Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
+    periods: list
+        Either [start, end] or list of [start_year, end_year] for the period(s) to be evaluated.
+        If both periods and warminglevels are None, the full time series will be used.
+    warminglevels: dict
+        Dictionary of arguments to pass to `py:func:xscen.subset_warming_level`.
+        If 'wl' is a list, the function will be called for each value and produce multiple horizons.
+        If both periods and warminglevels are None, the full time series will be used.
     to_level:
-      The processing level to assign to the output.
-      Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
-      the first value of the `warminglevel` coord of ds if it exists, 'period[0]' and 'period[1]'.
+        The processing level to assign to the output.
+        If there is only one horizon, you can use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
+        that information in the processing level.
 
     Returns
     -------
@@ -700,84 +721,153 @@ def produce_horizon(
         Horizon dataset.
     """
     if "warminglevel" in ds and len(ds.warminglevel) != 1:
-        warnings.warn(
-            "Input dataset should only have `warminglevel` coordinate of length 1."
+        raise ValueError(
+            "Input dataset should only have `warminglevel` dimension of length 1. If you want to use produce_horizon for multiple warming levels, "
+            "extract the full time series and use the `warminglevels` argument instead."
         )
     if period is not None:
-        period = standardize_periods(period, multiple=False)
-        ds = ds.sel(time=slice(period[0], period[1]))
-        window = int(period[1]) - int(period[0]) + 1
-        if to_level:
-            to_level = to_level.format(period0=period[0], period1=period[1])
-    else:
-        window = int(ds.time.dt.year[-1] - ds.time.dt.year[0]) + 1
-        if to_level and "{wl}" not in to_level:
-            to_level = to_level.format(
-                period0=ds.time.dt.year[0].values, period1=ds.time.dt.year[-1].values
-            )
+        warnings.warn(
+            "The 'period' argument is deprecated and will be removed in a future version. Use 'periods' instead.",
+            category=FutureWarning,
+        )
+        periods = [standardize_periods(period, multiple=False)]
 
-    # compute indicators
-    ind_dict = compute_indicators(ds=ds, indicators=indicators)
-
-    # Compute the window-year mean
-    ds_merge = xr.Dataset()
-    for freq, ds_ind in ind_dict.items():
-        if freq != "fx":
-            ds_mean = climatological_mean(
-                ds_ind,
-                window=window,
-            )
+    all_periods = []
+    if periods is not None:
+        all_periods.extend(periods)
+    if warminglevels is not None:
+        if isinstance(warminglevels["wl"], (int, float)):
+            all_periods.append(warminglevels)
+        elif isinstance(warminglevels["wl"], list):
+            template = deepcopy(warminglevels)
+            for wl in warminglevels["wl"]:
+                all_periods.append({**template, "wl": wl})
         else:
-            ds_mean = ds_ind
+            raise ValueError(
+                f"Could not understand the format of warminglevels['wl']: {warminglevels['wl']}"
+            )
+    if len(all_periods) == 0:
+        all_periods = standardize_periods(
+            [[int(ds.time.dt.year[0]), int(ds.time.dt.year[-1])]]
+        )
 
-        if "AS" in freq:
-            ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
-        elif freq != "fx":  # if not annual or fixed, need to stack dates
-            # name new_dim
-            if "QS" in freq:
-                new_dim = "season"
-            elif "MS" in freq:
-                new_dim = "month"
+    out = []
+    for period in all_periods:
+        if isinstance(period, list):
+            if ds.time.dt.year[0] <= int(period[0]) and ds.time.dt.year[-1] >= int(
+                period[1]
+            ):
+                ds_sub = ds.sel(time=slice(period[0], period[1]))
             else:
-                new_dim = "period"
                 warnings.warn(
-                    f"Frequency {freq} is not supported. Setting name of the new dimension to 'period'."
+                    f"The requested period {period} is not fully covered by the input dataset. The requested period will be skipped."
                 )
-            ds_mean = unstack_dates(
-                ds_mean,
-                new_dim=new_dim,
-            )
-            horizon = ds_mean.horizon.values[0, 0]
-            ds_mean = (
-                ds_mean.drop_vars("horizon")
-                .assign_coords(horizon=("time", [horizon]))
-                .swap_dims({"time": "horizon"})
-                .drop_vars("time")
-            )
-
+                ds_sub = None
         else:
-            ds_mean = ds_mean.expand_dims(
-                dim={"horizon": [f"{ds.time.dt.year[0]}-{ds.time.dt.year[-1]}"]}
-            )
-            ds_mean["horizon"] = ds_mean["horizon"].astype(str)
+            ds_sub = subset_warming_level(ds, **period)
 
-        if "warminglevel" in ds_mean.dims:
-            wl = ds_mean["warminglevel"].values
-            wl_attrs = ds_mean["warminglevel"].attrs
-            ds_mean = ds_mean.squeeze(dim="warminglevel", drop=True)
-            ds_mean["horizon"] = wl
-            ds_mean["horizon"].attrs.update(wl_attrs)
+        if ds_sub is not None:
+            # compute indicators
+            ind_dict = compute_indicators(ds=ds_sub, indicators=indicators)
 
-            if to_level:
-                to_level = to_level.format(wl=wl[0])
+            # Compute the window-year mean
+            ds_merge = xr.Dataset()
+            for freq, ds_ind in ind_dict.items():
+                if freq != "fx":
+                    ds_mean = climatological_mean(
+                        ds_ind,
+                    )
+                else:
+                    ds_mean = ds_ind
 
-        # put all indicators in one dataset
-        for var in ds_mean.data_vars:
-            ds_merge[var] = ds_mean[var]
-        ds_merge.attrs.update(ds_mean.attrs)
+                if "AS" in freq:
+                    ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
+                elif freq != "fx":  # if not annual or fixed, need to stack dates
+                    # name new_dim
+                    if "QS" in freq:
+                        new_dim = "season"
+                    elif "MS" in freq:
+                        new_dim = "month"
+                    else:
+                        raise ValueError(
+                            f"Frequency {freq} is not supported or recognized. Please use annual (AS), seasonal (QS), monthly (MS), or fixed (fx) frequency."
+                        )
+                    ds_mean = unstack_dates(
+                        ds_mean,
+                        new_dim=new_dim,
+                    )
+                    horizon = ds_mean.horizon.values[0, 0]
+                    ds_mean = (
+                        ds_mean.drop_vars("horizon")
+                        .assign_coords(horizon=("time", [horizon]))
+                        .swap_dims({"time": "horizon"})
+                        .drop_vars("time")
+                    )
 
-    ds_merge.attrs["cat:xrfreq"] = "fx"
-    ds_merge.attrs["cat:frequency"] = "fx"
-    if to_level:
-        ds_merge.attrs["cat:processing_level"] = to_level
-    return ds_merge
+                else:
+                    ds_mean = ds_mean.expand_dims(
+                        dim={
+                            "horizon": [
+                                f"{ds.time.dt.year[0].item()}-{ds.time.dt.year[-1].item()}"
+                            ]
+                        }
+                    )
+                    ds_mean["horizon"] = ds_mean["horizon"].astype(str)
+
+                if "warminglevel" in ds_mean.dims:
+                    wl = ds_mean["warminglevel"].values
+                    wl_attrs = ds_mean["warminglevel"].attrs
+                    ds_mean = ds_mean.squeeze(dim="warminglevel", drop=True)
+                    ds_mean["horizon"] = wl
+                    ds_mean["horizon"].attrs.update(wl_attrs)
+
+                # put all indicators in one dataset
+                for var in ds_mean.data_vars:
+                    ds_merge[var] = ds_mean[var]
+                ds_merge.attrs.update(ds_mean.attrs)
+
+            out.append(ds_merge)
+
+    # If automatic attributes are not the same for all indicators, warn the user.
+    if len(out) > 0:
+        for v in out[0].data_vars:
+            if not all(
+                [
+                    all(
+                        [
+                            out[0][v].attrs[attr] == out[i][v].attrs[attr]
+                            for i in range(1, len(out))
+                        ]
+                    )
+                    for attr in ["long_name", "description"]
+                ]
+            ):
+                warnings.warn(
+                    f"The attributes for variable {v} are not the same for all horizons, probably because the periods were not of the same length. "
+                    f"Attributes will be kept from the first horizon, but this might not be the most appropriate."
+                )
+
+        out = xr.concat(out, dim="horizon")
+
+        out.attrs["cat:xrfreq"] = "fx"
+        out.attrs["cat:frequency"] = "fx"
+        if to_level:
+            if len(all_periods) == 1:
+                if (isinstance(all_periods[0], dict)) or (
+                    "warminglevel" in ds.dims and warminglevels is None
+                ):
+                    to_level = to_level.format(
+                        wl=ds_sub.warminglevel.values[0]
+                        if isinstance(all_periods[0], dict)
+                        else ds.warminglevel.values[0]
+                    )
+                else:
+                    to_level = to_level.format(
+                        period0=all_periods[0][0], period1=all_periods[0][1]
+                    )
+            out.attrs["cat:processing_level"] = to_level
+
+        return out
+
+    else:
+        raise ValueError("No horizon could be computed. Check your inputs.")

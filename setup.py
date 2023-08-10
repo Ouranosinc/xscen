@@ -1,9 +1,5 @@
 #!/usr/bin/env python
-
 """The setup script."""
-
-import re
-
 from setuptools import find_packages, setup
 
 with open("README.rst") as readme_file:
@@ -25,7 +21,7 @@ requirements = [
     "cartopy",
     "cftime",
     "cf_xarray>=0.7.6",
-    "clisops>=0.9.5",
+    "clisops>=0.10",
     "dask",
     "flox",
     "fsspec",
@@ -36,15 +32,16 @@ requirements = [
     "matplotlib",
     "netCDF4",
     "numpy",
-    "pandas!=1.5.3",
+    "pandas>=2",
     "parse",
     "pyarrow",  # Used when opening catalogs.
+    "pydantic<2.0",  # See: https://github.com/intake/intake-esm/issues/617
     "pygeos",
     "pyyaml",
     "rechunker",
     "shapely",
     "xarray",
-    "xclim>=0.37",
+    "xclim>=0.43",
     "xesmf>=0.7",
     "zarr",
 ]
@@ -62,7 +59,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
-        # "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.11",
         "Topic :: Scientific/Engineering :: Atmospheric Science",
     ],
     description="A climate change scenario-building analysis framework, built with xclim/xarray.",
@@ -81,6 +78,6 @@ setup(
     test_suite="tests",
     tests_require=["pytest", "pytest-cov"],
     url="https://github.com/Ouranosinc/xscen",
-    version="0.6.11-beta",
+    version="0.6.18-beta",
     zip_safe=False,
 )

@@ -29,6 +29,7 @@ __all__ = [
     "save_to_netcdf",
     "save_to_zarr",
     "subset_maxsize",
+    "rechunk_for_saving",
 ]
 
 
@@ -291,6 +292,8 @@ def save_to_netcdf(
         Name of the NetCDF file to be saved.
     rechunk : dict, optional
         This is a mapping from dimension name to new chunks (in any format understood by dask).
+        Spatial dimensions can be generalized as 'X' and 'Y', which will be mapped to the actual grid type's
+        dimension names.
         Rechunking is only done on *data* variables sharing dimensions with this argument.
     netcdf_kwargs : dict, optional
         Additional arguments to send to_netcdf()
@@ -304,22 +307,7 @@ def save_to_netcdf(
     xarray.Dataset.to_netcdf
     """
     if rechunk:
-        for rechunk_var in ds.data_vars:
-            # Support for chunks varying per variable
-            if rechunk_var in rechunk:
-                rechunk_dims = rechunk[rechunk_var]
-            else:
-                rechunk_dims = rechunk
-
-            ds[rechunk_var] = ds[rechunk_var].chunk(
-                {
-                    d: chnks
-                    for d, chnks in rechunk_dims.items()
-                    if d in ds[rechunk_var].dims
-                }
-            )
-            ds[rechunk_var].encoding.pop("chunksizes", None)
-            ds[rechunk_var].encoding.pop("chunks", None)
+        ds = rechunk_for_saving(ds, rechunk)
 
     path = Path(filename)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -371,6 +359,8 @@ def save_to_zarr(
       Name of the Zarr file to be saved.
     rechunk : dict, optional
       This is a mapping from dimension name to new chunks (in any format understood by dask).
+      Spatial dimensions can be generalized as 'X' and 'Y' which will be mapped to the actual grid type's
+      dimension names.
       Rechunking is only done on *data* variables sharing dimensions with this argument.
     zarr_kwargs : dict, optional
       Additional arguments to send to_zarr()
@@ -404,22 +394,7 @@ def save_to_zarr(
             ds[v].encoding.clear()
 
     if rechunk:
-        for rechunk_var in ds.data_vars:
-            # Support for chunks varying per variable
-            if rechunk_var in rechunk:
-                rechunk_dims = rechunk[rechunk_var]
-            else:
-                rechunk_dims = rechunk
-
-            ds[rechunk_var] = ds[rechunk_var].chunk(
-                {
-                    d: chnks
-                    for d, chnks in rechunk_dims.items()
-                    if d in ds[rechunk_var].dims
-                }
-            )
-            ds[rechunk_var].encoding.pop("chunksizes", None)
-            ds[rechunk_var].encoding.pop("chunks", None)
+        ds = rechunk_for_saving(ds, rechunk)
 
     path = Path(filename)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -516,6 +491,44 @@ def save_to_zarr(
                 for name in ds.data_vars:
                     sh.rmtree(path / name)
             raise
+
+
+def rechunk_for_saving(ds, rechunk):
+    """Rechunk before saving to .zarr or .nc, generalized as Y/X for different axes lat/lon, rlat/rlon.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        The xr.Dataset to be rechunked.
+    rechunk : dict
+        A dictionary with the dimension names of ds and the new chunk size. Spatial dimensions
+        can be provided as X/Y.
+
+    Returns
+    -------
+    xr.Dataset
+        The dataset with new chunking.
+    """
+    for rechunk_var in ds.data_vars:
+        # Support for chunks varying per variable
+        if rechunk_var in rechunk:
+            rechunk_dims = rechunk[rechunk_var].copy()
+        else:
+            rechunk_dims = rechunk.copy()
+
+        # get actual axes labels
+        if "X" in rechunk_dims and "X" not in ds.dims:
+            rechunk_dims[ds.cf.axes["X"][0]] = rechunk_dims.pop("X")
+        if "Y" in rechunk_dims and "Y" not in ds.dims:
+            rechunk_dims[ds.cf.axes["Y"][0]] = rechunk_dims.pop("Y")
+
+        ds[rechunk_var] = ds[rechunk_var].chunk(
+            {d: chnks for d, chnks in rechunk_dims.items() if d in ds[rechunk_var].dims}
+        )
+        ds[rechunk_var].encoding.pop("chunksizes", None)
+        ds[rechunk_var].encoding.pop("chunks", None)
+
+    return ds
 
 
 @parse_config
