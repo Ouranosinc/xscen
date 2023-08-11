@@ -129,10 +129,13 @@ def date_parser(
         date = pd.Timestamp(date)
 
     if isinstance(end_of_period, str) or (end_of_period is True and fmt):
+        quasiday = (pd.Timedelta(1, "d") - pd.Timedelta(1, "s")).as_unit(date.unit)
         if end_of_period == "Y" or "m" not in fmt:
-            date = pd.tseries.frequencies.to_offset("A-DEC").rollforward(date)
+            date = (
+                pd.tseries.frequencies.to_offset("A-DEC").rollforward(date) + quasiday
+            )
         elif end_of_period == "M" or "d" not in fmt:
-            date = pd.tseries.frequencies.to_offset("M").rollforward(date)
+            date = pd.tseries.frequencies.to_offset("M").rollforward(date) + quasiday
         # TODO: Implement subdaily ?
 
     if out_dtype == "str":
