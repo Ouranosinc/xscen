@@ -18,11 +18,11 @@
 #     filename: # The file name schema, a list of facet names. If a facet is empty, it will be skipped. Elements will be separated by "_".
 #               # The special "DATES" facet will be replaced by the most concise way found to define the temporal range covered by the file.
 ---
-### Raw data
+### Original / raw data
 #
-# These schemas are meant for raw-like data, usually hourly or daily, used as input for scenario projects.
-# It includes bias-adjusted datasets.
-raw-non-sims:
+# These schemas are meant for primary data, usually hourly or daily, used as input for scenario projects.
+# It usually includes datasets with processing_level "raw" or "biasadjusted
+original-non-sims:
   with:
     - facet: type
       value: [station-obs, reconstruction, forecast]
@@ -37,7 +37,7 @@ raw-non-sims:
     - frequency
     - variable
   filename: [ variable, frequency, domain, institution, source, version, member, DATES ]
-raw-sims-raw:
+original-sims-raw:
   with:
     - facet: type
       value: simulation
@@ -57,7 +57,7 @@ raw-sims-raw:
     - frequency
     - variable
   filename: [ variable, frequency, bias_adjust_project, version, mip_era, activity, domain, institution, source, driving_model, experiment, member, DATES ]
-raw-sims-ba:
+original-sims-ba:
   with:
     - facet: type
       value: simulation
@@ -78,7 +78,7 @@ raw-sims-ba:
     - frequency
     - variable
   filename: [ variable, frequency, bias_adjust_project, version, mip_era, activity, domain, institution, source, driving_model, experiment, member, DATES ]
-raw-hydro-reconstruction:
+original-hydro-reconstruction:
   with:
     - facet: type
       value: reconstruction-hydro
@@ -88,15 +88,15 @@ raw-hydro-reconstruction:
     - type
     - domain
     - hydrology_project
-    - hydrology_institution
     - hydrology_source
+    - (hydrology_member)
     - institution
     - [source, version]
     - (member)
     - frequency
     - variable
   filename: [ variable, frequency, domain, hydrology_project, hydrology_institution, hydrology_source, institution, source, version, member, DATES ]
-raw-hydro-sims-raw:
+original-hydro-sims-raw:
   with:
     - facet: type
       value: simulation-hydro
@@ -105,8 +105,8 @@ raw-hydro-sims-raw:
   folders:
     - type
     - hydrology_project
-    - hydrology_institution
     - hydrology_source
+    - (hydrology_member)
     - processing_level
     - mip_era
     - activity
@@ -119,7 +119,7 @@ raw-hydro-sims-raw:
     - frequency
     - variable
   filename: [ variable, frequency, hydrology_project, hydrology_institution, hydrology_source,  bias_adjust_project, version, mip_era, activity, domain, institution, source, driving_model, experiment, member, DATES ]
-raw-hydro-sims-ba:
+original-hydro-sims-ba:
   with:
     - facet: type
       value: simulation-hydro
@@ -128,8 +128,8 @@ raw-hydro-sims-ba:
   folders:
     - type
     - hydrology_project
-    - hydrology_institution
     - hydrology_source
+    - (hydrology_member)
     - processing_level
     - [bias_adjust_project, version]
     - mip_era
@@ -213,8 +213,8 @@ derived-hydro-sims-ba:
   folders:
     - type
     - hydrology_project
-    - hydrology_institution
     - hydrology_source
+    - (hydrology_member)
     - [bias_adjust_project, version]
     - mip_era
     - activity
@@ -235,8 +235,8 @@ derived-hydro-sims-raw:
   folders:
     - type
     - hydrology_project
-    - hydrology_institution
     - hydrology_source
+    - (hydrology_member)
     - text: raw
     - mip_era
     - activity
@@ -257,8 +257,8 @@ derived-hydro-reconstruction:
   folders:
     - type
     - hydrology_project
-    - hydrology_institution
     - hydrology_source
+    - (hydrology_member)
     - institution
     - [source, version]
     - (member)
