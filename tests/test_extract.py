@@ -19,22 +19,17 @@ class TestSearchDataCatalogs:
             ({"tas": "D"}, None),
             ({"sftlf": "fx"}, "other"),
             ({"tas": "D", "sftlf": "fx"}, "exclusion"),
-            ({"tas": "D", "sftlf": "fx"}, "other2"),
         ],
     )
     def test_basic(self, variables_and_freqs, other_arg):
-        if "other" in other_arg:
-            other_arg = "other"
-            # fdsfs TODO find nothing
-        else:
-            out = xs.search_data_catalogs(
-                data_catalogs=self.small_cat,
-                variables_and_freqs=variables_and_freqs,
-                other_search_criteria={"experiment": ["ssp370"]}
-                if other_arg == "other"
-                else None,
-                exclusions={"member": "r2.*"} if other_arg == "exclusion" else None,
-            )
+        out = xs.search_data_catalogs(
+            data_catalogs=self.small_cat,
+            variables_and_freqs=variables_and_freqs,
+            other_search_criteria={"experiment": ["ssp370"]}
+            if other_arg == "other"
+            else None,
+            exclusions={"member": "r2.*"} if other_arg == "exclusion" else None,
+        )
         assert len(out) == 5 if other_arg is None else 1 if other_arg == "other" else 4
 
     @pytest.mark.parametrize(
@@ -177,13 +172,45 @@ class TestSearchDataCatalogs:
             assert "evspsblpot" not in out[list(out.keys())[0]].unique("variable")
 
     def test_no_match(self):
-        pass
+        out = xs.search_data_catalogs(
+            data_catalogs=self.small_cat,
+            variables_and_freqs={"tas": "YS"},
+            allow_resampling=False,
+        )
+        assert isinstance(out, dict)
+        assert len(out) == 0
 
     def test_input_types(self):
         pass
 
     def test_match_histfut(self):
-        pass
+        out = xs.search_data_catalogs(
+            data_catalogs=self.big_cat,
+            variables_and_freqs={"tas": "D"},
+            other_search_criteria={"experiment": "ssp585", "source": "CanESM5"},
+            restrict_members={"ordered": 1},
+            match_hist_and_fut=True,
+        )
+        assert (
+            str(
+                sorted(
+                    out["ScenarioMIP_CCCma_CanESM5_ssp585_r1i1p1f1_gn"].unique(
+                        "date_start"
+                    )
+                )[0]
+            )
+            == "1985-01-01 00:00:00"
+        )
+        assert (
+            str(
+                sorted(
+                    out["ScenarioMIP_CCCma_CanESM5_ssp585_r1i1p1f1_gn"].unique(
+                        "date_start"
+                    )
+                )[1]
+            )
+            == "2015-01-01 00:00:00"
+        )
 
     def test_fx(self):
         pass
