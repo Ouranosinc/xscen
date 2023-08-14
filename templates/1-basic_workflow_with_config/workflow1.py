@@ -69,7 +69,7 @@ if __name__ == "__main__":
             # Iterate over the datasets that matched the search
             # 'ds_id' is the ID of the dataset, 'dc' is the sub-catalog for this dataset
             for ds_id, dc in cat.items():
-                # These are some relevant attributes that will be added to the dataset after extraction.
+                # These are some relevant attributes that are used to check if the task was done already and to write the output path.
                 cur = {
                     "id": ds_id,
                     "xrfreq": "D",
