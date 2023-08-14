@@ -124,7 +124,7 @@ raw-hydro-sims-ba:
     - facet: type
       value: simulation-hydro
     - facet: processing_level
-      value: [ rbiasadjusted ]
+      value: [ biasadjusted ]
   folders:
     - type
     - hydrology_project
