@@ -57,7 +57,7 @@ import xclim as xc
 import yaml
 
 logger = logging.getLogger(__name__)
-EXTERNAL_MODULES = ["logging", "xarray", "xclim", "warnings"]
+EXTERNAL_MODULES = ["locales", "logging", "xarray", "xclim", "warnings"]
 
 __all__ = [
     "CONFIG",
@@ -134,6 +134,7 @@ def load_config(*elements, reset=False, verbose=False):
     Once all elements are loaded, special sections are dispatched to their module, but only if
     the section was changed by the loaded elements. These special sections are:
 
+    * `locales` : The locales to use when writing metadata in xscen, xclim and figanos. This section must be a list of 2-char strings.
     * `logging` : Everything passed to :py:func:`logging.config.dictConfig`.
     * `xarray` : Passed to :py:func:`xarray.set_options`.
     * `xclim` : Passed to :py:func:`xclim.set_options`.
@@ -225,7 +226,15 @@ def parse_config(func_or_cls):  # noqa: D103
 
 
 def _setup_external(module, config):
-    if module == "logging":
+    if module == "locales":
+        if not isinstance(config, list) or not all(
+            [(isinstance(loc, str) and (len(loc) == 2)) for loc in config]
+        ):
+            raise ValueError(
+                'Config values for top-level entry "locales" must be a list of 2-char strings.'
+            )
+        xc.set_options(metadata_locales=config)
+    elif module == "logging":
         config.update(version=1)
         logging.config.dictConfig(config)
     elif module == "xclim":

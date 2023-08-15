@@ -4,7 +4,7 @@ import warnings
 from collections.abc import Sequence
 from pathlib import Path, PosixPath
 from types import ModuleType
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -235,7 +235,7 @@ def properties_and_measures(
             update_attr(
                 meas[vname],
                 "long_name",
-                _("{attr1} {attr}"),
+                "{attr1} {attr}",
                 others=[prop[vname]],
             )
 

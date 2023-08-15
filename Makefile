@@ -1,4 +1,4 @@
-.PHONY: clean clean-build clean-pyc clean-test docs help install lint lint/flake8 lint/black
+.PHONY: clean clean-build clean-pyc clean-test docs help install lint lint/flake8 lint/black test test-all translate dist servedocs
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -34,6 +34,7 @@ clean-build: ## remove build artifacts
 	rm -fr .eggs/
 	find . -name '*.egg-info' -exec rm -fr {} +
 	find . -name '*.egg' -exec rm -f {} +
+	find . -name '*.pot' -exec rm -f {} +
 
 clean-docs: ## remove documentation artifacts
 	rm -fr docs/notebooks/_data/
@@ -82,10 +83,20 @@ endif
 servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
- dist: clean ## builds source and wheel package
+dist: clean ## builds source and wheel package
 	python -m build --sdist
 	python -m build --wheel
 	ls -l dist
 
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install
+
+develop: compile_po
+	pip install -e .
+
+translate:
+	python setup.py extract_messages
+	python setup.py update_catalog
+
+compile_po:
+	python setup.py compile_catalog
