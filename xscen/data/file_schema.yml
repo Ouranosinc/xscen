@@ -95,7 +95,7 @@ original-hydro-reconstruction:
     - (member)
     - frequency
     - variable
-  filename: [ variable, frequency, domain, hydrology_project, hydrology_institution, hydrology_source, institution, source, version, member, DATES ]
+  filename: [ variable, frequency, domain, hydrology_project, hydrology_source, hydrology_member, institution, source, version, member, DATES ]
 original-hydro-sims-raw:
   with:
     - facet: type
@@ -118,7 +118,7 @@ original-hydro-sims-raw:
     - member
     - frequency
     - variable
-  filename: [ variable, frequency, hydrology_project, hydrology_institution, hydrology_source,  bias_adjust_project, version, mip_era, activity, domain, institution, source, driving_model, experiment, member, DATES ]
+  filename: [ variable, frequency, hydrology_project, hydrology_source, hydrology_member, bias_adjust_project, version, mip_era, activity, domain, institution, source, driving_model, experiment, member, DATES ]
 original-hydro-sims-ba:
   with:
     - facet: type
@@ -142,7 +142,7 @@ original-hydro-sims-ba:
     - member
     - frequency
     - variable
-  filename: [ variable, frequency, hydrology_project, hydrology_institution, hydrology_source,  bias_adjust_project, version, mip_era, activity, domain, institution, source, driving_model, experiment, member, DATES ]
+  filename: [ variable, frequency, hydrology_project, hydrology_source, hydrology_member, bias_adjust_project, version, mip_era, activity, domain, institution, source, driving_model, experiment, member, DATES ]
 
 ### Derived data
 #
@@ -227,7 +227,7 @@ derived-hydro-sims-ba:
     - processing_level
     - xrfreq
     - variable
-  filename: [ variable, xrfreq, hydrology_project, hydrology_institution, hydrology_source, bias_adjust_project, version, mip_era, activity, institution, source, driving_model, experiment, member, domain, processing_level, DATES ]
+  filename: [ variable, xrfreq, hydrology_project, hydrology_source, hydrology_member, bias_adjust_project, version, mip_era, activity, institution, source, driving_model, experiment, member, domain, processing_level, DATES ]
 derived-hydro-sims-raw:
   with:
   - facet: type
@@ -249,7 +249,7 @@ derived-hydro-sims-raw:
     - processing_level
     - xrfreq
     - variable
-  filename: [ variable, xrfreq, hydrology_project, hydrology_institution, hydrology_source, bias_adjust_project, version, mip_era, activity, institution, source, driving_model, experiment, member, domain, processing_level, DATES ]
+  filename: [ variable, xrfreq, hydrology_project, hydrology_source, hydrology_member, bias_adjust_project, version, mip_era, activity, institution, source, driving_model, experiment, member, domain, processing_level, DATES ]
 derived-hydro-reconstruction:
   with:
     - facet: type
