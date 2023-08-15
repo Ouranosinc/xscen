@@ -266,4 +266,4 @@ derived-hydro-reconstruction:
     - processing_level
     - xrfreq
     - variable
-  filename: [ variable, xrfreq, hydrology_project, hydrology_institution, hydrology_source, institution, source, version, member, domain, processing_level, DATES ]
+  filename: [ variable, xrfreq, hydrology_project, hydrology_source, hydrology_member, institution, source, version, member, domain, processing_level, DATES ]
