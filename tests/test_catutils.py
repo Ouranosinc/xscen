@@ -250,6 +250,6 @@ def test_build_path_multivar(samplecat):
     info["variable"] = ("tas", "tasmin")
     with pytest.raises(
         ValueError,
-        match="Selected schema raw-sims is meant to be used with single-variable datasets.",
+        match="Selected schema original-sims-raw is meant to be used with single-variable datasets.",
     ):
         cu.build_path(info)
