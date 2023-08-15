@@ -23,6 +23,10 @@ class TestScripting:
         "cat:source": "CanESM5",
         "cat:experiment": "ssp585",
         "cat:member": "r1i1p1f1",
+        "cat:domain": "global",
+        "cat:mip_era": "CMIP6",
+        "cat:institution": "CCCma",
+        "cat:activity": "ScenarioMIP",
     }
 
     def test_save_and_update(self):
@@ -50,7 +54,7 @@ class TestScripting:
         assert (
             cat.df.path[1]
             == root
-            + "/simulation/raw/CanESM5/ssp585/r1i1p1f1/yr/tas/tas_yr_CanESM5_ssp585_r1i1p1f1_2000-2049.nc"
+            + "/simulation/raw/CMIP6/ScenarioMIP/global/CCCma/CanESM5/ssp585/r1i1p1f1/yr/tas/tas_yr_CMIP6_ScenarioMIP_global_CCCma_CanESM5_ssp585_r1i1p1f1_2000-2049.nc"
         )
         assert cat.df.source[1] == "CanESM5"
 
