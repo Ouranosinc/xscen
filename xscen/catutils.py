@@ -885,7 +885,7 @@ def _schema_dates(facets, optional=False):
         raise ValueError(
             "Facets date_start, date_end and xrfreq are needed, but at least one is missing or None-like in the data."
         )
-    
+
     start = date_parser(facets["date_start"])
     end = date_parser(facets["date_end"])
     freq = pd.Timedelta(CV.xrfreq_to_timedelta(facets["xrfreq"]))
