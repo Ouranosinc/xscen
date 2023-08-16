@@ -28,7 +28,7 @@ __all__ = [
 
 
 def health_checks(
-    ds: xr.Dataset | xr.DataArray,
+    ds: Union[xr.Dataset, xr.DataArray],
     *,
     structure: dict = None,
     calendar: str = None,
