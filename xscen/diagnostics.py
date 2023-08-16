@@ -218,8 +218,9 @@ def health_checks(
                     # cfchecks only warns, so we need to catch the warning and raise it as an error
                     with warnings.catch_warnings(record=True) as w:
                         getattr(xc.core.cfchecks, check)(**cfchecks[v][check])
-                        if len(w) > 0:
-                            raise ValueError(w[0].message)
+                    if len(w) > 0:
+                        raise w[0].message
+
                 else:
                     getattr(xc.core.cfchecks, check)(**cfchecks[v][check])
 

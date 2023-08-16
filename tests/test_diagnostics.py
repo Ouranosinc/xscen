@@ -8,7 +8,6 @@ import xscen as xs
 
 
 class TestHealthChecks:
-    @pytest.mark.parametrize("good", [True, False])
     def test_structure(self, datablock_3d):
         ds = datablock_3d(
             np.random.rand(5, 5, 5), "tas", "rlon", 0, "rlat", 0, as_dataset=True
@@ -34,13 +33,13 @@ class TestHealthChecks:
                 ds, structure={"coords": ["another"]}, raise_on=["structure"]
             )
         with pytest.raises(
-            UserWarning, match="'tas' is detected as a data variable, not a coordinate."
+            ValueError, match="'tas' is detected as a data variable, not a coordinate."
         ):
             xs.diagnostics.health_checks(
                 ds, structure={"coords": ["tas"]}, raise_on=["structure"]
             )
         with pytest.warns(
-            UserWarning, match="'tas' is detected as a coordinate, not a data variable."
+            UserWarning, match="'tas' is detected as a data variable, not a coordinate."
         ):
             xs.diagnostics.health_checks(ds, structure={"coords": ["tas"]})
 
@@ -125,20 +124,20 @@ class TestHealthChecks:
         xs.diagnostics.health_checks(ds, cfchecks=cfcheck, raise_on=["all"])
 
         # Bad checks
-        cfcheck = {
+        bad_cfcheck = {
             "tas": {
-                "check_valid": {"key": "standard_name", "expected": ["not", "good"]},
+                "check_valid": {"key": "standard_name", "expected": "something_else"},
                 "cfcheck_from_name": {"varname": "pr"},
             }
         }
         with pytest.raises(
-            ValueError, match="['not', 'good']"
+            UserWarning, match="Variable has a non-conforming standard_name"
         ):  # Will raise on the first check
-            xs.diagnostics.health_checks(ds, cfchecks=cfcheck, raise_on=["all"])
+            xs.diagnostics.health_checks(ds, cfchecks=bad_cfcheck, raise_on=["all"])
         with pytest.warns(
             UserWarning, match="['precipitation_flux']"
         ):  # Make sure the second check is still run
-            xs.diagnostics.health_checks(ds, cfchecks=cfcheck)
+            xs.diagnostics.health_checks(ds, cfchecks=bad_cfcheck)
 
     @pytest.mark.parametrize(
         "freq, gap", [("D", False), ("MS", False), ("3H", False), ("D", True)]
