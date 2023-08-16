@@ -2,110 +2,296 @@
 import logging
 import warnings
 from collections.abc import Sequence
+from copy import deepcopy
 from pathlib import Path, PosixPath
 from types import ModuleType
 from typing import Optional, Tuple, Union
 
 import numpy as np
 import xarray as xr
+import xclim as xc
+import xclim.core.dataflags
 from xclim.core.indicator import Indicator
 
-from .catalog import DataCatalog
 from .config import parse_config
 from .indicators import load_xclim_module
-from .io import save_to_zarr
 from .utils import change_units, clean_up, standardize_periods, unstack_fill_nan
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "fix_unphysical_values",
+    "health_checks",
     "properties_and_measures",
     "measures_heatmap",
     "measures_improvement",
 ]
 
-# TODO: Implement logging, warnings, etc.
-# TODO: Change all paths to PosixPath objects, including in the catalog?
 
-
-def fix_unphysical_values(
-    catalog: DataCatalog,
-):  # noqa: D401
-    """Base checkups for impossible values such as tasmin > tasmax, or negative precipitation.
+def health_checks(
+    ds: xr.Dataset | xr.DataArray,
+    *,
+    structure: dict = None,
+    calendar: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    variables_and_units: dict = None,
+    cfchecks: dict = None,
+    freq: str = None,
+    missing: dict | str = None,
+    flags: dict = None,
+    flags_kwargs: dict = None,
+    return_flags: bool = False,
+    raise_on: list = None,
+) -> xr.Dataset | None:
+    """
+    Perform a series of health checks on the dataset. Be aware that missing data checks and flag checks can be slow.
 
     Parameters
     ----------
-    catalog : DataCatalog
-    """
-    if len(catalog.unique("processing_level")) > 1:
-        raise NotImplementedError
-
-    for domain in catalog.unique("domain"):
-        for id in catalog.unique("id"):
-            sim = catalog.search(id=id, domain=domain)
-
-            # tasmin > tasmax
-            if len(sim.search(variable=["tasmin", "tasmax"]).catalog) == 2:
-                # TODO: Do something with the last output
-                ds_tn = xr.open_zarr(
-                    sim.search(variable="tasmin").catalog.df.iloc[0]["path"]
-                )
-                ds_tx = xr.open_zarr(
-                    sim.search(variable="tasmax").catalog.df.iloc[0]["path"]
-                )
-
-                tn, tx, _ = _invert_unphysical_temperatures(
-                    ds_tn["tasmin"], ds_tx["tasmax"]
-                )
-                ds_tn["tasmin"] = tn
-                ds_tx["tasmax"] = tx
-                # TODO: History, attrs, etc.
-
-                save_to_zarr(
-                    ds=ds_tn,
-                    filename=sim.search(variable="tasmin").catalog.df.iloc[0]["path"],
-                    zarr_kwargs={"mode": "w"},
-                )
-                save_to_zarr(
-                    ds=ds_tx,
-                    filename=sim.search(variable="tasmax").catalog.df.iloc[0]["path"],
-                    zarr_kwargs={"mode": "w"},
-                )
-
-            # TODO: "clip" function for pr, sfcWind, huss/hurs, etc. < 0 (and > 1/100, when applicable).
-            #   Can we easily detect the variables that need to be clipped ? From the units ?
-
-
-def _invert_unphysical_temperatures(
-    tasmin: xr.DataArray, tasmax: xr.Dataset
-) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray]:
-    """
-    Invert tasmin and tasmax points where tasmax <  tasmin.
+    ds: xr.Dataset | xr.DataArray
+        Dataset to check.
+    structure: dict
+        Dictionary with keys "dims" and "coords" containing the expected dimensions and coordinates.
+    calendar: str
+        Expected calendar. Synonyms should be detected correctly (e.g. "standard" and "gregorian").
+    start_date: str
+        To check if the dataset starts at least at this date.
+    end_date: str
+        To check if the dataset ends at least at this date.
+    variables_and_units: dict
+        Dictionary containing the expected variables and units.
+    cfchecks: dict
+        Dictionary where the key is the variable to check and the values are the cfchecks.
+        The cfchecks themselves must be a dictionary with the keys being the cfcheck names and the values being the arguments to pass to the cfcheck.
+        See `xclim.core.cfchecks` for more details.
+    freq: str
+        Expected frequency, written as the result of xr.infer_freq(ds.time).
+    missing: dict | str
+        Dictionary where the key is the method to check for missing data and the values are the arguments to pass to the method.
+        The methods are: "missing_any", "at_least_n_valid", "missing_pct", "missing_wmo". See :py:func:`xclim.core.missing` for more details.
+        Only one method can be used at a time.
+    flags: dict
+        Dictionary where the key is the variable to check and the values are the flags.
+        The flags themselves must be a dictionary with the keys being the data_flags names and the values being the arguments to pass to the data_flags.
+        See :py:func:`xclim.core.dataflags.data_flags` for the list of possible flags.
+    flags_kwargs: dict
+        Additional keyword arguments to pass to the data_flags ("dims" and "freq").
+    return_flags: bool
+        Whether to return the Dataset created by data_flags.
+    raise_on: list
+        Whether to raise an error if a check fails. The possible values are the names of the checks.
+        Use ["all"] to raise on all checks.
 
     Returns
     -------
-    tasmin : xr.DataArray
-      New tasmin.
-    tasmax : xr.DataArray
-      New tasmax
-    switched : xr.DataArray
-      A scalar DataArray with the number of switched data points.
+    xr.Dataset | None
+        Dataset containing the flags if return_flags is True & raise_on is False for the "flags" check.
     """
-    is_bad = tasmax < tasmin
-    mask = tasmax.isel(time=0).notnull()
-    switch = is_bad & mask
-    tn = xr.where(switch, tasmax, tasmin)
-    tx = xr.where(switch, tasmin, tasmax)
+    if isinstance(ds, xr.DataArray):
+        ds = ds.to_dataset()
+    raise_on = [] if raise_on is None else raise_on
+    if "all" in raise_on:
+        raise_on = [
+            "structure",
+            "calendar",
+            "start_date",
+            "end_date",
+            "variables_and_units",
+            "cfchecks",
+            "freq",
+            "missing",
+            "flags",
+        ]
 
-    tn.attrs.update(tasmin.attrs)
-    tx.attrs.update(tasmax.attrs)
-    return tn, tx, switch.sum()
+    # Check the dimensions and coordinates
+    if structure is not None:
+        if "dims" in structure:
+            for dim in structure["dims"]:
+                if dim not in ds.dims:
+                    err = f"The dimension '{dim}' is missing."
+                    if "structure" in raise_on:
+                        raise ValueError(err)
+                    else:
+                        warnings.warn(err, UserWarning, stacklevel=1)
+        if "coords" in structure:
+            for coord in structure["coords"]:
+                if coord not in ds.coords:
+                    if coord in ds.data_vars:
+                        err = f"'{coord}' is detected as a data variable, not a coordinate."
+                        if "structure" in raise_on:
+                            raise ValueError(err)
+                        else:
+                            warnings.warn(err, UserWarning, stacklevel=1)
+                    else:
+                        err = f"The coordinate '{coord}' is missing."
+                        if "structure" in raise_on:
+                            raise ValueError(err)
+                        else:
+                            warnings.warn(err, UserWarning, stacklevel=1)
+
+    # Check the calendar
+    if calendar is not None:
+        cal = xc.core.calendar.get_calendar(ds.time)
+        if xc.core.calendar.common_calendar([calendar]).replace(
+            "default", "standard"
+        ) != xc.core.calendar.common_calendar([cal]).replace("default", "standard"):
+            err = f"The calendar is not '{calendar}'. Received '{cal}'."
+            if "calendar" in raise_on:
+                raise ValueError(err)
+            else:
+                warnings.warn(err, UserWarning, stacklevel=1)
+
+    # Check the start/end dates
+    if start_date is not None:
+        # Create cf_time objects to compare the dates
+        start_date = xr.cftime_range(
+            start=start_date, periods=1, freq="D", calendar=ds.time.dt.calendar
+        )[0]
+        if isinstance(ds.time.min().values, np.datetime64):
+            ds_start = xr.cftime_range(
+                start=str(ds.time.min().values.astype("datetime64[D]")),
+                periods=1,
+                freq="D",
+                calendar=ds.time.dt.calendar,
+            )[0]
+        else:
+            ds_start = ds.time.min().values
+        if ds_start > start_date:
+            err = f"The start date is not at least {start_date}. Received {ds.time.min().values.astype('datetime64[m]')}."
+            if "start_date" in raise_on:
+                raise ValueError(err)
+            else:
+                warnings.warn(err, UserWarning, stacklevel=1)
+    if end_date is not None:
+        # Create cf_time objects to compare the dates
+        end_date = xr.cftime_range(
+            start=end_date, periods=1, freq="D", calendar=ds.time.dt.calendar
+        )[0]
+        if isinstance(ds.time.max().values, np.datetime64):
+            ds_end = xr.cftime_range(
+                start=str(ds.time.max().values.astype("datetime64[D]")),
+                periods=1,
+                freq="D",
+                calendar=ds.time.dt.calendar,
+            )[0]
+        else:
+            ds_end = ds.time.max().values
+        if ds_end < end_date:
+            err = f"The end date is not at least {end_date}. Received {ds.time.max().values.astype('datetime64[m]')}."
+            if "end_date" in raise_on:
+                raise ValueError(err)
+            else:
+                warnings.warn(err, UserWarning, stacklevel=1)
+
+    # Check variables
+    if variables_and_units is not None:
+        for v in variables_and_units:
+            if v not in ds:
+                err = f"The variable '{v}' is missing."
+                if "variables_and_units" in raise_on:
+                    raise ValueError(err)
+                else:
+                    warnings.warn(err, UserWarning, stacklevel=1)
+            if ds[v].attrs.get("units", None) != variables_and_units[v]:
+                xc.core.units.check_units(
+                    ds[v], variables_and_units[v]
+                )  # Will raise an error if the units are not compatible
+                err = f"The variable '{v}' does not have the expected units '{variables_and_units[v]}'. Received '{ds[v].attrs['units']}'."
+                if "variables_and_units" in raise_on:
+                    raise ValueError(err)
+                else:
+                    warnings.warn(err, UserWarning, stacklevel=1)
+
+    # Check CF conventions
+    if cfchecks is not None:
+        cfchecks = deepcopy(cfchecks)
+        for v in cfchecks:
+            for check in cfchecks[v]:
+                if check == "check_valid":
+                    cfchecks[v][check]["var"] = ds[v]
+                elif check == "cfcheck_from_name":
+                    cfchecks[v][check].setdefault("varname", v)
+                    cfchecks[v][check]["vardata"] = ds[v]
+                else:
+                    raise ValueError(f"Check '{check}' is not in xclim.")
+                if "cfchecks" in raise_on:
+                    # cfchecks only warns, so we need to catch the warning and raise it as an error
+                    with warnings.catch_warnings(record=True) as w:
+                        getattr(xc.core.cfchecks, check)(**cfchecks[v][check])
+                        if len(w) > 0:
+                            raise ValueError(w[0].message)
+                else:
+                    getattr(xc.core.cfchecks, check)(**cfchecks[v][check])
+
+    inferred_freq = xr.infer_freq(ds.time)
+    if freq is not None:
+        if inferred_freq is None:
+            err = "The timesteps are irregular or cannot be inferred by xarray."
+            if "freq" in raise_on:
+                raise ValueError(err)
+            else:
+                warnings.warn(err, UserWarning, stacklevel=1)
+        elif freq != inferred_freq:
+            err = f"The frequency is not '{freq}'. Received '{inferred_freq}'."
+            if "freq" in raise_on:
+                raise ValueError(err)
+            else:
+                warnings.warn(err, UserWarning, stacklevel=1)
+
+    if missing is not None:
+        if inferred_freq not in ["M", "MS", "D", "H"]:
+            warnings.warn(
+                f"Frequency {inferred_freq} is not supported for missing data checks. That check will be skipped.",
+                UserWarning,
+                stacklevel=1,
+            )
+        else:
+            if isinstance(missing, str):
+                missing = {missing: {}}
+            if len(missing) > 1:
+                raise NotImplementedError(
+                    "Only one missing check can be performed at a time."
+                )
+            method = list(missing.keys())[0]
+            if "freq" not in missing[method]:
+                missing[method]["freq"] = "YS"
+            for v in ds.data_vars:
+                ms = getattr(xc.core.missing, method)(ds[v], **missing[method])
+                if ms.any():
+                    err = f"The variable '{v}' has missing values."
+                    if "missing" in raise_on:
+                        raise ValueError(err)
+                    else:
+                        warnings.warn(err, UserWarning, stacklevel=1)
+
+    if flags is not None:
+        if return_flags:
+            out = xr.Dataset()
+        for v in flags:
+            dsflags = xc.core.dataflags.data_flags(
+                ds[v],
+                ds,
+                flags=flags[v],
+                raise_flags="flags" in raise_on,
+                **(flags_kwargs or {}),
+            )
+            if (("flags" in raise_on) is False) and (
+                np.any([dsflags[dv] for dv in dsflags.data_vars])
+            ):
+                bad_checks = [dv for dv in dsflags.data_vars if dsflags[dv].any()]
+                warnings.warn(
+                    f"Data quality flags indicate suspicious values for the variable '{v}'. Flags raised are: {bad_checks}.",
+                    UserWarning,
+                    stacklevel=1,
+                )
+            if return_flags:
+                dsflags = dsflags.rename({dv: f"{v}_{dv}" for dv in dsflags.data_vars})
+                out = xr.merge([out, dsflags])
+        if return_flags:
+            return out
 
 
 # TODO: just measures?
-
-
 @parse_config
 def properties_and_measures(
     ds: xr.Dataset,
