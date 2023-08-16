@@ -37,12 +37,12 @@ def health_checks(
     variables_and_units: dict = None,
     cfchecks: dict = None,
     freq: str = None,
-    missing: dict | str = None,
+    missing: Union[dict, str] = None,
     flags: dict = None,
     flags_kwargs: dict = None,
     return_flags: bool = False,
     raise_on: list = None,
-) -> xr.Dataset | None:
+) -> Union[None, xr.Dataset]:
     """
     Perform a series of health checks on the dataset. Be aware that missing data checks and flag checks can be slow.
 
