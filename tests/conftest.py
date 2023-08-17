@@ -161,8 +161,8 @@ def datablock_3d():
                 np.arange(45, 45 + values.shape[1] * y_step, y_step),
                 np.arange(-75, -75 + values.shape[2] * x_step, x_step),
             )
-            da["lat"] = xr.DataArray(lat, dims=[y, x], attrs=attrs["lat"])
-            da["lon"] = xr.DataArray(lon, dims=[y, x], attrs=attrs["lon"])
+            da["lat"] = xr.DataArray(np.flipud(lat.T), dims=[y, x], attrs=attrs["lat"])
+            da["lon"] = xr.DataArray(lon.T, dims=[y, x], attrs=attrs["lon"])
             da.attrs["grid_mapping"] = (
                 "rotated_pole" if x == "rlon" else "oblique_mercator"
             )
