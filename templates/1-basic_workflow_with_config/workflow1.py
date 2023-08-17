@@ -108,7 +108,7 @@ if __name__ == "__main__":
                             pcat.update_from_ds(ds=ds, path=path)
 
     # The next steps follow the same pattern as the previous one, so we will not comment them in detail.
-    # Typically, you'll always have to:
+    # Typically, a workflow step will:
     # 1) search the ProjectCatalog for the relevant datasets
     # 2) iterate over the datasets
     # 3) check if the processed dataset is already in the ProjectCatalog
