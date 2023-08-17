@@ -141,11 +141,7 @@ def health_checks(
                 warnings.warn(err, UserWarning, stacklevel=1)
 
     # Check the start/end dates
-    if start_date is not None:
-        # Create cf_time objects to compare the dates
-        start_date = xr.cftime_range(
-            start=start_date, periods=1, freq="D", calendar=ds.time.dt.calendar
-        )[0]
+    if (start_date is not None) or (end_date is not None):
         if isinstance(ds.time.min().values, np.datetime64):
             ds_start = xr.cftime_range(
                 start=str(ds.time.min().values.astype("datetime64[D]")),
@@ -153,9 +149,21 @@ def health_checks(
                 freq="D",
                 calendar=ds.time.dt.calendar,
             )[0]
+            ds_end = xr.cftime_range(
+                start=str(ds.time.max().values.astype("datetime64[D]")),
+                periods=1,
+                freq="D",
+                calendar=ds.time.dt.calendar,
+            )[0]
         else:
             ds_start = ds.time.min().values
-        if ds_start > start_date:
+            ds_end = ds.time.max().values
+    if start_date is not None:
+        # Create cf_time objects to compare the dates
+        start_date = xr.cftime_range(
+            start=start_date, periods=1, freq="D", calendar=ds.time.dt.calendar
+        )[0]
+        if not ((ds_start <= start_date) and (ds_end > start_date)):
             err = f"The start date is not at least {start_date}. Received {ds.time.min().values.astype('datetime64[m]')}."
             if "start_date" in raise_on:
                 raise ValueError(err)
@@ -166,16 +174,8 @@ def health_checks(
         end_date = xr.cftime_range(
             start=end_date, periods=1, freq="D", calendar=ds.time.dt.calendar
         )[0]
-        if isinstance(ds.time.max().values, np.datetime64):
-            ds_end = xr.cftime_range(
-                start=str(ds.time.max().values.astype("datetime64[D]")),
-                periods=1,
-                freq="D",
-                calendar=ds.time.dt.calendar,
-            )[0]
-        else:
-            ds_end = ds.time.max().values
-        if ds_end < end_date:
+
+        if not ((ds_start < end_date) and (ds_end >= end_date)):
             err = f"The end date is not at least {end_date}. Received {ds.time.max().values.astype('datetime64[m]')}."
             if "end_date" in raise_on:
                 raise ValueError(err)
