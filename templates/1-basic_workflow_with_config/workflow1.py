@@ -274,7 +274,7 @@ if __name__ == "__main__":
         # The properties and measures that we want to compute are different for each type of data (ref, sim, scen), so we need to iterate over them.
         for kind, kind_dict in CONFIG["diagnostics"]["kind"].items():
             # Search for the right datasets and iterate over them
-            dict_input = pcat.search(**kind_dict["inputs"]).(**tdd)
+            dict_input = pcat.search(**kind_dict["inputs"]).to_dataset_dict(**tdd)
             for key_input, ds_input in dict_input.items():
                 cur = {
                     "id": ds_input.attrs["cat:id"],
