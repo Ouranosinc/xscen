@@ -72,13 +72,14 @@ def health_checks(
     flags: dict
         Dictionary where the key is the variable to check and the values are the flags.
         The flags themselves must be a dictionary with the keys being the data_flags names and the values being the arguments to pass to the data_flags.
+        If `None` is passed instead of a dictionary, then xclim's default flags for the given variable are run. See :py:data:`xclim.core.utils.VARIABLES`.
         See :py:func:`xclim.core.dataflags.data_flags` for the list of possible flags.
     flags_kwargs: dict
         Additional keyword arguments to pass to the data_flags ("dims" and "freq").
     return_flags: bool
         Whether to return the Dataset created by data_flags.
     raise_on: list
-        Whether to raise an error if a check fails. The possible values are the names of the checks.
+        Whether to raise an error if a check fails, else there will only be a warning. The possible values are the names of the checks. 
         Use ["all"] to raise on all checks.
 
     Returns
@@ -88,7 +89,7 @@ def health_checks(
     """
     if isinstance(ds, xr.DataArray):
         ds = ds.to_dataset()
-    raise_on = [] if raise_on is None else raise_on
+    raise_on = raise_on or []
     if "all" in raise_on:
         raise_on = [
             "structure",
@@ -219,15 +220,15 @@ def health_checks(
                 else:
                     getattr(xc.core.cfchecks, check)(**cfchecks[v][check])
 
-    inferred_freq = xr.infer_freq(ds.time)
     if freq is not None:
+        inferred_freq = xr.infer_freq(ds.time)
         if inferred_freq is None:
             err = "The timesteps are irregular or cannot be inferred by xarray."
             if "freq" in raise_on:
                 raise ValueError(err)
             else:
                 warnings.warn(err, UserWarning, stacklevel=1)
-        elif freq != inferred_freq:
+        elif freq.replace('YS', 'AS-JAN') != inferred_freq:
             err = f"The frequency is not '{freq}'. Received '{inferred_freq}'."
             if "freq" in raise_on:
                 raise ValueError(err)
@@ -235,6 +236,7 @@ def health_checks(
                 warnings.warn(err, UserWarning, stacklevel=1)
 
     if missing is not None:
+        inferred_freq = xr.infer_freq(ds.time)
         if inferred_freq not in ["M", "MS", "D", "H"]:
             warnings.warn(
                 f"Frequency {inferred_freq} is not supported for missing data checks. That check will be skipped.",
@@ -246,11 +248,10 @@ def health_checks(
                 missing = {missing: {}}
             elif isinstance(missing, list):
                 missing = {m: {} for m in missing}
-            for method in missing:
-                if "freq" not in missing[method]:
-                    missing[method]["freq"] = "YS"
+            for method, kwargs in missing.items():
+                kwargs.setdefault("freq", "YS")
                 for v in ds.data_vars:
-                    ms = getattr(xc.core.missing, method)(ds[v], **missing[method])
+                    ms = getattr(xc.core.missing, method)(ds[v], **kwargs)
                     if ms.any():
                         err = f"The variable '{v}' has missing values according to the '{method}' method."
                         if "missing" in raise_on:
