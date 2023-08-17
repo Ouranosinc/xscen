@@ -14,7 +14,7 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * `xscen` now tracks code coverage using `coveralls <https://coveralls.io/>`_. (:pull:`187`).
 * New function `get_warming_level` to search within the IPCC CMIP global temperatures CSV without requiring data. (:issue:`208`, :pull:`210`).
-* File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`).
+* File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`, :pull:`237`).
 * New scripting functions `save_and_update` and `move_and_delete`. (:pull:`214`).
 * Spatial dimensions can be generalized as X/Y when rechunking and will be mapped to rlon/rlat or lon/lat accordingly. (:pull:`221`).
 * New argument `var_as_string` for `get_cat_attrs` to return variable names as strings. (:pull:`233`).
@@ -30,6 +30,7 @@ Breaking changes
 ^^^^^^^^^^^^^^^^
 * Columns ``date_start`` and ``date_end`` now use a ``datetime64[ms]`` dtype. (:pull:`222`).
 * The default output of ``date_parser`` is now ``pd.Timestamp`` (``output_dtype='datetime'``). (:pull:`222`).
+* ``date_parser(date, end_of_period=True)`` has time "23:59:59", instead of "23:00". (:pull:`222`, :pull:`237`).
 * ``driving_institution`` was removed from the "default" xscen columns. (:pull:`222`).
 * Folder parsing utilities (``parse_directory``) moved to ``xscen.catutils``. Signature changed : ``globpattern`` removed, ``dirglob`` added, new ``patterns`` specifications. See doc for all changes. (:pull:`205`).
 * ``compute_indicators`` now returns all outputs produced by indicators with multiple outputs (such as `rain_season`). (:pull:`228`).

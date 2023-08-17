@@ -13,8 +13,8 @@ class TestDateParser:
     @pytest.mark.parametrize(
         "date,end_of_period,dtype,exp",
         [
-            ("2001", True, "datetime", pd.Timestamp("2001-12-31")),
-            ("150004", True, "datetime", pd.Timestamp("1500-04-30")),
+            ("2001", True, "datetime", pd.Timestamp("2001-12-31 23:59:59")),
+            ("150004", True, "datetime", pd.Timestamp("1500-04-30 23:59:59")),
             ("31231212", None, "datetime", pd.Timestamp("3123-12-12")),
             ("2001-07-08", None, "period", pd.Period("2001-07-08", "H")),
             (pd.Timestamp("1993-05-20T12:07"), None, "str", "1993-05-20"),
@@ -24,7 +24,12 @@ class TestDateParser:
                 "datetime",
                 pd.Timestamp("1981-02-28"),
             ),
-            (np.datetime64("1200-11-12"), "Y", "datetime", pd.Timestamp("1200-12-31")),
+            (
+                np.datetime64("1200-11-12"),
+                "Y",
+                "datetime",
+                pd.Timestamp("1200-12-31 23:59:59"),
+            ),
             (
                 datetime(2045, 5, 2, 13, 45),
                 None,
