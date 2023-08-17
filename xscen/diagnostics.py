@@ -15,7 +15,13 @@ from xclim.core.indicator import Indicator
 
 from .config import parse_config
 from .indicators import load_xclim_module
-from .utils import change_units, clean_up, standardize_periods, unstack_fill_nan
+from .utils import (
+    change_units,
+    clean_up,
+    date_parser,
+    standardize_periods,
+    unstack_fill_nan,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +58,7 @@ def health_checks(
         Dataset to check.
     structure: dict
         Dictionary with keys "dims" and "coords" containing the expected dimensions and coordinates.
+        This check will fail is extra dimensions or coordinates are found.
     calendar: str
         Expected calendar. Synonyms should be detected correctly (e.g. "standard" and "gregorian").
     start_date: str
@@ -103,31 +110,51 @@ def health_checks(
             "flags",
         ]
 
+    warns = []
+    errs = []
+
+    def _error(msg, check):
+        if check in raise_on:
+            errs.append(msg)
+        else:
+            warns.append(msg)
+
+    def _message():
+        base = "The following health checks failed:"
+        if len(warns) > 0:
+            msg = "\n  - ".join([base] + warns)
+            warnings.warn(msg, UserWarning, stacklevel=2)
+        if len(errs) > 0:
+            msg = "\n  - ".join([base] + errs)
+            raise ValueError(msg)
+
     # Check the dimensions and coordinates
     if structure is not None:
         if "dims" in structure:
             for dim in structure["dims"]:
                 if dim not in ds.dims:
-                    err = f"The dimension '{dim}' is missing."
-                    if "structure" in raise_on:
-                        raise ValueError(err)
-                    else:
-                        warnings.warn(err, UserWarning, stacklevel=1)
+                    _error(f"The dimension '{dim}' is missing.", "structure")
+            extra_dims = [dim for dim in ds.dims if dim not in structure["dims"]]
+            if len(extra_dims) > 0:
+                _error(
+                    f"Extra dimensions found: {extra_dims}.",
+                    "structure",
+                )
         if "coords" in structure:
             for coord in structure["coords"]:
                 if coord not in ds.coords:
                     if coord in ds.data_vars:
-                        err = f"'{coord}' is detected as a data variable, not a coordinate."
-                        if "structure" in raise_on:
-                            raise ValueError(err)
-                        else:
-                            warnings.warn(err, UserWarning, stacklevel=1)
+                        _error(
+                            f"'{coord}' is detected as a data variable, not a coordinate.",
+                            "structure",
+                        )
                     else:
-                        err = f"The coordinate '{coord}' is missing."
-                        if "structure" in raise_on:
-                            raise ValueError(err)
-                        else:
-                            warnings.warn(err, UserWarning, stacklevel=1)
+                        _error(f"The coordinate '{coord}' is missing.", "structure")
+            extra_coords = [
+                coord for coord in ds.coords if coord not in structure["coords"]
+            ]
+            if len(extra_coords) > 0:
+                _error(f"Extra coordinates found: {extra_coords}.", "structure")
 
     # Check the calendar
     if calendar is not None:
@@ -135,11 +162,7 @@ def health_checks(
         if xc.core.calendar.common_calendar([calendar]).replace(
             "default", "standard"
         ) != xc.core.calendar.common_calendar([cal]).replace("default", "standard"):
-            err = f"The calendar is not '{calendar}'. Received '{cal}'."
-            if "calendar" in raise_on:
-                raise ValueError(err)
-            else:
-                warnings.warn(err, UserWarning, stacklevel=1)
+            _error(f"The calendar is not '{calendar}'. Received '{cal}'.", "calendar")
 
     # Check the start/end dates
     if (start_date is not None) or (end_date is not None):
@@ -149,35 +172,34 @@ def health_checks(
         # Create cf_time objects to compare the dates
         start_date = date_parser(start_date)
         if not ((ds_start <= start_date) and (ds_end > start_date)):
-            err = f"The start date is not at least {start_date}. Received {ds_start}."
-            if "start_date" in raise_on:
-                raise ValueError(err)
-            else:
-                warnings.warn(err, UserWarning, stacklevel=1)
+            _error(
+                f"The start date is not at least {start_date}. Received {ds_start}.",
+                "start_date",
+            )
     if end_date is not None:
         # Create cf_time objects to compare the dates
         end_date = date_parser(end_date)
         if not ((ds_start < end_date) and (ds_end >= end_date)):
-            err = f"The end date is not at least {end_date}. Received {ds_end}."
-            if "end_date" in raise_on:
-                raise ValueError(err)
-            else:
-                warnings.warn(err, UserWarning, stacklevel=1)
+            _error(
+                f"The end date is not at least {end_date}. Received {ds_end}.",
+                "end_date",
+            )
 
     # Check variables
     if variables_and_units is not None:
         for v in variables_and_units:
             if v not in ds:
-                raise ValueError(f"The variable '{v}' is missing.")
-            if ds[v].attrs.get("units", None) != variables_and_units[v]:
-                xc.core.units.check_units(
-                    ds[v], variables_and_units[v]
-                )  # Will always raise an error if the units are not compatible
-                err = f"The variable '{v}' does not have the expected units '{variables_and_units[v]}'. Received '{ds[v].attrs['units']}'."
-                if "variables_and_units" in raise_on:
-                    raise ValueError(err)
-                else:
-                    warnings.warn(err, UserWarning, stacklevel=1)
+                _error(f"The variable '{v}' is missing.", "variables_and_units")
+            elif ds[v].attrs.get("units", None) != variables_and_units[v]:
+                with xc.set_options(data_validation="raise"):
+                    try:
+                        xc.core.units.check_units(ds[v], variables_and_units[v])
+                    except xc.core.utils.ValidationError as e:
+                        _error(f"'{v}' ValidationError: {e}", "variables_and_units")
+                _error(
+                    f"The variable '{v}' does not have the expected units '{variables_and_units[v]}'. Received '{ds[v].attrs['units']}'.",
+                    "variables_and_units",
+                )
 
     # Check CF conventions
     if cfchecks is not None:
@@ -191,30 +213,22 @@ def health_checks(
                     cfchecks[v][check]["vardata"] = ds[v]
                 else:
                     raise ValueError(f"Check '{check}' is not in xclim.")
-                if "cfchecks" in raise_on:
-                    warnings.simplefilter("error")
+                with xc.set_options(cf_compliance="raise"):
                     try:
                         getattr(xc.core.cfchecks, check)(**cfchecks[v][check])
-                    except UserWarning as e:
-                        raise ValueError(e)
-                    warnings.resetwarnings()
-                else:
-                    getattr(xc.core.cfchecks, check)(**cfchecks[v][check])
+                    except xc.core.utils.ValidationError as e:
+                        _error(f"'{v}' ValidationError: {e}", "cfchecks")
 
     if freq is not None:
         inferred_freq = xr.infer_freq(ds.time)
         if inferred_freq is None:
-            err = "The timesteps are irregular or cannot be inferred by xarray."
-            if "freq" in raise_on:
-                raise ValueError(err)
-            else:
-                warnings.warn(err, UserWarning, stacklevel=1)
+            _error(
+                "The timesteps are irregular or cannot be inferred by xarray.", "freq"
+            )
         elif freq.replace("YS", "AS-JAN") != inferred_freq:
-            err = f"The frequency is not '{freq}'. Received '{inferred_freq}'."
-            if "freq" in raise_on:
-                raise ValueError(err)
-            else:
-                warnings.warn(err, UserWarning, stacklevel=1)
+            _error(
+                f"The frequency is not '{freq}'. Received '{inferred_freq}'.", "freq"
+            )
 
     if missing is not None:
         inferred_freq = xr.infer_freq(ds.time)
@@ -234,11 +248,10 @@ def health_checks(
                 for v in ds.data_vars:
                     ms = getattr(xc.core.missing, method)(ds[v], **kwargs)
                     if ms.any():
-                        err = f"The variable '{v}' has missing values according to the '{method}' method."
-                        if "missing" in raise_on:
-                            raise ValueError(err)
-                        else:
-                            warnings.warn(err, UserWarning, stacklevel=1)
+                        _error(
+                            f"The variable '{v}' has missing values according to the '{method}' method.",
+                            "missing",
+                        )
 
     if flags is not None:
         if return_flags:
@@ -248,23 +261,22 @@ def health_checks(
                 ds[v],
                 ds,
                 flags=flags[v],
-                raise_flags="flags" in raise_on,
+                raise_flags=False,
                 **(flags_kwargs or {}),
             )
-            if ("flags" not in raise_on) and (
-                np.any([dsflags[dv] for dv in dsflags.data_vars])
-            ):
+            if np.any([dsflags[dv] for dv in dsflags.data_vars]):
                 bad_checks = [dv for dv in dsflags.data_vars if dsflags[dv].any()]
-                warnings.warn(
-                    f"Data quality flags indicate suspicious values for the variable '{v}'. Flags raised are: {bad_checks}.",
-                    UserWarning,
-                    stacklevel=1,
+                _error(
+                    f"'{v}' has suspicious values according to the following flags: {bad_checks}.",
+                    "flags",
                 )
             if return_flags:
                 dsflags = dsflags.rename({dv: f"{v}_{dv}" for dv in dsflags.data_vars})
                 out = xr.merge([out, dsflags])
-        if return_flags:
-            return out
+
+    _message()
+    if return_flags and flags is not None:
+        return out
 
 
 # TODO: just measures?

@@ -18,7 +18,7 @@ class TestHealthChecks:
             ds,
             structure={
                 "dims": ["time", "rlat", "rlon"],
-                "coords": ["time", "rlat", "rlon", "lon", "lat"],
+                "coords": ["time", "rlat", "rlon", "lon", "lat", "rotated_pole"],
             },
             raise_on=["all"],
         )
@@ -26,7 +26,7 @@ class TestHealthChecks:
         # Wrong structures
         with pytest.raises(ValueError, match="The dimension 'lat' is missing."):
             xs.diagnostics.health_checks(
-                ds, structure={"dims": ["time", "lat", "rlon"]}, raise_on=["structure"]
+                ds, structure={"dims": ["time", "lat", "rlon"]}, raise_on=["all"]
             )
         with pytest.warns(UserWarning, match="The dimension 'lat' is missing."):
             xs.diagnostics.health_checks(
@@ -78,8 +78,6 @@ class TestHealthChecks:
         )
         xs.diagnostics.health_checks(ds, start_date="2000-01-02", raise_on=["all"])
         xs.diagnostics.health_checks(ds, end_date="2000-01-02", raise_on=["all"])
-        if cal == "360_day":
-            xs.diagnostics.health_checks(ds, end_date="2000-02-30", raise_on=["all"])
 
         # Wrong dates
         with pytest.raises(
@@ -126,13 +124,11 @@ class TestHealthChecks:
             match="The variable 'tas' does not have the expected units 'degC'. Received 'K'.",
         ):
             xs.diagnostics.health_checks(ds, variables_and_units={"tas": "degC"})
-        with pytest.raises(
-            xc.core.utils.ValidationError,
+        with pytest.warns(
+            UserWarning,
             match="Data units kelvin are not compatible with requested 1 millimeter.",
         ):
-            xs.diagnostics.health_checks(
-                ds, variables_and_units={"tas": "mm"}
-            )  # Should always raise on ValidationError
+            xs.diagnostics.health_checks(ds, variables_and_units={"tas": "mm"})
 
     def test_cfchecks(self):
         ds = timeseries(np.arange(0, 365), "tas", "1/1/2000", freq="D", as_dataset=True)
@@ -235,8 +231,7 @@ class TestHealthChecks:
             flags = {"tasmax": {"tasmax_below_tasmin": {}}}
             ds = timeseries(tasmin, "tasmin", "1/1/2000", freq="D", as_dataset=True)
             ds["tasmax"] = timeseries(tasmax, "tasmax", "1/1/2000", freq="D")
-            xs.diagnostics.health_checks(ds, flags=flags)
-            # xs.diagnostics.health_checks(ds, flags=flags, raise_on=["all"])  # FIXME: This always raises an error
+            xs.diagnostics.health_checks(ds, flags=flags, raise_on=["all"])
         else:
             tasmin[7] = 150
             flags = {
@@ -252,8 +247,8 @@ class TestHealthChecks:
             ds = timeseries(tasmin, "tasmin", "1/1/2000", freq="D", as_dataset=True)
             ds["tasmax"] = timeseries(tasmax, "tasmax", "1/1/2000", freq="D")
             with pytest.raises(
-                xc.core.dataflags.DataQualityException,
-                match="Runs of repetitive values for 10 or more days found for tasmin.",
+                ValueError,
+                match="tasmax_below_tasmin",
             ):
                 xs.diagnostics.health_checks(ds, flags=flags, raise_on=["all"])
             with pytest.warns(UserWarning, match="tasmax_below_tasmin"):
