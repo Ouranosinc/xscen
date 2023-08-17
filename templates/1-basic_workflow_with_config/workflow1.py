@@ -26,6 +26,7 @@ if "logging" in CONFIG:
 # The workflow is made to be able to restart where it left off, in case of a crash or if you needed to stop it for some reason.
 # To achieve this, it checks if the results of a task are already in the project catalog before doing it.
 # When a task is completed, the produced data files are added to the project catalog.
+# Files manually removed from disk will be noticed by the workflow and they will be produced again.
 # The workflow does NOT automatically remove intermediate files. You might run out of space.
 if __name__ == "__main__":
     # Set dask  configuration
@@ -44,7 +45,7 @@ if __name__ == "__main__":
     if "scripting" in CONFIG:
         atexit.register(xs.send_mail_on_exit, subject=CONFIG["scripting"]["subject"])
 
-    # Either load or initialize the Project Catalog
+    # Initialize (create=True) or load (overwrite=False) the Project Catalog
     pcat = xs.ProjectCatalog(
         CONFIG["paths"]["project_catalog"],
         project=CONFIG["project"],
@@ -57,9 +58,9 @@ if __name__ == "__main__":
         tdd = CONFIG["to_dataset_dict"]
 
     # --- EXTRACT---
-    # Check if that step is in list of tasks before doing it
+    # Check if that step is in list of tasks before doing it, hence when commented in the config it will be skipped.
     if "extract" in CONFIG["tasks"]:
-        # Iterate on types to extract (reconstruction, simulation) and get the dictionary for this type of data from the config
+        # Iterate on types of data to extract (reconstruction, simulation) and get the respective dictionary from the config
         for source_type, type_dict in CONFIG["extract"].items():
             # Filter the catalog to get only the datasets that match the arguments in the config.
             # Arguments are not passed automatically, because the config is different for each type of data.
@@ -75,7 +76,7 @@ if __name__ == "__main__":
                     "xrfreq": "D",
                     "processing_level": "extracted",
                 }
-                # We use the attributes to check if the dataset is already extracted and exists in the ProjectCatalog.
+                # We use these attributes to check if the dataset is already extracted and exists in the ProjectCatalog.
                 if not pcat.exists_in_cat(**cur):
                     # Set up the dask client with fine-tuned parameters for this task, and measure time
                     with (
@@ -124,7 +125,7 @@ if __name__ == "__main__":
         # Search the ProjectCatalog for the results of the previous step, then iterate over each dataset.
         # We usually don't have to rely on search_data_catalogs anymore after the initial extraction, because the content of the ProjectCatalog is smaller and more manageable.
         # In most cases, we can just use the search function with the 'type' and 'processing_level' attributes.
-        input_dict = pcat.search(**CONFIG["regrid"]["inputs"]).to_dataset_dict(**tdd)
+        input_dict = pcat.search(**CONFIG["regrid"]["inputs"]).(**tdd)
         for key_input, ds_input in input_dict.items():
             cur = {
                 "id": ds_input.attrs["cat:id"],
@@ -158,7 +159,7 @@ if __name__ == "__main__":
         # Bias adjustment differs for each variable, so we need to iterate over them.
         for var, ba_dict in CONFIG["biasadjust"].items():
             # Search the ProjectCatalog for the results of the previous step, then iterate over each dataset.
-            dict_sim = pcat.search(**ba_dict["sim_inputs"]).to_dataset_dict(**tdd)
+            dict_sim = pcat.search(**ba_dict["sim_inputs"]).(**tdd)
             for id_sim, ds_sim in dict_sim.items():
                 cur = {
                     "id": ds_sim.attrs["cat:id"],
@@ -237,7 +238,7 @@ if __name__ == "__main__":
     # --- RECHUNK and store final daily data ---
     if "rechunk" in CONFIG["tasks"]:
         # Search the ProjectCatalog for the results of the previous step, then iterate over each dataset.
-        dict_input = pcat.search(**CONFIG["rechunk"]["inputs"]).to_dataset_dict(**tdd)
+        dict_input = pcat.search(**CONFIG["rechunk"]["inputs"]).(**tdd)
         for key_input, ds_input in dict_input.items():
             cur = {
                 "id": ds_input.attrs["cat:id"],
@@ -273,7 +274,7 @@ if __name__ == "__main__":
         # The properties and measures that we want to compute are different for each type of data (ref, sim, scen), so we need to iterate over them.
         for kind, kind_dict in CONFIG["diagnostics"]["kind"].items():
             # Search for the right datasets and iterate over them
-            dict_input = pcat.search(**kind_dict["inputs"]).to_dataset_dict(**tdd)
+            dict_input = pcat.search(**kind_dict["inputs"]).(**tdd)
             for key_input, ds_input in dict_input.items():
                 cur = {
                     "id": ds_input.attrs["cat:id"],
