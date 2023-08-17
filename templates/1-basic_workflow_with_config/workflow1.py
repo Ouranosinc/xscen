@@ -159,7 +159,7 @@ if __name__ == "__main__":
         # Bias adjustment differs for each variable, so we need to iterate over them.
         for var, ba_dict in CONFIG["biasadjust"].items():
             # Search the ProjectCatalog for the results of the previous step, then iterate over each dataset.
-            dict_sim = pcat.search(**ba_dict["sim_inputs"]).(**tdd)
+            dict_sim = pcat.search(**ba_dict["sim_inputs"]).to_dataset_dict(**tdd)
             for id_sim, ds_sim in dict_sim.items():
                 cur = {
                     "id": ds_sim.attrs["cat:id"],
