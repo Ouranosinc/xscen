@@ -25,6 +25,7 @@ New features and enhancements
 * New independence_level, `institution`, added to ``generate_weights``. (:pull:`231`).
 * Updated ``produce_horizon`` so it can accept multiple periods or warming levels. (:pull:`231`).
 * Add more comments in the template. (:pull:`233`,:pull:`235`, :issue:`232`).
+* New function ``diagnostics.health_checks`` that can perform multiple checkups on a dataset. (:pull:`238`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -39,6 +40,7 @@ Breaking changes
 * Legacy support for `stats_kwargs` in ``ensemble_stats`` was dropped. (:pull:`231`).
 * `period` in ``produce_horizon`` has been deprecated and replaced with `periods`. (:pull:`231`).
 * Some automated `to_level` were updated to reflect more recent changes. (:pull:`231`).
+* Removed ``diagnostics.fix_unphysical_values``. (:pull:`238`).
 
 Bug fixes
 ^^^^^^^^^

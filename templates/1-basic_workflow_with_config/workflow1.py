@@ -289,6 +289,11 @@ if __name__ == "__main__":
                         Client(**CONFIG["diagnostics"]["dask"], **daskkws),
                         xs.measure_time(name=f"{cur}", logger=logger),
                     ):
+                        # Perform some health checks on the data
+                        xs.diagnostics.health_checks(
+                            ds_input, **CONFIG["diagnostics"]["health_checks"]
+                        )
+
                         # Find the reference required for the measures
                         dref_for_measure = None
                         if "dref_for_measure" in kind_dict:

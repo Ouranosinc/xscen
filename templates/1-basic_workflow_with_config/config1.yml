@@ -373,6 +373,28 @@ diagnostics:
     n_workers: 3
     threads_per_worker: 5
     memory_limit: "5GB"
+  health_checks:
+    freq: D
+    calendar: standard
+    variables_and_units:
+      tasmax: degC
+      tasmin: degC
+      pr: mm d-1
+    cfchecks:
+      tasmax: {'cfcheck_from_name': {}}
+      tasmin: {'cfcheck_from_name': {}}
+      pr: {'cfcheck_from_name': {}}
+    flags:
+      tasmax:  # `None` flags means that it will use xclim's default flags for the given variable
+      tasmin:
+      pr:
+    # structure
+    # start_date
+    # end_date
+    # missing
+    # flag_kwargs
+    # return_flags
+    # raise_on  # Since we don't raise on anything, the function will print warnings instead
   kind:
     reference:
       inputs:
