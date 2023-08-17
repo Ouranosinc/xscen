@@ -238,7 +238,7 @@ if __name__ == "__main__":
     # --- RECHUNK and store final daily data ---
     if "rechunk" in CONFIG["tasks"]:
         # Search the ProjectCatalog for the results of the previous step, then iterate over each dataset.
-        dict_input = pcat.search(**CONFIG["rechunk"]["inputs"]).(**tdd)
+        dict_input = pcat.search(**CONFIG["rechunk"]["inputs"]).to_dataset_dict(**tdd)
         for key_input, ds_input in dict_input.items():
             cur = {
                 "id": ds_input.attrs["cat:id"],
