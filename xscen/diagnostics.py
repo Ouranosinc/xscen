@@ -79,7 +79,7 @@ def health_checks(
     return_flags: bool
         Whether to return the Dataset created by data_flags.
     raise_on: list
-        Whether to raise an error if a check fails, else there will only be a warning. The possible values are the names of the checks. 
+        Whether to raise an error if a check fails, else there will only be a warning. The possible values are the names of the checks.
         Use ["all"] to raise on all checks.
 
     Returns
@@ -228,7 +228,7 @@ def health_checks(
                 raise ValueError(err)
             else:
                 warnings.warn(err, UserWarning, stacklevel=1)
-        elif freq.replace('YS', 'AS-JAN') != inferred_freq:
+        elif freq.replace("YS", "AS-JAN") != inferred_freq:
             err = f"The frequency is not '{freq}'. Received '{inferred_freq}'."
             if "freq" in raise_on:
                 raise ValueError(err)
