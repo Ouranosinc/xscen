@@ -290,7 +290,9 @@ if __name__ == "__main__":
                         xs.measure_time(name=f"{cur}", logger=logger),
                     ):
                         # Perform some health checks on the data
-                        xs.diagnostics.health_checks(ds_input)
+                        xs.diagnostics.health_checks(
+                            ds_input, **CONFIG["diagnostics"]["health_checks"]
+                        )
 
                         # Find the reference required for the measures
                         dref_for_measure = None

@@ -373,7 +373,7 @@ diagnostics:
     n_workers: 3
     threads_per_worker: 5
     memory_limit: "5GB"
-  health_checks: # automatically passed to the function
+  health_checks:
     freq: D
     calendar: standard
     variables_and_units:
