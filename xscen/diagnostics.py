@@ -143,8 +143,8 @@ def health_checks(
 
     # Check the start/end dates
     if (start_date is not None) or (end_date is not None):
-        ds_start = date_parser(ds.time.min().dt.floor('D').item())
-        ds_end = date_parser(ds.time.max().dt.floor('D').item())
+        ds_start = date_parser(ds.time.min().dt.floor("D").item())
+        ds_end = date_parser(ds.time.max().dt.floor("D").item())
     if start_date is not None:
         # Create cf_time objects to compare the dates
         start_date = date_parser(start_date)
