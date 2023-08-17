@@ -28,10 +28,16 @@ class TestHealthChecks:
             xs.diagnostics.health_checks(
                 ds, structure={"dims": ["time", "lat", "rlon"]}, raise_on=["structure"]
             )
+        with pytest.warns(UserWarning, match="The dimension 'lat' is missing."):
+            xs.diagnostics.health_checks(
+                ds, structure={"dims": ["time", "lat", "rlon"]}
+            )
         with pytest.raises(ValueError, match="The coordinate 'another' is missing."):
             xs.diagnostics.health_checks(
                 ds, structure={"coords": ["another"]}, raise_on=["structure"]
             )
+        with pytest.warns(UserWarning, match="The coordinate 'another' is missing."):
+            xs.diagnostics.health_checks(ds, structure={"coords": ["another"]})
         with pytest.raises(
             ValueError, match="'tas' is detected as a data variable, not a coordinate."
         ):
@@ -55,6 +61,8 @@ class TestHealthChecks:
             if i in fail_on:
                 with pytest.raises(ValueError, match=f"The calendar is not '{cals}'."):
                     xs.diagnostics.health_checks(ds, calendar=cals, raise_on=["all"])
+                with pytest.warns(UserWarning, match=f"The calendar is not '{cals}'."):
+                    xs.diagnostics.health_checks(ds, calendar=cals)
             else:
                 xs.diagnostics.health_checks(ds, calendar=cals, raise_on=["all"])
 
@@ -78,12 +86,20 @@ class TestHealthChecks:
             ValueError, match="The start date is not at least 1999-01-02."
         ):
             xs.diagnostics.health_checks(ds, start_date="1999-01-02", raise_on=["all"])
+        with pytest.warns(
+            UserWarning, match="The start date is not at least 1999-01-02."
+        ):
+            xs.diagnostics.health_checks(ds, start_date="1999-01-02")
         with pytest.raises(
             ValueError, match="The end date is not at least 2001-01-01."
         ):
             xs.diagnostics.health_checks(
                 ds, end_date="2001-01-01", raise_on=["end_date"]
             )
+        with pytest.warns(
+            UserWarning, match="The end date is not at least 2001-01-01."
+        ):
+            xs.diagnostics.health_checks(ds, end_date="2001-01-01")
 
     def test_variables(self):
         ds = timeseries(np.arange(0, 365), "tas", "1/1/2000", freq="D")
@@ -97,6 +113,13 @@ class TestHealthChecks:
         with pytest.raises(ValueError, match="The variable 'tas2' is missing."):
             xs.diagnostics.health_checks(
                 ds, variables_and_units={"tas2": "K"}, raise_on=["all"]
+            )
+        with pytest.raises(
+            ValueError,
+            match="The variable 'tas' does not have the expected units 'degC'. Received 'K'.",
+        ):
+            xs.diagnostics.health_checks(
+                ds, variables_and_units={"tas": "degC"}, raise_on=["all"]
             )
         with pytest.warns(
             UserWarning,
@@ -113,6 +136,10 @@ class TestHealthChecks:
 
     def test_cfchecks(self):
         ds = timeseries(np.arange(0, 365), "tas", "1/1/2000", freq="D", as_dataset=True)
+
+        # Check that the cfchecks are valid
+        with pytest.raises(ValueError, match="Check 'fake' is not in xclim."):
+            xs.diagnostics.health_checks(ds, cfchecks={"tas": {"fake": {}}})
 
         # Good checks
         cfcheck = {
@@ -153,6 +180,8 @@ class TestHealthChecks:
             # Wrong frequency
             with pytest.raises(ValueError, match="The frequency is not 'M'."):
                 xs.diagnostics.health_checks(ds, freq="M", raise_on=["all"])
+            with pytest.warns(UserWarning, match="The frequency is not 'M'."):
+                xs.diagnostics.health_checks(ds, freq="M")
         else:
             ds = xr.concat(
                 [ds.isel(time=slice(0, 100)), ds.isel(time=slice(200, 365))], dim="time"
@@ -164,22 +193,36 @@ class TestHealthChecks:
                 xs.diagnostics.health_checks(ds, freq="D", raise_on=["all"])
             with pytest.warns(
                 UserWarning,
+                match="The timesteps are irregular or cannot be inferred by xarray.",
+            ):
+                xs.diagnostics.health_checks(ds, freq="D")
+            with pytest.warns(
+                UserWarning,
                 match="Frequency None is not supported for missing data checks. That check will be skipped.",
             ):
                 xs.diagnostics.health_checks(ds, missing="any")
 
-    @pytest.mark.parametrize("missing", ["missing_any", "missing_wmo"])
+    @pytest.mark.parametrize("missing", ["missing_any", "missing_wmo", "both"])
     def test_missing(self, missing):
         ds = timeseries(
             np.tile(np.arange(1, 366), 3), "tas", "1/1/2001", freq="D", as_dataset=True
         )
         ds = ds.where((ds.time.dt.year > 2001) | (ds.time.dt.dayofyear > 2))
 
-        if missing == "missing_any":
+        if missing == "both":
+            missing = ["missing_any", "missing_wmo"]
+
+        if missing == "missing_any" or isinstance(missing, list):
             with pytest.raises(
-                ValueError, match="The variable 'tas' has missing values."
+                ValueError,
+                match="The variable 'tas' has missing values according to the 'missing_any' method.",
             ):
                 xs.diagnostics.health_checks(ds, missing=missing, raise_on=["all"])
+            with pytest.warns(
+                UserWarning,
+                match="The variable 'tas' has missing values according to the 'missing_any' method.",
+            ):
+                xs.diagnostics.health_checks(ds, missing=missing)
         else:
             xs.diagnostics.health_checks(ds, missing=missing, raise_on=["all"])
 

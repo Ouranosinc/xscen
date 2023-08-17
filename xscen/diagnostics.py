@@ -37,7 +37,7 @@ def health_checks(
     variables_and_units: dict = None,
     cfchecks: dict = None,
     freq: str = None,
-    missing: Union[dict, str] = None,
+    missing: Union[dict, str, list] = None,
     flags: dict = None,
     flags_kwargs: dict = None,
     return_flags: bool = False,
@@ -66,10 +66,9 @@ def health_checks(
         See `xclim.core.cfchecks` for more details.
     freq: str
         Expected frequency, written as the result of xr.infer_freq(ds.time).
-    missing: dict | str
-        Dictionary where the key is the method to check for missing data and the values are the arguments to pass to the method.
+    missing: dict | str | list
+        String, list of strings, or dictionary where the key is the method to check for missing data and the values are the arguments to pass to the method.
         The methods are: "missing_any", "at_least_n_valid", "missing_pct", "missing_wmo". See :py:func:`xclim.core.missing` for more details.
-        Only one method can be used at a time.
     flags: dict
         Dictionary where the key is the variable to check and the values are the flags.
         The flags themselves must be a dictionary with the keys being the data_flags names and the values being the arguments to pass to the data_flags.
@@ -187,15 +186,11 @@ def health_checks(
     if variables_and_units is not None:
         for v in variables_and_units:
             if v not in ds:
-                err = f"The variable '{v}' is missing."
-                if "variables_and_units" in raise_on:
-                    raise ValueError(err)
-                else:
-                    warnings.warn(err, UserWarning, stacklevel=1)
+                raise ValueError(f"The variable '{v}' is missing.")
             if ds[v].attrs.get("units", None) != variables_and_units[v]:
                 xc.core.units.check_units(
                     ds[v], variables_and_units[v]
-                )  # Will raise an error if the units are not compatible
+                )  # Will always raise an error if the units are not compatible
                 err = f"The variable '{v}' does not have the expected units '{variables_and_units[v]}'. Received '{ds[v].attrs['units']}'."
                 if "variables_and_units" in raise_on:
                     raise ValueError(err)
@@ -249,21 +244,19 @@ def health_checks(
         else:
             if isinstance(missing, str):
                 missing = {missing: {}}
-            if len(missing) > 1:
-                raise NotImplementedError(
-                    "Only one missing check can be performed at a time."
-                )
-            method = list(missing.keys())[0]
-            if "freq" not in missing[method]:
-                missing[method]["freq"] = "YS"
-            for v in ds.data_vars:
-                ms = getattr(xc.core.missing, method)(ds[v], **missing[method])
-                if ms.any():
-                    err = f"The variable '{v}' has missing values."
-                    if "missing" in raise_on:
-                        raise ValueError(err)
-                    else:
-                        warnings.warn(err, UserWarning, stacklevel=1)
+            elif isinstance(missing, list):
+                missing = {m: {} for m in missing}
+            for method in missing:
+                if "freq" not in missing[method]:
+                    missing[method]["freq"] = "YS"
+                for v in ds.data_vars:
+                    ms = getattr(xc.core.missing, method)(ds[v], **missing[method])
+                    if ms.any():
+                        err = f"The variable '{v}' has missing values according to the '{method}' method."
+                        if "missing" in raise_on:
+                            raise ValueError(err)
+                        else:
+                            warnings.warn(err, UserWarning, stacklevel=1)
 
     if flags is not None:
         if return_flags:
