@@ -251,7 +251,7 @@ def health_checks(
                 raise_flags="flags" in raise_on,
                 **(flags_kwargs or {}),
             )
-            if (("flags" in raise_on) is False) and (
+            if ("flags" not in raise_on) and (
                 np.any([dsflags[dv] for dv in dsflags.data_vars])
             ):
                 bad_checks = [dv for dv in dsflags.data_vars if dsflags[dv].any()]
