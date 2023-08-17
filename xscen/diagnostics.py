@@ -215,12 +215,12 @@ def health_checks(
                 else:
                     raise ValueError(f"Check '{check}' is not in xclim.")
                 if "cfchecks" in raise_on:
-                    # cfchecks only warns, so we need to catch the warning and raise it as an error
-                    with warnings.catch_warnings(record=True) as w:
+                    warnings.simplefilter("error")
+                    try:
                         getattr(xc.core.cfchecks, check)(**cfchecks[v][check])
-                    if len(w) > 0:
-                        raise w[0].message
-
+                    except UserWarning as e:
+                        raise ValueError(e)
+                    warnings.resetwarnings()
                 else:
                     getattr(xc.core.cfchecks, check)(**cfchecks[v][check])
 

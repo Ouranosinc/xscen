@@ -131,7 +131,7 @@ class TestHealthChecks:
             }
         }
         with pytest.raises(
-            UserWarning, match="Variable has a non-conforming standard_name"
+            ValueError, match="['something_else']"
         ):  # Will raise on the first check
             xs.diagnostics.health_checks(ds, cfchecks=bad_cfcheck, raise_on=["all"])
         with pytest.warns(
