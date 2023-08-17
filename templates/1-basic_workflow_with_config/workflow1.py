@@ -125,7 +125,7 @@ if __name__ == "__main__":
         # Search the ProjectCatalog for the results of the previous step, then iterate over each dataset.
         # We usually don't have to rely on search_data_catalogs anymore after the initial extraction, because the content of the ProjectCatalog is smaller and more manageable.
         # In most cases, we can just use the search function with the 'type' and 'processing_level' attributes.
-        input_dict = pcat.search(**CONFIG["regrid"]["inputs"]).(**tdd)
+        input_dict = pcat.search(**CONFIG["regrid"]["inputs"]).to_dataset_dict(**tdd)
         for key_input, ds_input in input_dict.items():
             cur = {
                 "id": ds_input.attrs["cat:id"],
