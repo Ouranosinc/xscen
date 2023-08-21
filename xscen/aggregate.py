@@ -728,7 +728,7 @@ def produce_horizon(
     all_periods = []
     if periods is not None:
         if len(periods) == 2 and isinstance(periods[0], str):
-            all_periods.append(standardize_periods(periods))
+            all_periods.append(standardize_periods(periods, multiple=False))
         else:
             all_periods.extend(
                 [standardize_periods(p) if isinstance(p, list) else p for p in periods]
