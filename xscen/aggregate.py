@@ -713,11 +713,13 @@ def produce_horizon(
     xr.Dataset
         Horizon dataset.
     """
-    if "warminglevel" in ds and len(ds.warminglevel) != 1:
-        raise ValueError(
-            "Input dataset should only have `warminglevel` dimension of length 1. If you want to use produce_horizon for multiple warming levels, "
-            "extract the full time series and use the `warminglevels` argument instead."
-        )
+    if "warminglevel" in ds:
+        if len(ds.warminglevel) != 1:
+            raise ValueError(
+                "Input dataset should only have `warminglevel` dimension of length 1. If you want to use produce_horizon for multiple warming levels, "
+                "extract the full time series and use the `warminglevels` argument instead."
+            )
+        ds = ds.squeeze(dim="warminglevel")
     if period is not None:
         warnings.warn(
             "The 'period' argument is deprecated and will be removed in a future version. Use 'periods' instead.",
@@ -757,7 +759,7 @@ def produce_horizon(
                 )
                 ds_sub = None
         else:
-            ds_sub = subset_warming_level(ds, **period)
+            ds_sub = subset_warming_level(ds, **period).squeeze(dim="warminglevel")
 
         if ds_sub is not None:
             # compute indicators
@@ -807,10 +809,10 @@ def produce_horizon(
                     )
                     ds_mean["horizon"] = ds_mean["horizon"].astype(str)
 
-                if "warminglevel" in ds_mean.dims:
-                    wl = ds_mean["warminglevel"].values
+                if "warminglevel" in ds_mean.coords:
+                    wl = np.array([ds_mean["warminglevel"].item()])
                     wl_attrs = ds_mean["warminglevel"].attrs
-                    ds_mean = ds_mean.squeeze(dim="warminglevel", drop=True)
+                    ds_mean = ds_mean.drop_vars("warminglevel")
                     ds_mean["horizon"] = wl
                     ds_mean["horizon"].attrs.update(wl_attrs)
 
