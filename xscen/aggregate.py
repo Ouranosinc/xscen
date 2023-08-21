@@ -854,7 +854,7 @@ def produce_horizon(
                     "warminglevel" in ds.dims and warminglevels is None
                 ):
                     to_level = to_level.format(
-                        wl=ds_sub.warminglevel.values[0]
+                        wl=ds_sub.horizon.values[0]
                         if isinstance(all_periods[0], dict)
                         else ds.warminglevel.values[0]
                     )
