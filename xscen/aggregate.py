@@ -727,15 +727,7 @@ def produce_horizon(
 
     all_periods = []
     if periods is not None:
-        if len(periods) == 2 and (not isinstance(periods[0], list)):
-            all_periods.append(standardize_periods(periods, multiple=False))
-        else:
-            all_periods.extend(
-                [
-                    standardize_periods(p, multiple=False) if isinstance(p, list) else p
-                    for p in periods
-                ]
-            )
+        all_periods.extend(standardize_periods(periods))
     if warminglevels is not None:
         if isinstance(warminglevels["wl"], (int, float)):
             all_periods.append(warminglevels)
