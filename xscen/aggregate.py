@@ -697,7 +697,8 @@ def produce_horizon(
     indicators:  Union[str, Path, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
         Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     periods: list
-        List of periods to be evaluated. Each period should be a list of [start, end] or an int/float for the warming level.
+        Either ['start', 'end'], or list of periods to be evaluated.
+        Each period should be a list of [start, end] or an int/float for the warming level.
         If both periods and warminglevels are None, the full time series will be used.
     warminglevels: dict
         Dictionary of arguments to pass to `py:func:xscen.subset_warming_level`.
@@ -727,11 +728,18 @@ def produce_horizon(
 
     all_periods = []
     if periods is not None:
-        if len(periods) == 2 and isinstance(periods[0], str):
+        if (
+            len(periods) == 2
+            and isinstance(periods[0], (int, float, str))
+            and float(periods[0]) > 100
+        ):
             all_periods.append(standardize_periods(periods, multiple=False))
         else:
             all_periods.extend(
-                [standardize_periods(p) if isinstance(p, list) else p for p in periods]
+                [
+                    standardize_periods(p, multiple=False) if isinstance(p, list) else p
+                    for p in periods
+                ]
             )
     if warminglevels is not None:
         if isinstance(warminglevels["wl"], (int, float)):
