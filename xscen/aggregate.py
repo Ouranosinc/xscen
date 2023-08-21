@@ -730,7 +730,7 @@ def produce_horizon(
     if periods is not None:
         if (
             len(periods) == 2
-            and isinstance(periods[0], (int, float, str))
+            and (not isinstance(periods[0], list))
             and float(periods[0]) > 100
         ):
             all_periods.append(standardize_periods(periods, multiple=False))
