@@ -697,7 +697,7 @@ def produce_horizon(
     indicators:  Union[str, Path, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
         Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     periods: list
-        Either [start, end] or list of [start_year, end_year] for the period(s) to be evaluated.
+        List of periods to be evaluated. Each period should be a list of [start, end] or an int/float for the warming level.
         If both periods and warminglevels are None, the full time series will be used.
     warminglevels: dict
         Dictionary of arguments to pass to `py:func:xscen.subset_warming_level`.
