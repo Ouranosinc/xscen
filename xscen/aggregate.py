@@ -765,7 +765,7 @@ def produce_horizon(
                 )
                 ds_sub = None
         else:
-            ds_sub = subset_warming_level(ds, wl=period)
+            ds_sub = subset_warming_level(ds, **period)
 
         if ds_sub is not None:
             # compute indicators
