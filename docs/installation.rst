@@ -24,7 +24,7 @@ If for some reason you wish to install the `PyPI` version of `xscen` into an exi
     $ pip install xscen
 
 Development Installation (Anaconda + pip)
---------------------------------------
+-----------------------------------------
 
 For development purposes, we provide the means for generating a conda environment with the latest dependencies in an `environment.yml` file at the top-level of the `Github repo`_.
 
