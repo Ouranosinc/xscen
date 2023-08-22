@@ -727,7 +727,7 @@ def produce_horizon(
 
     all_periods = []
     if periods is not None:
-        all_periods.extend(periods)
+        all_periods.extend(standardize_periods(periods))
     if warminglevels is not None:
         if isinstance(warminglevels["wl"], (int, float)):
             all_periods.append(warminglevels)
@@ -761,7 +761,12 @@ def produce_horizon(
 
         if ds_sub is not None:
             # compute indicators
-            ind_dict = compute_indicators(ds=ds_sub, indicators=indicators)
+            ind_dict = compute_indicators(
+                ds=ds_sub.squeeze(dim="warminglevel")
+                if "warminglevel" in ds_sub.dims
+                else ds_sub,
+                indicators=indicators,
+            )
 
             # Compute the window-year mean
             ds_merge = xr.Dataset()
@@ -807,10 +812,10 @@ def produce_horizon(
                     )
                     ds_mean["horizon"] = ds_mean["horizon"].astype(str)
 
-                if "warminglevel" in ds_mean.dims:
-                    wl = ds_mean["warminglevel"].values
+                if "warminglevel" in ds_mean.coords:
+                    wl = np.array([ds_mean["warminglevel"].item()])
                     wl_attrs = ds_mean["warminglevel"].attrs
-                    ds_mean = ds_mean.squeeze(dim="warminglevel", drop=True)
+                    ds_mean = ds_mean.drop_vars("warminglevel")
                     ds_mean["horizon"] = wl
                     ds_mean["horizon"].attrs.update(wl_attrs)
 
