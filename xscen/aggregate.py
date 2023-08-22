@@ -713,13 +713,11 @@ def produce_horizon(
     xr.Dataset
         Horizon dataset.
     """
-    if "warminglevel" in ds:
-        if len(ds.warminglevel) != 1:
-            raise ValueError(
-                "Input dataset should only have `warminglevel` dimension of length 1. If you want to use produce_horizon for multiple warming levels, "
-                "extract the full time series and use the `warminglevels` argument instead."
-            )
-        ds = ds.squeeze(dim="warminglevel")
+    if "warminglevel" in ds and len(ds.warminglevel) != 1:
+        raise ValueError(
+            "Input dataset should only have `warminglevel` dimension of length 1. If you want to use produce_horizon for multiple warming levels, "
+            "extract the full time series and use the `warminglevels` argument instead."
+        )
     if period is not None:
         warnings.warn(
             "The 'period' argument is deprecated and will be removed in a future version. Use 'periods' instead.",
@@ -760,12 +758,15 @@ def produce_horizon(
                 ds_sub = None
         else:
             ds_sub = subset_warming_level(ds, **period)
-            if ds_sub is not None:
-                ds_sub = ds_sub.squeeze(dim="warminglevel")
 
         if ds_sub is not None:
             # compute indicators
-            ind_dict = compute_indicators(ds=ds_sub, indicators=indicators)
+            ind_dict = compute_indicators(
+                ds=ds_sub.squeeze(dim="warminglevel")
+                if "warminglevel" in ds_sub.dims
+                else ds_sub,
+                indicators=indicators,
+            )
 
             # Compute the window-year mean
             ds_merge = xr.Dataset()
@@ -854,7 +855,7 @@ def produce_horizon(
                     "warminglevel" in ds.dims and warminglevels is None
                 ):
                     to_level = to_level.format(
-                        wl=ds_sub.horizon.values[0]
+                        wl=ds_sub.warminglevel.values[0]
                         if isinstance(all_periods[0], dict)
                         else ds.warminglevel.values[0]
                     )
