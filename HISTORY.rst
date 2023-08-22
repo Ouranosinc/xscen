@@ -2,7 +2,7 @@
 History
 =======
 
-v0.7.0 (unreleased)
+v0.7.0 (2023-08-22)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).
 
@@ -25,7 +25,7 @@ New features and enhancements
 * ``generate_weights`` now allows to split weights between experiments, and make them vary along the time/horizon axis. (:issue:`108`, :pull:`231`).
 * New independence_level, `institution`, added to ``generate_weights``. (:pull:`231`).
 * Updated ``produce_horizon`` so it can accept multiple periods or warming levels. (:pull:`231`, :pull:`240`).
-* Add more comments in the template. (:pull:`233`,:pull:`235`, :issue:`232`).
+* Add more comments in the template. (:pull:`233`, :pull:`235`, :issue:`232`).
 * New function ``diagnostics.health_checks`` that can perform multiple checkups on a dataset. (:pull:`238`).
 
 Breaking changes
