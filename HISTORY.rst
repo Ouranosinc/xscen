@@ -2,7 +2,7 @@
 History
 =======
 
-v0.7.0 (unreleased)
+v0.7.0 (2023-08-22)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).
 
