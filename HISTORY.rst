@@ -9,7 +9,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal
 Announcements
 ^^^^^^^^^^^^^
 * Dropped support for Python 3.8, added support for 3.11. (:pull:`199`, :pull:`222`).
-* `xscen` is now available on `conda-forge <https://anaconda.org/conda-forge/xscen>`_, and can be installed with ``conda install -c conda-forge xscen``.
+* `xscen` is now available on `conda-forge <https://anaconda.org/conda-forge/xscen>`_, and can be installed with ``conda install -c conda-forge xscen``. (:pull:`241`)
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
