@@ -6,12 +6,12 @@ from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
-from typing import Tuple, Union
+from typing import Union
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import pygeos
+import shapely
 import xarray as xr
 import xclim as xc
 import xclim.core.calendar
@@ -495,18 +495,22 @@ def spatial_mean(
                 "Make sure that the computation is right."
             )
 
-        ds = ds.cf.add_bounds(["longitude", "latitude"])
-        weights = xr.DataArray(
-            pygeos.area(
-                pygeos.polygons(pygeos.linearrings(ds.lon_bounds, ds.lat_bounds))
-            ),
-            dims=ds.cf["longitude"].dims,
-            coords=ds.cf["longitude"].coords,
-        ) * np.cos(np.deg2rad(ds.cf["latitude"]))
-
-        ds_agg = ds.weighted(weights).mean(
-            [d for d in ds.cf.axes["X"] + ds.cf.axes["Y"]], keep_attrs=True
-        )
+        weights = np.cos(np.deg2rad(ds.cf["latitude"]))
+        if ds.cf["longitude"].ndim == 1:
+            dims = ds.cf["longitude"].dims + ds.cf["latitude"].dims
+        else:
+            if "longitude" not in ds.cf.bounds:
+                ds = ds.cf.add_bounds(["longitude", "latitude"])
+            # Weights the weights by the cell area (in °²)
+            weights = weights * xr.DataArray(
+                shapely.area(
+                    shapely.polygons(shapely.linearrings(ds.lon_bounds, ds.lat_bounds))
+                ),
+                dims=ds.cf["longitude"].dims,
+                coords=ds.cf["longitude"].coords,
+            )
+            dims = ds.cf["longitude"].dims
+        ds_agg = ds.weighted(weights).mean(dims, keep_attrs=True)
 
         # Prepare the History field
         new_history = (

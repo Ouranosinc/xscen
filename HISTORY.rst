@@ -2,6 +2,11 @@
 History
 =======
 
+v0.7.1 (2023-08-23)
+-------------------
+* Update dependencies by removing ``pygeos``, pinning ``shapely>=2`` and ``intake-esm>=2023.07.07`` as well as other small fixes to the environment files. (:pull:`243`).
+* Fix ``xs.aggregate.spatial_mean`` with method ``cos-lat`` when the data is on a rectilinear grid. (:pull:`243`).
+
 v0.7.0 (2023-08-22)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).
