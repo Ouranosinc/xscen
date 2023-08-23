@@ -411,7 +411,6 @@ class DataCatalog(intake_esm.esm_datastore):
         cat = deepcopy(self)
         # Put back what was removed by the copy...
         cat._requested_variables = self._requested_variables
-        preprocess = kwargs.get("preprocess")
 
         if isinstance(concat_on, str):
             concat_on = [concat_on]
@@ -443,7 +442,7 @@ class DataCatalog(intake_esm.esm_datastore):
             )
 
         if create_ensemble_on:
-            if preprocess is not None:
+            if kwargs.get("preprocess") is not None:
                 warnings.warn(
                     "Using `create_ensemble_on` will override the given `preprocess` function."
                 )
@@ -464,6 +463,8 @@ class DataCatalog(intake_esm.esm_datastore):
                     )
                 return ds
 
+            kwargs["preprocess"] = preprocess
+
         if len(rm_from_id) > 1:
             # Guess what the ID was and rebuild a new one, omitting the columns part of the aggregation
             unstacked = unstack_id(cat)
@@ -478,7 +479,7 @@ class DataCatalog(intake_esm.esm_datastore):
             raise ValueError(
                 f"Expected exactly one dataset, received {N} instead : {cat.keys()}"
             )
-        ds = cat.to_dask(preprocess=preprocess, **kwargs)
+        ds = cat.to_dask(**kwargs)
         return ds
 
 
