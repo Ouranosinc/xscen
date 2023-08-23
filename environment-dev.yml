@@ -3,9 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python >=3.9
-  # Don't forget to sync the changes here with environment.yml!
-  # FIXME pins
-  - pydantic < 2  # breaks intake-esm, See: https://github.com/intake/intake-esm/issues/617
+  # Don't forget to sync the changes here with environment-dev.yml!
   # Main packages
   - cartopy
   - cftime
@@ -16,24 +14,26 @@ dependencies:
   - fsspec
   - geopandas
   - h5netcdf
-  - intake
-  - intake-esm >=2022.9.18
+  - h5py
+  - intake-esm >=2023.07.07
   - matplotlib
   - netCDF4
   - numpy
   - pandas >= 2
   - parse
-  - pygeos
   - pyyaml
   - rechunker
-  - shapely
+  - shapely >= 2
+  - sparse
+  - toolz
   - xarray
   - xclim >=0.43.0
   - xesmf >=0.7
   - zarr
   # Opt
   - nc-time-axis >=1.3.1
-  - pyarrow >=1.0.0  # For lighter in-memory catalogs
+  - pyarrow >=1.0.0
+  - pip
   # Dev
   - bumpversion
   - coveralls
