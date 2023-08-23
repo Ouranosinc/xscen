@@ -19,34 +19,37 @@ build:
 
 requirements:
   host:
-    - python >=3.8
+    - python >=3.9
     - pip
   run:
-    - python >=3.8
     - cartopy
     - cftime
     - cf_xarray >=0.7.6
-    - clisops
+    - clisops >=0.10
     - dask-core
     - flox
     - fsspec
     - geopandas
     - h5netcdf
-    - intake
-    - intake-esm >=2022.9.18
-    - matplotlib-base
-    - pyarrow  # Used when opening catalogs.
-    - pygeos
-    - netcdf4
+    - h5py
+    - intake-esm >=2023.07.07
+    - matplotlib
+    - netCDF4
     - numpy
-    - pandas
+    - pandas >= 2
+    - parse
     - pyyaml
     - rechunker
-    - shapely
+    - shapely >= 2
+    - sparse
+    - toolz
     - xarray
-    - xclim >=0.37
+    - xclim >=0.43.0
     - xesmf >=0.7
     - zarr
+    # Opt
+    - nc-time-axis >=1.3.1
+    - pyarrow >=1.0.0
 
 test:
   imports:

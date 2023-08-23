@@ -14,6 +14,7 @@ from yaml import safe_load
 
 from xscen.config import parse_config
 
+from .catutils import parse_from_ds
 from .utils import CV, standardize_periods
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ def compute_indicators(
     ],
     *,
     periods: list = None,
+    restrict_years: bool = True,
     to_level: str = "indicators",
 ) -> Union[dict, xr.Dataset]:
     """Calculate variables and indicators based on a YAML call to xclim.
@@ -85,6 +87,11 @@ def compute_indicators(
     periods : list
         Either [start, end] or list of [start, end] of continuous periods over which to compute the indicators. This is needed when the time axis of ds contains some jumps in time.
         If None, the dataset will be considered continuous.
+    restrict_years:
+        If True, cut the time axis to be within the same years as the input.
+        This is mostly useful for frequencies that do not start in January, such as QS-DEC.
+        In that instance, `xclim` would start on previous_year-12-01 (DJF), with a NaN. `restrict_years` will cut that first timestep.
+        This should have no effect on YS and MS indicators.
     to_level : str, optional
         The processing level to assign to the output.
         If None, the processing level of the inputs is preserved.
@@ -193,7 +200,7 @@ def compute_indicators(
             if (out[c].attrs != ds[c].attrs) and (out[c].sizes == ds[c].sizes):
                 out[c].attrs = ds[c].attrs
 
-        if "time" in out.dims:
+        if restrict_years and "time" in out.dims:
             # cut the time axis to be within the same years as the input
             # for QS-DEC, xclim starts on DJF with time previous_year-12-01 with a nan as values. We want to cut this.
             # this should have no effect on YS and MS indicators
@@ -209,7 +216,9 @@ def compute_indicators(
             out_dict[key] = out
             # TODO: Double-check History, units, attrs, add missing variables (grid_mapping), etc.
             out_dict[key].attrs = ds.attrs
-            out_dict[key].attrs.pop("cat:variable", None)
+            out_dict[key].attrs["cat:variable"] = parse_from_ds(
+                out_dict[key], ["variable"]
+            )["variable"]
             out_dict[key].attrs["cat:xrfreq"] = freq
             out_dict[key].attrs["cat:frequency"] = CV.xrfreq_to_frequency(freq, None)
             if to_level is not None:

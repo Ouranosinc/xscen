@@ -1,8 +1,14 @@
-realm: atmos
+# This file will generate a custom xclim module using your own specifications.
+# You have a lot of freedom in the way you can use this file, such as changing the inputs, output name, frequency, etc.
+# For a complete list of the possible arguments, please refer to the xclim documentation: https://xclim.readthedocs.io/en/stable/api.html#indicator-tools
+
+realm: atmos  # The realm used here can be anything. It is used to create the name of the module.
 indicators:
   consecutive_frost_days:
+    # The only required argument for an indicator is the 'base', which corresponds to the xclim indicator you want to use as a template.
     base: consecutive_frost_days
   sdii:
     base: sdii
     parameters:
+      # The parameters listed here must correspond to possible arguments of the xclim indicator you are using as a template (here, 'sdii').
       freq: MS

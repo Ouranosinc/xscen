@@ -29,13 +29,13 @@ jobs:
           python-version: "3.9"
       - name: Install tox
         run: |
-          pip install tox~=3.0
+          pip install tox
       - name: Run linting suite
         run: |
           tox -e black
 
   testing:
-    name: Smoke Test with Python${{ matrix.python-version }}
+    name: Test with Python${{ matrix.python-version }}
     needs: black
     runs-on: ubuntu-latest
     strategy:

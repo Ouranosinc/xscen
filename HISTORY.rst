@@ -2,29 +2,51 @@
 History
 =======
 
-v0.7.0 (unreleased)
+v0.7.1 (2023-08-23)
+-------------------
+* Update dependencies by removing ``pygeos``, pinning ``shapely>=2`` and ``intake-esm>=2023.07.07`` as well as other small fixes to the environment files. (:pull:`243`).
+* Fix ``xs.aggregate.spatial_mean`` with method ``cos-lat`` when the data is on a rectilinear grid. (:pull:`243`).
+
+v0.7.0 (2023-08-22)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).
 
 Announcements
 ^^^^^^^^^^^^^
 * Dropped support for Python 3.8, added support for 3.11. (:pull:`199`, :pull:`222`).
+* `xscen` is now available on `conda-forge <https://anaconda.org/conda-forge/xscen>`_, and can be installed with ``conda install -c conda-forge xscen``. (:pull:`241`)
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * `xscen` now tracks code coverage using `coveralls <https://coveralls.io/>`_. (:pull:`187`).
 * New function `get_warming_level` to search within the IPCC CMIP global temperatures CSV without requiring data. (:issue:`208`, :pull:`210`).
-* File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`).
+* File re-structuration from catalogs with ``xscen.catutils.build_path``. (:pull:`205`, :pull:`237`).
 * New scripting functions `save_and_update` and `move_and_delete`. (:pull:`214`).
 * Spatial dimensions can be generalized as X/Y when rechunking and will be mapped to rlon/rlat or lon/lat accordingly. (:pull:`221`).
+* New argument `var_as_string` for `get_cat_attrs` to return variable names as strings. (:pull:`233`).
+* New argument `copy` for `move_and_delete`. (:pull:`233`).
+* New argument `restrict_year` for `compute_indicators`. (:pull:`233`).
+* Add more comments in the template. (:pull:`233`, :issue:`232`).
+* ``generate_weights`` now allows to split weights between experiments, and make them vary along the time/horizon axis. (:issue:`108`, :pull:`231`).
+* New independence_level, `institution`, added to ``generate_weights``. (:pull:`231`).
+* Updated ``produce_horizon`` so it can accept multiple periods or warming levels. (:pull:`231`, :pull:`240`).
+* Add more comments in the template. (:pull:`233`, :pull:`235`, :issue:`232`).
+* New function ``diagnostics.health_checks`` that can perform multiple checkups on a dataset. (:pull:`238`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * Columns ``date_start`` and ``date_end`` now use a ``datetime64[ms]`` dtype. (:pull:`222`).
 * The default output of ``date_parser`` is now ``pd.Timestamp`` (``output_dtype='datetime'``). (:pull:`222`).
+* ``date_parser(date, end_of_period=True)`` has time "23:59:59", instead of "23:00". (:pull:`222`, :pull:`237`).
 * ``driving_institution`` was removed from the "default" xscen columns. (:pull:`222`).
 * Folder parsing utilities (``parse_directory``) moved to ``xscen.catutils``. Signature changed : ``globpattern`` removed, ``dirglob`` added, new ``patterns`` specifications. See doc for all changes. (:pull:`205`).
 * ``compute_indicators`` now returns all outputs produced by indicators with multiple outputs (such as `rain_season`). (:pull:`228`).
+* In ``generate_weights``, independence_level `all` was renamed `model`. (:pull:`231`).
+* In response to a bugfix, results for ``generate_weights(independence_level='GCM')`` are significantly altered. (:issue:`230`, :pull:`231`).
+* Legacy support for `stats_kwargs` in ``ensemble_stats`` was dropped. (:pull:`231`).
+* `period` in ``produce_horizon`` has been deprecated and replaced with `periods`. (:pull:`231`).
+* Some automated `to_level` were updated to reflect more recent changes. (:pull:`231`).
+* Removed ``diagnostics.fix_unphysical_values``. (:pull:`238`).
 
 Bug fixes
 ^^^^^^^^^
@@ -32,6 +54,7 @@ Bug fixes
 * Added NotImplemented errors when trying to call `climatological_mean` and `compute_deltas` with daily data. (:pull:`187`).
 * Minor documentation fixes. (:issue:`223`, :pull:`225`).
 * Fixed a bug in ``unstack_dates`` where it failed for anything other than seasons. (:pull:`228`).
+* ``cleanup`` with `common_attrs_only` now works even when no `cat` attribute is present in the datasets. (:pull:`231`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^

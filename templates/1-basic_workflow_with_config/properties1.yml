@@ -1,18 +1,23 @@
+# This file bears a similar purpose to indicators1.yml, but is called during the diagnostics step.
+# Same as for indicators1.yml, this will create a custom xclim module using your own specifications.
+# For a complete list of the possible arguments, please refer to the xclim documentation: https://xclim.readthedocs.io/en/stable/api.html#indicator-tools
+
 realm: generic
 indicators:
   quantile_02-tasmin:
-    base: xclim.sdba.properties.quantile
+    base: xclim.sdba.properties.quantile  # Properties do not have an identifier, so the full path must be specified.
     cf_attrs:
-      long_name: 2th quantile of the minimum temperature
+      long_name: 2nd quantile of the minimum temperature
     input:
-      da: tasmin
+      da: tasmin  # Since properties are generic, the input name must be specified.
     parameters:
-      q: 0.98
+      q: 0.02
       group: time.season
   maximum_length_of_warm_spell:
     base: xclim.sdba.properties.spell_length_distribution
     cf_attrs:
-      long_name: Maximum spell length distribution when the mean temperature is larger or equal to the 90th quantile.
+      # You can specify the attributes of the output DataArray here, but xclim will also try to infer them from the parameters.
+      long_name: Maximum spell length distribution when the maximum temperature is larger or equal to the 90th quantile.
     input:
       da: tasmax
     parameters:
@@ -23,7 +28,7 @@ indicators:
   mean-pr:
     base: xclim.sdba.properties.mean
     cf_attrs:
-      long_name: Variance of the precipitation
+      long_name: Mean precipitation
     input:
       da: pr
-    measure: xclim.sdba.measures.RATIO
+    measure: xclim.sdba.measures.RATIO  # This will instruct xclim to perform a ratio between the given input and the reference data.

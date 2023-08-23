@@ -879,7 +879,6 @@ def get_warming_level(
     if tas_csv is None:
         tas_csv = Path(__file__).parent / "data" / "IPCC_annual_global_tas.csv"
 
-    info = {}
     if isinstance(realization, (xr.Dataset, str, dict)):
         realization = [realization]
     info_models = []
