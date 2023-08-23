@@ -1,20 +1,21 @@
-{% set name = "xscen" %}
+# Build recipe using `boa` build standard. Not suitable for conda-forge. See: https://github.com/mamba-org/boa
+
+context:
+  name: xscen
+  version: 0.5.0
 
 package:
-  name: {{ name|lower }}
-  version: {{ environ['GIT_DESCRIBE_TAG'] }}
+  name: '{{ name|lower }}'
+  version: '{{ version }}'
 
 source:
-  path: ../../
-
-channels:
-  - conda-forge
-  - defaults
+  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/xscen-{{ version }}.tar.gz
+  sha256: f31df2cb52e87dd82d2fc7d340788e4edf14abccf04685a9249a2067594b721a
 
 build:
   noarch: python
-  script: {{ PYTHON }} -m pip install . -vv
-  number: 0
+  script: '{{ PYTHON }} -m pip install . -vv'
+  number: 1
 
 requirements:
   host:
@@ -67,8 +68,6 @@ about:
 
 extra:
   recipe-maintainers:
-    # GitHub.com
+    # Anaconda.org
     - Zeitsperre
-    - RondeauG
-    - aulemahal
-    - juliettelavoie
+    - aule
