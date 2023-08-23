@@ -442,7 +442,7 @@ class DataCatalog(intake_esm.esm_datastore):
             )
 
         if create_ensemble_on:
-            if kwargs.get('preprocess') is not None:
+            if kwargs.get("preprocess") is not None:
                 warnings.warn(
                     "Using `create_ensemble_on` will override the given `preprocess` function."
                 )
@@ -463,7 +463,7 @@ class DataCatalog(intake_esm.esm_datastore):
                     )
                 return ds
 
-            kwargs['preprocess'] = preprocess
+            kwargs["preprocess"] = preprocess
 
         if len(rm_from_id) > 1:
             # Guess what the ID was and rebuild a new one, omitting the columns part of the aggregation
