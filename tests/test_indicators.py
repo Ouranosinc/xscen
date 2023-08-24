@@ -7,7 +7,7 @@ from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
 
-from .conftest import notebooks
+from conftest import notebooks
 
 
 class TestComputeIndicators:

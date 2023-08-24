@@ -7,11 +7,11 @@ import xarray as xr
 
 from xscen import catutils as cu
 
-from .conftest import SAMPLES_DIR
+from conftest import SAMPLES_DIR
 
 
 # Sample files are in the doc folder
-@pytest.mark.requires_docs
+@pytest.mark.requires_netcdf
 @pytest.mark.parametrize(
     "exts,lens,dirglob,N",
     (
@@ -86,7 +86,7 @@ def _reverse_word(text):
     return "".join(reversed(text))
 
 
-@pytest.mark.requires_docs
+@pytest.mark.requires_netcdf
 def test_parse_directory():
     df = cu.parse_directory(
         directories=[str(SAMPLES_DIR)],
@@ -135,7 +135,7 @@ def test_parse_directory():
     ) == {"v20191108", "v20200702"}
 
 
-@pytest.mark.requires_docs
+@pytest.mark.requires_netcdf
 def test_parse_directory_readgroups():
     df = cu.parse_directory(
         directories=[str(SAMPLES_DIR)],
@@ -154,7 +154,7 @@ def test_parse_directory_readgroups():
     assert (df[~t2m].variable.apply(len) == 0).all()
 
 
-@pytest.mark.requires_docs
+@pytest.mark.requires_netcdf
 def test_parse_directory_offcols():
     with pytest.raises(
         ValueError, match="Patterns include fields which are not recognized by xscen"
@@ -175,7 +175,7 @@ def test_parse_directory_offcols():
     assert (df["activité"] == "ScenarioMIP").all()
 
 
-@pytest.mark.requires_docs
+@pytest.mark.requires_netcdf
 def test_parse_directory_idcols():
     df = cu.parse_directory(
         directories=[str(SAMPLES_DIR)],
