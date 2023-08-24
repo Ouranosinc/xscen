@@ -63,7 +63,26 @@ class TestSearchDataCatalogs:
         assert len(out) == 1
         assert len(out["NorESM2-MM"].df) == 5
 
-        # TODO: missing id
+        # Missing id
+        small_cat = deepcopy(self.small_cat)
+        small_cat.esmcat._df.loc[
+            small_cat.esmcat._df.id
+            == "CMIP6_ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_example-region",
+            "id",
+        ] = None
+        assert (
+            "CMIP6_ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_example-region"
+            not in small_cat.esmcat._df.id.values
+        )
+        out = xs.search_data_catalogs(
+            data_catalogs=deepcopy(self.small_cat),
+            variables_and_freqs={"tas": "D"},
+        )
+        assert len(out) == 5
+        assert (
+            "CMIP6_ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_example-region"
+            in out.keys()
+        )
 
     @pytest.mark.parametrize("allow_resampling", [True, False])
     def test_allow_resampling(self, allow_resampling):
@@ -179,8 +198,26 @@ class TestSearchDataCatalogs:
         )
         assert isinstance(out, dict)
         assert len(out) == 0
+        out = xs.search_data_catalogs(
+            data_catalogs=self.small_cat,
+            variables_and_freqs={"tas": "D"},
+            other_search_criteria={"experiment": "not_real"},
+        )
+        assert isinstance(out, dict)
+        assert len(out) == 0
 
     def test_input_types(self):
+        # data_catalogs_1 = notebooks / "samples" / "tutorial-catalog.json"
+        # data_catalogs_2 = notebooks / "samples" / "pangeo-cmip6.json"
+        # out = xs.search_data_catalogs(
+        #     data_catalogs=data_catalogs_1,
+        #     variables_and_freqs={"tas": "D"},
+        #     other_search_criteria={
+        #         "experiment": "ssp585",
+        #         "source": "NorESM.*",
+        #         "member": "r1i1p1f1",
+        #     },
+        # )
         pass
 
     def test_match_histfut(self):

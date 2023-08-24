@@ -587,7 +587,7 @@ def search_data_catalogs(
         }
 
     # Cast paths to single item list
-    if isinstance(data_catalogs, (str, Path)):
+    if isinstance(data_catalogs, (str, os.PathLike)):
         data_catalogs = [data_catalogs]
 
     # Prepare a unique catalog to search from, with the DerivedCat added if required
@@ -608,7 +608,7 @@ def search_data_catalogs(
             **cat_kwargs,
         )
     elif isinstance(data_catalogs, list) and all(
-        isinstance(dc, str) for dc in data_catalogs
+        isinstance(dc, (str, os.PathLike)) for dc in data_catalogs
     ):
         data_catalogs = [
             DataCatalog(path) if path.endswith(".json") else DataCatalog.from_df(path)
