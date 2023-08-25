@@ -17,6 +17,7 @@ from . import (
     regrid,
     scripting,
     spatial,
+    testing,
     utils,
 )
 
