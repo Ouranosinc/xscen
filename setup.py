@@ -53,7 +53,7 @@ setup(
     author_email="rondeau-genesse.gabriel@ouranos.ca",
     python_requires=">=3.9",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: Apache Software License",
