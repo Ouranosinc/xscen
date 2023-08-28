@@ -67,6 +67,7 @@ Internal changes
 * A few changes to `subset_warming_level` so it doesn't need `driving_institution`. (:pull:`215`).
 * Added more tests. (:pull:`228`).
 * In ``compute_indicators``, the logic to manage indicators returning multiple outputs was simplified. (:pull:`228`).
+* Added a workflow that removes obsolete GitHub Workflow caches from merged pull requests. (:pull:`250`).
 
 v0.6.0 (2023-05-04)
 -------------------
