@@ -92,12 +92,16 @@ def datablock_3d(
             np.arange(y_start, y_start + values.shape[1] * y_step, y_step),
             dims=y,
             attrs=attrs[y],
-        ),
+        )[
+            0 : values.shape[1]
+        ],  # np.arange sometimes creates an extra value
         x: xr.DataArray(
             np.arange(x_start, x_start + values.shape[2] * x_step, x_step),
             dims=x,
             attrs=attrs[x],
-        ),
+        )[
+            0 : values.shape[2]
+        ],  # np.arange sometimes creates an extra value
     }
 
     # Get the attributes using xclim, then create the DataArray
@@ -158,3 +162,62 @@ def datablock_3d(
             return da.to_dataset()
     else:
         return da
+
+
+def fake_data(
+    nyears, nx, ny, rand_type="random", seed=0, amplitude=1, offset=0
+) -> np.ndarray:
+    """Generate fake data for testing.
+
+    Parameters
+    ----------
+    nyears : int
+        Number of years (365 days) to generate.
+    nx : int
+        Number of x points.
+    ny : int
+        Number of y points.
+    rand_type : str
+        Type of random data to generate. Options are:
+        - "random": random data with no structure.
+        - "tas": temperature-like data with a yearly half-sine cycle.
+    seed : int
+        Random seed.
+    amplitude : float
+        Amplitude of the random data.
+    offset : float
+        Offset of the random data.
+
+    Returns
+    -------
+    np.ndarray
+        Fake data.
+    """
+    if rand_type not in ["random", "tas"]:
+        raise NotImplementedError(f"rand_type={rand_type} not implemented.")
+
+    np.random.seed(seed)
+    data = np.reshape(
+        np.random.random(365 * nyears * (nx * ny)) * amplitude, (365 * nyears, ny, nx)
+    )
+
+    if rand_type == "tas":
+        # add an annual cycle (repeating half-sine)
+        data += np.tile(
+            np.sin(np.linspace(0, np.pi, 365))[:, None, None] * amplitude,
+            (nyears, 1, 1),
+        )
+        # convert to Kelvin and offset the half-sine
+        data = data + 273.15 - amplitude
+        # add trend (polynomial 3rd)
+        np.random.seed(seed)
+        base_warming_rate = 0.02 + np.random.random() * 0.01
+        data += np.tile(
+            np.linspace(0, base_warming_rate * nyears, 365 * nyears) ** 3, (nx, ny, 1)
+        ).T
+
+    # add a semi-random offset
+    np.random.seed(seed)
+    data = data + offset - (np.random.random() * amplitude - amplitude / 2)
+
+    return data
