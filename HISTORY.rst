@@ -68,6 +68,7 @@ Internal changes
 * Added more tests. (:pull:`228`).
 * In ``compute_indicators``, the logic to manage indicators returning multiple outputs was simplified. (:pull:`228`).
 * Added a workflow that removes obsolete GitHub Workflow caches from merged pull requests. (:pull:`250`).
+* Added a workflow to perform automated labeling of pull requests, dependent on the files changed. (:pull:`250`).
 
 v0.6.0 (2023-05-04)
 -------------------
