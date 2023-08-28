@@ -124,7 +124,7 @@ def test_parse_directory():
     assert df.date_start.dtype == "<M8[ms]"
     assert df.date_end.dtype == "<M8[ms]"
     assert (
-        df[df["frequency"] == "day"]["date_end"] == pd.Timestamp("2050-12-31")
+        df[df["frequency"] == "day"]["date_end"] == pd.Timestamp("2002-12-31")
     ).all()  # Read from file
     # Read from file + attrs cvs
     assert set(
@@ -149,7 +149,7 @@ def test_parse_directory_readgroups():
     )
     assert len(df) == 10
     t2m = df.variable.apply(lambda v: "t2m" in v)
-    assert (df[t2m]["date_end"] == pd.Timestamp("2050-12-31")).all()
+    assert (df[t2m]["date_end"] == pd.Timestamp("2002-12-31")).all()
     assert (df[~t2m].variable.apply(len) == 0).all()
 
 

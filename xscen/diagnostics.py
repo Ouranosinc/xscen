@@ -244,7 +244,7 @@ def health_checks(
             elif isinstance(missing, list):
                 missing = {m: {} for m in missing}
             for method, kwargs in missing.items():
-                kwargs.setdefault("freq", inferred_freq)
+                kwargs.setdefault("freq", "YS")
                 for v in ds.data_vars:
                     ms = getattr(xc.core.missing, method)(ds[v], **kwargs)
                     if ms.any():
