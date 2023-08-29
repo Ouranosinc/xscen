@@ -3,110 +3,101 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 import pytest
+from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
 
-from .conftest import notebooks
-
 
 class TestSearchDataCatalogs:
-    small_cat = xs.DataCatalog(notebooks / "samples" / "tutorial-catalog.json")
-    big_cat = xs.DataCatalog(notebooks / "samples" / "pangeo-cmip6.json")
+    cat = xs.DataCatalog(notebooks / "samples" / "pangeo-cmip6.json")
 
     @pytest.mark.parametrize(
         "variables_and_freqs, other_arg",
         [
-            ({"tas": "D"}, None),
+            ({"tasmin": "D"}, None),
             ({"sftlf": "fx"}, "other"),
-            ({"tas": "D", "sftlf": "fx"}, "exclusion"),
+            ({"tasmin": "D", "sftlf": "fx"}, "exclusion"),
         ],
     )
     def test_basic(self, variables_and_freqs, other_arg):
         out = xs.search_data_catalogs(
-            data_catalogs=self.small_cat,
+            data_catalogs=self.cat,
             variables_and_freqs=variables_and_freqs,
-            other_search_criteria={"experiment": ["ssp370"]}
+            other_search_criteria={"experiment": ["ssp585"]}
             if other_arg == "other"
             else None,
             exclusions={"member": "r2.*"} if other_arg == "exclusion" else None,
         )
-        assert len(out) == 5 if other_arg is None else 1 if other_arg == "other" else 4
+        assert len(out) == 13 if other_arg is None else 2 if other_arg == "other" else 6
 
     @pytest.mark.parametrize(
         "periods, coverage_kwargs",
         [
             ([["2020", "2030"], ["2035", "2040"]], None),
             ([["1900", "2030"], ["2035", "2040"]], None),
-            ([["2020", "2080"]], None),
-            ([["2020", "2080"]], {"coverage": 0.5}),
+            ([["2020", "2130"]], {"coverage": 0.70}),
         ],
     )
     def test_periods(self, periods, coverage_kwargs):
         out = xs.search_data_catalogs(
-            data_catalogs=self.small_cat,
-            variables_and_freqs={"tas": "D"},
+            data_catalogs=self.cat,
+            variables_and_freqs={"tasmin": "D"},
             periods=periods,
             coverage_kwargs=coverage_kwargs,
         )
-        assert len(out) == (
-            5
-            if ((periods[0] == ["2020", "2030"]) or coverage_kwargs is not None)
-            else 0
-        )
+        assert len(out) == (0 if periods[0] == ["1900", "2030"] else 5)
 
     def test_ids(self):
         out = xs.search_data_catalogs(
-            data_catalogs=deepcopy(self.small_cat),
-            variables_and_freqs={"tas": "D"},
+            data_catalogs=deepcopy(self.cat),
+            variables_and_freqs={"tasmin": "D"},
             id_columns=["source"],
         )
-        assert len(out) == 1
+        assert len(out) == 3
         assert len(out["NorESM2-MM"].df) == 5
 
     @pytest.mark.parametrize("allow_resampling", [True, False])
     def test_allow_resampling(self, allow_resampling):
         out = xs.search_data_catalogs(
-            data_catalogs=deepcopy(self.small_cat),
-            variables_and_freqs={"tas": "YS"},
+            data_catalogs=deepcopy(self.cat),
+            variables_and_freqs={"tasmin": "YS"},
             allow_resampling=allow_resampling,
         )
-        assert len(out) == (5 if allow_resampling else 0)
+        assert len(out) == (13 if allow_resampling else 0)
 
     @pytest.mark.parametrize(
         "restrict_warming_level",
         [
             True,
-            {"ignore_member": True},
-            {"wl": 2},
-            {"wl": 3},
             {"wl": 2, "ignore_member": True},
+            {"wl": 4},
         ],
     )
     def test_warminglevel(self, restrict_warming_level):
+        cat = deepcopy(self.cat)
+        new_line = deepcopy(cat.df.iloc[13])
+        new_line["experiment"] = "ssp245"
+        new_line["id"] = xs.catalog.generate_id(new_line.to_frame().T).iloc[0]
+        cat.esmcat._df = pd.concat([cat.df, new_line.to_frame().T], ignore_index=True)
+
         out = xs.search_data_catalogs(
-            data_catalogs=self.small_cat,
-            variables_and_freqs={"tas": "D"},
+            data_catalogs=cat,
+            variables_and_freqs={"tasmax": "D"},
             restrict_warming_level=restrict_warming_level,
         )
-        assert (
-            out == 5
-            if restrict_warming_level == {"ignore_member": True}
-            else 4
-            if (
-                (restrict_warming_level is True)
-                or (restrict_warming_level == {"wl": 2, "ignore_member": True})
-            )
-            else 3
-            if restrict_warming_level == {"wl": 2}
-            else 2
-        )
+        if isinstance(restrict_warming_level, bool):
+            assert len(out) == 5
+        elif restrict_warming_level == {"wl": 2, "ignore_member": True}:
+            assert len(out) == 5
+        elif restrict_warming_level == {"wl": 4}:
+            assert len(out) == 2
 
     @pytest.mark.parametrize("restrict_resolution", [None, "finest", "coarsest"])
     def test_restrict_resolution(self, restrict_resolution):
-        big_cat = deepcopy(self.big_cat)
+        cat = deepcopy(self.cat)
         for i in range(2):
-            new_line = deepcopy(big_cat.df.iloc[0])
+            new_line = deepcopy(cat.df.iloc[0])
             new_line["mip_era"] = "CMIP5"
             new_line["activity"] = "CORDEX"
             new_line["institution"] = "CCCma"
@@ -117,16 +108,16 @@ class TestSearchDataCatalogs:
             new_line["domain"] = "NAM-22" if i == 0 else "NAM-11"
             new_line["frequency"] = "day"
             new_line["xrfreq"] = "D"
-            new_line["variable"] = ("tas",)
+            new_line["variable"] = ("tasmin",)
             new_line["id"] = xs.catalog.generate_id(new_line.to_frame().T).iloc[0]
 
-            big_cat.esmcat._df = pd.concat(
-                [big_cat.df, new_line.to_frame().T], ignore_index=True
+            cat.esmcat._df = pd.concat(
+                [cat.df, new_line.to_frame().T], ignore_index=True
             )
 
         out = xs.search_data_catalogs(
-            data_catalogs=big_cat,
-            variables_and_freqs={"tas": "D"},
+            data_catalogs=cat,
+            variables_and_freqs={"tasmin": "D"},
             other_search_criteria={
                 "source": ["GFDL-CM4", "CRCM5"],
                 "experiment": ["ssp585", "rcp85"],
@@ -144,46 +135,48 @@ class TestSearchDataCatalogs:
             assert any("NAM-22" in x for x in out)
             assert any("_gr2" in x for x in out)
 
-    @pytest.mark.parametrize("restrict_members", [None, {"ordered": 5}])
+    @pytest.mark.parametrize("restrict_members", [None, {"ordered": 2}])
     def test_restrict_members(self, restrict_members):
         out = xs.search_data_catalogs(
-            data_catalogs=self.big_cat,
-            variables_and_freqs={"tas": "D"},
-            other_search_criteria={"source": ["CanESM5"], "experiment": ["ssp585"]},
+            data_catalogs=self.cat,
+            variables_and_freqs={"tasmin": "D"},
+            other_search_criteria={
+                "source": ["NorESM2-LM"],
+                "experiment": ["historical"],
+            },
             restrict_members=restrict_members,
         )
-        assert len(out) == (50 if restrict_members is None else 5)
+        assert len(out) == (3 if restrict_members is None else 2)
         if restrict_members is not None:
             assert all(
                 o in out.keys()
                 for o in [
-                    "ScenarioMIP_CCCma_CanESM5_ssp585_r1i1p2f1_gn",
-                    "ScenarioMIP_CCCma_CanESM5_ssp585_r1i1p1f1_gn",
-                    "ScenarioMIP_CCCma_CanESM5_ssp585_r2i1p1f1_gn",
-                    "ScenarioMIP_CCCma_CanESM5_ssp585_r2i1p2f1_gn",
-                    "ScenarioMIP_CCCma_CanESM5_ssp585_r3i1p1f1_gn",
+                    "CMIP_NCC_NorESM2-LM_historical_r1i1p1f1_gn",
+                    "CMIP_NCC_NorESM2-LM_historical_r2i1p1f1_gn",
                 ]
             )
 
+        # Make sure that those with fewer members are still returned
         assert (
             len(
                 xs.search_data_catalogs(
-                    data_catalogs=self.big_cat,
-                    variables_and_freqs={"tas": "D"},
+                    data_catalogs=self.cat,
+                    variables_and_freqs={"tasmin": "D"},
                     other_search_criteria={
-                        "institution": ["NOAA-GFDL"],
+                        "source": ["GFDL-CM4"],
                         "experiment": ["ssp585"],
+                        "domain": "gr1",
                     },
                     restrict_members=restrict_members,
                 )
             )
-            == 3
+            == 1
         )
 
     @pytest.mark.parametrize("allow_conversion", [True, False])
     def test_allow_conversion(self, allow_conversion):
         out = xs.search_data_catalogs(
-            data_catalogs=self.big_cat,
+            data_catalogs=self.cat,
             variables_and_freqs={"evspsblpot": "D"},
             other_search_criteria={
                 "institution": ["NOAA-GFDL"],
@@ -191,37 +184,36 @@ class TestSearchDataCatalogs:
             },
             allow_conversion=allow_conversion,
         )
-        assert len(out) == (3 if allow_conversion else 0)
+        assert len(out) == (2 if allow_conversion else 0)
         if allow_conversion:
             assert all(
                 v in out[list(out.keys())[0]].unique("variable")
                 for v in ["tasmin", "tasmax"]
             )
-            assert "evspsblpot" not in out[list(out.keys())[0]].unique("variable")
+            assert "tas" not in out[list(out.keys())[0]].unique("variable")
 
     def test_no_match(self):
         out = xs.search_data_catalogs(
-            data_catalogs=self.small_cat,
+            data_catalogs=self.cat,
             variables_and_freqs={"tas": "YS"},
             allow_resampling=False,
         )
         assert isinstance(out, dict)
         assert len(out) == 0
         out = xs.search_data_catalogs(
-            data_catalogs=self.small_cat,
+            data_catalogs=self.cat,
             variables_and_freqs={"tas": "D"},
             other_search_criteria={"experiment": "not_real"},
         )
         assert isinstance(out, dict)
         assert len(out) == 0
 
-    def test_input_types(self):
-        data_catalogs_1 = notebooks / "samples" / "tutorial-catalog.json"
+    def test_input_types(self, samplecat):
         data_catalogs_2 = notebooks / "samples" / "pangeo-cmip6.json"
 
         assert (
             xs.search_data_catalogs(
-                data_catalogs=[data_catalogs_1, data_catalogs_2],
+                data_catalogs=[samplecat, data_catalogs_2],
                 variables_and_freqs={"tas": "D"},
                 other_search_criteria={
                     "experiment": "ssp585",
@@ -230,7 +222,7 @@ class TestSearchDataCatalogs:
                 },
             ).keys()
             == xs.search_data_catalogs(
-                data_catalogs=[self.small_cat, data_catalogs_2],
+                data_catalogs=[samplecat, self.cat],
                 variables_and_freqs={"tas": "D"},
                 other_search_criteria={
                     "experiment": "ssp585",
@@ -242,58 +234,37 @@ class TestSearchDataCatalogs:
 
     def test_match_histfut(self):
         out = xs.search_data_catalogs(
-            data_catalogs=self.big_cat,
-            variables_and_freqs={"tas": "D"},
-            other_search_criteria={"experiment": "ssp585", "source": "CanESM5"},
-            restrict_members={"ordered": 1},
+            data_catalogs=self.cat,
+            variables_and_freqs={"tasmin": "D"},
+            other_search_criteria={"experiment": "ssp585", "source": "GFDL-CM4"},
             match_hist_and_fut=True,
         )
-        assert (
-            str(
-                sorted(
-                    out["ScenarioMIP_CCCma_CanESM5_ssp585_r1i1p1f1_gn"].unique(
-                        "date_start"
-                    )
-                )[0]
-            )
-            == "1985-01-01 00:00:00"
-        )
-        assert (
-            str(
-                sorted(
-                    out["ScenarioMIP_CCCma_CanESM5_ssp585_r1i1p1f1_gn"].unique(
-                        "date_start"
-                    )
-                )[1]
-            )
-            == "2015-01-01 00:00:00"
-        )
+        k = list(out.keys())[0]
+        assert str(sorted(out[k].unique("date_start"))[0]) == "1985-01-01 00:00:00"
+        assert str(sorted(out[k].unique("date_start"))[1]) == "2015-01-01 00:00:00"
 
     def test_fx(self):
-        small_cat = deepcopy(self.small_cat)
-        new_line = deepcopy(small_cat.df.iloc[0])
+        cat = deepcopy(self.cat)
+        new_line = deepcopy(cat.df.iloc[0])
         new_line["id"] = new_line["id"].replace(
             new_line["experiment"], "another_experiment"
         )
         new_line["experiment"] = "another_experiment"
-        small_cat.esmcat._df = pd.concat(
-            [small_cat.df, new_line.to_frame().T], ignore_index=True
-        )
+        cat.esmcat._df = pd.concat([cat.df, new_line.to_frame().T], ignore_index=True)
 
         with pytest.warns(
             UserWarning,
             match="doesn't have the fixed field sftlf, but it can be acquired from ",
         ):
             out = xs.search_data_catalogs(
-                data_catalogs=small_cat,
+                data_catalogs=cat,
                 variables_and_freqs={"sftlf": "fx"},
                 other_search_criteria={"experiment": "another_experiment"},
             )
         assert len(out) == 1
+        k = list(out.keys())[0]
         np.testing.assert_array_equal(
-            out[
-                "CMIP6_ScenarioMIP_NCC_NorESM2-MM_another_experiment_r1i1p1f1_example-region"
-            ].df["experiment"],
+            out[k].df["experiment"],
             "another_experiment",
         )
 

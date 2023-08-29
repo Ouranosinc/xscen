@@ -26,7 +26,7 @@ def cleanup_notebook_data_folder(request):
     request.addfinalizer(remove_data_folder)
 
 
-@pytest.mark.requires_docs
+@pytest.mark.requires_netcdf
 @pytest.fixture(scope="session")
 def samplecat():
     """Generate a sample catalog with the tutorial netCDFs."""
