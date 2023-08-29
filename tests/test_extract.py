@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 import numpy as np
+import pandas as pd
 import pytest
 from xclim.testing.helpers import test_timeseries as timeseries
 
@@ -63,27 +64,6 @@ class TestSearchDataCatalogs:
         assert len(out) == 1
         assert len(out["NorESM2-MM"].df) == 5
 
-        # Missing id
-        small_cat = deepcopy(self.small_cat)
-        small_cat.esmcat._df.loc[
-            small_cat.esmcat._df.id
-            == "CMIP6_ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_example-region",
-            "id",
-        ] = None
-        assert (
-            "CMIP6_ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_example-region"
-            not in small_cat.esmcat._df.id.values
-        )
-        out = xs.search_data_catalogs(
-            data_catalogs=deepcopy(self.small_cat),
-            variables_and_freqs={"tas": "D"},
-        )
-        assert len(out) == 5
-        assert (
-            "CMIP6_ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_example-region"
-            in out.keys()
-        )
-
     @pytest.mark.parametrize("allow_resampling", [True, False])
     def test_allow_resampling(self, allow_resampling):
         out = xs.search_data_catalogs(
@@ -122,18 +102,47 @@ class TestSearchDataCatalogs:
             else 2
         )
 
-    @pytest.mark.parametrize("restrict_resolution", [None, "finest"])
+    @pytest.mark.parametrize("restrict_resolution", [None, "finest", "coarsest"])
     def test_restrict_resolution(self, restrict_resolution):
+        big_cat = deepcopy(self.big_cat)
+        for i in range(2):
+            new_line = deepcopy(big_cat.df.iloc[0])
+            new_line["mip_era"] = "CMIP5"
+            new_line["activity"] = "CORDEX"
+            new_line["institution"] = "CCCma"
+            new_line["driving_model"] = "CanESM2"
+            new_line["source"] = "CRCM5"
+            new_line["experiment"] = "rcp85"
+            new_line["member"] = "r1i1p1"
+            new_line["domain"] = "NAM-22" if i == 0 else "NAM-11"
+            new_line["frequency"] = "day"
+            new_line["xrfreq"] = "D"
+            new_line["variable"] = ("tas",)
+            new_line["id"] = xs.catalog.generate_id(new_line.to_frame().T).iloc[0]
+
+            big_cat.esmcat._df = pd.concat(
+                [big_cat.df, new_line.to_frame().T], ignore_index=True
+            )
+
         out = xs.search_data_catalogs(
-            data_catalogs=self.big_cat,
+            data_catalogs=big_cat,
             variables_and_freqs={"tas": "D"},
             other_search_criteria={
-                "institution": ["NOAA-GFDL"],
-                "experiment": ["ssp585"],
+                "source": ["GFDL-CM4", "CRCM5"],
+                "experiment": ["ssp585", "rcp85"],
             },
             restrict_resolution=restrict_resolution,
         )
-        assert len(out) == 3 if restrict_resolution is None else 2
+        if restrict_resolution is None:
+            assert len(out) == 4
+        elif restrict_resolution == "finest":
+            assert len(out) == 2
+            assert any("NAM-11" in x for x in out)
+            assert any("_gr1" in x for x in out)
+        elif restrict_resolution == "coarsest":
+            assert len(out) == 2
+            assert any("NAM-22" in x for x in out)
+            assert any("_gr2" in x for x in out)
 
     @pytest.mark.parametrize("restrict_members", [None, {"ordered": 5}])
     def test_restrict_members(self, restrict_members):
@@ -207,18 +216,29 @@ class TestSearchDataCatalogs:
         assert len(out) == 0
 
     def test_input_types(self):
-        # data_catalogs_1 = notebooks / "samples" / "tutorial-catalog.json"
-        # data_catalogs_2 = notebooks / "samples" / "pangeo-cmip6.json"
-        # out = xs.search_data_catalogs(
-        #     data_catalogs=data_catalogs_1,
-        #     variables_and_freqs={"tas": "D"},
-        #     other_search_criteria={
-        #         "experiment": "ssp585",
-        #         "source": "NorESM.*",
-        #         "member": "r1i1p1f1",
-        #     },
-        # )
-        pass
+        data_catalogs_1 = notebooks / "samples" / "tutorial-catalog.json"
+        data_catalogs_2 = notebooks / "samples" / "pangeo-cmip6.json"
+
+        assert (
+            xs.search_data_catalogs(
+                data_catalogs=[data_catalogs_1, data_catalogs_2],
+                variables_and_freqs={"tas": "D"},
+                other_search_criteria={
+                    "experiment": "ssp585",
+                    "source": "NorESM.*",
+                    "member": "r1i1p1f1",
+                },
+            ).keys()
+            == xs.search_data_catalogs(
+                data_catalogs=[self.small_cat, data_catalogs_2],
+                variables_and_freqs={"tas": "D"},
+                other_search_criteria={
+                    "experiment": "ssp585",
+                    "source": "NorESM.*",
+                    "member": "r1i1p1f1",
+                },
+            ).keys()
+        )
 
     def test_match_histfut(self):
         out = xs.search_data_catalogs(
@@ -250,7 +270,32 @@ class TestSearchDataCatalogs:
         )
 
     def test_fx(self):
-        pass
+        small_cat = deepcopy(self.small_cat)
+        new_line = deepcopy(small_cat.df.iloc[0])
+        new_line["id"] = new_line["id"].replace(
+            new_line["experiment"], "another_experiment"
+        )
+        new_line["experiment"] = "another_experiment"
+        small_cat.esmcat._df = pd.concat(
+            [small_cat.df, new_line.to_frame().T], ignore_index=True
+        )
+
+        with pytest.warns(
+            UserWarning,
+            match="doesn't have the fixed field sftlf, but it can be acquired from ",
+        ):
+            out = xs.search_data_catalogs(
+                data_catalogs=small_cat,
+                variables_and_freqs={"sftlf": "fx"},
+                other_search_criteria={"experiment": "another_experiment"},
+            )
+        assert len(out) == 1
+        np.testing.assert_array_equal(
+            out[
+                "CMIP6_ScenarioMIP_NCC_NorESM2-MM_another_experiment_r1i1p1f1_example-region"
+            ].df["experiment"],
+            "another_experiment",
+        )
 
 
 class TestGetWarmingLevel:

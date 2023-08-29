@@ -586,43 +586,31 @@ def search_data_catalogs(
             "registry": registry_from_module(load_xclim_module(conversion_yaml))
         }
 
-    # Cast paths to single item list
-    if isinstance(data_catalogs, (str, os.PathLike)):
+    # Cast single items to a list
+    if isinstance(data_catalogs, (str, os.PathLike, DataCatalog)):
         data_catalogs = [data_catalogs]
+    # Open the catalogs given as paths
+    for i, dc in enumerate(data_catalogs):
+        if isinstance(dc, (str, os.PathLike)):
+            data_catalogs[i] = (
+                DataCatalog(dc, **cat_kwargs)
+                if Path(dc).suffix == ".json"
+                else DataCatalog.from_df(dc)
+            )
 
-    # Prepare a unique catalog to search from, with the DerivedCat added if required
-    if isinstance(data_catalogs, DataCatalog):
-        catalog = DataCatalog(
-            {"esmcat": data_catalogs.esmcat.dict(), "df": data_catalogs.df},
-            **cat_kwargs,
-        )
-        data_catalogs = [catalog]  # simply for a meaningful logging line
-    elif isinstance(data_catalogs, list) and all(
+    if not isinstance(data_catalogs, list) or not all(
         isinstance(dc, DataCatalog) for dc in data_catalogs
     ):
-        catalog = DataCatalog(
-            {
-                "esmcat": data_catalogs[0].esmcat.dict(),
-                "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
-            },
-            **cat_kwargs,
-        )
-    elif isinstance(data_catalogs, list) and all(
-        isinstance(dc, (str, os.PathLike)) for dc in data_catalogs
-    ):
-        data_catalogs = [
-            DataCatalog(path) if path.endswith(".json") else DataCatalog.from_df(path)
-            for path in data_catalogs
-        ]
-        catalog = DataCatalog(
-            {
-                "esmcat": data_catalogs[0].esmcat.dict(),
-                "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
-            },
-            **cat_kwargs,
-        )
-    else:
         raise ValueError("Catalogs type not recognized.")
+
+    # Prepare a unique catalog to search from, with the DerivedCat added if required
+    catalog = DataCatalog(
+        {
+            "esmcat": data_catalogs[0].esmcat.dict(),
+            "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
+        },
+        **cat_kwargs,
+    )
     logger.info(f"Catalog opened: {catalog} from {len(data_catalogs)} files.")
 
     if match_hist_and_fut:
@@ -630,16 +618,17 @@ def search_data_catalogs(
         catalog = _dispatch_historical_to_future(catalog, id_columns)
 
     # Cut entries that do not match search criteria
-    if other_search_criteria:
-        catalog = catalog.search(**other_search_criteria)
-        logger.info(
-            f"{len(catalog.df)} assets matched the criteria : {other_search_criteria}."
-        )
     if exclusions:
         ex = catalog.search(**exclusions)
         catalog.esmcat._df = pd.concat([catalog.df, ex.df]).drop_duplicates(keep=False)
         logger.info(
             f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
+        )
+    full_catalog = deepcopy(catalog)  # Used for searching for fixed fields
+    if other_search_criteria:
+        catalog = catalog.search(**other_search_criteria)
+        logger.info(
+            f"{len(catalog.df)} assets matched the criteria : {other_search_criteria}."
         )
     if restrict_warming_level:
         if isinstance(restrict_warming_level, bool):
@@ -654,11 +643,16 @@ def search_data_catalogs(
             # Recreate id from user specifications
             catalog.df["id"] = ids
         else:
-            # Only fill in the missing IDs
+            # Only fill in the missing IDs.
+            # Unreachable line if 'id' is in the aggregation control columns, but this is a safety measure.
             catalog.df["id"] = catalog.df["id"].fillna(ids)
 
     if catalog.df.empty:
-        logger.warning("Found no match corresponding to the 'other' search criteria.")
+        warnings.warn(
+            "Found no match corresponding to the search criteria.",
+            UserWarning,
+            stacklevel=1,
+        )
         return {}
 
     coverage_kwargs = coverage_kwargs or {}
@@ -687,11 +681,14 @@ def search_data_catalogs(
                             scat_id = {
                                 i: scat.df[i].iloc[0]
                                 for i in id_columns or ID_COLUMNS
-                                if i in scat.df.columns
+                                if (
+                                    (i in scat.df.columns)
+                                    and (not pd.isnull(scat.df[i].iloc[0]))
+                                )
                             }
                             scat_id.pop("experiment", None)
                             scat_id.pop("member", None)
-                            varcat = catalog.search(
+                            varcat = full_catalog.search(
                                 **scat_id,
                                 xrfreq=xrfreq,
                                 variable=var_id,
@@ -700,8 +697,10 @@ def search_data_catalogs(
                             if len(varcat) > 1:
                                 varcat.esmcat._df = varcat.df.iloc[[0]]
                             if len(varcat) == 1:
-                                logger.warning(
-                                    f"Dataset {sim_id} doesn't have the fixed field {var_id}, but it can be acquired from {varcat.df['id'].iloc[0]}."
+                                warnings.warn(
+                                    f"Dataset {sim_id} doesn't have the fixed field {var_id}, but it can be acquired from {varcat.df['id'].iloc[0]}.",
+                                    UserWarning,
+                                    stacklevel=1,
                                 )
                                 for i in {"member", "experiment", "id"}.intersection(
                                     varcat.df.columns
