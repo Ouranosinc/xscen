@@ -72,4 +72,4 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
 
 .. |status| image:: https://www.repostatus.org/badges/latest/active.svg
         :target: https://www.repostatus.org/#active
-        :alt: Active  The project has reached a stable, usable state and is being actively developed.
+        :alt: Project Status: Active  The project has reached a stable, usable state and is being actively developed.

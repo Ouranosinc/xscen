@@ -13,7 +13,7 @@ from fnmatch import fnmatch
 from functools import partial, reduce
 from multiprocessing import Pool
 from pathlib import Path, PosixPath
-from typing import Any, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 import cftime
 import netCDF4
@@ -101,7 +101,10 @@ def _parse_datebounds(text: str) -> tuple[str, str]:
 
 
 def _find_assets(
-    root: str, exts: set[str], lengths: set[int], dirglob: Optional[str] = None
+    root: Union[str, Path],
+    exts: set[str],
+    lengths: set[int],
+    dirglob: Optional[str] = None,
 ):
     """Walk recursively over files in a directory, filtering according to a glob pattern, path depth and extensions."""
     root = str(root)  # to be sure
@@ -1040,10 +1043,10 @@ def _build_path(
 def build_path(
     data: Union[dict, xr.Dataset, xr.DataArray, pd.Series, DataCatalog, pd.DataFrame],
     schemas: Optional[Union[str, os.PathLike, list[dict], dict]] = None,
-    root: os.PathLike = None,
+    root: Union[str, os.PathLike] = None,
     **extra_facets,
 ) -> Union[Path, DataCatalog, pd.DataFrame]:
-    """Parse the schema from a configuration and construct path using a dictionary of facets.
+    r"""Parse the schema from a configuration and construct path using a dictionary of facets.
 
     Parameters
     ----------
@@ -1057,9 +1060,9 @@ def build_path(
         See the comments in the `xscen/data/file_schema.yml` file for more details on its construction.
         A dict of dict schemas can be given (same as reading the yaml).
         Or a single schema dict (single element of the yaml).
-    root : Path, optional
+    root : str or Path, optional
         If given, the generated path(s) is given under this root one.
-    extra_facets : str
+    \*\*extra_facets
         Extra facets to supplement or override metadadata missing from the first input.
 
     Returns
