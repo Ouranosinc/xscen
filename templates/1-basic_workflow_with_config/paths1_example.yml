@@ -1,4 +1,5 @@
-#add you own paths and rename this file paths1.yml
+# Add you own paths and rename this file paths1.yml
+# Make sure to add this file to your .gitignore
 
 paths:
   project_catalog: &pcat

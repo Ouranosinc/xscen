@@ -876,15 +876,15 @@ def _schema_level(schema: Union[dict, str], facets: dict):
 
 
 def _schema_dates(facets, optional=False):
+    if facets.get("xrfreq") == "fx":
+        return "fx"
+
     if any([facets.get(f) is None for f in ["date_start", "date_end", "xrfreq"]]):
         if optional:
             return None
         raise ValueError(
             "Facets date_start, date_end and xrfreq are needed, but at least one is missing or None-like in the data."
         )
-
-    if facets["xrfreq"] == "fx":
-        return "fx"
 
     start = date_parser(facets["date_start"])
     end = date_parser(facets["date_end"])

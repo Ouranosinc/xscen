@@ -6,12 +6,12 @@ from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
-from typing import Tuple, Union
+from typing import Union
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import pygeos
+import shapely
 import xarray as xr
 import xclim as xc
 import xclim.core.calendar
@@ -495,18 +495,22 @@ def spatial_mean(
                 "Make sure that the computation is right."
             )
 
-        ds = ds.cf.add_bounds(["longitude", "latitude"])
-        weights = xr.DataArray(
-            pygeos.area(
-                pygeos.polygons(pygeos.linearrings(ds.lon_bounds, ds.lat_bounds))
-            ),
-            dims=ds.cf["longitude"].dims,
-            coords=ds.cf["longitude"].coords,
-        ) * np.cos(np.deg2rad(ds.cf["latitude"]))
-
-        ds_agg = ds.weighted(weights).mean(
-            [d for d in ds.cf.axes["X"] + ds.cf.axes["Y"]], keep_attrs=True
-        )
+        weights = np.cos(np.deg2rad(ds.cf["latitude"]))
+        if ds.cf["longitude"].ndim == 1:
+            dims = ds.cf["longitude"].dims + ds.cf["latitude"].dims
+        else:
+            if "longitude" not in ds.cf.bounds:
+                ds = ds.cf.add_bounds(["longitude", "latitude"])
+            # Weights the weights by the cell area (in °²)
+            weights = weights * xr.DataArray(
+                shapely.area(
+                    shapely.polygons(shapely.linearrings(ds.lon_bounds, ds.lat_bounds))
+                ),
+                dims=ds.cf["longitude"].dims,
+                coords=ds.cf["longitude"].coords,
+            )
+            dims = ds.cf["longitude"].dims
+        ds_agg = ds.weighted(weights).mean(dims, keep_attrs=True)
 
         # Prepare the History field
         new_history = (
@@ -727,7 +731,7 @@ def produce_horizon(
 
     all_periods = []
     if periods is not None:
-        all_periods.extend(periods)
+        all_periods.extend(standardize_periods(periods))
     if warminglevels is not None:
         if isinstance(warminglevels["wl"], (int, float)):
             all_periods.append(warminglevels)
@@ -761,7 +765,12 @@ def produce_horizon(
 
         if ds_sub is not None:
             # compute indicators
-            ind_dict = compute_indicators(ds=ds_sub, indicators=indicators)
+            ind_dict = compute_indicators(
+                ds=ds_sub.squeeze(dim="warminglevel")
+                if "warminglevel" in ds_sub.dims
+                else ds_sub,
+                indicators=indicators,
+            )
 
             # Compute the window-year mean
             ds_merge = xr.Dataset()
@@ -807,10 +816,10 @@ def produce_horizon(
                     )
                     ds_mean["horizon"] = ds_mean["horizon"].astype(str)
 
-                if "warminglevel" in ds_mean.dims:
-                    wl = ds_mean["warminglevel"].values
+                if "warminglevel" in ds_mean.coords:
+                    wl = np.array([ds_mean["warminglevel"].item()])
                     wl_attrs = ds_mean["warminglevel"].attrs
-                    ds_mean = ds_mean.squeeze(dim="warminglevel", drop=True)
+                    ds_mean = ds_mean.drop_vars("warminglevel")
                     ds_mean["horizon"] = wl
                     ds_mean["horizon"].attrs.update(wl_attrs)
 

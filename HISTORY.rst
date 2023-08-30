@@ -2,13 +2,24 @@
 History
 =======
 
-v0.7.0 (unreleased)
+v0.7.1 (2023-08-23)
+-------------------
+* Update dependencies by removing ``pygeos``, pinning ``shapely>=2`` and ``intake-esm>=2023.07.07`` as well as other small fixes to the environment files. (:pull:`243`).
+* Fix ``xs.aggregate.spatial_mean`` with method ``cos-lat`` when the data is on a rectilinear grid. (:pull:`243`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Added a workflow that removes obsolete GitHub Workflow caches from merged pull requests. (:pull:`250`).
+* Added a workflow to perform automated labeling of pull requests, dependent on the files changed. (:pull:`250`).
+
+v0.7.0 (2023-08-22)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).
 
 Announcements
 ^^^^^^^^^^^^^
 * Dropped support for Python 3.8, added support for 3.11. (:pull:`199`, :pull:`222`).
+* `xscen` is now available on `conda-forge <https://anaconda.org/conda-forge/xscen>`_, and can be installed with ``conda install -c conda-forge xscen``. (:pull:`241`)
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -23,7 +34,9 @@ New features and enhancements
 * Add more comments in the template. (:pull:`233`, :issue:`232`).
 * ``generate_weights`` now allows to split weights between experiments, and make them vary along the time/horizon axis. (:issue:`108`, :pull:`231`).
 * New independence_level, `institution`, added to ``generate_weights``. (:pull:`231`).
-* Updated ``produce_horizon`` so it can accept multiple periods or warming levels. (:pull:`231`).
+* Updated ``produce_horizon`` so it can accept multiple periods or warming levels. (:pull:`231`, :pull:`240`).
+* Add more comments in the template. (:pull:`233`, :pull:`235`, :issue:`232`).
+* New function ``diagnostics.health_checks`` that can perform multiple checkups on a dataset. (:pull:`238`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -38,6 +51,7 @@ Breaking changes
 * Legacy support for `stats_kwargs` in ``ensemble_stats`` was dropped. (:pull:`231`).
 * `period` in ``produce_horizon`` has been deprecated and replaced with `periods`. (:pull:`231`).
 * Some automated `to_level` were updated to reflect more recent changes. (:pull:`231`).
+* Removed ``diagnostics.fix_unphysical_values``. (:pull:`238`).
 
 Bug fixes
 ^^^^^^^^^

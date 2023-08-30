@@ -13,6 +13,7 @@ recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 recursive-exclude docs notebooks *.rst conf.py Makefile make.bat *.jpg *.png *.gif *.ipynb *.csv *.json *.yml *.md
 recursive-exclude docs notebooks samples *.csv *.json
+recursive-exclude conda *.yml
 recursive-exclude templates *.csv *.json *.py *.yml
 
 exclude .cruft.json
