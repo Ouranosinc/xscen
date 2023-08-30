@@ -2,6 +2,30 @@
 History
 =======
 
+v0.8.0 (unreleased)
+-------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+
+Announcements
+^^^^^^^^^^^^^
+* N/A
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Added the ability to search for simulations that reach a given warming level. (:pull:`251`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* N/A
+
+Bug fixes
+^^^^^^^^^
+* Fixed a bug in ``xs.search_data_catalogs`` when searching for fixed fields and specific experiments/members. (:pull:`251`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Continued work on adding tests. (:pull:`251`).
+
 v0.7.1 (2023-08-23)
 -------------------
 * Update dependencies by removing ``pygeos``, pinning ``shapely>=2`` and ``intake-esm>=2023.07.07`` as well as other small fixes to the environment files. (:pull:`243`).
