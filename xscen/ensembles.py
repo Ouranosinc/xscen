@@ -143,6 +143,7 @@ def generate_weights(
     *,
     independence_level: str = "model",
     experiment_weights: bool = False,
+    attribute_weights: dict = None,
     skipna: bool = True,
     v_for_skipna: str = None,
     standardize: bool = False,
@@ -162,6 +163,14 @@ def generate_weights(
         'institution': Weights using the method '1 institution - 1 Vote'
     experiment_weights : bool
         If True, each experiment will be given a total weight of 1. This option requires the 'cat:experiment' attribute to be present in all datasets.
+    attribute_weights : dict
+        Nested dictionaries of weights to apply to each dataset.
+        Keys are the attributes names for which weights are given,
+        values are either dictionaries containing attribute value and individual weight
+        or a xr.DataArray with the same non-stationary coord as the datasets (ex: time, horizon) and attribute coord (ex: experiment).
+        If others is used, all options not named will be given same weight value for the attribute.
+        ex: {'model': {'MPI-ESM-1-2-HAM': 0.25, 'MPI-ESM1-2-HR': 0.5},
+        'experiment': {'ssp585': xr.DataArray, 'ssp126': xr.DataArray}, 'institution': {'CCma': 0.5, 'others': 1}
     skipna : bool
         If True, weights will be computed from attributes only. If False, weights will be computed from the number of non-missing values.
         skipna=False requires either a 'time' or 'horizon' dimension in the datasets.
@@ -231,7 +240,9 @@ def generate_weights(
         "source": None,
         "member": None,
     }
+
     info = {key: dict(defdict, **get_cat_attrs(datasets[key])) for key in keys}
+
     # More easily manage GCMs and RCMs
     for k in info:
         if info[k]["driving_model"] is None or len(info[k]["driving_model"]) == 0:
@@ -441,7 +452,72 @@ def generate_weights(
         # Drop the experiment coordinate
         weights = weights.drop_vars("experiment")
 
+    # Attribute_weights
+    if attribute_weights:
+        stationary_weights = {}
+        non_stationary_weights = {}
+        for att, v_att in attribute_weights.items():
+            # Verification
+            if att not in info[k] or any(
+                (info[k][att] is None or len(info[k][att]) == 0) for k in info
+            ):
+                raise ValueError(
+                    f"The {att} attribute is missing from some simulations."
+                )
+            # Split dict and xr.Dataarray weights
+            if isinstance(v_att, xr.DataArray):
+                non_stationary_weights[att] = v_att
+            elif isinstance(v_att, dict):
+                stationary_weights[att] = v_att
+            else:
+                raise ValueError("Attribute_weights should be dict or xr.DataArray.")
+        # Stationary weights (dicts)
+        if stationary_weights:
+            for att, w_dict in stationary_weights.items():
+                for k, v in info.items():
+                    if v[att] not in w_dict and "others" not in w_dict:
+                        raise ValueError(
+                            f"The {att} {v[att]} or others are not in the attribute_weights dict."
+                        )
+                    elif v[att] not in w_dict and "others" in w_dict:
+                        w = w_dict["others"]
+                    elif v[att] in w_dict:
+                        w = w_dict[v[att]]
+                    weights.loc[{"realization": k}] = weights.sel(realization=k) * w
+        # Non-staionary weights (xr.DataArray)
+        if non_stationary_weights:
+            for att, da in non_stationary_weights.items():
+                # verification
+                if att not in da.coords:
+                    raise ValueError(f"{att} is not in the xr.DataArray coords.")
+                ls_coord = list(da.coords)
+                ls_coord.remove(att)
+                if len(ls_coord) > 1:
+                    raise ValueError(
+                        f"The {att} DataArray has more than one coord dimension to apply weights."
+                    )
+                else:
+                    coord = ls_coord[0]
+                # coord which will be used for broadcasting
+                if coord not in weights.coords:
+                    weights = weights.expand_dims({coord: da[coord].values})
+                ls_da = []
+                for k, v in info.items():
+                    if v[att] not in da[att] and "others" not in da[att]:
+                        raise ValueError(
+                            f"The {att} {v[att]} or others are not in the attribute_weights datarray coords."
+                        )
+                    elif v[att] not in da[att] and "others" in da[att]:
+                        ls_da.append(da.sel(**{att: "others"}).drop_vars(att))
+                    else:
+                        ls_da.append(da.sel(**{att: v[att]}).drop_vars(att))
+                nw = xr.concat(ls_da, weights.realization)
+                weights = weights * nw
+
     if standardize:
-        weights = weights / weights.sum(dim="realization")
+        if attribute_weights:
+            weights = weights / weights.sum(dim=weights.dims)
+        else:
+            weights = weights / weights.sum(dim="realization")
 
     return weights
