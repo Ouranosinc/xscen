@@ -2,6 +2,13 @@
 History
 =======
 
+v0.7.2 (Unreleased)
+-------------------
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* New argument attribute_weights to ``generate_weights`` to allow for custom weights.
+
 v0.7.1 (2023-08-23)
 -------------------
 * Update dependencies by removing ``pygeos``, pinning ``shapely>=2`` and ``intake-esm>=2023.07.07`` as well as other small fixes to the environment files. (:pull:`243`).
