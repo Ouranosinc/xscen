@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: xscen 0.6.18b0\n"
 "Report-Msgid-Bugs-To: Rondeau-Genesse.Gabriel@ouranos.ca\n"
-"POT-Creation-Date: 2023-09-05 16:04-0400\n"
+"POT-Creation-Date: 2023-09-08 15:17-0400\n"
 "PO-Revision-Date: 2023-08-15 16:48-0400\n"
 "Last-Translator: Pascal Bourgault <bourgault.pascal@ouranos.ca>\n"
 "Language: fr\n"
@@ -26,10 +26,10 @@ msgstr "Moyenne {window} ans de {attr}"
 msgid "{attr1}: {kind} delta compared to {refhoriz}."
 msgstr "{attr1}: Delta {kind} comparé à {refhoriz}."
 
-#: xscen/diagnostics.py:330
+#: xscen/diagnostics.py:500
 msgid "Ranking of measure performance"
 msgstr "Classement de performance de la mesure"
 
-#: xscen/diagnostics.py:389
+#: xscen/diagnostics.py:559
 msgid "Fraction of improved grid cells"
 msgstr "Fraction de points de grille améliorés"

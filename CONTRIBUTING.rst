@@ -70,7 +70,11 @@ Ready to contribute? Here's how to set up `xscen` for local development.
     $ mamba env create -f environment-dev.yml
     $ pip install -e .
 
-3. To ensure a consistent style, please install the pre-commit hooks to your repo::
+3. As xscen was installed in editable mode, we also need to compile the translation catalogs manuall:
+
+    $ make translate
+
+4. To ensure a consistent style, please install the pre-commit hooks to your repo::
 
     $ pre-commit install
 
@@ -79,13 +83,13 @@ Ready to contribute? Here's how to set up `xscen` for local development.
 
     $ pre-commit run -a
 
-4. Create a branch for local development::
+5. Create a branch for local development::
 
     $ git checkout -b name-of-your-bugfix-or-feature
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass flake8, black, and the
+6. When you're done making changes, check that your changes pass flake8, black, and the
    tests, including testing other Python versions with tox::
 
     $ tox
@@ -98,20 +102,20 @@ Ready to contribute? Here's how to set up `xscen` for local development.
    are installed in a conda-based environment. Running `pytest` demands that your runtime/dev environment have all necessary
    dependencies installed.
 
-6. Commit your changes and push your branch to GitHub::
+7. Commit your changes and push your branch to GitHub::
 
     $ git add .
     $ git commit -m "Your detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 
-7. If you are editing the docs, compile and open them with::
+8. If you are editing the docs, compile and open them with::
 
     $ make docs
     # or to simply generate the html
     $ cd docs/
     $ make html
 
-8. Submit a pull request through the GitHub website.
+9. Submit a pull request through the GitHub website.
 
 
 Translating xscen

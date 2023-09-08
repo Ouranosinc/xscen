@@ -49,7 +49,7 @@ __all__ = [
 print(Path(__file__).parent / "data")
 TRANSLATOR = defaultdict(lambda: lambda s: s)
 for loc in (Path(__file__).parent / "data").iterdir():
-    if loc.is_dir() and len(loc.name) == 1:
+    if loc.is_dir() and len(loc.name) == 2:
         TRANSLATOR[loc.name] = gettext.translation(
             "xscen", localedir=loc.parent, languages=[loc.name]
         ).gettext
