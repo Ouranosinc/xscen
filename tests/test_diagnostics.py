@@ -126,7 +126,7 @@ class TestHealthChecks:
             xs.diagnostics.health_checks(ds, variables_and_units={"tas": "degC"})
         with pytest.warns(
             UserWarning,
-            match="Data units kelvin are not compatible with requested 1 millimeter.",
+            match="Data units kelvin are not compatible with requested mm.",
         ):
             xs.diagnostics.health_checks(ds, variables_and_units={"tas": "mm"})
 

@@ -6,7 +6,13 @@
 #   not configurations related to the deployment process itself.
 
 CI:
-  - .*  # all '.<something>' files
+  - .cruft.json
+  - .editorconfig
+  - .gitignore
+  - .pre-commit-config.yaml
+  - .readthedocs.yml
+  - .secrets.baseline
+  - .yamllint.yaml
   - .github/workflows/*
   - docs/Makefile
   - tox.ini
@@ -15,7 +21,6 @@ CI:
 docs:
   - .readthedocs.yml
   - docs/**/*
-  - AUTHORS.rst
   - CONTRIBUTING.rst
   - ISSUE_TEMPLATE/**/*
   - ISSUE_TEMPLATE.md

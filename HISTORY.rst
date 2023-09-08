@@ -4,10 +4,28 @@ History
 
 v0.7.2 (Unreleased)
 -------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+
+Announcements
+^^^^^^^^^^^^^
+* N/A
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New argument attribute_weights to ``generate_weights`` to allow for custom weights.
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* N/A
+
+Bug fixes
+^^^^^^^^^
+* N/A
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Fixed pre-commit's pretty-format-json so it ignores notebooks. (:pull:`254`).
+* Fixed the labeler so docs/CI isn't automatically added for contributions by new collaborators. (:pull:`254`).
 
 v0.7.1 (2023-08-23)
 -------------------
