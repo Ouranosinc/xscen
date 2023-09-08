@@ -21,6 +21,8 @@ import pandas as pd
 import xarray as xr
 from xclim.core import units
 from xclim.core.calendar import convert_calendar, get_calendar, parse_offset
+from xclim.core.options import METADATA_LOCALES
+from xclim.core.options import OPTIONS as XC_OPTIONS
 from xclim.core.utils import uses_dask
 from xclim.testing.utils import show_versions as _show_versions
 
@@ -104,7 +106,7 @@ def update_attr(ds, attr, new, others=None, **fmt):
 def add_attr(ds, attr, new, **fmt):
     """Add a formatted translatable attribute to a dataset."""
     ds.attrs[attr] = new.format(**fmt)
-    for loc in CONFIG.get("locales", []):
+    for loc in XC_OPTIONS[METADATA_LOCALES]:
         ds.attrs[f"{attr}_{loc}"] = TRANSLATOR[loc](new).format(**fmt)
 
 
