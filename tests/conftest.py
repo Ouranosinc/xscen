@@ -155,10 +155,55 @@ def datablock_3d():
         da[y].attrs["axis"] = "Y"
         da["time"].attrs["axis"] = "T"
 
-        # TODO: Fully support rotated grids (2D coordinates + grid_mapping)
+        # Support for rotated pole and oblique mercator grids
+        if x != "lon" and y != "lat":
+            lat, lon = np.meshgrid(
+                np.arange(45, 45 + values.shape[1] * y_step, y_step),
+                np.arange(-75, -75 + values.shape[2] * x_step, x_step),
+            )
+            da["lat"] = xr.DataArray(np.flipud(lat.T), dims=[y, x], attrs=attrs["lat"])
+            da["lon"] = xr.DataArray(lon.T, dims=[y, x], attrs=attrs["lon"])
+            da.attrs["grid_mapping"] = (
+                "rotated_pole" if x == "rlon" else "oblique_mercator"
+            )
 
         if as_dataset:
-            return da.to_dataset()
+            if "grid_mapping" in da.attrs:
+                da = da.to_dataset()
+                # These grid_mapping attributes are simply placeholders and won't match the data
+                if da[variable].attrs["grid_mapping"] == "rotated_pole":
+                    da = da.assign_coords(
+                        {
+                            "rotated_pole": xr.DataArray(
+                                "",
+                                attrs={
+                                    "grid_mapping_name": "rotated_latitude_longitude",
+                                    "grid_north_pole_latitude": 42.5,
+                                    "grid_north_pole_longitude": 83.0,
+                                },
+                            )
+                        }
+                    )
+                else:
+                    da = da.assign_coords(
+                        {
+                            "oblique_mercator": xr.DataArray(
+                                "",
+                                attrs={
+                                    "grid_mapping_name": "oblique_mercator",
+                                    "azimuth_of_central_line": 90.0,
+                                    "latitude_of_projection_origin": 46.0,
+                                    "longitude_of_projection_origin": -63.0,
+                                    "scale_factor_at_projection_origin": 1.0,
+                                    "false_easting": 0.0,
+                                    "false_northing": 0.0,
+                                },
+                            )
+                        }
+                    )
+                return da
+            else:
+                return da.to_dataset()
         else:
             return da
 

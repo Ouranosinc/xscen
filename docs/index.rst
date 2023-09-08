@@ -26,7 +26,6 @@ Features
 
     readme
     installation
-    templates
     goodtoknow
     notebooks/1_catalog
     notebooks/2_getting_started
@@ -35,6 +34,7 @@ Features
     notebooks/5_warminglevels
     notebooks/6_config
     columns
+    templates
     api
     contributing
     authors

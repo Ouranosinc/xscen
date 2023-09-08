@@ -455,6 +455,15 @@ class TestProduceHorizon:
             out.horizon, ["1982-1988", "+0.8Cvs1850-1900", "+0.85Cvs1850-1900"]
         )
 
+    def test_single(self):
+        out = xs.produce_horizon(
+            self.ds,
+            indicators=self.yaml_file,
+            periods=[1982, 1988],
+        )
+        assert len(out.horizon) == 1
+        np.testing.assert_array_equal(out.horizon, ["1982-1988"])
+
     def test_warminglevel_in_ds(self):
         ds = self.ds.copy().expand_dims({"warminglevel": ["+1Cvs1850-1900"]})
         out = xs.produce_horizon(
