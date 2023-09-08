@@ -555,9 +555,10 @@ def search_data_catalogs(
         If True, this will only keep the datasets that have a mip_era, source, experiment and member combination that exist in the csv.
         This does not guarantee that a given warming level will be reached, only that the datasets have corresponding columns in the csv.
         More option can be added by passing a dictionary instead of a boolean.
-        If {'wl': float}, it will only keep the datasets that reach a warming level that is equal or greater than the given value.
         If {'ignore_member':True}, it will disregard the member when trying to match the dataset to a column.
         If {tas_csv: Path_to_csv}, it will use an alternative csv instead of the default one provided by xscen.
+        If 'wl' is a provided key, then `xs.get_warming_level` will be called and only datasets that reach the given warming level will be kept.
+        This can be combined with other arguments of the function, for example {'wl': 1.5, 'window': 30}.
 
     Notes
     -----
