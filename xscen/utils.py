@@ -48,7 +48,6 @@ __all__ = [
     "update_attr",
 ]
 
-print(Path(__file__).parent / "data")
 TRANSLATOR = defaultdict(lambda: lambda s: s)
 for loc in (Path(__file__).parent / "data").iterdir():
     if loc.is_dir() and len(loc.name) == 2:
