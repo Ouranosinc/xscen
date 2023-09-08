@@ -29,6 +29,7 @@ from .config import CONFIG, parse_config
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "add_attr",
     "change_units",
     "clean_up",
     "date_parser",
@@ -42,6 +43,7 @@ __all__ = [
     "translate_time_chunk",
     "unstack_fill_nan",
     "unstack_dates",
+    "update_attr",
 ]
 
 print(Path(__file__).parent / "data")
@@ -54,7 +56,40 @@ for loc in (Path(__file__).parent / "data").iterdir():
 
 
 def update_attr(ds, attr, new, others=None, **fmt):
-    # EN, default
+    """Format a dataset attribute referencing itself in a translatable way.
+
+    Parameters
+    ----------
+    ds: Dataset or DataArray
+        The input object with the attribute to update.
+    attr : str
+        Attribute name.
+    new : str
+        New attribute as a template string. It may refer to the old version
+        of the attribute with the "{attr}" field.
+    others: iterable of Datasets or DataArrays
+        Other objects from which we can extract the attributes.
+        The attributes can be be referenced as "{attrII}" in `new`, where II
+        is the index of the other source.
+    fmt:
+        Other formatting data.
+
+    Returns
+    -------
+    `ds`, but updated with the new version of `attr`, in each of the activated languages.
+
+    Notes
+    -----
+    This is meant for constructing attributes by extending a previous version
+    or combining it from different sources. For example, given a `ds` that has `long_name="Variability"`:
+
+    >>> update_attr(ds, "long_name", _("Mean of {attr}"))
+
+    Will update the "long_name" of `ds` with `long_name="Mean of Variability"`.
+    The use of `_(...)` allows the detection of this string by the translation manager. The function
+    will be able to add a translatable version of the string for each activated languages, for example adding
+    a `long_name_fr="Moyenne de Variabilité"` (assuming a `long_name_fr` was present on the initial `ds`).
+    """
     others = others or []
     if attr in ds.attrs:
         others = {f"attr{i}": dso.attrs[attr] for i, dso in enumerate(others, 1)}
@@ -67,6 +102,7 @@ def update_attr(ds, attr, new, others=None, **fmt):
 
 
 def add_attr(ds, attr, new, **fmt):
+    """Add a formatted translatable attribute to a dataset."""
     ds.attrs[attr] = new.format(**fmt)
     for loc in CONFIG.get("locales", []):
         ds.attrs[f"{attr}_{loc}"] = TRANSLATOR[loc](new).format(**fmt)

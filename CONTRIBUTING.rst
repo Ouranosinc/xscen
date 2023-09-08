@@ -113,6 +113,40 @@ Ready to contribute? Here's how to set up `xscen` for local development.
 
 8. Submit a pull request through the GitHub website.
 
+
+Translating xscen
+~~~~~~~~~~~~~~~~~
+If your additions to xscen play with plain text dataset attributes like "long_name" or "description", you should also provide
+french translations for those fields. To manage translations, xscen uses python's `gettext` with the help of `babel`.
+
+To update an attribute while enabling translation, use py:func:`utils.add_attr` instead of a normal set-item. For example:
+
+.. code python
+    ds.attrs['description'] = "The english description"
+
+becomes
+
+.. code python
+    from xscen.utils import add_attr
+
+    def _(s):
+        return s
+
+    add_attr(ds, "description", _("English description of {a}"), a="var")
+
+See also :py:func:`update_attr` for the special case where an attribute is updated using the previous version.
+
+Once the code is implemented and translatable strings marked as such, we need to extract them and catalog them
+in the french translation map. From the root directory of xscen, run::
+
+    $ make findfrench
+
+Then go edit ``xscen/xscen/data/fr/LC_MESSAGES/xscen.po`` with the correct french translations. Finally, running::
+
+    $ make translate
+
+will compile the edited catalogs, allowing python to detect and use them.
+
 Pull Request Guidelines
 -----------------------
 
