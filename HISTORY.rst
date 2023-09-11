@@ -25,6 +25,8 @@ Bug fixes
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Continued work on adding tests. (:pull:`251`).
+* Fixed pre-commit's pretty-format-json so it ignores notebooks. (:pull:`254`).
+* Fixed the labeler so docs/CI isn't automatically added for contributions by new collaborators. (:pull:`254`).
 
 v0.7.1 (2023-08-23)
 -------------------
