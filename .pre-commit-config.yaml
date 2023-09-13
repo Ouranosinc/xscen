@@ -6,7 +6,7 @@ repos:
     rev: v3.10.1
     hooks:
     -   id: pyupgrade
-        args: [--py39-plus]
+        args: [ '--py39-plus' ]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:
@@ -53,7 +53,7 @@ repos:
     rev: v0.3.8
     hooks:
       - id: blackdoc
-        additional_dependencies: [ 'black==23.3.0' ]
+        additional_dependencies: [ 'black==23.9.1' ]
         exclude: config.py
   - repo: https://github.com/adrienverge/yamllint.git
     rev: v1.32.0
