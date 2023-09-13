@@ -12,7 +12,7 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* N/A
+* Added the ability to search for simulations that reach a given warming level. (:pull:`251`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -20,12 +20,19 @@ Breaking changes
 
 Bug fixes
 ^^^^^^^^^
-* N/A
+* Fixed a bug in ``xs.search_data_catalogs`` when searching for fixed fields and specific experiments/members. (:pull:`251`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
+* Continued work on adding tests. (:pull:`251`).
 * Fixed pre-commit's pretty-format-json so it ignores notebooks. (:pull:`254`).
 * Fixed the labeler so docs/CI isn't automatically added for contributions by new collaborators. (:pull:`254`).
+* Made it so that `tests` are no longer treated as an installable package. (:pull:`248`).
+* Renamed the pytest marker from `requires_docs` to `requires_netcdf`. (:pull:`248`).
+* Included the documentation in the source distribution, while excluding the NetCDF files. (:pull:`248`).
+* Reduced the size of the files in /docs/notebooks/samples and changed the Notebooks and tests accordingly. (:issue:`247`, :pull:`248`).
+* Added a new `xscen.testing` module with the `datablock_3d` function previously located in `/tests/conftest.py`. (:pull:`248`).
+* New function `xscen.testing.fake_data` to generate fake data for testing. (:pull:`248`).
 
 v0.7.1 (2023-08-23)
 -------------------

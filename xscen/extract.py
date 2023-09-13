@@ -552,11 +552,13 @@ def search_data_catalogs(
         Currently only supports {"ordered": int} format.
     restrict_warming_level : bool, dict
         Used to restrict the results only to datasets that exist in the csv used to compute warming levels in `subset_warming_level`.
-        If True, this will only keep the datasets that have a mip_era, source, experiment
-        and member combination that exist in the csv. This does not guarantees that a given warming level will be reached, only that the datasets have corresponding columns in the csv.
+        If True, this will only keep the datasets that have a mip_era, source, experiment and member combination that exist in the csv.
+        This does not guarantee that a given warming level will be reached, only that the datasets have corresponding columns in the csv.
         More option can be added by passing a dictionary instead of a boolean.
         If {'ignore_member':True}, it will disregard the member when trying to match the dataset to a column.
         If {tas_csv: Path_to_csv}, it will use an alternative csv instead of the default one provided by xscen.
+        If 'wl' is a provided key, then `xs.get_warming_level` will be called and only datasets that reach the given warming level will be kept.
+        This can be combined with other arguments of the function, for example {'wl': 1.5, 'window': 30}.
 
     Notes
     -----
@@ -586,43 +588,31 @@ def search_data_catalogs(
             "registry": registry_from_module(load_xclim_module(conversion_yaml))
         }
 
-    # Cast paths to single item list
-    if isinstance(data_catalogs, (str, Path)):
+    # Cast single items to a list
+    if isinstance(data_catalogs, (str, os.PathLike, DataCatalog)):
         data_catalogs = [data_catalogs]
+    # Open the catalogs given as paths
+    for i, dc in enumerate(data_catalogs):
+        if isinstance(dc, (str, os.PathLike)):
+            data_catalogs[i] = (
+                DataCatalog(dc, **cat_kwargs)
+                if Path(dc).suffix == ".json"
+                else DataCatalog.from_df(dc)
+            )
 
-    # Prepare a unique catalog to search from, with the DerivedCat added if required
-    if isinstance(data_catalogs, DataCatalog):
-        catalog = DataCatalog(
-            {"esmcat": data_catalogs.esmcat.dict(), "df": data_catalogs.df},
-            **cat_kwargs,
-        )
-        data_catalogs = [catalog]  # simply for a meaningful logging line
-    elif isinstance(data_catalogs, list) and all(
+    if not isinstance(data_catalogs, list) or not all(
         isinstance(dc, DataCatalog) for dc in data_catalogs
     ):
-        catalog = DataCatalog(
-            {
-                "esmcat": data_catalogs[0].esmcat.dict(),
-                "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
-            },
-            **cat_kwargs,
-        )
-    elif isinstance(data_catalogs, list) and all(
-        isinstance(dc, str) for dc in data_catalogs
-    ):
-        data_catalogs = [
-            DataCatalog(path) if path.endswith(".json") else DataCatalog.from_df(path)
-            for path in data_catalogs
-        ]
-        catalog = DataCatalog(
-            {
-                "esmcat": data_catalogs[0].esmcat.dict(),
-                "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
-            },
-            **cat_kwargs,
-        )
-    else:
         raise ValueError("Catalogs type not recognized.")
+
+    # Prepare a unique catalog to search from, with the DerivedCat added if required
+    catalog = DataCatalog(
+        {
+            "esmcat": data_catalogs[0].esmcat.dict(),
+            "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
+        },
+        **cat_kwargs,
+    )
     logger.info(f"Catalog opened: {catalog} from {len(data_catalogs)} files.")
 
     if match_hist_and_fut:
@@ -630,16 +620,17 @@ def search_data_catalogs(
         catalog = _dispatch_historical_to_future(catalog, id_columns)
 
     # Cut entries that do not match search criteria
-    if other_search_criteria:
-        catalog = catalog.search(**other_search_criteria)
-        logger.info(
-            f"{len(catalog.df)} assets matched the criteria : {other_search_criteria}."
-        )
     if exclusions:
         ex = catalog.search(**exclusions)
         catalog.esmcat._df = pd.concat([catalog.df, ex.df]).drop_duplicates(keep=False)
         logger.info(
             f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
+        )
+    full_catalog = deepcopy(catalog)  # Used for searching for fixed fields
+    if other_search_criteria:
+        catalog = catalog.search(**other_search_criteria)
+        logger.info(
+            f"{len(catalog.df)} assets matched the criteria : {other_search_criteria}."
         )
     if restrict_warming_level:
         if isinstance(restrict_warming_level, bool):
@@ -654,11 +645,16 @@ def search_data_catalogs(
             # Recreate id from user specifications
             catalog.df["id"] = ids
         else:
-            # Only fill in the missing IDs
+            # Only fill in the missing IDs.
+            # Unreachable line if 'id' is in the aggregation control columns, but this is a safety measure.
             catalog.df["id"] = catalog.df["id"].fillna(ids)
 
     if catalog.df.empty:
-        logger.warning("Found no match corresponding to the 'other' search criteria.")
+        warnings.warn(
+            "Found no match corresponding to the search criteria.",
+            UserWarning,
+            stacklevel=1,
+        )
         return {}
 
     coverage_kwargs = coverage_kwargs or {}
@@ -687,11 +683,14 @@ def search_data_catalogs(
                             scat_id = {
                                 i: scat.df[i].iloc[0]
                                 for i in id_columns or ID_COLUMNS
-                                if i in scat.df.columns
+                                if (
+                                    (i in scat.df.columns)
+                                    and (not pd.isnull(scat.df[i].iloc[0]))
+                                )
                             }
                             scat_id.pop("experiment", None)
                             scat_id.pop("member", None)
-                            varcat = catalog.search(
+                            varcat = full_catalog.search(
                                 **scat_id,
                                 xrfreq=xrfreq,
                                 variable=var_id,
@@ -700,8 +699,10 @@ def search_data_catalogs(
                             if len(varcat) > 1:
                                 varcat.esmcat._df = varcat.df.iloc[[0]]
                             if len(varcat) == 1:
-                                logger.warning(
-                                    f"Dataset {sim_id} doesn't have the fixed field {var_id}, but it can be acquired from {varcat.df['id'].iloc[0]}."
+                                warnings.warn(
+                                    f"Dataset {sim_id} doesn't have the fixed field {var_id}, but it can be acquired from {varcat.df['id'].iloc[0]}.",
+                                    UserWarning,
+                                    stacklevel=1,
                                 )
                                 for i in {"member", "experiment", "id"}.intersection(
                                     varcat.df.columns
@@ -851,7 +852,7 @@ def get_warming_level(
     tas_baseline_period : list
        [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
     ignore_member : bool
-       Only used for Datasets. Decides whether to ignore the member when searching for the model run in tas_csv.
+       Decides whether to ignore the member when searching for the model run in tas_csv.
     tas_csv : str
        Path to a csv of annual global mean temperature with a row for each year and a column for each dataset.
        If None, it will default to data/IPCC_annual_global_tas.csv which was built from
@@ -901,6 +902,8 @@ def get_warming_level(
                 info["experiment"],
                 info["member"],
             ) = real.split("_")
+            if ignore_member:
+                info["member"] = ".*"
         elif isinstance(real, dict) and set(real.keys()).issuperset(
             (set(FIELDS) - {"member"}) if ignore_member else FIELDS
         ):
@@ -1353,7 +1356,7 @@ def _restrict_wl(df, restrictions: dict):
     # open csv
     annual_tas = pd.read_csv(tas_csv, index_col="year")
 
-    if restrictions["ignore_member"]:
+    if restrictions["ignore_member"] and "wl" not in restrictions:
         df["csv_name"] = df["mip_era"].str.cat(
             [df["source"], df["experiment"]], sep="_"
         )
@@ -1364,7 +1367,15 @@ def _restrict_wl(df, restrictions: dict):
         )
         csv_source = list(annual_tas.columns[1:])
 
-    to_keep = df["csv_name"].isin(csv_source)
+    if "wl" in restrictions:
+        to_keep = pd.Series(
+            [
+                get_warming_level(x, **restrictions)[0] is not None
+                for x in df["csv_name"]
+            ]
+        )
+    else:
+        to_keep = df["csv_name"].isin(csv_source)
     removed = pd.unique(df[~to_keep]["id"])
 
     df = df[to_keep]
