@@ -2,6 +2,37 @@
 History
 =======
 
+v0.8.0 (unreleased)
+-------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+
+Announcements
+^^^^^^^^^^^^^
+* N/A
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* N/A
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* N/A
+
+Bug fixes
+^^^^^^^^^
+* N/A
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Fixed pre-commit's pretty-format-json so it ignores notebooks. (:pull:`254`).
+* Fixed the labeler so docs/CI isn't automatically added for contributions by new collaborators. (:pull:`254`).
+* Made it so that `tests` are no longer treated as an installable package. (:pull:`248`).
+* Renamed the pytest marker from `requires_docs` to `requires_netcdf`. (:pull:`248`).
+* Included the documentation in the source distribution, while excluding the NetCDF files. (:pull:`248`).
+* Reduced the size of the files in /docs/notebooks/samples and changed the Notebooks and tests accordingly. (:issue:`247`, :pull:`248`).
+* Added a new `xscen.testing` module with the `datablock_3d` function previously located in `/tests/conftest.py`. (:pull:`248`).
+* New function `xscen.testing.fake_data` to generate fake data for testing. (:pull:`248`).
+
 v0.7.1 (2023-08-23)
 -------------------
 * Update dependencies by removing ``pygeos``, pinning ``shapely>=2`` and ``intake-esm>=2023.07.07`` as well as other small fixes to the environment files. (:pull:`243`).

@@ -257,7 +257,7 @@ def compute_deltas(
         )
 
     if "time" in ds:
-        if xr.infer_freq(ds.time) == "D":
+        if (len(ds.time) >= 3) and (xr.infer_freq(ds.time) == "D"):
             raise NotImplementedError(
                 "xs.climatological_mean does not currently support daily data."
             )

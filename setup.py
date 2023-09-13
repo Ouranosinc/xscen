@@ -51,26 +51,28 @@ requirements = [
     "matplotlib",
     "netCDF4",
     "numpy",
-    "pandas>=2",
+    "pandas>=2.0",
     "parse",
     "pyarrow",  # Used when opening catalogs.
     "pyyaml",
     "rechunker",
-    "shapely>=2",
+    "shapely>=2.0",
     "sparse",
     "toolz",
     "xarray",
     "xclim>=0.43",
-    "xesmf>=0.7",
+    "xesmf>=0.7.0",
     "zarr",
 ]
+
+dev_requirements = ["pytest", "pytest-cov", "xdoctest"]
 
 setup(
     author="Gabriel Rondeau-Genesse",
     author_email="rondeau-genesse.gabriel@ouranos.ca",
     python_requires=">=3.9",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: Apache Software License",
@@ -98,8 +100,8 @@ setup(
     },
     setup_requires=["babel"],
     test_suite="tests",
-    tests_require=["pytest", "pytest-cov"],
+    extras_require={"dev": dev_requirements},
     url="https://github.com/Ouranosinc/xscen",
-    version="0.7.2-beta",
+    version="0.7.4-beta",
     zip_safe=False,
 )
