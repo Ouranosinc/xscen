@@ -12,7 +12,7 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* N/A
+* Added the ability to search for simulations that reach a given warming level. (:pull:`251`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -20,10 +20,11 @@ Breaking changes
 
 Bug fixes
 ^^^^^^^^^
-* N/A
+* Fixed a bug in ``xs.search_data_catalogs`` when searching for fixed fields and specific experiments/members. (:pull:`251`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
+* Continued work on adding tests. (:pull:`251`).
 * Fixed pre-commit's pretty-format-json so it ignores notebooks. (:pull:`254`).
 * Fixed the labeler so docs/CI isn't automatically added for contributions by new collaborators. (:pull:`254`).
 * Made it so that `tests` are no longer treated as an installable package. (:pull:`248`).
