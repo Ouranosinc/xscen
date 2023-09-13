@@ -17,6 +17,7 @@ from . import (
     regrid,
     scripting,
     spatial,
+    testing,
     utils,
 )
 
@@ -62,3 +63,19 @@ def warning_on_one_line(
 
 
 warnings.formatwarning = warning_on_one_line
+
+# FIXME: This is a temporary fix for the FutureWarning spam from intake-esm.
+# Print FutureWarnings from intake-esm only once
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    module="intake_esm",
+    message="The default of observed=False is deprecated and will be changed to True in a future version of pandas. "
+    "Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.",
+)
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    module="intake_esm",
+    message="DataFrame.applymap has been deprecated. Use DataFrame.map instead.",
+)

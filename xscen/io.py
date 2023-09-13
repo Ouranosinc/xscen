@@ -33,7 +33,7 @@ __all__ = [
 ]
 
 
-def get_engine(file: str) -> str:
+def get_engine(file: Union[str, Path]) -> str:
     """Use functionality of h5py to determine if a NetCDF file is compatible with h5netcdf.
 
     Parameters
