@@ -5,7 +5,7 @@ import pandas as pd
 import xarray as xr
 from xclim.testing.helpers import test_timeseries as timeseries
 
-__all__ = ["datablock_3d"]
+__all__ = ["datablock_3d", "fake_data"]
 
 
 def datablock_3d(
