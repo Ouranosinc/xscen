@@ -29,7 +29,7 @@ Internal changes
 * Made it so that `tests` are no longer treated as an installable package. (:pull:`248`).
 * Renamed the pytest marker from `requires_docs` to `requires_netcdf`. (:pull:`248`).
 * Included the documentation in the source distribution, while excluding the NetCDF files. (:pull:`248`).
-* Substantially reduced the size of the files in /docs/notebooks/samples and changed the Notebooks and tests accordingly. (:issue:`247`, :pull:`248`).
+* Reduced the size of the files in /docs/notebooks/samples and changed the Notebooks and tests accordingly. (:issue:`247`, :pull:`248`).
 * Added a new `xscen.testing` module with the `datablock_3d` function previously located in `/tests/conftest.py`. (:pull:`248`).
 * New function `xscen.testing.fake_data` to generate fake data for testing. (:pull:`248`).
 
