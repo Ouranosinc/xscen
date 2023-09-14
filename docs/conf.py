@@ -21,6 +21,7 @@
 import os
 import sys
 import warnings
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, os.path.abspath('..'))
@@ -157,8 +158,8 @@ source_suffix = ['.rst']
 master_doc = 'index'
 
 # General information about the project.
-project = 'xscen'
-copyright = "2022, Ouranos Inc., Gabriel Rondeau-Genesse, and contributors"
+project = "xscen"
+copyright = f"2022-{datetime.now().year}, Ouranos Inc., Gabriel Rondeau-Genesse, and contributors"
 author = "Gabriel Rondeau-Genesse"
 
 # The version info for the project you're documenting, acts as replacement
