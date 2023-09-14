@@ -35,6 +35,7 @@ extra actions when finding the following special sections:
   The content of this section will be sent directly to :py:func:`xarray.set_options`.
 - ``xclim``:
   The content of this section will be sent directly to :py:func:`xclim.set_options`.
+  Here goes `metadata_locales: - fr` to activate the automatic translation of added attributes, for example.
 - ``warnings``:
   The content of this section must be a simple mapping. The keys are understood as python
   warning categories (types) and the values as an action to add to the filter. The key "all"
@@ -57,7 +58,7 @@ import xclim as xc
 import yaml
 
 logger = logging.getLogger(__name__)
-EXTERNAL_MODULES = ["locales", "logging", "xarray", "xclim", "warnings"]
+EXTERNAL_MODULES = ["logging", "xarray", "xclim", "warnings"]
 
 __all__ = [
     "CONFIG",
@@ -226,15 +227,7 @@ def parse_config(func_or_cls):  # noqa: D103
 
 
 def _setup_external(module, config):
-    if module == "locales":
-        if not isinstance(config, list) or not all(
-            [(isinstance(loc, str) and (len(loc) == 2)) for loc in config]
-        ):
-            raise ValueError(
-                'Config values for top-level entry "locales" must be a list of 2-char strings.'
-            )
-        xc.set_options(metadata_locales=config)
-    elif module == "logging":
+    if module == "logging":
         config.update(version=1)
         logging.config.dictConfig(config)
     elif module == "xclim":

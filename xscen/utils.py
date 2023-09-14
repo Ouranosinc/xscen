@@ -26,7 +26,7 @@ from xclim.core.options import OPTIONS as XC_OPTIONS
 from xclim.core.utils import uses_dask
 from xclim.testing.utils import show_versions as _show_versions
 
-from .config import CONFIG, parse_config
+from .config import parse_config
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,13 @@ __all__ = [
 ]
 
 TRANSLATOR = defaultdict(lambda: lambda s: s)
+"""Dictionary of translating objects.
+
+Each key is a two letter locale code and values are functions that return the translated message as compiled in the gettext catalogs.
+If a language is not defined or a message not translated, the function will return the raw message.
+"""
+
+
 for loc in (Path(__file__).parent / "data").iterdir():
     if loc.is_dir() and len(loc.name) == 2:
         TRANSLATOR[loc.name] = gettext.translation(
