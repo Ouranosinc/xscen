@@ -68,16 +68,22 @@ autosectionlabel_prefix_document = True
 autosectionlabel_maxdepth = 2
 
 autosummary_generate = True
-nbsphinx_execute = "always"
 
-# To avoid running notebooks on linkcheck
+nbsphinx_execute = "always"
+# To avoid running notebooks on linkcheck and when building PDF.
 try:
     skip_notebooks = int(os.getenv("SKIP_NOTEBOOKS"))
 except TypeError:
     skip_notebooks = False
 if skip_notebooks:
-    warnings.warn("Not executing notebooks.")
+    warnings.warn("SKIP_NOTEBOOKS is set. Not executing notebooks.")
     nbsphinx_execute = "never"
+elif os.getenv("READTHEDOCS_VERSION_NAME") in ["latest", "stable"] or os.getenv(
+    "READTHEDOCS_VERSION_TYPE"
+) in ["tag"]:
+    if os.getenv("READTHEDOCS_OUTPUT") in ["pdf"]:
+        warnings.warn("Generating PDF version. Not executing notebooks.")
+        nbsphinx_execute = "never"
 
 # if skip_notebooks or os.getenv("READTHEDOCS_VERSION_TYPE") in [
 #     "branch",
