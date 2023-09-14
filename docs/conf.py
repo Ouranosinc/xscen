@@ -24,12 +24,12 @@ import warnings
 from datetime import datetime
 from pathlib import Path
 
-sys.path.insert(0, os.path.abspath('..'))
-if os.environ.get('READTHEDOCS') and 'ESMFMKFILE' not in os.environ:
+sys.path.insert(0, os.path.abspath(".."))
+if os.environ.get("READTHEDOCS") and "ESMFMKFILE" not in os.environ:
     # RTD doesn't activate the env, and esmpy depends on a env var set there
     # We assume the `os` package is in {ENV}/lib/pythonX.X/os.py
     # See conda-forge/esmf-feedstock#91 and readthedocs/readthedocs.org#4067
-    os.environ['ESMFMKFILE'] = str(Path(os.__file__).parent.parent / 'esmf.mk')
+    os.environ["ESMFMKFILE"] = str(Path(os.__file__).parent.parent / "esmf.mk")
 
 import xscen  # noqa
 import xarray  # noqa
@@ -54,7 +54,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "nbsphinx",
     "sphinx_codeautolink",
-    "sphinx_copybutton"
+    "sphinx_copybutton",
 ]
 
 # To ensure that underlined fields (e.g. `_field`) are shown in the docs.
@@ -152,10 +152,10 @@ linkcheck_ignore = [
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = ['.rst']
+source_suffix = [".rst"]
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # General information about the project.
 project = "xscen"
@@ -188,7 +188,7 @@ exclude_patterns = [
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
@@ -217,13 +217,13 @@ html_logo = "_static/_images/xscen-logo.png"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 
 # -- Options for HTMLHelp output ---------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'xscendoc'
+htmlhelp_basename = "xscendoc"
 
 
 # -- Options for LaTeX output ------------------------------------------
@@ -232,15 +232,12 @@ latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
-
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
-
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
-
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -250,9 +247,13 @@ latex_elements = {
 # (source start file, target name, title, author, documentclass
 # [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'xscen.tex',
-     'xscen Documentation',
-     'Gabriel Rondeau-Genesse', 'manual'),
+    (
+        master_doc,
+        "xscen.tex",
+        "xscen Documentation",
+        "Gabriel Rondeau-Genesse",
+        "manual",
+    ),
 ]
 
 
@@ -260,11 +261,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'xscen',
-     'xscen Documentation',
-     [author], 1)
-]
+man_pages = [(master_doc, "xscen", "xscen Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------
@@ -273,10 +270,13 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'xscen',
-     'xscen Documentation',
-     author,
-     'xscen',
-     'One line description of project.',
-     'Miscellaneous'),
+    (
+        master_doc,
+        "xscen",
+        "xscen Documentation",
+        author,
+        "xscen",
+        "One line description of project.",
+        "Miscellaneous",
+    ),
 ]
