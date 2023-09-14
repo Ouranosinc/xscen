@@ -83,10 +83,19 @@ if skip_notebooks:
 #     "branch",
 #     "external",
 # ]:
-# elif os.getenv("READTHEDOCS_VERSION_NAME") in ["latest", "stable"]:
-#     nbsphinx_execute = "always"
-# else:
-#     nbsphinx_execute = "auto"
+#     warnings.warn("Not executing notebooks.")
+#     nbsphinx_execute = "never"
+
+if os.getenv("READTHEDOCS_VERSION_NAME") in ["latest", "stable"] or os.getenv(
+    "READTHEDOCS_VERSION_TYPE"
+) in ["tag"]:
+    if os.getenv("READTHEDOCS_OUTPUT") in ["pdf"]:
+        warnings.warn("Generating PDF version. Not executing notebooks.")
+        nbsphinx_execute = "never"
+    else:
+        nbsphinx_execute = "always"
+else:
+    nbsphinx_execute = "auto"
 
 # To avoid having to install these and burst memory limit on ReadTheDocs.
 # autodoc_mock_imports = [
