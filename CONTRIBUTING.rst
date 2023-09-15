@@ -114,9 +114,14 @@ Ready to contribute? Here's how to set up `xscen` for local development.
     # or to simply generate the html
     $ cd docs/
     $ make html
+    
+.. note::
+
+    When building the documentation, the default behaviour is to evaluate notebooks ('nbsphinx_execute = "always"'), rather than simply parse the content ('nbsphinx_execute = "never"'). Due to their complexity, this can sometimes be a very computationally demanding task and should only be performed when necessary (i.e.: when the notebooks have been modified).
+
+    In order to speed up documentation builds, setting a value for the environment variable "SKIP_NOTEBOOKS" (e.g. "$ export SKIP_NOTEBOOKS=1") will prevent the notebooks from being evaluated on all subsequent "$ tox -e docs" or "$ make docs" invocations.
 
 9. Submit a pull request through the GitHub website.
-
 
 Translating xscen
 ~~~~~~~~~~~~~~~~~
