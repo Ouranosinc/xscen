@@ -114,7 +114,7 @@ Ready to contribute? Here's how to set up `xscen` for local development.
     # or to simply generate the html
     $ cd docs/
     $ make html
-    
+
 .. note::
 
     When building the documentation, the default behaviour is to evaluate notebooks ('nbsphinx_execute = "always"'), rather than simply parse the content ('nbsphinx_execute = "never"'). Due to their complexity, this can sometimes be a very computationally demanding task and should only be performed when necessary (i.e.: when the notebooks have been modified).
