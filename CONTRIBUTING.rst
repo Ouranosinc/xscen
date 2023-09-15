@@ -128,7 +128,7 @@ Translating xscen
 If your additions to xscen play with plain text attributes like "long_name" or "description", you should also provide
 French translations for those fields. To manage translations, xscen uses python's `gettext` with the help of `babel`.
 
-To update an attribute while enabling translation, use py:func:`utils.add_attr` instead of a normal set-item. For example:
+To update an attribute while enabling translation, use :py:func:`utils.add_attr` instead of a normal set-item. For example:
 
 .. code python
     ds.attrs['description'] = "The English description"

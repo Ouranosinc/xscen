@@ -39,7 +39,7 @@ __all__ = [
     "maybe_unstack",
     "minimum_calendar",
     "natural_sort",
-    "publish_release_notes",  #
+    "publish_release_notes",
     "stack_drop_nans",
     "standardize_periods",
     "translate_time_chunk",

@@ -292,14 +292,14 @@ def compute_deltas(
 
         with xr.set_options(keep_attrs=True):
             if (isinstance(kind, dict) and kind[vv] == "+") or kind == "+":
-                _kind = "absolute"
+                _kind = "abs."
                 deltas[v_name] = other_hz[vv] - ref[vv]
             elif (isinstance(kind, dict) and kind[vv] == "/") or kind == "/":
-                _kind = "relative"
+                _kind = "rel."
                 deltas[v_name] = other_hz[vv] / ref[vv]
                 deltas[v_name].attrs["units"] = ""
             elif (isinstance(kind, dict) and kind[vv] == "%") or kind == "%":
-                _kind = "percentage"
+                _kind = "pct."
                 deltas[v_name] = 100 * (other_hz[vv] - ref[vv]) / ref[vv]
                 deltas[v_name].attrs["units"] = "%"
             else:
