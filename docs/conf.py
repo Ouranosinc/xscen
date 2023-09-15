@@ -79,11 +79,11 @@ except TypeError:
 if skip_notebooks:
     warnings.warn("SKIP_NOTEBOOKS is set. Not executing notebooks.")
     nbsphinx_execute = "never"
-elif os.getenv("READTHEDOCS_VERSION_NAME") in ["latest", "stable"] or os.getenv(
-    "READTHEDOCS_VERSION_TYPE"
-) in ["tag"]:
-    if os.getenv("READTHEDOCS_OUTPUT") in ["pdf"]:
-        warnings.warn("Generating PDF version. Not executing notebooks.")
+elif (os.getenv("READTHEDOCS_VERSION_NAME") in ["latest", "stable"]) or (
+    os.getenv("READTHEDOCS_VERSION_TYPE") in ["tag"]
+):
+    if Path(__file__).parent.joinpath("notebooks/_data").exists():
+        warnings.warn("Notebook artefacts found. Not executing notebooks.")
         nbsphinx_execute = "never"
 
 # if skip_notebooks or os.getenv("READTHEDOCS_VERSION_TYPE") in [
