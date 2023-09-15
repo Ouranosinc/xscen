@@ -17,6 +17,8 @@ build:
     pre_build:
       - sphinx-apidoc -o docs/apidoc --private --module-first xscen
       - env SKIP_NOTEBOOKS=1 sphinx-build -b linkcheck docs/ _build/linkcheck
+#    post_build:
+#      - rm -rf docs/notebooks/_data
 
 conda:
   environment: environment-dev.yml
