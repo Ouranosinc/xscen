@@ -2,7 +2,7 @@
 History
 =======
 
-v0.8.0 (Unreleased)
+v0.8.0 (unreleased)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
