@@ -48,7 +48,7 @@ What is currently not covered by either `xscen` or `xclim` is a method to resamp
 Metadata translation
 --------------------
 
-xscen itself does not add many translatable attributes, but when it does it will look into xclim's options for which locales to translate them too. In a config file, activating french translation for xclim's indicators but also for xscen is done with :
+xscen itself does not add many translatable attributes, but when it does, it will look into xclim's options for which locales to translate them to. In a config file, activating French translations for both xclim's indicators and xscen is done with :
 
 .. code-block:: yaml
 
@@ -56,12 +56,12 @@ xscen itself does not add many translatable attributes, but when it does it will
 		metadata_locales:
 		  - fr
 
-Note that this only applies to attributes that are added to a dataset. Some xscen functions will only update an attribute. For example, when calculating the climatology of a variable with `long_name` `Mean temperature`, :py:func:`climatological_mean` will update the `long_name` as `30-year average of Mean temperature`. This automatic update is done for all locales available in the variable, no matter what xclim option is activated.
+Note that this only applies to attributes that are added to a dataset. Some xscen functions will instead update an existing attribute. For example, when calculating the climatology of a variable with `long_name` `Mean temperature`, :py:func:`climatological_mean` will update the `long_name` as `30-year average of Mean temperature`. This automatic update is done for all locales available in the variable, no matter what xclim option is activated.
 
-Module wide options
+Module-wide options
 -------------------
 
-As seen above, it can be useful to use the "special" sections of the config file to set some module wide options. For example:
+As seen above, it can be useful to use the "special" sections of the config file to set some module-wide options. For example:
 
 .. code-block:: yaml
 

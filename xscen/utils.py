@@ -64,7 +64,7 @@ for loc in (Path(__file__).parent / "data").iterdir():
 
 
 def update_attr(ds, attr, new, others=None, **fmt):
-    """Format a dataset attribute referencing itself in a translatable way.
+    """Format an attribute referencing itself in a translatable way.
 
     Parameters
     ----------

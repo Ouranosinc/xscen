@@ -90,7 +90,7 @@ dist: clean ## builds source and wheel package
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install
 
-findfrench:  ## Extract phrases and update the french translation catalog (this doesn't translate)
+findfrench:  ## Extract phrases and update the French translation catalog (this doesn't translate)
 	python setup.py extract_messages
 	python setup.py update_catalog -l fr
 
