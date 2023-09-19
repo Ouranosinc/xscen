@@ -36,6 +36,7 @@ __all__ = [
 ]
 
 
+# Dummy function to make gettext aware of translatable-strings
 def _(s):
     return s
 

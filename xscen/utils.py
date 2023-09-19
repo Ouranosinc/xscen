@@ -75,10 +75,11 @@ def update_attr(ds, attr, new, others=None, **fmt):
     new : str
         New attribute as a template string. It may refer to the old version
         of the attribute with the "{attr}" field.
-    others: iterable of Datasets or DataArrays
-        Other objects from which we can extract the attributes.
-        The attributes can be be referenced as "{attrII}" in `new`, where II
-        is the index of the other source.
+    others: Sequence of Datasets or DataArrays
+        Other objects from which we can extract the attribute `attr`.
+        These can be be referenced as "{attrXX}" in `new`, where XX is the based-1 index of the other source in `others`.
+        If they don't have the `attr` attribute, an empty string is sent to the string formatting.
+        See notes.
     fmt:
         Other formatting data.
 
@@ -97,16 +98,40 @@ def update_attr(ds, attr, new, others=None, **fmt):
     The use of `_(...)` allows the detection of this string by the translation manager. The function
     will be able to add a translatable version of the string for each activated languages, for example adding
     a `long_name_fr="Moyenne de Variabilité"` (assuming a `long_name_fr` was present on the initial `ds`).
+
+    If the new attribute is an aggregation from multiple sources, these can be passed in `others`.
+
+    >>> update_attr(
+    ...     ds0,
+    ...     "long_name",
+    ...     _("Addition of {attr} and {attr1}, divided by {attr2}"),
+    ...     others=[ds1, ds2],
+    ... )
+
+    Here, `ds0` will have it's `long_name` updated with the passed string, where  `attr1` is the `long_name` of `ds1`
+    and `attr2` the `long_name` of `ds2`. The process will be repeated for each localized `long_name` available on `ds0`.
+    For example, if `ds0` has a `long_name_fr`, the template string is translated and
+    filled with the `long_name_fr` attributes of  `ds0`, `ds1` and `ds2`.
+    If the latter don't exist, the english version is used instead.
     """
     others = others or []
+    # .strip(' .') removes trailing and leading whitespaces and dots
     if attr in ds.attrs:
-        others = {f"attr{i}": dso.attrs[attr] for i, dso in enumerate(others, 1)}
-        ds.attrs[attr] = new.format(attr=ds.attrs[attr], **others, **fmt)
+        others = {
+            f"attr{i}": dso.attrs.get(attr, "").strip(" .")
+            for i, dso in enumerate(others, 1)
+        }
+        ds.attrs[attr] = new.format(attr=ds.attrs[attr].strip(" ."), **others, **fmt)
     # All existing locales
     for key in fnmatch.filter(ds.attrs.keys(), f"{attr}_??"):
         loc = key[-2:]
-        others = {f"attr{i}": dso.attrs.get(key, "") for i, dso in enumerate(others, 1)}
-        ds.attrs[key] = TRANSLATOR[loc](new).format(attr=ds.attrs[key], **fmt)
+        others = {
+            f"attr{i}": dso.attrs.get(key, dso.attrs.get(attr, "")).strip(" .")
+            for i, dso in enumerate(others, 1)
+        }
+        ds.attrs[key] = TRANSLATOR[loc](new).format(
+            attr=ds.attrs[key].strip(" ."), **others, **fmt
+        )
 
 
 def add_attr(ds, attr, new, **fmt):

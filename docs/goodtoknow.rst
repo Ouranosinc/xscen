@@ -48,7 +48,9 @@ What is currently not covered by either `xscen` or `xclim` is a method to resamp
 Metadata translation
 --------------------
 
-xscen itself does not add many translatable attributes, but when it does, it will look into xclim's options for which locales to translate them to. In a config file, activating French translations for both xclim's indicators and xscen is done with :
+xscen itself does not add many translatable attributes, but when it does, it will look into xclim's options for which locales to translate them to. Similar to xclim, it will always add a particular attribute in english and then translations with the same attribute name followed by "_XX" where "XX" is the two-letter locale name, usually following te `ISO-639-1 <https://en.wikipedia.org/wiki/ISO_639-1>`_ standard. For example, if a function adds a `long_name` and Inuktitut translation is activated, the function will also add a `long_name_iu` attribute.
+
+In a config file, activating French translations for both xclim's indicators and xscen (and figanos) is done with :
 
 .. code-block:: yaml
 
@@ -56,7 +58,9 @@ xscen itself does not add many translatable attributes, but when it does, it wil
 		metadata_locales:
 		  - fr
 
-Note that this only applies to attributes that are added to a dataset. Some xscen functions will instead update an existing attribute. For example, when calculating the climatology of a variable with `long_name` `Mean temperature`, :py:func:`climatological_mean` will update the `long_name` as `30-year average of Mean temperature`. This automatic update is done for all locales available in the variable, no matter what xclim option is activated.
+Which can also be activated in the code using :py:func:`xclim.core.options.set_options`. Note that this only applies to attributes that are *added* to a dataset. Some xscen functions will instead update an existing attribute. For example, when calculating the climatology of a variable with `long_name` `Mean temperature`, :py:func:`climatological_mean` will update the `long_name` as `30-year average of Mean temperature`. This automatic update is done for all locales available in the variable, no matter what xclim option is activated. For example, if a `long_name_eu` exists in the variable and a Basque translation catalog exists in that xscen instance, then the attribute will be translated, no matter what xclim's ``metadata_locales`` is set to.
+
+xscen ships with a catalog of french (fr) translations.
 
 Module-wide options
 -------------------
