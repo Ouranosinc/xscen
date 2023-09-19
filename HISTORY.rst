@@ -13,7 +13,7 @@ Announcements
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Added the ability to search for simulations that reach a given warming level. (:pull:`251`).
-* New argument attribute_weights to ``generate_weights`` to allow for custom weights.
+* New argument attribute_weights to ``generate_weights`` to allow for custom weights. (:pull:`252`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
