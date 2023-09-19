@@ -19,8 +19,8 @@ msgstr ""
 "Generated-By: Babel 2.12.1\n"
 
 #: xscen/aggregate.py:184
-msgid "{window}-year mean of {attr}"
-msgstr "Moyenne {window} ans de {attr}"
+msgid "{window}-year mean of {attr}."
+msgstr "Moyenne {window} ans de {attr}."
 
 #: xscen/aggregate.py:318
 msgid "{attr1}: {kind} delta compared to {refhoriz}."

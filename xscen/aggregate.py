@@ -182,7 +182,7 @@ def climatological_mean(
     for vv in ds_rolling.data_vars:
         for a in ["description", "long_name"]:
             update_attr(
-                ds_rolling[vv], a, _("{window}-year mean of {attr}"), window=window
+                ds_rolling[vv], a, _("{window}-year mean of {attr}."), window=window
             )
 
         new_history = (
