@@ -1,8 +1,11 @@
 """Common utilities to be used in many places."""
+import fnmatch
+import gettext
 import json
 import logging
 import os
 import re
+from collections import defaultdict
 from collections.abc import Sequence
 from datetime import datetime
 from io import StringIO
@@ -18,6 +21,8 @@ import pandas as pd
 import xarray as xr
 from xclim.core import units
 from xclim.core.calendar import convert_calendar, get_calendar, parse_offset
+from xclim.core.options import METADATA_LOCALES
+from xclim.core.options import OPTIONS as XC_OPTIONS
 from xclim.core.utils import uses_dask
 from xclim.testing.utils import show_versions as _show_versions
 
@@ -26,6 +31,7 @@ from .config import parse_config
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "add_attr",
     "change_units",
     "clean_up",
     "date_parser",
@@ -39,7 +45,100 @@ __all__ = [
     "translate_time_chunk",
     "unstack_fill_nan",
     "unstack_dates",
+    "update_attr",
 ]
+
+TRANSLATOR = defaultdict(lambda: lambda s: s)
+"""Dictionary of translating objects.
+
+Each key is a two letter locale code and values are functions that return the translated message as compiled in the gettext catalogs.
+If a language is not defined or a message not translated, the function will return the raw message.
+"""
+
+
+for loc in (Path(__file__).parent / "data").iterdir():
+    if loc.is_dir() and len(loc.name) == 2:
+        TRANSLATOR[loc.name] = gettext.translation(
+            "xscen", localedir=loc.parent, languages=[loc.name]
+        ).gettext
+
+
+def update_attr(ds, attr, new, others=None, **fmt):
+    """Format an attribute referencing itself in a translatable way.
+
+    Parameters
+    ----------
+    ds: Dataset or DataArray
+        The input object with the attribute to update.
+    attr : str
+        Attribute name.
+    new : str
+        New attribute as a template string. It may refer to the old version
+        of the attribute with the "{attr}" field.
+    others: Sequence of Datasets or DataArrays
+        Other objects from which we can extract the attribute `attr`.
+        These can be be referenced as "{attrXX}" in `new`, where XX is the based-1 index of the other source in `others`.
+        If they don't have the `attr` attribute, an empty string is sent to the string formatting.
+        See notes.
+    fmt:
+        Other formatting data.
+
+    Returns
+    -------
+    `ds`, but updated with the new version of `attr`, in each of the activated languages.
+
+    Notes
+    -----
+    This is meant for constructing attributes by extending a previous version
+    or combining it from different sources. For example, given a `ds` that has `long_name="Variability"`:
+
+    >>> update_attr(ds, "long_name", _("Mean of {attr}"))
+
+    Will update the "long_name" of `ds` with `long_name="Mean of Variability"`.
+    The use of `_(...)` allows the detection of this string by the translation manager. The function
+    will be able to add a translatable version of the string for each activated languages, for example adding
+    a `long_name_fr="Moyenne de Variabilité"` (assuming a `long_name_fr` was present on the initial `ds`).
+
+    If the new attribute is an aggregation from multiple sources, these can be passed in `others`.
+
+    >>> update_attr(
+    ...     ds0,
+    ...     "long_name",
+    ...     _("Addition of {attr} and {attr1}, divided by {attr2}"),
+    ...     others=[ds1, ds2],
+    ... )
+
+    Here, `ds0` will have it's `long_name` updated with the passed string, where  `attr1` is the `long_name` of `ds1`
+    and `attr2` the `long_name` of `ds2`. The process will be repeated for each localized `long_name` available on `ds0`.
+    For example, if `ds0` has a `long_name_fr`, the template string is translated and
+    filled with the `long_name_fr` attributes of  `ds0`, `ds1` and `ds2`.
+    If the latter don't exist, the english version is used instead.
+    """
+    others = others or []
+    # .strip(' .') removes trailing and leading whitespaces and dots
+    if attr in ds.attrs:
+        others = {
+            f"attr{i}": dso.attrs.get(attr, "").strip(" .")
+            for i, dso in enumerate(others, 1)
+        }
+        ds.attrs[attr] = new.format(attr=ds.attrs[attr].strip(" ."), **others, **fmt)
+    # All existing locales
+    for key in fnmatch.filter(ds.attrs.keys(), f"{attr}_??"):
+        loc = key[-2:]
+        others = {
+            f"attr{i}": dso.attrs.get(key, dso.attrs.get(attr, "")).strip(" .")
+            for i, dso in enumerate(others, 1)
+        }
+        ds.attrs[key] = TRANSLATOR[loc](new).format(
+            attr=ds.attrs[key].strip(" ."), **others, **fmt
+        )
+
+
+def add_attr(ds, attr, new, **fmt):
+    """Add a formatted translatable attribute to a dataset."""
+    ds.attrs[attr] = new.format(**fmt)
+    for loc in XC_OPTIONS[METADATA_LOCALES]:
+        ds.attrs[f"{attr}_{loc}"] = TRANSLATOR[loc](new).format(**fmt)
 
 
 def date_parser(

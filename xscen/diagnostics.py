@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path, PosixPath
 from types import ModuleType
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -15,12 +15,15 @@ from xclim.core.indicator import Indicator
 
 from .config import parse_config
 from .indicators import load_xclim_module
+from .io import save_to_zarr
 from .utils import (
+    add_attr,
     change_units,
     clean_up,
     date_parser,
     standardize_periods,
     unstack_fill_nan,
+    update_attr,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,6 +34,11 @@ __all__ = [
     "measures_heatmap",
     "measures_improvement",
 ]
+
+
+# Dummy function to make gettext aware of translatable-strings
+def _(s):
+    return s
 
 
 def health_checks(
@@ -395,9 +403,12 @@ def properties_and_measures(
                 sim=prop[vname], ref=dref_for_measure[vname]
             )
             # create a merged long_name
-            prop_ln = prop[vname].attrs.get("long_name", "").replace(".", "")
-            meas_ln = meas[vname].attrs.get("long_name", "").lower()
-            meas[vname].attrs["long_name"] = f"{prop_ln} {meas_ln}"
+            update_attr(
+                meas[vname],
+                "long_name",
+                "{attr1} {attr}",
+                others=[prop[vname]],
+            )
 
     for ds1 in [prop, meas]:
         ds1.attrs = ds.attrs
@@ -487,7 +498,7 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
     )
     ds_hmap.attrs["cat:processing_level"] = to_level
     ds_hmap.attrs.pop("cat:variable", None)
-    ds_hmap["heatmap"].attrs["long_name"] = "Ranking of measure performance"
+    add_attr(ds_hmap["heatmap"], "long_name", _("Ranking of measure performance"))
 
     return ds_hmap
 
@@ -543,9 +554,11 @@ def measures_improvement(
 
     ds_better = ds_better.to_dataset(name="improved_grid_points")
 
-    ds_better["improved_grid_points"].attrs[
-        "long_name"
-    ] = "Fraction of improved grid cells"
+    add_attr(
+        ds_better["improved_grid_points"],
+        "long_name",
+        _("Fraction of improved grid cells"),
+    )
     ds_better.attrs = ds2.attrs
     ds_better.attrs["cat:processing_level"] = to_level
     ds_better.attrs.pop("cat:variable", None)
