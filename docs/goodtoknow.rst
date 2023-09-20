@@ -48,7 +48,7 @@ What is currently not covered by either `xscen` or `xclim` is a method to resamp
 Metadata translation
 --------------------
 
-xscen itself does not add many translatable attributes, but when it does, it will look into xclim's options for which locales to translate them to. Similar to xclim, it will always add a particular attribute in english and then translations with the same attribute name suffixed by "_XX", where "XX" is the two-letter locale name, usually following the `ISO-639-1 <https://en.wikipedia.org/wiki/ISO_639-1>`_ standard. For example, if a function adds a `long_name` and Inuktitut translation is activated, the function will also add a `long_name_iu` attribute.
+xscen itself does not add many translatable attributes, but when it does, it will look into xclim's options for which locales to translate them to. Similar to xclim, it will always add a particular attribute in english and then translations with the same attribute name suffixed by "_XX", where "XX" is the two-letter language code, as set in the `ISO-639-1 <https://en.wikipedia.org/wiki/ISO_639-1>`_ standard. For example, if a function adds a `long_name` and Inuktitut translation is activated, the function will also add a `long_name_iu` attribute.
 
 In a config file, activating French translations for both xclim's indicators and xscen (and figanos) is done with :
 
