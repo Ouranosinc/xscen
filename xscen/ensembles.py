@@ -169,7 +169,7 @@ def generate_weights(
         values are either dictionaries containing attribute value and individual weight
         or a xr.DataArray with the same non-stationary coord as the datasets (ex: time, horizon) and attribute coord (ex: experiment).
         If others is used, all options not named will be given same weight value for the attribute.
-        ex: {'model': {'MPI-ESM-1-2-HAM': 0.25, 'MPI-ESM1-2-HR': 0.5},
+        ex: {'source': {'MPI-ESM-1-2-HAM': 0.25, 'MPI-ESM1-2-HR': 0.5},
         'experiment': {'ssp585': xr.DataArray, 'ssp126': xr.DataArray}, 'institution': {'CCma': 0.5, 'others': 1}
     skipna : bool
         If True, weights will be computed from attributes only. If False, weights will be computed from the number of non-missing values.
@@ -454,9 +454,31 @@ def generate_weights(
 
     # Attribute_weights
     if attribute_weights:
+        # mismatch GCM/RCM attributes in same datasets not yet implemented
+        if not all([info[k]["driving_model"] is None for k in info.keys()]) or not all(
+            [info[k]["driving_model"] is not None for k in info.keys()]
+        ):
+            raise NotImplementedError(
+                "Management of RCM and GCM in same datasets dictionary not "
+                "yet implemented with attribute_weights."
+            )
+
         stationary_weights = {}
         non_stationary_weights = {}
         for att, v_att in attribute_weights.items():
+            # Add warning when mismatch between independance_level/experiment_weight and attribute_weights
+            if att != independence_level or (
+                att == "experiment" and not experiment_weights
+            ):
+                if att != "experiment":
+                    warnings.warn(
+                        f"The {att} weights do not match the {independence_level} independance level"
+                    )
+                else:
+                    warnings.warn(
+                        "Key experiment given in attribute_weights without argument experiment_weights=True"
+                    )
+
             # Verification
             if att not in info[k] or any(
                 (info[k][att] is None or len(info[k][att]) == 0) for k in info
