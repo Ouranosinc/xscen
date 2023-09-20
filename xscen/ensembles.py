@@ -3,7 +3,7 @@ import inspect
 import logging
 import warnings
 from copy import deepcopy
-from itertools import chain
+from itertools import chain, groupby
 from pathlib import Path
 from typing import Any, Union
 
@@ -455,8 +455,9 @@ def generate_weights(
     # Attribute_weights
     if attribute_weights:
         # mismatch GCM/RCM attributes in same datasets not yet implemented
-        if not all([info[k]["driving_model"] is None for k in info.keys()]) or not all(
-            [info[k]["driving_model"] is not None for k in info.keys()]
+        if (
+            len(list(groupby([info[k]["driving_model"] is None for k in info.keys()])))
+            != 1
         ):
             raise NotImplementedError(
                 "Management of RCM and GCM in same datasets dictionary not "
