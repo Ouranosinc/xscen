@@ -82,10 +82,17 @@ endif
 servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
- dist: clean ## builds source and wheel package
+dist: clean ## builds source and wheel package
 	python -m build --sdist
 	python -m build --wheel
 	ls -l dist
 
 install: clean ## install the package to the active Python's site-packages
 	python setup.py install
+
+findfrench:  ## Extract phrases and update the French translation catalog (this doesn't translate)
+	python setup.py extract_messages
+	python setup.py update_catalog -l fr
+
+translate:   ## Compile the translation catalogs.
+	python setup.py compile_catalog

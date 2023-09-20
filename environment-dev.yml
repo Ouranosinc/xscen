@@ -35,6 +35,7 @@ dependencies:
   - pyarrow >=1.0.0
   - pip
   # Dev
+  - babel
   - bumpversion
   - coveralls
   - ipykernel

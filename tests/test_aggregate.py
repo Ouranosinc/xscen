@@ -177,9 +177,7 @@ class TestComputeDeltas:
             )
 
         variable = "tas_delta_1981_2010" if rename_variables else "tas"
-        delta_kind = (
-            "absolute" if kind == "+" else "relative" if kind == "/" else "percentage"
-        )
+        delta_kind = "abs." if kind == "+" else "rel." if kind == "/" else "pct."
         results = (
             [0, 1, 2, 3]
             if kind == "+"
@@ -198,7 +196,7 @@ class TestComputeDeltas:
         # Test metadata
         assert (
             deltas[variable].attrs["description"]
-            == f"{self.ds.tas.attrs['description']}: {delta_kind} delta compared to 1981-2010."
+            == f"{self.ds.tas.attrs['description'].strip(' .')}: {delta_kind} delta compared to 1981-2010."
         )
         assert f"{delta_kind} delta vs. 1981-2010" in deltas[variable].attrs["history"]
         # Test variable
