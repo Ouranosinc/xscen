@@ -90,7 +90,10 @@ def _parse_level(text: str) -> str:
     return text
 
 
-@register_parse_type("datebounds", regex=r"(([\d]+(\-[\d]+)?)|fx)", group_count=3)
+# Minimum 4 digits for a date (a single year). Maximum is, in theory, YYYYMMDDHHMMSS so 14.
+@register_parse_type(
+    "datebounds", regex=r"(([\d]{4,15}(\-[\d]{4,15})?)|fx)", group_count=3
+)
 def _parse_datebounds(text: str) -> tuple[str, str]:
     """Parse helper to translate date bounds, used in the special DATES field."""
     if "-" in text:

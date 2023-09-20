@@ -107,7 +107,7 @@ def date_parser(
         except (KeyError, ValueError):
             try:
                 date = pd.Timestamp(date)
-            except pd._libs.tslibs.parsing.DateParseError:
+            except (pd._libs.tslibs.parsing.DateParseError, ValueError):
                 date = pd.NaT
     elif isinstance(date, cftime.datetime):
         for n in range(3):
