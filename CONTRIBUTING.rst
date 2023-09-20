@@ -123,6 +123,8 @@ Ready to contribute? Here's how to set up `xscen` for local development.
 
 9. Submit a pull request through the GitHub website.
 
+.. _translating-xscen:
+
 Translating xscen
 ~~~~~~~~~~~~~~~~~
 If your additions to xscen play with plain text attributes like "long_name" or "description", you should also provide

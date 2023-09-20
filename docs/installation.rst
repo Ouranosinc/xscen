@@ -5,7 +5,7 @@ Installation
 Official Sources
 ----------------
 
-Because of some packages being absent from PyPI (such as `xESMF`), we strongly recommend installing `xscen` in an Anaconda environment.
+Because of some packages being absent from PyPI (such as `xESMF`), we strongly recommend installing `xscen` in an Anaconda Python environment.
 
 `xscen` can be installed directly from conda-forge:
 
