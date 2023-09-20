@@ -549,6 +549,11 @@ logging: # general logging args
       handlers: [console] # [file, console] could also be used to write the log to a file
 
 
+xclim:  # Options for xclim
+  metadata_locales:  # Enable french translation for xclim indicators, but also some xscen methods.
+    - fr
+
+
 to_dataset_dict: # parameters to open datasets
   xarray_open_kwargs:
     decode_timedelta: False
