@@ -243,6 +243,17 @@ def generate_weights(
 
     info = {key: dict(defdict, **get_cat_attrs(datasets[key])) for key in keys}
 
+    # Check if RCM and GCMs in datasets with attribute_weights
+    if (
+        attribute_weights
+        and len(list(groupby([info[k]["driving_model"] is None for k in info.keys()])))
+        > 1
+    ):
+        raise NotImplementedError(
+            "Management of RCM and GCM in same datasets dictionary not "
+            "yet implemented with attribute_weights."
+        )
+
     # More easily manage GCMs and RCMs
     for k in info:
         if info[k]["driving_model"] is None or len(info[k]["driving_model"]) == 0:
@@ -454,16 +465,6 @@ def generate_weights(
 
     # Attribute_weights
     if attribute_weights:
-        # mismatch GCM/RCM attributes in same datasets not yet implemented
-        if (
-            len(list(groupby([info[k]["driving_model"] is None for k in info.keys()])))
-            != 1
-        ):
-            raise NotImplementedError(
-                "Management of RCM and GCM in same datasets dictionary not "
-                "yet implemented with attribute_weights."
-            )
-
         stationary_weights = {}
         non_stationary_weights = {}
         for att, v_att in attribute_weights.items():
@@ -473,7 +474,7 @@ def generate_weights(
             ):
                 if att != "experiment":
                     warnings.warn(
-                        f"The {att} weights do not match the {independence_level} independance level"
+                        f"The {att} weights do not match the {independence_level} independance_level"
                     )
                 else:
                     warnings.warn(
