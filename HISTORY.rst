@@ -4,7 +4,7 @@ History
 
 v0.8.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -13,6 +13,7 @@ Announcements
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Added the ability to search for simulations that reach a given warming level. (:pull:`251`).
+* ``xs.spatial_mean`` now accepts the ``region="global"`` keyword to perform a global average (:issue:`94`, :pull:`260`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -34,6 +35,7 @@ Internal changes
 * Reduced the size of the files in /docs/notebooks/samples and changed the Notebooks and tests accordingly. (:issue:`247`, :pull:`248`).
 * Added a new `xscen.testing` module with the `datablock_3d` function previously located in `/tests/conftest.py`. (:pull:`248`).
 * New function `xscen.testing.fake_data` to generate fake data for testing. (:pull:`248`).
+* xESMF 0.8 Regridder and SpatialAverager argument ``out_chunks`` is now accepted by ``xs.regrid_dataset``  and ``xs.spatial_mean``. (:pull:`260`).
 
 v0.7.1 (2023-08-23)
 -------------------
