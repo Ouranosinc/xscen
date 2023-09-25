@@ -478,7 +478,7 @@ class TestGenerateWeights:
         out = xs.generate_weights(
             self.ens,
             independence_level=independence_level,
-            experiment_weights=exp_weights,
+            balance_experiments=exp_weights,
             skipna=skipna,
         )
 
@@ -612,7 +612,7 @@ class TestGenerateWeights:
         with pytest.raises(
             ValueError, match="The 'cat:experiment' attribute is missing"
         ):
-            xs.generate_weights(ens2, experiment_weights=True)
+            xs.generate_weights(ens2, balance_experiments=True)
         ens2 = deepcopy(self.ens)
         ens2["CCCma-CanESM2-rcp45-r1i1p1-CanESM2"].attrs["cat:institution"] = None
         with pytest.raises(
@@ -628,7 +628,7 @@ class TestGenerateWeights:
             UserWarning,
             match="The 'cat:experiment' attribute is missing from all datasets",
         ):
-            xs.generate_weights(ens2, experiment_weights=False)
+            xs.generate_weights(ens2, balance_experiments=False)
         ens2 = deepcopy(self.ens)
         ens2["CCCma-CanESM2-rcp45-r1i1p1-CanESM2"].attrs["cat:member"] = None
         with pytest.warns(
@@ -894,7 +894,7 @@ class TestGenerateWeights:
                 )
             with pytest.warns(
                 UserWarning,
-                match="Key experiment given in attribute_weights without argument experiment_weights=True",
+                match="Key experiment given in attribute_weights without argument balance_experiments=True",
             ):
                 xs.generate_weights(
                     self.ens_rcm,

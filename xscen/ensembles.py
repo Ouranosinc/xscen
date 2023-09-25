@@ -142,11 +142,12 @@ def generate_weights(
     datasets: Union[dict, list],
     *,
     independence_level: str = "model",
-    experiment_weights: bool = False,
+    balance_experiments: bool = False,
     attribute_weights: dict = None,
     skipna: bool = True,
     v_for_skipna: str = None,
     standardize: bool = False,
+    experiment_weights: bool = False,
 ) -> xr.DataArray:
     """Use realization attributes to automatically generate weights along the 'realization' dimension.
 
@@ -161,7 +162,7 @@ def generate_weights(
         'model': Weights using the method '1 model - 1 Vote', where every unique combination of 'source' and 'driving_model' is considered a model.
         'GCM': Weights using the method '1 GCM - 1 Vote'
         'institution': Weights using the method '1 institution - 1 Vote'
-    experiment_weights : bool
+    balance_experiments : bool
         If True, each experiment will be given a total weight of 1. This option requires the 'cat:experiment' attribute to be present in all datasets.
     attribute_weights : dict
         Nested dictionaries of weights to apply to each dataset.
@@ -178,6 +179,8 @@ def generate_weights(
         Variable to use for skipna=False. If None, the first variable in the first dataset is used.
     standardize : bool
         If True, the weights are standardized to sum to 1 (per timestep/horizon, if skipna=False).
+    experiment_weights : bool
+        Deprecated. Use balance_experiments instead.
 
     Notes
     -----
@@ -194,6 +197,13 @@ def generate_weights(
     xr.DataArray
         Weights along the 'realization' dimension, or 2D weights along the 'realization' and 'time/horizon' dimensions if skipna=False.
     """
+    if experiment_weights is True:
+        warnings.warn(
+            "`experiment_weights` has been renamed and will be removed in a future release. Use `balance_experiments` instead.",
+            category=FutureWarning,
+        )
+        balance_experiments = True
+
     if isinstance(datasets, list):
         datasets = {i: datasets[i] for i in range(len(datasets))}
 
@@ -267,11 +277,11 @@ def generate_weights(
         raise ValueError(
             "The 'cat:source' or 'cat:driving_model' attribute is missing from some simulations."
         )
-    if experiment_weights and any(
+    if balance_experiments and any(
         (info[k]["experiment"] is None or len(info[k]["experiment"]) == 0) for k in info
     ):
         raise ValueError(
-            "The 'cat:experiment' attribute is missing from some simulations. 'experiment_weights' cannot be True."
+            "The 'cat:experiment' attribute is missing from some simulations. 'balance_experiments' cannot be True."
         )
     if independence_level == "institution" and any(
         (info[k]["institution"] is None or len(info[k]["institution"]) == 0)
@@ -371,13 +381,13 @@ def generate_weights(
         if independence_level == "model":
             realization_struct = (
                 ["source", "driving_model", "experiment"]
-                if experiment_weights
+                if balance_experiments
                 else ["source", "driving_model"]
             )
         else:
             realization_struct = (
                 ["driving_model", "experiment"]
-                if experiment_weights
+                if balance_experiments
                 else ["driving_model"]
             )
         realizations = {
@@ -411,7 +421,9 @@ def generate_weights(
         # Number of driving models run by a given institution
         if independence_level == "institution":
             institution_struct = (
-                ["institution", "experiment"] if experiment_weights else ["institution"]
+                ["institution", "experiment"]
+                if balance_experiments
+                else ["institution"]
             )
             institution = {
                 info[k]["driving_model"]
@@ -447,7 +459,7 @@ def generate_weights(
         w = 1 / n_models / n_realizations / n_institutions
         weights[i] = xr.where(np.isfinite(w), w, 0)
 
-    if experiment_weights:
+    if balance_experiments:
         # Divide the weight equally between the experiments
         experiments = [info[k]["experiment"] for k in info.keys()]
         weights = weights.assign_coords(
@@ -470,7 +482,7 @@ def generate_weights(
         for att, v_att in attribute_weights.items():
             # Add warning when mismatch between independance_level/experiment_weight and attribute_weights
             if att != independence_level or (
-                att == "experiment" and not experiment_weights
+                att == "experiment" and not balance_experiments
             ):
                 if att != "experiment":
                     warnings.warn(
@@ -478,7 +490,7 @@ def generate_weights(
                     )
                 else:
                     warnings.warn(
-                        "Key experiment given in attribute_weights without argument experiment_weights=True"
+                        "Key experiment given in attribute_weights without argument balance_experiments=True"
                     )
 
             # Verification
