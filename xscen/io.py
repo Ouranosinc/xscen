@@ -274,12 +274,24 @@ def clean_incomplete(path: Union[str, os.PathLike], complete: Sequence[str]) -> 
             sh.rmtree(fold)
 
 
+def _coerce_attrs(attrs):
+    """Ensure no funky objects in attrs."""
+    for k in list(attrs.keys()):
+        if not (
+            isinstance(attrs[k], (str, float, int, np.ndarray))
+            or isinstance(attrs[k], (tuple, list))
+            and isinstance(attrs[k][0], (str, float, int))
+        ):
+            attrs[k] = str(attrs[k])
+
+
 @parse_config
 def save_to_netcdf(
     ds: xr.Dataset,
     filename: str,
     *,
     rechunk: Optional[dict] = None,
+    compute: bool = True,
     netcdf_kwargs: Optional[dict] = None,
 ) -> None:
     """Save a Dataset to NetCDF, rechunking if requested.
@@ -295,6 +307,8 @@ def save_to_netcdf(
         Spatial dimensions can be generalized as 'X' and 'Y', which will be mapped to the actual grid type's
         dimension names.
         Rechunking is only done on *data* variables sharing dimensions with this argument.
+    compute : bool
+        Whether to start the computation or return a delayed object.
     netcdf_kwargs : dict, optional
         Additional arguments to send to_netcdf()
 
@@ -317,21 +331,11 @@ def save_to_netcdf(
     netcdf_kwargs.setdefault("engine", "h5netcdf")
     netcdf_kwargs.setdefault("format", "NETCDF4")
 
-    # Ensure no funky objects in attrs:
-    def coerce_attrs(attrs):
-        for k in attrs.keys():
-            if not (
-                isinstance(attrs[k], (str, float, int, np.ndarray))
-                or isinstance(attrs[k], (tuple, list))
-                and isinstance(attrs[k][0], (str, float, int))
-            ):
-                attrs[k] = str(attrs[k])
-
-    coerce_attrs(ds.attrs)
+    _coerce_attrs(ds.attrs)
     for var in ds.variables.values():
-        coerce_attrs(var.attrs)
+        _coerce_attrs(var.attrs)
 
-    ds.to_netcdf(filename, **netcdf_kwargs)
+    return ds.to_netcdf(filename, compute=compute, **netcdf_kwargs)
 
 
 @parse_config
@@ -438,19 +442,9 @@ def save_to_zarr(
     if len(ds.data_vars) == 0:
         return None
 
-    # Ensure no funky objects in attrs:
-    def coerce_attrs(attrs):
-        for k in list(attrs.keys()):
-            if not (
-                isinstance(attrs[k], (str, float, int, np.ndarray))
-                or isinstance(attrs[k], (tuple, list))
-                and isinstance(attrs[k][0], (str, float, int))
-            ):
-                attrs[k] = str(attrs[k])
-
-    coerce_attrs(ds.attrs)
+    _coerce_attrs(ds.attrs)
     for var in ds.variables.values():
-        coerce_attrs(var.attrs)
+        _coerce_attrs(var.attrs)
 
     if itervar:
         zarr_kwargs["compute"] = True
