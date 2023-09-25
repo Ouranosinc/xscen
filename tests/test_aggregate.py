@@ -6,6 +6,7 @@ from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
+from xscen.testing import datablock_3d
 
 
 class TestClimatologicalMean:
@@ -523,3 +524,27 @@ class TestProduceHorizon:
                 xs.produce_horizon(
                     self.ds, indicators=self.yaml_file, periods=[["1950", "1990"]]
                 )
+
+
+class TestSpatialMean:
+    # We test different longitude flavors : all < 0, crossing 0, all > 0
+    # the default global bbox changes because of subtleties in clisops
+    @pytest.mark.parametrize(
+        "method,exp", (["xesmf", 1.62032976], ["cos-lat", 1.63397460])
+    )
+    @pytest.mark.parametrize("lonstart", [-70, -30, 0])
+    def test_global(self, lonstart, method, exp):
+        ds = datablock_3d(
+            np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 3, "float"),
+            "tas",
+            "lon",
+            lonstart,
+            "lat",
+            15,
+            30,
+            30,
+            as_dataset=True,
+        )
+
+        avg = xs.aggregate.spatial_mean(ds, method=method, region="global")
+        np.testing.assert_allclose(avg.tas, exp)

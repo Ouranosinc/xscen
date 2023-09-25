@@ -401,7 +401,7 @@ def spatial_mean(
         Can also be "global", for global averages. This is simply a shortcut for `{'name': 'global', 'method': 'bbox', 'lon_bnds' [-180, 180], 'lat_bnds': [-90, 90]}`.
     kwargs : dict
         Arguments to send to either mean(), interp() or SpatialAverager().
-        For SpatialAverager, one can give `skipna` here, to be passed to the averager call itself.
+        For SpatialAverager, one can give `skipna` or  `out_chunks` here, to be passed to the averager call itself.
     simplify_tolerance : float
         Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
         The simpler the polygons, the faster the averaging, but it will lose some precision.
@@ -456,9 +456,13 @@ def spatial_mean(
         region = {
             "name": "global",
             "method": "bbox",
-            "lon_bnds": [-180, 180],
-            "lat_bnds": [-90, 90],
+            "lat_bnds": [-90 + 1e-5, 90 - 1e-5],
         }
+        # `spatial_subset` won't wrap coords on the bbox, we need to fit the system used on ds.
+        if ds.cf["longitude"].min() >= 0:
+            region["lon_bnds"] = [0, 360]
+        else:
+            region["lon_bnds"] = [-180, 180]
 
     if (
         (region is not None)
@@ -638,7 +642,9 @@ def spatial_mean(
             raise ValueError("'method' should be one of [bbox, shape].")
 
         kwargs_copy = deepcopy(kwargs)
-        skipna = kwargs_copy.pop("skipna", False)
+        call_kwargs = {"skipna": kwargs_copy.pop("skipna", False)}
+        if "out_chunks" in kwargs:
+            call_kwargs["out_chunks"] = kwargs_copy.pop("out_chunks")
 
         # Pre-emptive segmentization. Same threshold as xESMF, but there's not strong analysis behind this choice
         geoms = shapely.segmentize(polygon.geometry, 1)
@@ -653,7 +659,7 @@ def spatial_mean(
             ds = ds.update(create_bounds_rotated_pole(ds))
 
         savg = xe.SpatialAverager(ds, geoms, **kwargs_copy)
-        ds_agg = savg(ds, keep_attrs=True, skipna=skipna)
+        ds_agg = savg(ds, keep_attrs=True, **call_kwargs)
         extra_coords = {
             col: xr.DataArray(polygon[col], dims=("geom",))
             for col in polygon.columns
