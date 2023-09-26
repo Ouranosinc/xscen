@@ -35,6 +35,7 @@ extra actions when finding the following special sections:
   The content of this section will be sent directly to :py:func:`xarray.set_options`.
 - ``xclim``:
   The content of this section will be sent directly to :py:func:`xclim.set_options`.
+  Here goes `metadata_locales: - fr` to activate the automatic translation of added attributes, for example.
 - ``warnings``:
   The content of this section must be a simple mapping. The keys are understood as python
   warning categories (types) and the values as an action to add to the filter. The key "all"
@@ -134,6 +135,7 @@ def load_config(*elements, reset=False, verbose=False):
     Once all elements are loaded, special sections are dispatched to their module, but only if
     the section was changed by the loaded elements. These special sections are:
 
+    * `locales` : The locales to use when writing metadata in xscen, xclim and figanos. This section must be a list of 2-char strings.
     * `logging` : Everything passed to :py:func:`logging.config.dictConfig`.
     * `xarray` : Passed to :py:func:`xarray.set_options`.
     * `xclim` : Passed to :py:func:`xclim.set_options`.
