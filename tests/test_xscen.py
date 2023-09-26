@@ -28,4 +28,4 @@ class TestSmokeTest:
         contents = f.read()
         assert """Gabriel Rondeau-Genesse""" in contents
         assert '__email__ = "rondeau-genesse.gabriel@ouranos.ca"' in contents
-        assert '__version__ = "0.7.8-beta"' in contents
+        assert '__version__ = "0.7.9-beta"' in contents
