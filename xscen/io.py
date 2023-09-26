@@ -4,11 +4,12 @@ import os
 import shutil as sh
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import h5py
 import netCDF4
 import numpy as np
+import pandas as pd
 import xarray as xr
 import zarr
 from rechunker import rechunk as _rechunk
@@ -485,6 +486,227 @@ def save_to_zarr(
                 for name in ds.data_vars:
                     sh.rmtree(path / name)
             raise
+
+
+def _to_dataframe(
+    data: xr.DataArray,
+    index: list[str],
+    column: list[str],
+    coords: list[str],
+    coords_dims: dict,
+):
+    """Convert a DataArray to a DataFrame with support for MultiColumn."""
+    df = data.to_dataframe()
+    if not column:
+        # Fast track for the easy case where xarray's default is already what we want.
+        return df
+    df_data = (
+        df[[data.name]]
+        .reset_index()
+        .pivot(index=index, columns=column)
+        .droplevel(None, axis=1)
+    )
+    dfs = []
+    for v in coords:
+        drop_cols = [c for c in column if c not in coords_dims[v]]
+        cols = [c for c in column if c in coords_dims[v]]
+        dfc = (
+            df[[v]]
+            .reset_index()
+            .drop(columns=drop_cols)
+            .pivot(index=index, columns=cols)
+        )
+        cols = dfc.columns
+        # The "None" level has the aux coord name we want it either at the same level as variable, or at lowest missing level otherwise.
+        varname_lvl = "variable" if "variable" in drop_cols else drop_cols[-1]
+        cols = cols.rename(
+            varname_lvl
+            if not isinstance(cols, pd.MultiIndex)
+            else [nm or varname_lvl for nm in cols.name]
+        )
+        if isinstance(df_data.columns, pd.MultiIndex) or isinstance(
+            cols, pd.MultiIndex
+        ):
+            # handle different depth of multicolumns, expand MultiCol of coord with None for missing levels.
+            cols = pd.MultiIndex.from_arrays(
+                [
+                    cols.get_level_values(lvl) if lvl in cols.names else [None]
+                    for lvl in df_data.columns.names
+                ]
+            )
+        dfc.columns = cols
+        dfs.append(
+            dfc[~dfc.index.duplicated()]
+        )  # We dropped columns thus the index is not unique anymore
+    dfs.append(df_data)
+    return pd.concat(dfs, axis=1)
+
+
+def to_table(
+    ds: Union[xr.Dataset, xr.DataArray],
+    *,
+    index: Union[None, str, Sequence[str]] = None,
+    column: Union[None, str, Sequence[str]] = None,
+    sheet: Union[None, str, Sequence[str]] = None,
+    coords: Union[bool, Sequence[str]] = True,
+) -> Union[pd.DataFrame, dict]:
+    """Convert a dataset to a pandas DataFrame with support for multicolumns and multisheet.
+
+    This function will trigger a computation of the dataset.
+
+    Parameters
+    ----------
+    ds : xr.Dataset or xr.DataArray
+      Dataset or DataArray to be saved.
+      If a Dataset with more than one variable is given, the dimension "variable"
+      must appear in one of `index`, `column` or `sheet`.
+    index : str or sequence of str, optional
+      Name of the dimension(s) to use as index.
+      Default is all data dimensions.
+    column : str or sequence of str, optional
+      Name of the dimension(s) to use as index.
+      Default is "variable", i.e. the name of the variable(s).
+    sheet : str or sequence of str, optional
+      Name of the dimension(s) to use as sheet names.
+    coords: bool or sequence of str
+      A list of auxiliary coordinates to add to the columns (as would variables).
+      If True, all (if any) are added.
+
+    Returns
+    -------
+    pd.DataFrame or dict
+      DataFrame with a MultiIndex with levels `index` and MultiColumn with levels `column`.
+      If `sheet` is given, the output is dictionary with keys for each unique "sheet" dimensions tuple, values are DataFrames.
+    """
+    if isinstance(ds, xr.Dataset):
+        da = ds.to_array(name="data")
+        if len(ds) == 1:
+            da = da.isel(variable=0).rename(data=da.variable.values[0])
+
+    def _ensure_list(seq):
+        if isinstance(seq, str):
+            return [seq]
+        return list(seq)
+
+    index = _ensure_list(index or (set(da.dims) - {"variable"}))
+    column = _ensure_list(column or (["variable"] if len(ds) > 1 else []))
+    sheet = _ensure_list(sheet or [])
+
+    needed_dims = index + column + sheet
+    if len(set(needed_dims)) != len(needed_dims):
+        raise ValueError(
+            f"Repeated dimension names. Got index={index}, column={column} and sheet={sheet}."
+            "Each dimension should appear only once."
+        )
+    if set(needed_dims) != set(da.dims):
+        raise ValueError(
+            f"Passed index, column and sheet do not match available dimensions. Got {needed_dims}, data has {da.dims}."
+        )
+
+    coords = coords or []
+    if coords is not True:
+        drop = set(ds.coords.keys()) - set(da.dims) - set(coords)
+        da = da.drop_vars(drop)
+    else:
+        coords = list(set(ds.coords.keys()) - set(da.dims))
+    if len(coords) > 1 and "variable" in index:
+        raise NotImplementedError(
+            "Keeping auxiliary coords is implemented when 'variable' is in the index."
+        )
+
+    table_kwargs = dict(
+        index=index,
+        column=column,
+        coords=coords,
+        coords_dims={c: ds[c].dims for c in coords},
+    )
+    if sheet:
+        out = {}
+        das = da.stack(sheet=sheet)
+        for elem in das.sheet:
+            out[elem.item()] = _to_dataframe(
+                das.sel(sheet=elem, drop=True), **table_kwargs
+            )
+        return out
+    return _to_dataframe(da, **table_kwargs)
+
+
+TABLE_FORMATS = {".csv": "csv", ".xls": "excel", ".xlsx": "excel"}
+
+
+def save_to_table(
+    ds: Union[xr.Dataset, xr.DataArray],
+    filename: str,
+    output_format: Optional[str] = None,
+    *,
+    index: Union[None, str, Sequence[str]] = None,
+    column: Union[None, str, Sequence[str]] = "variable",
+    sheet: Union[None, str, Sequence[str]] = None,
+    coords: Union[bool, Sequence[str]] = True,
+    sep: str = "_",
+    **kwargs,
+):
+    """Save the dataset to a tabular file (csv, excel, ...).
+
+    This function will trigger a computation of the dataset.
+
+    Parameters
+    ----------
+    ds : xr.Dataset or xr.DataArray
+      Dataset or DataArray to be saved.
+      If a Dataset with more than one variable is given, the dimension "variable"
+      must appear in one of `index`, `column` or `sheet`.
+    filename : str
+      Name of the file to be saved.
+    output_format: {'csv', 'excel', ...}, optional
+      The output format. If None (default), it is inferred
+      from the extension of `filename`. Not all possible output format are supported for inference.
+      Valid values are any that matches a :py:class:`pandas.DataFrame` method like "df.to_{format}".
+    index : str or sequence of str, optional
+      Name of the dimension(s) to use as index.
+      Default is all data dimensions.
+    column : str or sequence of str, optional
+      Name of the dimension(s) to use as index.
+      Default is "variable", i.e. the name of the variable(s).
+    sheet : str or sequence of str, optional
+      Name of the dimension(s) to use as sheet names.
+      Only valid if the output format is excel.
+    coords: bool or sequence of str
+      A list of auxiliary coordinates to add to the columns (as would variables).
+      If True, all (if any) are added.
+    sep : str
+      For output formats other than excel and for sheet names,
+      index, column and sheet names from multiple dimensions are
+      constructed by concatenating values with this separator.
+    kwargs:
+      Other arguments passed to the panda function.
+    """
+    filename = Path(filename)
+
+    if output_format is None:
+        output_format = TABLE_FORMATS.get(filename.suffix)
+    if output_format is None:
+        raise ValueError(
+            f"Output format could not be inferred from filename {filename.name}. Please pass `output_format`."
+        )
+
+    if sheet is not None and output_format != "excel":
+        raise ValueError(
+            f"Argument `sheet` is only valid with excel as the output format. Got {output_format}."
+        )
+
+    out = to_table(ds, index=index, column=column, sheet=sheet, coords=coords)
+
+    if sheet:
+        with pd.ExcelWriter(filename, engine=kwargs.get("engine")) as writer:
+            for sheet_name, df in out.items():
+                df.to_excel(writer, sheet_name=sep.join(sheet_name), **kwargs)
+    else:
+        if isinstance(out.columns, pd.MultiIndex):
+            out.columns = out.columns.map(lambda lvls: sep.join(map(str, lvls)))
+        if isinstance(out.index, pd.MultiIndex):
+            out.index = out.index.map(lambda lvls: sep.join(map(str, lvls)))
+        getattr(out, f"to_{output_format}")(filename, **kwargs)
 
 
 def rechunk_for_saving(ds, rechunk):
