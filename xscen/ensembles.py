@@ -261,8 +261,7 @@ def generate_weights(
         > 1
     ):
         raise NotImplementedError(
-            "Management of RCM and GCM in same datasets dictionary not "
-            "yet implemented with attribute_weights."
+            "Weighting `source` and/or `driving_model` through `attribute_weights` is not yet implemented when given a mix of GCMs and RCMs."
         )
 
     # More easily manage GCMs and RCMs
