@@ -216,7 +216,7 @@ class TestGenerateWeights:
         return ens_rcm
 
     ens = make_ensemble.__func__()
-    ens_rcm = make_ensemble_rcm(ens)
+    ens_rcm = make_ensemble_rcm.__func__(ens)
 
     @staticmethod
     def make_answer(independence_level, exp_weights, skipna):
