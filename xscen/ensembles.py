@@ -480,7 +480,7 @@ def generate_weights(
         stationary_weights = {}
         non_stationary_weights = {}
         for att, v_att in attribute_weights.items():
-            # Add warning when mismatch between independance_level/experiment_weight and attribute_weights
+            # Add warning when a mismatch between independance_level/experiment_weight and attribute_weights is detected
             if att != independence_level or (
                 att == "experiment" and not balance_experiments
             ):
