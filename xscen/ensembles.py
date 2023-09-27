@@ -520,7 +520,7 @@ def generate_weights(
                     elif v[att] in w_dict:
                         w = w_dict[v[att]]
                     weights.loc[{"realization": k}] = weights.sel(realization=k) * w
-        # Non-staionary weights (xr.DataArray)
+        # Non-stationary weights (xr.DataArray)
         if non_stationary_weights:
             for att, da in non_stationary_weights.items():
                 # verification
