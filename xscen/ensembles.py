@@ -166,13 +166,13 @@ def generate_weights(
         If True, each experiment will be given a total weight of 1 (prior to subsequent weighting made through `attribute_weights`).
         This option requires the 'cat:experiment' attribute to be present in all datasets.
     attribute_weights : dict
-        Nested dictionaries of weights to apply to each dataset.
-        Keys are the attributes names for which weights are given,
-        values are either dictionaries containing attribute value and individual weight
-        or a xr.DataArray with the same non-stationary coord as the datasets (ex: time, horizon) and attribute coord (ex: experiment).
-        If others is used, all options not named will be given same weight value for the attribute.
-        ex: {'source': {'MPI-ESM-1-2-HAM': 0.25, 'MPI-ESM1-2-HR': 0.5},
-        'experiment': {'ssp585': xr.DataArray, 'ssp126': xr.DataArray}, 'institution': {'CCma': 0.5, 'others': 1}
+        Nested dictionaries of weights to apply to each dataset. These weights are applied after the independence weighting.
+        The first level of keys are the attributes for which weights are being given.
+        The second level of keys are unique entries for the attribute, with the value being either an individual weight
+        or a xr.DataArray. If a DataArray is used, its dimensions must be the same non-stationary coordinate as the datasets (ex: time, horizon) and the attribute being weighted (ex: experiment).
+        A `others` key can be used to give the same weight to all entries not specifically named in the dictionnary.
+        Example #1: {'source': {'MPI-ESM-1-2-HAM': 0.25, 'MPI-ESM1-2-HR': 0.5}},
+        Example #2: {'experiment': {'ssp585': xr.DataArray, 'ssp126': xr.DataArray}, 'institution': {'CCCma': 0.5, 'others': 1}}
     skipna : bool
         If True, weights will be computed from attributes only. If False, weights will be computed from the number of non-missing values.
         skipna=False requires either a 'time' or 'horizon' dimension in the datasets.
