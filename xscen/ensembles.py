@@ -163,7 +163,8 @@ def generate_weights(
         'GCM': Weights using the method '1 GCM - 1 Vote'
         'institution': Weights using the method '1 institution - 1 Vote'
     balance_experiments : bool
-        If True, each experiment will be given a total weight of 1. This option requires the 'cat:experiment' attribute to be present in all datasets.
+        If True, each experiment will be given a total weight of 1 (prior to subsequent weighting made through `attribute_weights`).
+        This option requires the 'cat:experiment' attribute to be present in all datasets.
     attribute_weights : dict
         Nested dictionaries of weights to apply to each dataset.
         Keys are the attributes names for which weights are given,
