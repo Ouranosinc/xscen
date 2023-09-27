@@ -254,7 +254,7 @@ def generate_weights(
 
     info = {key: dict(defdict, **get_cat_attrs(datasets[key])) for key in keys}
 
-    # Check if RCM and GCMs in datasets with attribute_weights
+    # Check if there are both RCMs and GCMs in datasets, with attribute_weights set to weight them.
     if (
         attribute_weights
         and len(list(groupby([info[k]["driving_model"] is None for k in info.keys()])))
