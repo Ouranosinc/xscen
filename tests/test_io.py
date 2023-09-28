@@ -106,7 +106,7 @@ class TestToTable:
 
         # Variable in the index, thus no coords
         tab = xs.io.to_table(
-            self.ds, index=["time", "variable"], column=["season", "site"], coords=False
+            self.ds, row=["time", "variable"], column=["season", "site"], coords=False
         )
         assert tab.shape == (15, 24)
         assert tab.columns.names == ["season", "site"]
