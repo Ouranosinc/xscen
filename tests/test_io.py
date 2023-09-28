@@ -100,9 +100,12 @@ class TestToTable:
         assert tab.columns.names == ["variable"]
         assert tab.index.names == ["season", "time", "site"]
         # Season order is chronological, rather than alphabetical
-        assert tab.xs("1993", level="time").xs(
-            "a", level="site"
-        ).index.get_level_values("season") == ["JFM", "AMJ", "JAS", "OND"]
+        np.testing.assert_array_equal(
+            tab.xs("1993", level="time")
+            .xs("a", level="site")
+            .index.get_level_values("season"),
+            ["JFM", "AMJ", "JAS", "OND"],
+        )
 
         # Variable in the index, thus no coords
         tab = xs.io.to_table(
