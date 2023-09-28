@@ -589,7 +589,7 @@ def to_table(
             return [seq]
         return list(seq)
 
-    row = _ensure_list(row or (list(da.dims) - {"variable"}))
+    row = _ensure_list(row or ([d for d in da.dims if d != "variable"]))
     column = _ensure_list(column or (["variable"] if len(ds) > 1 else []))
     sheet = _ensure_list(sheet or [])
 
