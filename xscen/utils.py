@@ -1238,3 +1238,39 @@ def standardize_periods(periods, multiple=True):
                 f"'period' should be a single instance of [start, end], received {len(periods)}."
             )
         return periods[0]
+
+
+def season_sort_key(idx: pd.Index, name: str = None):
+    """Get a proper sort key for a "season"  or "month" index to avoid alphabetical sorting.
+
+    If any of the values in the index is not recognized as a 3-letter
+    season code or a 3-letter month abbreviation, the operation is
+    aborted and the index is returned untouched.
+    DJF is the first season of the year.
+
+    Parameters
+    ----------
+    idx : pd.Index
+      Any array that implements a `map` method.
+      If name is "month", index elements are expected to be 3-letter month abbreviations, uppercase (JAN, FEB, etc).
+      If name is "season", index elements are expected to be 3-letter season abbreviations, uppercase (DJF, AMJ, OND, etc.)
+      If anything else, the index is returned untouched.
+    name : str, optional
+      The index name. By default, the `name` attribute of the index is used, if present.
+
+    Returns
+    -------
+    idx : Integer sort key for months and seasons, the input index untouched otherwise.
+    """
+    try:
+        if (name or getattr(idx, "name", None)) == "season":
+            m = "DJFMAMJJASONDJ"
+            return idx.map(m.index)
+        if (name or getattr(idx, "name", None)) == "month":
+            m = list(xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values())
+            return idx.map(m.index)
+    except (ValueError, TypeError):
+        # ValueError if string not in seasons, or value not in months
+        # TypeError if season element was not a string.
+        pass
+    return idx

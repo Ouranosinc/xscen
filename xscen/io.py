@@ -4,7 +4,7 @@ import os
 import shutil as sh
 from collections.abc import Sequence
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import h5py
 import netCDF4
@@ -17,7 +17,7 @@ from xclim.core.calendar import get_calendar
 
 from .config import parse_config
 from .scripting import TimeoutException
-from .utils import translate_time_chunk
+from .utils import season_sort_key, translate_time_chunk
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +27,12 @@ __all__ = [
     "estimate_chunks",
     "get_engine",
     "rechunk",
+    "rechunk_for_saving",
+    "save_to_table",
     "save_to_netcdf",
     "save_to_zarr",
     "subset_maxsize",
-    "rechunk_for_saving",
+    "to_table",
 ]
 
 
@@ -532,14 +534,15 @@ def _to_dataframe(
                 [
                     cols.get_level_values(lvl) if lvl in cols.names else [None]
                     for lvl in df_data.columns.names
-                ]
+                ],
+                names=df_data.columns.names,
             )
         dfc.columns = cols
         dfs.append(
             dfc[~dfc.index.duplicated()]
         )  # We dropped columns thus the index is not unique anymore
     dfs.append(df_data)
-    return pd.concat(dfs, axis=1)
+    return pd.concat(dfs, axis=1).sort_index(level=index, key=season_sort_key)
 
 
 def to_table(
@@ -577,6 +580,7 @@ def to_table(
     pd.DataFrame or dict
       DataFrame with a MultiIndex with levels `index` and MultiColumn with levels `column`.
       If `sheet` is given, the output is dictionary with keys for each unique "sheet" dimensions tuple, values are DataFrames.
+      The DataFrames are always sorted with level priority as given in `index` and in ascending order,.
     """
     if isinstance(ds, xr.Dataset):
         da = ds.to_array(name="data")
@@ -611,7 +615,7 @@ def to_table(
         coords = list(set(ds.coords.keys()) - set(da.dims))
     if len(coords) > 1 and "variable" in index:
         raise NotImplementedError(
-            "Keeping auxiliary coords is implemented when 'variable' is in the index."
+            "Keeping auxiliary coords is not implemented when 'variable' is in the index. Pass `coords=False` or put 'variable' in `column` instead."
         )
 
     table_kwargs = dict(

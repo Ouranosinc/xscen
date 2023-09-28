@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import xarray as xr
 
 import xscen as xs
 
@@ -66,3 +67,49 @@ class TestRechunkForSaving:
         for v in ds_ch.data_vars:
             for dim, chunks in zip(list(ds.dims), ds_ch[v].chunks):
                 assert chunks[0] == new_chunks[v][dim]
+
+
+class TestToTable:
+    ds = xs.utils.unstack_dates(
+        xr.merge(
+            [
+                xs.testing.datablock_3d(
+                    np.random.random_sample((20, 3, 2)),
+                    v,
+                    "lon",
+                    0,
+                    "lat",
+                    0,
+                    1,
+                    1,
+                    "1993-01-01",
+                    "QS-JAN",
+                )
+                for v in ["tas", "pr", "snw"]
+            ]
+        )
+        .stack(site=["lat", "lon"])
+        .reset_index("site")
+        .assign_coords(site=list("abcdef"))
+    ).transpose("season", "time", "site")
+
+    def test_normal(self):
+        # Default
+        tab = xs.io.to_table(self.ds)
+        assert tab.shape == (120, 5)  # 3 vars + 2 aux coords
+        assert tab.columns.names == ["variable"]
+        assert tab.index.names == ["season", "time", "site"]
+        # Season order is chronological, rather than alphabetical
+        assert tab.xs("1993", level="time").xs(
+            "a", level="site"
+        ).index.get_level_values("season") == ["JFM", "AMJ", "JAS", "OND"]
+
+        # Variable in the index, thus no coords
+        tab = xs.io.to_table(
+            self.ds, index=["time", "variable"], column=["season", "site"], coords=False
+        )
+        assert tab.shape == (15, 24)
+        assert tab.columns.names == ["season", "site"]
+        np.testing.assert_array_equal(
+            tab.loc[("1993", "pr"), ("JFM",)], self.ds.pr.sel(time="1993", season="JFM")
+        )
