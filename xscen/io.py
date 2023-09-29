@@ -3,6 +3,7 @@ import logging
 import os
 import shutil as sh
 from collections.abc import Sequence
+from inspect import signature
 from pathlib import Path
 from typing import Optional, Union
 
@@ -592,9 +593,18 @@ def to_table(
             return [seq]
         return list(seq)
 
-    row = _ensure_list(row or ([d for d in da.dims if d != "variable"]))
-    column = _ensure_list(column or (["variable"] if len(ds) > 1 else []))
-    sheet = _ensure_list(sheet or [])
+    passed_dims = set().union(
+        _ensure_list(row or []), _ensure_list(column or []), _ensure_list(sheet or [])
+    )
+    if row is None:
+        row = [d for d in da.dims if d != "variable" and d not in passed_dims]
+    row = _ensure_list(row)
+    if column is None:
+        column = ["variable"] if len(ds) > 1 and "variable" not in passed_dims else []
+    column = _ensure_list(column)
+    if sheet is None:
+        sheet = []
+    sheet = _ensure_list(sheet)
 
     needed_dims = row + column + sheet
     if len(set(needed_dims)) != len(needed_dims):
@@ -722,7 +732,7 @@ def save_to_table(
       The sheet name of the toc can be given through the "name" attribute of the DataFrame, otherwise "Content" is used.
     kwargs:
       Other arguments passed to the pandas function.
-      If the output format is excel and multiple sheets are requested, "engine" will be passed to :py:class:`pandas.ExcelWriter`.
+      If the output format is excel, kwargs to :py:class:`pandas.ExcelWriter` can be given here as well.
     """
     filename = Path(filename)
 
@@ -752,7 +762,12 @@ def save_to_table(
         out = {(add_toc.attrs.get("name", "Content"),): add_toc, **out}
 
     if sheet or (add_toc is not False):
-        with pd.ExcelWriter(filename, engine=kwargs.pop("engine", None)) as writer:
+        engine_kwargs = {}  # Extract engine kwargs
+        for arg in signature(pd.ExcelWriter).parameters:
+            if arg in kwargs:
+                engine_kwargs[arg] = kwargs.pop(arg)
+
+        with pd.ExcelWriter(filename, **engine_kwargs) as writer:
             for sheet_name, df in out.items():
                 df.to_excel(writer, sheet_name=col_sep.join(sheet_name), **kwargs)
     else:
