@@ -14,10 +14,12 @@ import xarray as xr
 import zarr
 from rechunker import rechunk as _rechunk
 from xclim.core.calendar import get_calendar
+from xclim.core.options import METADATA_LOCALES
+from xclim.core.options import OPTIONS as XC_OPTIONS
 
 from .config import parse_config
 from .scripting import TimeoutException
-from .utils import season_sort_key, translate_time_chunk
+from .utils import TRANSLATOR, season_sort_key, translate_time_chunk
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,7 @@ __all__ = [
     "clean_incomplete",
     "estimate_chunks",
     "get_engine",
+    "make_toc",
     "rechunk",
     "rechunk_for_saving",
     "save_to_table",
@@ -633,6 +636,36 @@ def to_table(
     return _to_dataframe(da, **table_kwargs)
 
 
+def make_toc(ds: Union[xr.Dataset, xr.DataArray], loc: str = None) -> pd.DataFrame:
+    """Make a table of content describing a dataset's variables.
+
+    This return a simple DataFrame with variable names as index, the long_name as "description" and units.
+    Column names and long names are taken from the activated locale if found, otherwise the english version is taken.
+    """
+    if loc is None:
+        loc = (XC_OPTIONS[METADATA_LOCALES] or ["en"])[0]
+    locsuf = "" if loc == "en" else f"_{loc}"
+    _ = TRANSLATOR[loc]  # Combine translation and gettext parsing (like it usually is)
+
+    if isinstance(ds, xr.DataArray):
+        ds = ds.to_dataset()
+
+    toc = pd.DataFrame.from_records(
+        [
+            {
+                _("Variable"): vv,
+                _("Description"): da.attrs.get(
+                    f"long_name{locsuf}", da.attrs.get("long_name")
+                ),
+                _("Units"): da.attrs.get("units"),
+            }
+            for vv, da in ds.data_vars.items()
+        ],
+    ).set_index(_("Variable"))
+    toc.attrs["name"] = _("Content")
+    return toc
+
+
 TABLE_FORMATS = {".csv": "csv", ".xls": "excel", ".xlsx": "excel"}
 
 
@@ -647,6 +680,7 @@ def save_to_table(
     coords: Union[bool, Sequence[str]] = True,
     col_sep: str = "_",
     row_sep: str = None,
+    add_toc: Union[bool, pd.DataFrame] = False,
     **kwargs,
 ):
     """Save the dataset to a tabular file (csv, excel, ...).
@@ -682,8 +716,13 @@ def save_to_table(
     row_sep : str, optional
       Multi-index names are concatenated with this separator, except in excel.
       If None (default), each level is written in its own column.
+    add_toc : bool or DataFrame
+      A table of content to add as the first sheet. Only valid if the output format is excel.
+      If True, :py:func:`make_toc` is used to generate the toc.
+      The sheet name of the toc can be given through the "name" attribute of the DataFrame, otherwise "Content" is used.
     kwargs:
-      Other arguments passed to the panda function.
+      Other arguments passed to the pandas function.
+      If the output format is excel and multiple sheets are requested, "engine" will be passed to :py:class:`pandas.ExcelWriter`.
     """
     filename = Path(filename)
 
@@ -698,11 +737,22 @@ def save_to_table(
         raise ValueError(
             f"Argument `sheet` is only valid with excel as the output format. Got {output_format}."
         )
+    if add_toc is not False and output_format != "excel":
+        raise ValueError(
+            f"A TOC was requested, but the output format is not Excel. Got {output_format}."
+        )
 
     out = to_table(ds, row=row, column=column, sheet=sheet, coords=coords)
 
-    if sheet:
-        with pd.ExcelWriter(filename, engine=kwargs.get("engine")) as writer:
+    if add_toc is not False:
+        if not sheet:
+            out = {("data",): out}
+        if add_toc is True:
+            add_toc = make_toc(ds)
+        out = {(add_toc.attrs.get("name", "Content"),): add_toc, **out}
+
+    if sheet or (add_toc is not False):
+        with pd.ExcelWriter(filename, engine=kwargs.pop("engine", None)) as writer:
             for sheet_name, df in out.items():
                 df.to_excel(writer, sheet_name=col_sep.join(sheet_name), **kwargs)
     else:
