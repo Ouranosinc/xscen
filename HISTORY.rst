@@ -16,6 +16,7 @@ New features and enhancements
 * ``xs.spatial_mean`` now accepts the ``region="global"`` keyword to perform a global average (:issue:`94`, :pull:`260`).
 * ``xs.spatial_mean`` with ``method='xESMF'`` will also automatically segmentize polygons (down to a 1° resolution) to ensure a correct average (:pull:`260`).
 * Added documentation for `require_all_on` in `search_data_catalogs`. (:pull:`263`).
+* Better ``xs.extract.resample`` : support for weighted resampling operations when starting with frequencies coarser than daily and missing timesteps/values handling. (:issue:`80`, :issue:`93`, :pull:`265`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
