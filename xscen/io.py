@@ -552,7 +552,7 @@ def to_table(
     row: Union[None, str, Sequence[str]] = None,
     column: Union[None, str, Sequence[str]] = None,
     sheet: Union[None, str, Sequence[str]] = None,
-    coords: Union[bool, Sequence[str]] = True,
+    coords: Union[bool, str, Sequence[str]] = True,
 ) -> Union[pd.DataFrame, dict]:
     """Convert a dataset to a pandas DataFrame with support for multicolumns and multisheet.
 
@@ -572,7 +572,7 @@ def to_table(
       Default is "variable", i.e. the name of the variable(s).
     sheet : str or sequence of str, optional
       Name of the dimension(s) to use as sheet names.
-    coords: bool or sequence of str
+    coords: bool or str or sequence of str
       A list of auxiliary coordinates to add to the columns (as would variables).
       If True, all (if any) are added.
 
@@ -617,8 +617,8 @@ def to_table(
             f"Passed row, column and sheet do not match available dimensions. Got {needed_dims}, data has {da.dims}."
         )
 
-    coords = coords or []
     if coords is not True:
+        coords = _ensure_list(coords or [])
         drop = set(ds.coords.keys()) - set(da.dims) - set(coords)
         da = da.drop_vars(drop)
     else:
