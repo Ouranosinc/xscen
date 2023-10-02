@@ -524,6 +524,8 @@ def search_data_catalogs(
         Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format. A list of strings can also be provided.
     other_search_criteria : dict, optional
         Other criteria to search for in the catalogs' columns, following a 'column_name: list(subset)' format.
+        You can also pass 'require_all_on: list(columns_name)' in order to only return results that correspond to all other criteria across the listed columns.
+        More details available at https://intake-esm.readthedocs.io/en/stable/how-to/enforce-search-query-criteria-via-require-all-on.html .
     exclusions : dict, optional
         Same as other_search_criteria, but for eliminating results.
     match_hist_and_fut: bool, optional
