@@ -428,9 +428,15 @@ class TestResample:
                 [1.49041096, 5.49041096, 9.49453552, 13.49041096, 17.49041096],
             ],
             ["MS", "std", "2YS", [6.92009239, 6.91557206]],
+            [
+                "QS",
+                "median",
+                "YS",
+                [1.516437, 5.516437, 9.516437, 13.51092864, 17.516437],
+            ],
         ],
     )
-    def test_mean_from_monthly(self, infrq, meth, outfrq, exp):
+    def test_weighted(self, infrq, meth, outfrq, exp):
         da = timeseries(
             np.arange(48),
             variable="tas",
@@ -440,7 +446,7 @@ class TestResample:
         out = xs.extract.resample(da, outfrq, method=meth)
         np.testing.assert_allclose(out.isel(time=slice(0, 5)), exp)
 
-    def test_wind_from_monthly(self):
+    def test_weighted_wind(self):
         uas = timeseries(
             np.arange(48),
             variable="uas",

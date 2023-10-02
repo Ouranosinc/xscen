@@ -408,8 +408,10 @@ def resample(
     )
 
     weights = None
-    if initial_frequency != "undetected" and initial_frequency_td > pd.Timedelta(
-        7, "days"
+    if (
+        initial_frequency != "undetected"
+        and initial_frequency_td > pd.Timedelta(7, "days")
+        and method in ["mean", "median", "std", "var"]
     ):
         # More than a week -> non-uniform sampling length!
         t = xr.date_range(
@@ -505,7 +507,7 @@ def resample(
         else:
             out = ds[var_name]
 
-    elif days_per_step is not None and method in ["mean", "median", "std", "var"]:
+    elif weights is not None:
         if method == "mean":
             # Avoiding resample().map() is much more performant
             with xr.set_options(keep_attrs=True):
@@ -529,6 +531,7 @@ def resample(
             dim="time", keep_attrs=True
         )
 
+    missing_note = " "
     if missing in ["mask", "drop"]:
         steps_per_period = (
             xr.ones_like(da.time, dtype="int").resample(time=target_frequency).sum()
@@ -545,18 +548,26 @@ def resample(
             / initial_frequency_td
         )
         complete = (steps_per_period / expected) > 0.95
+        action = "masking" if missing == "mask" else "dropping"
+        missing_note = f", {action} incomplete periods "
     elif isinstance(missing, dict):
         missmeth = missing.pop("method")
         complete = ~xc.core.missing.MISSING_METHODS[missmeth](
             da, target_frequency, initial_frequency
         )(**missing)
+        funcstr = xc.core.formatting.gen_call_string(
+            f"xclim.core.missing_{missmeth}", **missing
+        )
         missing = "mask"
+        missing_note = f", masking incomplete periods according to {funcstr} "
     if missing in {"mask", "drop"}:
         out = out.where(complete, drop=(missing == "drop"))
 
     new_history = (
-        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {method} "
-        f"resample from {initial_frequency} to {target_frequency} - xarray v{xr.__version__}"
+        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+        f"{'weighted' if weights is not None else ''} {method} "
+        f"resample from {initial_frequency} to {target_frequency}"
+        f"{missing_note}- xarray v{xr.__version__}"
     )
     history = (
         new_history + " \n " + out.attrs["history"]
