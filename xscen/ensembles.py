@@ -500,7 +500,7 @@ def generate_weights(
                 raise ValueError(
                     f"The {att} attribute is missing from some simulations."
                 )
-            # Split dict and xr.Dataarray weights
+            # Split dict and xr.DataArray weights
             if isinstance(v_att, xr.DataArray):
                 non_stationary_weights[att] = v_att
             elif isinstance(v_att, dict):
