@@ -397,15 +397,30 @@ def resample(
     initial_frequency_td = pd.Timedelta(
         CV.xrfreq_to_timedelta(xr.infer_freq(da.time.dt.round("T")), None)
     )
-    if initial_frequency_td == pd.Timedelta("1D"):
-        logger.warning(
-            "You appear to be resampling daily data using extract_dataset. "
-            "It is advised to use compute_indicators instead, as it is far more robust."
+    days_per_step = None
+    if initial_frequency != "undetected" and initial_frequency_td > pd.Timedelta(
+        7, "days"
+    ):
+        # More than a week -> non-uniform sampling length!
+        t = xr.date_range(
+            da.indexes["time"][0],
+            periods=da.time.size + 1,
+            freq=initial_frequency,
+            calendar=da.time.dt.calendar,
         )
-    elif initial_frequency_td > pd.Timedelta("1D"):
-        logger.warning(
-            "You appear to be resampling data that is coarser than daily. "
-            "Be aware that this is not currently explicitely supported by xscen and might result in erroneous manipulations."
+        # This is the number of days in each sampling period
+        days_per_step = (
+            xr.DataArray(t, dims=("time",), coords={"time": t})
+            .diff("time", label="lower")
+            .dt.days
+        )
+        days_per_period = (
+            days_per_step.resample(time=target_frequency)
+            .sum()  # Total number of days per period
+            .sel(time=days_per_step.time, method="ffill")  # Upsample to initial freq
+            .assign_coords(
+                time=days_per_step.time
+            )  # Not sure why we need this, but time coord is from the resample even after sel
         )
 
     if method is None:
@@ -454,7 +469,15 @@ def resample(
             )
 
         # Resample first to find the average wind speed and components
-        ds = ds.resample(time=target_frequency).mean(dim="time", keep_attrs=True)
+        if days_per_step is not None:
+            with xr.set_options(keep_attrs=True):
+                ds = (
+                    (ds * (days_per_step / days_per_period))
+                    .reample(time=target_frequency)
+                    .sum(time="time")
+                )
+        else:
+            ds = ds.resample(time=target_frequency).mean(dim="time", keep_attrs=True)
 
         # Based on Vector Magnitude and Direction equations
         # For example: https://www.khanacademy.org/math/precalculus/x9e81a4f98389efdf:vectors/x9e81a4f98389efdf:component-form/a/vector-magnitude-and-direction-review
@@ -475,6 +498,26 @@ def resample(
         else:
             out = ds[var_name]
 
+    elif days_per_step is not None and method in ["mean", "median", "std", "var"]:
+        if method == "mean":
+            # Avoiding resample().map() is much more performant
+            with xr.set_options(keep_attrs=True):
+                out = (
+                    (da * (days_per_step / days_per_period))
+                    .reample(time=target_frequency)
+                    .sum(time="time")
+                )
+        elif hasattr(xr.core.weighted.DataArrayWeighted, method):
+            ds = xr.merge([da, days_per_step.rename("weights")])
+            da = ds.resample(time="QS-DEC").map(
+                lambda grp: getattr(
+                    grp.drop_vars("weights").weighted(grp.weights), method
+                )(dim="time")
+            )[da.name]
+        else:
+            raise NotImplementedError(
+                f"Weighted resampling not implemented for method {method}."
+            )
     else:
         out = getattr(da.resample(time=target_frequency), method)(
             dim="time", keep_attrs=True
