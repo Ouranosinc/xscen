@@ -515,17 +515,15 @@ def resample(
                     .sum(dim="time")
                     .rename(da.name)
                 )
-        elif hasattr(xr.core.weighted.DataArrayWeighted, method):
+        else:
+            kws = {"q": 0.5} if method == "median" else {}
             ds = xr.merge([da, weights.rename("weights")])
             out = ds.resample(time=target_frequency).map(
                 lambda grp: getattr(
-                    grp.drop_vars("weights").weighted(grp.weights), method
-                )(dim="time")
+                    grp.drop_vars("weights").weighted(grp.weights),
+                    method if method != "median" else "quantile",
+                )(dim="time", **kws)
             )[da.name]
-        else:
-            raise NotImplementedError(
-                f"Weighted resampling not implemented for method {method}."
-            )
     else:
         out = getattr(da.resample(time=target_frequency), method)(
             dim="time", keep_attrs=True
