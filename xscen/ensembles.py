@@ -486,7 +486,7 @@ def generate_weights(
             ):
                 if att != "experiment":
                     warnings.warn(
-                        f"The {att} weights do not match the {independence_level} independance_level"
+                        f"The {att} weights do not match the {independence_level} independence_level"
                     )
                 else:
                     warnings.warn(
