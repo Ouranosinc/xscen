@@ -256,7 +256,7 @@ def generate_weights(
 
     # Check if there are both RCMs and GCMs in datasets, with attribute_weights set to weight them.
     if (
-        attribute_weights
+        any(a in ["source", "driving_model"] for a in list(attribute_weights.keys()))
         and len(list(groupby([info[k]["driving_model"] is None for k in info.keys()])))
         > 1
     ):
