@@ -116,3 +116,38 @@ class TestToTable:
         np.testing.assert_array_equal(
             tab.loc[("1993", "pr"), ("JFM",)], self.ds.pr.sel(time="1993", season="JFM")
         )
+
+
+def test_round_bits(datablock_3d):
+    da = datablock_3d(
+        np.random.random((30, 30, 50)),
+        variable="tas",
+        x="lon",
+        x_start=-70,
+        y="lat",
+        y_start=45,
+    )
+    dar = xs.io.round_bits(da, 12)
+    # Close but NOT equal, meaning something happened
+    np.testing.assert_allclose(da, dar, rtol=0.013)
+    assert not (da == dar).any()
+
+
+class TestSaveToZarr:
+    @pytest.mark.parametrize(
+        "vname,vtype,bitr,exp",
+        [
+            ("tas", np.float32, 12, 12),
+            ("tas", np.float32, False, None),
+            ("tas", np.int32, 12, None),
+            ("tas", np.int32, {"tas": 2}, "error"),
+            ("tas", object, {"pr": 2}, None),
+            ("tas", np.float64, True, 12),
+        ],
+    )
+    def test_guess_bitround(self, vname, vtype, bitr, exp):
+        if exp == "error":
+            with pytest.raises(ValueError):
+                xs.io._guess_keepbits(bitr, vname, vtype)
+        else:
+            assert xs.io._guess_keepbits(bitr, vname, vtype) == exp
