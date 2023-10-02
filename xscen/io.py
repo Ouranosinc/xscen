@@ -297,59 +297,6 @@ def _coerce_attrs(attrs):
             attrs[k] = str(attrs[k])
 
 
-@parse_config
-def save_to_netcdf(
-    ds: xr.Dataset,
-    filename: str,
-    *,
-    rechunk: Optional[dict] = None,
-    compute: bool = True,
-    netcdf_kwargs: Optional[dict] = None,
-) -> None:
-    """Save a Dataset to NetCDF, rechunking if requested.
-
-    Parameters
-    ----------
-    ds : xr.Dataset
-        Dataset to be saved.
-    filename : str
-        Name of the NetCDF file to be saved.
-    rechunk : dict, optional
-        This is a mapping from dimension name to new chunks (in any format understood by dask).
-        Spatial dimensions can be generalized as 'X' and 'Y', which will be mapped to the actual grid type's
-        dimension names.
-        Rechunking is only done on *data* variables sharing dimensions with this argument.
-    compute : bool
-        Whether to start the computation or return a delayed object.
-    netcdf_kwargs : dict, optional
-        Additional arguments to send to_netcdf()
-
-    Returns
-    -------
-    None
-
-    See Also
-    --------
-    xarray.Dataset.to_netcdf
-    """
-    if rechunk:
-        ds = rechunk_for_saving(ds, rechunk)
-
-    path = Path(filename)
-    path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Prepare to_netcdf kwargs
-    netcdf_kwargs = netcdf_kwargs or {}
-    netcdf_kwargs.setdefault("engine", "h5netcdf")
-    netcdf_kwargs.setdefault("format", "NETCDF4")
-
-    _coerce_attrs(ds.attrs)
-    for var in ds.variables.values():
-        _coerce_attrs(var.attrs)
-
-    return ds.to_netcdf(filename, compute=compute, **netcdf_kwargs)
-
-
 def _np_bitround(array, keepbits):
     """Bitround for Arrays."""
     codec = BitRound(keepbits=keepbits)
@@ -389,6 +336,69 @@ def _guess_keepbits(bitround, varname, vartype):
     if isinstance(bitround, dict):
         return bitround.get(varname, KEEPBITS[varname])
     return None
+
+
+@parse_config
+def save_to_netcdf(
+    ds: xr.Dataset,
+    filename: str,
+    *,
+    rechunk: Optional[dict] = None,
+    bitround: Union[bool, int, dict] = False,
+    compute: bool = True,
+    netcdf_kwargs: Optional[dict] = None,
+) -> None:
+    """Save a Dataset to NetCDF, rechunking if requested.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset to be saved.
+    filename : str
+        Name of the NetCDF file to be saved.
+    rechunk : dict, optional
+        This is a mapping from dimension name to new chunks (in any format understood by dask).
+        Spatial dimensions can be generalized as 'X' and 'Y', which will be mapped to the actual grid type's
+        dimension names.
+        Rechunking is only done on *data* variables sharing dimensions with this argument.
+    bitround : bool or int or dict
+      If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa, allowing for a much better compression.
+      If an int, this is the number of bits to keep for all float variables.
+      If a dict, a mapping from variable name to the number of bits to keep.
+      If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12, which yields a relative error of 0.012%.
+    compute : bool
+        Whether to start the computation or return a delayed object.
+    netcdf_kwargs : dict, optional
+        Additional arguments to send to_netcdf()
+
+    Returns
+    -------
+    None
+
+    See Also
+    --------
+    xarray.Dataset.to_netcdf
+    """
+    if rechunk:
+        ds = rechunk_for_saving(ds, rechunk)
+
+    path = Path(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Prepare to_netcdf kwargs
+    netcdf_kwargs = netcdf_kwargs or {}
+    netcdf_kwargs.setdefault("engine", "h5netcdf")
+    netcdf_kwargs.setdefault("format", "NETCDF4")
+
+    for var in list(ds.data_vars.keys()):
+        if keepbits := _guess_keepbits(bitround, var, ds[var].dtype):
+            ds = ds.assign({var: round_bits(ds[var], keepbits)})
+
+    _coerce_attrs(ds.attrs)
+    for var in ds.variables.values():
+        _coerce_attrs(var.attrs)
+
+    return ds.to_netcdf(filename, compute=compute, **netcdf_kwargs)
 
 
 @parse_config
