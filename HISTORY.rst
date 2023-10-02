@@ -16,6 +16,7 @@ New features and enhancements
 * ``xs.spatial_mean`` now accepts the ``region="global"`` keyword to perform a global average (:issue:`94`, :pull:`260`).
 * ``xs.spatial_mean`` with ``method='xESMF'`` will also automatically segmentize polygons (down to a 1° resolution) to ensure a correct average (:pull:`260`).
 * Added documentation for `require_all_on` in `search_data_catalogs`. (:pull:`263`).
+* ``xs.save_to_table`` and ``xs.io.to_table`` to transform datasets and arrays to DataFrames, but with support for multi-columns, multi-sheets and localized table of content generation.
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
