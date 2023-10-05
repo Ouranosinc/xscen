@@ -26,6 +26,7 @@ Bug fixes
 ^^^^^^^^^
 * Fixed a bug in ``xs.search_data_catalogs`` when searching for fixed fields and specific experiments/members. (:pull:`251`).
 * Fixed a bug in the documentation build configuration that prevented stable/latest and tagged documentation builds from resolving on ReadTheDocs. (:pull:`256`).
+* Fixed ``get_warming_level`` to avoid incomplete matches. (:pull:`269`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^

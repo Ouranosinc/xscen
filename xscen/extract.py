@@ -929,13 +929,13 @@ def get_warming_level(
     out = {}
     for model in info_models:
         # choose colum based in ds cat attrs
-        mip = models.mip_era.str.match(model["mip_era"])
-        src = models.source.str.match(model["source"])
+        mip = models.mip_era.str.fullmatch(model["mip_era"])
+        src = models.source.str.fullmatch(model["source"])
         if not src.any():
             # Maybe it's an RCM, then source may contain the institute
             src = models.source.apply(lambda s: model["source"].endswith(s))
-        exp = models.experiment.str.match(model["experiment"])
-        mem = models.member.str.match(model["member"])
+        exp = models.experiment.str.fullmatch(model["experiment"])
+        mem = models.member.str.fullmatch(model["member"])
 
         candidates = models[mip & src & exp & mem]
         if candidates.empty:
