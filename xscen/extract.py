@@ -14,6 +14,7 @@ import pandas as pd
 import xarray as xr
 import xclim as xc
 from intake_esm.derived import DerivedVariableRegistry
+from xclim.core.calendar import compare_offsets
 
 from .catalog import DataCatalog  # noqa
 from .catalog import ID_COLUMNS, concat_data_catalogs, generate_id, subset_file_coverage
@@ -23,7 +24,7 @@ from .indicators import load_xclim_module, registry_from_module
 from .spatial import subset
 from .utils import CV
 from .utils import ensure_correct_time as _ensure_correct_time
-from .utils import get_cat_attrs, natural_sort, standardize_periods
+from .utils import get_cat_attrs, natural_sort, standardize_periods, xrfreq_to_timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -403,15 +404,36 @@ def resample(
     var_name = da.name
 
     initial_frequency = xr.infer_freq(da.time.dt.round("T")) or "undetected"
-    initial_frequency_td = pd.Timedelta(
-        CV.xrfreq_to_timedelta(xr.infer_freq(da.time.dt.round("T")), None)
-    )
+    if initial_frequency == "undetected":
+        warnings.warn(
+            "Could not infer the frequency of the dataset. Be aware that this might result in erroneous manipulations."
+        )
+
+    if method is None:
+        if (
+            target_frequency in CV.resampling_methods.dict
+            and var_name in CV.resampling_methods.dict[target_frequency]
+        ):
+            method = CV.resampling_methods(target_frequency)[var_name]
+            logger.info(
+                f"Resampling method for {var_name}: '{method}', based on variable name and frequency."
+            )
+
+        elif var_name in CV.resampling_methods.dict["any"]:
+            method = CV.resampling_methods("any")[var_name]
+            logger.info(
+                f"Resampling method for {var_name}: '{method}', based on variable name."
+            )
+
+        else:
+            method = "mean"
+            logger.info(f"Resampling method for {var_name} defaulted to: 'mean'.")
 
     weights = None
     if (
         initial_frequency != "undetected"
-        and initial_frequency_td > pd.Timedelta(7, "days")
-        and method in ["mean", "median", "std", "var"]
+        and compare_offsets(initial_frequency, ">", "W")
+        and method in ["mean", "median", "std", "var", "wind_direction"]
     ):
         # More than a week -> non-uniform sampling length!
         t = xr.date_range(
@@ -435,26 +457,6 @@ def resample(
             )  # Not sure why we need this, but time coord is from the resample even after sel
         )
         weights = days_per_step / days_per_period
-
-    if method is None:
-        if (
-            target_frequency in CV.resampling_methods.dict
-            and var_name in CV.resampling_methods.dict[target_frequency]
-        ):
-            method = CV.resampling_methods(target_frequency)[var_name]
-            logger.info(
-                f"Resampling method for {var_name}: '{method}', based on variable name and frequency."
-            )
-
-        elif var_name in CV.resampling_methods.dict["any"]:
-            method = CV.resampling_methods("any")[var_name]
-            logger.info(
-                f"Resampling method for {var_name}: '{method}', based on variable name."
-            )
-
-        else:
-            method = "mean"
-            logger.info(f"Resampling method for {var_name} defaulted to: 'mean'.")
 
     # TODO : Support non-surface wind?
     if method == "wind_direction":
@@ -482,7 +484,7 @@ def resample(
             )
 
         # Resample first to find the average wind speed and components
-        if days_per_step is not None:
+        if weights is not None:
             with xr.set_options(keep_attrs=True):
                 ds = (ds * weights).resample(time=target_frequency).sum(dim="time")
         else:
@@ -532,7 +534,8 @@ def resample(
         )
 
     missing_note = " "
-    if missing in ["mask", "drop"]:
+    initial_td = xrfreq_to_timedelta(initial_frequency)
+    if missing in ["mask", "drop"] and not pd.isnull(initial_td):
         steps_per_period = (
             xr.ones_like(da.time, dtype="int").resample(time=target_frequency).sum()
         )
@@ -541,11 +544,12 @@ def resample(
             periods=steps_per_period.time.size + 1,
             freq=target_frequency,
         )
+
         expected = (
             xr.DataArray(t, dims=("time",), coords={"time": t}).diff(
                 "time", label="lower"
             )
-            / initial_frequency_td
+            / initial_td
         )
         complete = (steps_per_period / expected) > 0.95
         action = "masking" if missing == "mask" else "dropping"
