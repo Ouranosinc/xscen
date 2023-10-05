@@ -389,8 +389,8 @@ def resample(
         using the mapping in CVs/resampling_methods.json. If the variable is not found there,
         "mean" is used by default.
     missing: {'mask', 'drop'} or dict, optional
-        If 'mask' or 'drop', target periods with fewer steps than expected are masked or dropped.
-        For example, for daily data beginning in January with a `target_frequency` of "QS-DEC". the first season is missing one month.
+        If 'mask' or 'drop', target periods that would have been computed from fewer timesteps than expected are masked or dropped, using a threshold of 5% of missing data.
+        For example, the first season of a `target_frequency` of "QS-DEC" will be masked or dropped if data only starts in January.
         If a dict, it points to a xclim check missing method which will mask periods according to their number of NaN values.
         The dict must contain a "method" field corresponding to the xclim method name and may contain
         any other args to pass. Options are documented in :py:mod:`xclim.core.missing`.
