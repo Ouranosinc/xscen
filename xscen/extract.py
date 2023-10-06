@@ -831,7 +831,9 @@ def get_warming_level(
     window: int = 20,
     tas_baseline_period: list = None,
     ignore_member: bool = False,
-    tas_src: Union[str, Path] = Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc",
+    tas_src: Union[str, Path] = Path(__file__).parent
+    / "data"
+    / "IPCC_annual_global_tas.nc",
     return_horizon: bool = True,
 ):
     """Use the IPCC Atlas method to return the window of time over which the requested level of global warming is first reached.
@@ -916,7 +918,7 @@ def get_warming_level(
         info_models.append(info)
 
     # open csv, split column names for easier usage
-    tas = xr.open_dataset(tas_src).tas # pd.read_csv(tas_csv, index_col="year")
+    tas = xr.open_dataset(tas_src).tas  # pd.read_csv(tas_csv, index_col="year")
     # models = pd.DataFrame.from_records(
     #     [c.split("_") for c in annual_tas.columns],
     #     index=annual_tas.columns,
@@ -926,13 +928,13 @@ def get_warming_level(
     out = {}
     for model in info_models:
         # choose colum based in ds cat attrs
-        mip = tas.mip_era.str.match(model["mip_era"] + '$')
-        src = tas.source.str.match(model["source"] + '$')
+        mip = tas.mip_era.str.match(model["mip_era"] + "$")
+        src = tas.source.str.match(model["source"] + "$")
         if not src.any():
             # Maybe it's an RCM, then source may contain the institute
             src = xr.apply_ufunc(model["source"].endswith, tas.source, vectorize=True)
-        exp = tas.experiment.str.match(model["experiment"] + '$')
-        mem = tas.member.str.match(model["member"] + '$')
+        exp = tas.experiment.str.match(model["experiment"] + "$")
+        mem = tas.member.str.match(model["member"] + "$")
 
         candidates = mip & src & exp & mem
         if not candidates.any():
@@ -947,7 +949,7 @@ def get_warming_level(
                 "More than one simulation of the database fits the dataset metadata. Choosing the first one."
             )
         tas_sel = tas.isel(simulation=candidates.argmax())
-        selected = '_'.join([tas_sel[c].item() for c in FIELDS])
+        selected = "_".join([tas_sel[c].item() for c in FIELDS])
         logger.debug(
             f"Computing warming level +{wl}°C for {model} from simulation: {selected}."
         )
@@ -956,15 +958,13 @@ def get_warming_level(
         yearly_diff = tas_sel - tas_sel.sel(time=slice(*tas_baseline_period)).mean()
 
         # get the start and end date of the window when the warming level is first reached
-        rolling_diff = (
-            yearly_diff
-            .rolling(time=window, min_periods=window, center=True)
-            .mean()
-        )
+        rolling_diff = yearly_diff.rolling(
+            time=window, min_periods=window, center=True
+        ).mean()
         # shift(-1) is needed to reproduce IPCC results.
         # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
         if window % 2 == 0:  # Even window
-             rolling_diff = rolling_diff.shift(time=-1)
+            rolling_diff = rolling_diff.shift(time=-1)
 
         yrs = rolling_diff.where(rolling_diff >= wl, drop=True)
         if yrs.size == 0:
