@@ -831,7 +831,7 @@ def get_warming_level(
     window: int = 20,
     tas_baseline_period: list = None,
     ignore_member: bool = False,
-    tas_csv: str = None,
+    tas_src: Union[str, Path] = Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc",
     return_horizon: bool = True,
 ):
     """Use the IPCC Atlas method to return the window of time over which the requested level of global warming is first reached.
@@ -879,9 +879,6 @@ def get_warming_level(
 
     FIELDS = ["mip_era", "source", "experiment", "member"]
 
-    if tas_csv is None:
-        tas_csv = Path(__file__).parent / "data" / "IPCC_annual_global_tas.csv"
-
     if isinstance(realization, (xr.Dataset, str, dict)):
         realization = [realization]
     info_models = []
@@ -919,73 +916,66 @@ def get_warming_level(
         info_models.append(info)
 
     # open csv, split column names for easier usage
-    annual_tas = pd.read_csv(tas_csv, index_col="year")
-    models = pd.DataFrame.from_records(
-        [c.split("_") for c in annual_tas.columns],
-        index=annual_tas.columns,
-        columns=FIELDS,
-    )
+    tas = xr.open_dataset(tas_src).tas # pd.read_csv(tas_csv, index_col="year")
+    # models = pd.DataFrame.from_records(
+    #     [c.split("_") for c in annual_tas.columns],
+    #     index=annual_tas.columns,
+    #     columns=FIELDS,
+    # )
 
     out = {}
     for model in info_models:
         # choose colum based in ds cat attrs
-        mip = models.mip_era.str.fullmatch(model["mip_era"])
-        src = models.source.str.fullmatch(model["source"])
+        mip = tas.mip_era.str.match(model["mip_era"] + '$')
+        src = tas.source.str.match(model["source"] + '$')
         if not src.any():
             # Maybe it's an RCM, then source may contain the institute
-            src = models.source.apply(lambda s: model["source"].endswith(s))
-        exp = models.experiment.str.fullmatch(model["experiment"])
-        mem = models.member.str.fullmatch(model["member"])
+            src = xr.apply_ufunc(model["source"].endswith, tas.source, vectorize=True)
+        exp = tas.experiment.str.match(model["experiment"] + '$')
+        mem = tas.member.str.match(model["member"] + '$')
 
-        candidates = models[mip & src & exp & mem]
-        if candidates.empty:
+        candidates = mip & src & exp & mem
+        if not candidates.any():
             warnings.warn(
-                f"No columns fit the attributes of the input dataset ({model})."
+                f"No simulation fit the attributes of the input dataset ({model})."
             )
             selected = "_".join([model[c] for c in FIELDS])
             out[selected] = [None, None] if return_horizon else None
             continue
-        if len(candidates) > 1:
+        if candidates.sum() > 1:
             logger.info(
-                "More than one column of the csv fits the dataset metadata. Choosing the first one."
+                "More than one simulation of the database fits the dataset metadata. Choosing the first one."
             )
-        selected = candidates.index[0]
-        right_column = annual_tas.loc[:, selected]
-
+        tas_sel = tas.isel(simulation=candidates.argmax())
+        selected = '_'.join([tas_sel[c].item() for c in FIELDS])
         logger.debug(
-            f"Computing warming level +{wl}°C for {model} from column: {selected}."
+            f"Computing warming level +{wl}°C for {model} from simulation: {selected}."
         )
 
-        # compute reference temperature for the warming
-        mean_base = right_column.loc[
-            tas_baseline_period[0] : tas_baseline_period[1]
-        ].mean()
-
-        yearly_diff = right_column - mean_base  # difference from reference
+        # compute reference temperature for the warming and difference from reference
+        yearly_diff = tas_sel - tas_sel.sel(time=slice(*tas_baseline_period)).mean()
 
         # get the start and end date of the window when the warming level is first reached
+        rolling_diff = (
+            yearly_diff
+            .rolling(time=window, min_periods=window, center=True)
+            .mean()
+        )
         # shift(-1) is needed to reproduce IPCC results.
         # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
         if window % 2 == 0:  # Even window
-            rolling_diff = (
-                yearly_diff.rolling(window=window, min_periods=window, center=True)
-                .mean()
-                .shift(-1)
-            )
-        else:  # window % 2 == 1:  # Odd windows do not require the shift
-            rolling_diff = yearly_diff.rolling(
-                window=window, min_periods=window, center=True
-            ).mean()
+             rolling_diff = rolling_diff.shift(time=-1)
 
-        yr = rolling_diff.where(rolling_diff >= wl).first_valid_index()
-        if yr is None:
+        yrs = rolling_diff.where(rolling_diff >= wl, drop=True)
+        if yrs.size == 0:
             logger.info(
                 f"Global warming level of +{wl}C is not reached by the last year of the provided 'tas_csv' file for {selected}."
             )
-            out[selected] = [None, None] if return_horizon else None
+            out[name] = [None, None] if return_horizon else None
         else:
-            start_yr = int(yr - window / 2 + 1)
-            end_yr = int(yr + window / 2)
+            yr = yrs.isel(time=0).time.dt.year.item()
+            start_yr = yr - (window // 2) + 1
+            end_yr = yr + (window // 2)
             out[selected] = (
                 standardize_periods([start_yr, end_yr], multiple=False)
                 if return_horizon
@@ -994,7 +984,7 @@ def get_warming_level(
 
     if len(out) != len(realization):
         warnings.warn(
-            "Two or more input model specifications pointed towards the same column in the CSV, "
+            "Two or more input model specifications pointed towards the same model in the database, "
             "the length of the output is different from the input."
         )
     if len(realization) == 1:
