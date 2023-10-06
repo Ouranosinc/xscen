@@ -17,6 +17,7 @@ New features and enhancements
 * ``xs.spatial_mean`` with ``method='xESMF'`` will also automatically segmentize polygons (down to a 1° resolution) to ensure a correct average (:pull:`260`).
 * Added documentation for `require_all_on` in `search_data_catalogs`. (:pull:`263`).
 * ``xs.save_to_table`` and ``xs.io.to_table`` to transform datasets and arrays to DataFrames, but with support for multi-columns, multi-sheets and localized table of content generation.
+* Added annual global tas timeseries for CMIP6's models CMCC-ESM2 (ssp245, ssp370, ssp585), EC-Earth3-CC (ssp245, ssp585), KACE-1-0-G (ssp245, ssp370, ssp585) and TaiESM1 (ssp245, ssp370). (:issue:`268`, :pull:`270`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
