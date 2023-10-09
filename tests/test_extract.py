@@ -3,6 +3,7 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 import pytest
+import xarray as xr
 from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
 
@@ -413,3 +414,83 @@ class TestSubsetWarmingLevel:
 
     def test_none(self):
         assert xs.subset_warming_level(TestSubsetWarmingLevel.ds, wl=20) is None
+
+
+class TestResample:
+    @pytest.mark.parametrize(
+        "infrq,meth,outfrq,exp",
+        [
+            ["MS", "mean", "QS-DEC", [0.47457627, 3, 6.01086957, 9, 11.96666667]],
+            [
+                "QS-DEC",
+                "mean",
+                "YS",
+                [1.49041096, 5.49041096, 9.49453552, 13.49041096, 17.49041096],
+            ],
+            ["MS", "std", "2YS", [6.92009239, 6.91557206]],
+            [
+                "QS",
+                "median",
+                "YS",
+                [1.516437, 5.516437, 9.516437, 13.51092864, 17.516437],
+            ],
+        ],
+    )
+    def test_weighted(self, infrq, meth, outfrq, exp):
+        da = timeseries(
+            np.arange(48),
+            variable="tas",
+            start="2001-01-01",
+            freq=infrq,
+        )
+        out = xs.extract.resample(da, outfrq, method=meth)
+        np.testing.assert_allclose(out.isel(time=slice(0, 5)), exp)
+
+    def test_weighted_wind(self):
+        uas = timeseries(
+            np.arange(48),
+            variable="uas",
+            start="2001-01-01",
+            freq="MS",
+        )
+        vas = timeseries(
+            np.arange(48),
+            variable="vas",
+            start="2001-01-01",
+            freq="MS",
+        )
+        ds = xr.merge([uas, vas])
+        out = xs.extract.resample(ds.uas, "YS", method="wind_direction", ds=ds)
+        np.testing.assert_allclose(out, [5.5260274, 17.5260274, 29.5260274, 41.5136612])
+
+    def test_missing(self):
+        da = timeseries(
+            np.arange(48),
+            variable="tas",
+            start="2001-01-01",
+            freq="MS",
+        )
+        out = xs.extract.resample(da, "QS-DEC", method="mean", missing="drop")
+        assert out.size == 15
+
+        out = xs.extract.resample(da, "QS-DEC", method="mean", missing="mask")
+        assert out.isel(time=0).isnull().all()
+
+    def test_missing_xclim(self):
+        arr = np.arange(48).astype(float)
+        arr[0] = np.nan
+        arr[40:] = np.nan
+        da = timeseries(
+            arr,
+            variable="tas",
+            start="2001-01-01",
+            freq="MS",
+        )
+        out = xs.extract.resample(da, "YS", method="mean", missing={"method": "any"})
+        assert out.isel(time=0).isnull().all()
+
+        out = xs.extract.resample(
+            da, "YS", method="mean", missing={"method": "pct", "tolerance": 0.6}
+        )
+        assert out.isel(time=0).notnull().all()
+        assert out.isel(time=-1).isnull().all()
