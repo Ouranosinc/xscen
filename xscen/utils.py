@@ -1274,3 +1274,9 @@ def season_sort_key(idx: pd.Index, name: str = None):
         # TypeError if season element was not a string.
         pass
     return idx
+
+
+def xrfreq_to_timedelta(freq):
+    """Approximate the length of a period based on its frequency offset."""
+    N, B, _, _ = parse_offset(freq)
+    return N * pd.Timedelta(CV.xrfreq_to_timedelta(B, "NaT"))

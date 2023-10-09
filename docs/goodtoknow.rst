@@ -37,12 +37,12 @@ There are many ways to open data in xscen workflows. The list below tries to mak
 Which function to use when resampling data
 ------------------------------------------
 
-:extract_dataset: :py:func:`~xscen.extract.extract_dataset` has resampling capabilities to provide daily data from finer sources.
+:extract_dataset: :py:func:`~xscen.extract.extract_dataset`'s resampling capabilities are meant to provide daily data from finer sources.
+
+:resample: :py:func`xscen.extract.resample` extends xarray's `resample` methods with support for weighted resampling when starting from data coarser than daily and for handling of missing timesteps or values.
 
 :xclim indicators: Through :py:func:`~xscen.indicators.compute_indicators`, xscen workflows can easily use `xclim indicators <https://xclim.readthedocs.io/en/stable/indicators.html>`_
-    to go from daily data to coarser (monthly, seasonal, annual).
-
-What is currently not covered by either `xscen` or `xclim` is a method to resample from data coarser than daily, where the base period is non-uniform (ex: resampling from monthly to annual data, taking into account the number of days per month).
+    to go from daily data to coarser (monthly, seasonal, annual), with missing values handling. This option will add more metadata than the two firsts.
 
 
 Metadata translation
