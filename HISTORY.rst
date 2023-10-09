@@ -19,10 +19,11 @@ New features and enhancements
 * ``xs.save_to_table`` and ``xs.io.to_table`` to transform datasets and arrays to DataFrames, but with support for multi-columns, multi-sheets and localized table of content generation.
 * Better ``xs.extract.resample`` : support for weighted resampling operations when starting with frequencies coarser than daily and missing timesteps/values handling. (:issue:`80`, :issue:`93`, :pull:`265`).
 * Added annual global tas timeseries for CMIP6's models CMCC-ESM2 (ssp245, ssp370, ssp585), EC-Earth3-CC (ssp245, ssp585), KACE-1-0-G (ssp245, ssp370, ssp585) and TaiESM1 (ssp245, ssp370). Moved global tas database to a netCDF file. (:issue:`268`, :pull:`270`).
+* Implemented support for multiple levels and models in ``xs.subset_warming_level``. Better support for `DataArray` and `DataFrame` in ``xs.get_warming_level``. (:pull:`270`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* N/A
+* For a sequence of models, the output of ``xs.get_warming_level`` is now a list. Revert to a dictionary with ``output='selected'`` (:pull:`270`).
 
 Bug fixes
 ^^^^^^^^^
