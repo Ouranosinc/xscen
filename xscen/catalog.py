@@ -423,7 +423,9 @@ class DataCatalog(intake_esm.esm_datastore):
         if ensemble_name is None:
             ensemble_name = create_ensemble_on
         elif not set(ensemble_name).issubset(create_ensemble_on):
-            raise ValueError(f"`ensemble_name` must be a subset of `create_ensemble_on`.")
+            raise ValueError(
+                "`ensemble_name` must be a subset of `create_ensemble_on`."
+            )
         rm_from_id = (concat_on or []) + (create_ensemble_on or []) + ["realization"]
 
         aggs = {

@@ -5,9 +5,10 @@ import os
 import re
 import warnings
 from collections import defaultdict
+from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
-from typing import Callable, List, Optional, Sequence, Union
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -960,6 +961,7 @@ def get_warming_level(
         When `realization` is a sequence.
         If "requested", the function returns a list of the same length as `realization`.
         If "selected", the function returns a dict, keys are the models selected in the database.
+
     Returns
     -------
     dict, list or str
@@ -1005,7 +1007,7 @@ def get_warming_level(
             if ignore_member:
                 info["member"] = ".*"
         # Dict or Series (DataFrame row)
-        elif hasattr(real, 'keys') and set(real.keys()).issuperset(
+        elif hasattr(real, "keys") and set(real.keys()).issuperset(
             (set(FIELDS) - {"member"}) if ignore_member else FIELDS
         ):
             info = real
@@ -1019,7 +1021,7 @@ def get_warming_level(
 
     # open nc
     tas = xr.open_dataset(tas_src).tas
-    
+
     def _get_warming_level(model):
         # choose colum based in ds cat attrs, +'$' to ensure a full match (matches end-of-string)
         mip = tas.mip_era.str.match(model["mip_era"] + "$")
@@ -1029,7 +1031,7 @@ def get_warming_level(
             src = xr.apply_ufunc(model["source"].endswith, tas.source, vectorize=True)
         exp = tas.experiment.str.match(model["experiment"] + "$")
         mem = tas.member.str.match(model["member"] + "$")
-    
+
         candidates = mip & src & exp & mem
         if not candidates.any():
             warnings.warn(
@@ -1047,10 +1049,10 @@ def get_warming_level(
         logger.debug(
             f"Computing warming level +{wl}°C for {model} from simulation: {selected}."
         )
-    
+
         # compute reference temperature for the warming and difference from reference
         yearly_diff = tas_sel - tas_sel.sel(time=slice(*tas_baseline_period)).mean()
-    
+
         # get the start and end date of the window when the warming level is first reached
         rolling_diff = yearly_diff.rolling(
             time=window, min_periods=window, center=True
@@ -1059,7 +1061,7 @@ def get_warming_level(
         # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
         if window % 2 == 0:  # Even window
             rolling_diff = rolling_diff.shift(time=-1)
-    
+
         yrs = rolling_diff.where(rolling_diff >= wl, drop=True)
         if yrs.size == 0:
             logger.info(
@@ -1067,7 +1069,7 @@ def get_warming_level(
                 f"({tas.time[-1].dt.year.item()}) of the provided 'tas_src' database for {selected}."
             )
             return selected, [None, None] if return_horizon else None
-    
+
         yr = yrs.isel(time=0).time.dt.year.item()
         start_yr = yr - (window // 2) + 1
         end_yr = yr + (window // 2)
@@ -1076,21 +1078,23 @@ def get_warming_level(
             if return_horizon
             else str(yr)
         )
-    
-    out = [] if output == 'requested' or len(realization) == 1 else {}
+
+    out = [] if output == "requested" or len(realization) == 1 else {}
     for model in info_models:
         selected, wlslice = _get_warming_level(model)
         if isinstance(out, list):
             out.append(wlslice)
         else:
-            out[selected] = wlslice        
+            out[selected] = wlslice
 
     if len(out) == 1:
         return out[0]
     if isinstance(realization, pd.DataFrame):
         return pd.Series(out, index=realization.index)
     elif isinstance(realization, xr.DataArray):
-        return xr.DataArray(out, dims=(realization.dims[0], 'bounds'), coords=realization.coords)
+        return xr.DataArray(
+            out, dims=(realization.dims[0], "bounds"), coords=realization.coords
+        )
     return out
 
 
@@ -1100,7 +1104,7 @@ def subset_warming_level(
     wl: Union[float, Sequence[float]],
     to_level: str = "warminglevel-{wl}vs{period0}-{period1}",
     wl_dim: Union[str, bool] = "+{wl}Cvs{period0}-{period1}",
-    **kwargs
+    **kwargs,
 ):
     """Subsets the input dataset with only the window of time over which the requested level of global warming is first reached, using the IPCC Atlas method.
 
@@ -1139,49 +1143,78 @@ def subset_warming_level(
         If `wl` was a list or if ds had a "realization" dim, the "time" axis is replaced by a fake time starting in 1000-01-01 and of length of `window` years.
         Start and end years of the subsets are bound in the new coordinate "warminglevel_bounds".
     """
-    tas_baseline_period = standardize_periods(kwargs.get('tas_baseline_period', ['1850', '1900']), multiple=False)
-    window = kwargs.get('window', 20)
+    tas_baseline_period = standardize_periods(
+        kwargs.get("tas_baseline_period", ["1850", "1900"]), multiple=False
+    )
+    window = kwargs.get("window", 20)
 
-    fake_time = kwargs.pop('_fake_time', None)  # If wl was originally a list, the generated fake_time was passed
+    fake_time = kwargs.pop(
+        "_fake_time", None
+    )  # If wl was originally a list, the generated fake_time was passed
     # Fake time generation is needed : real is a dim or multiple levels
-    if fake_time is None and not isinstance(wl, (int, float)) or 'realization' in ds.dims:
+    if (
+        fake_time is None
+        and not isinstance(wl, (int, float))
+        or "realization" in ds.dims
+    ):
         freq = xr.infer_freq(ds.time)
         # FIXME: This is because I couldn't think an elegant way to generate a fake_time otherwise.
-        if not compare_offsets(freq, '==', 'YS'):
+        if not compare_offsets(freq, "==", "YS"):
             raise NotImplementedError(
                 "Passing multiple warming levels or vectorizing subsetting along the 'realization' dim is currently not supported for non-annual data"
             )
-        fake_time = xr.date_range('1000-01-01', periods=window, freq=freq, calendar=ds.time.dt.calendar)
+        fake_time = xr.date_range(
+            "1000-01-01", periods=window, freq=freq, calendar=ds.time.dt.calendar
+        )
 
     # If we got a wl sequence, call ourself multiple times and concatenate
     if not isinstance(wl, (int, float)):
-        if not wl_dim or (isinstance(wl_dim , str) and '{wl}' not in wl_dim):
-            raise ValueError("`wl_dim` must be True or a template string including '{wl}' if multiple levels are passed.")        
+        if not wl_dim or (isinstance(wl_dim, str) and "{wl}" not in wl_dim):
+            raise ValueError(
+                "`wl_dim` must be True or a template string including '{wl}' if multiple levels are passed."
+            )
         ds_wl = xr.concat(
             [
-                subset_warming_level(ds, wli, to_level=to_level, wl_dim=wl_dim, _fake_time=fake_time, **kwargs)
+                subset_warming_level(
+                    ds,
+                    wli,
+                    to_level=to_level,
+                    wl_dim=wl_dim,
+                    _fake_time=fake_time,
+                    **kwargs,
+                )
                 for wli in wl
             ],
-            'warminglevel'
+            "warminglevel",
         )
         return ds_wl
-    
+
     # Creating the warminglevel coordinate
     if isinstance(wl_dim, str):  # a non-empty string
         wl_crd = xr.DataArray(
-            [wl_dim.format(wl=wl, period0=tas_baseline_period[0], period1=tas_baseline_period[1])],
-            dims=('warminglevel',),
-            name='warminglevel'
+            [
+                wl_dim.format(
+                    wl=wl,
+                    period0=tas_baseline_period[0],
+                    period1=tas_baseline_period[1],
+                )
+            ],
+            dims=("warminglevel",),
+            name="warminglevel",
         )
     else:
-        wl_crd = xr.DataArray([wl], dims=('warminglevel',), name='warminglevel', attrs={'units': 'degC'})
+        wl_crd = xr.DataArray(
+            [wl], dims=("warminglevel",), name="warminglevel", attrs={"units": "degC"}
+        )
     wl_crd.warminglevel.attrs.update(
         baseline=f"{tas_baseline_period[0]}-{tas_baseline_period[1]}",
         long_name=f"Warming level for {window}-year periods since {tas_baseline_period[0]}-{tas_baseline_period[1]}",
     )
 
-    date_cls = xc.core.calendar.datetime_classes[ds.time.dt.calendar]  # For generating the bounds coord
-    if 'realization' in ds.dims:
+    date_cls = xc.core.calendar.datetime_classes[
+        ds.time.dt.calendar
+    ]  # For generating the bounds coord
+    if "realization" in ds.dims:
         # Vectorized subset
         bounds = get_warming_level(ds.realization, wl, return_horizon=True, **kwargs)
         reals = []
@@ -1189,19 +1222,26 @@ def subset_warming_level(
             start, end = bounds.sel(realization=real).values
             if start is not None:
                 data = ds.sel(realization=[real], time=slice(start, end))
-                bnds_crd = [date_cls(int(start), 1, 1), date_cls(int(end) + 1, 1, 1) - datetime.timedelta(seconds=1)]
+                bnds_crd = [
+                    date_cls(int(start), 1, 1),
+                    date_cls(int(end) + 1, 1, 1) - datetime.timedelta(seconds=1),
+                ]
             else:
-                data = ds.sel(realization=[real]).isel(time=slice(0, fake_time.size)) * np.NaN
+                data = (
+                    ds.sel(realization=[real]).isel(time=slice(0, fake_time.size))
+                    * np.NaN
+                )
                 bnds_crd = [None, None]
             reals.append(
-                data
-                .expand_dims(warminglevel=wl_crd)
-                .assign_coords(
+                data.expand_dims(warminglevel=wl_crd).assign_coords(
                     time=fake_time,
-                    warminglevel_bounds=(('realization', 'warminglevel', 'bounds'), [[bnds_crd]])
+                    warminglevel_bounds=(
+                        ("realization", "warminglevel", "bounds"),
+                        [[bnds_crd]],
+                    ),
                 )
             )
-        ds_wl = xr.concat(reals, 'realization')
+        ds_wl = xr.concat(reals, "realization")
     else:
         # Scalar subset, single level
         start_yr, end_yr = get_warming_level(ds, wl=wl, return_horizon=True, **kwargs)
@@ -1213,18 +1253,26 @@ def subset_warming_level(
                 ds_wl = ds.isel(time=slice(0, fake_time.size)) * np.NaN
         else:
             # cut the window selected above and expand dims with wl_crd
-            ds_wl = ds.sel(time=slice(start_yr, end_yr)).expand_dims(warminglevel=wl_crd)
+            ds_wl = ds.sel(time=slice(start_yr, end_yr)).expand_dims(
+                warminglevel=wl_crd
+            )
 
         if fake_time is not None:
             # We are in an iteration over multiple levels, put the fake time axis, but remember bounds
             ds_wl = ds_wl.assign_coords(
                 time=fake_time,
                 warminglevel_bounds=(
-                    ('warminglevel', 'bounds'),
-                    [[date_cls(int(start_yr), 1, 1), date_cls(int(end_yr) + 1, 1, 1) - datetime.timedelta(seconds=1)]]
-                )
+                    ("warminglevel", "bounds"),
+                    [
+                        [
+                            date_cls(int(start_yr), 1, 1),
+                            date_cls(int(end_yr) + 1, 1, 1)
+                            - datetime.timedelta(seconds=1),
+                        ]
+                    ],
+                ),
             )
-       
+
     if to_level is not None:
         ds_wl.attrs["cat:processing_level"] = to_level.format(
             wl=wl,
@@ -1233,7 +1281,7 @@ def subset_warming_level(
         )
 
     if not wl_dim:
-        ds_wl = ds_wl.squeeze('warminglevel', drop=True)
+        ds_wl = ds_wl.squeeze("warminglevel", drop=True)
 
     return ds_wl
 
@@ -1500,7 +1548,7 @@ def _restrict_multimembers(catalogs: dict, id_columns: list, restrictions: dict)
 
 def _restrict_wl(df, restrictions: dict):
     """Update the results from search_data_catalogs by removing simulations that are not available in the warming level netCDF."""
-    restrictions.setdefault('wl', 0)
+    restrictions.setdefault("wl", 0)
     to_keep = get_warming_level(df, return_horizon=False, **restrictions).notnull()
     removed = pd.unique(df[~to_keep]["id"])
     df = df[to_keep]
