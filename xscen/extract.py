@@ -1071,8 +1071,8 @@ def get_warming_level(
             return selected, [None, None] if return_horizon else None
 
         yr = yrs.isel(time=0).time.dt.year.item()
-        start_yr = yr - (window // 2) + 1
-        end_yr = yr + (window // 2)
+        start_yr = int(yr - window / 2 + 1)
+        end_yr = int(yr + window / 2)
         return selected, (
             standardize_periods([start_yr, end_yr], multiple=False)
             if return_horizon
@@ -1087,14 +1087,16 @@ def get_warming_level(
         else:
             out[selected] = wlslice
 
-    if len(out) == 1:
-        return out[0]
     if isinstance(realization, pd.DataFrame):
         return pd.Series(out, index=realization.index)
-    elif isinstance(realization, xr.DataArray):
-        return xr.DataArray(
-            out, dims=(realization.dims[0], "bounds"), coords=realization.coords
-        )
+    if isinstance(realization, xr.DataArray):
+        if return_horizon:
+            return xr.DataArray(
+                out, dims=(realization.dims[0], "bounds"), coords=realization.coords
+            )
+        return xr.DataArray(out, dims=(realization.dims[0],), coords=realization.coords)
+    if len(out) == 1:
+        return out[0]
     return out
 
 
@@ -1148,9 +1150,8 @@ def subset_warming_level(
     )
     window = kwargs.get("window", 20)
 
-    fake_time = kwargs.pop(
-        "_fake_time", None
-    )  # If wl was originally a list, the generated fake_time was passed
+    # If wl was originally a list, the generated fake_time was passed
+    fake_time = kwargs.pop("_fake_time", None)
     # Fake time generation is needed : real is a dim or multiple levels
     if (
         fake_time is None
@@ -1206,14 +1207,9 @@ def subset_warming_level(
         wl_crd = xr.DataArray(
             [wl], dims=("warminglevel",), name="warminglevel", attrs={"units": "degC"}
         )
-    wl_crd.warminglevel.attrs.update(
-        baseline=f"{tas_baseline_period[0]}-{tas_baseline_period[1]}",
-        long_name=f"Warming level for {window}-year periods since {tas_baseline_period[0]}-{tas_baseline_period[1]}",
-    )
 
-    date_cls = xc.core.calendar.datetime_classes[
-        ds.time.dt.calendar
-    ]  # For generating the bounds coord
+    # For generating the bounds coord
+    date_cls = xc.core.calendar.datetime_classes[ds.time.dt.calendar]
     if "realization" in ds.dims:
         # Vectorized subset
         bounds = get_warming_level(ds.realization, wl, return_horizon=True, **kwargs)
@@ -1234,7 +1230,7 @@ def subset_warming_level(
                 bnds_crd = [None, None]
             reals.append(
                 data.expand_dims(warminglevel=wl_crd).assign_coords(
-                    time=fake_time,
+                    time=fake_time[: data.time.size],
                     warminglevel_bounds=(
                         ("realization", "warminglevel", "bounds"),
                         [[bnds_crd]],
@@ -1245,22 +1241,20 @@ def subset_warming_level(
     else:
         # Scalar subset, single level
         start_yr, end_yr = get_warming_level(ds, wl=wl, return_horizon=True, **kwargs)
-
-        if start_yr is None:
-            if fake_time is None:
+        # cut the window selected above and expand dims with wl_crd
+        ds_wl = ds.sel(time=slice(start_yr, end_yr)).expand_dims(warminglevel=wl_crd)
+        if fake_time is None:
+            # WL not reached or completely outside ds time
+            if start_yr is None or ds_wl.time.size == 0:
                 return None
-            else:
-                ds_wl = ds.isel(time=slice(0, fake_time.size)) * np.NaN
         else:
-            # cut the window selected above and expand dims with wl_crd
-            ds_wl = ds.sel(time=slice(start_yr, end_yr)).expand_dims(
-                warminglevel=wl_crd
-            )
+            # WL not reached or not completely inside ds time
+            if start_yr is None or ds_wl.time.size == 0:
+                ds_wl = ds.isel(time=slice(0, fake_time.size)) * np.NaN
 
-        if fake_time is not None:
             # We are in an iteration over multiple levels, put the fake time axis, but remember bounds
             ds_wl = ds_wl.assign_coords(
-                time=fake_time,
+                time=fake_time[: ds_wl.time.size],
                 warminglevel_bounds=(
                     ("warminglevel", "bounds"),
                     [
@@ -1282,7 +1276,11 @@ def subset_warming_level(
 
     if not wl_dim:
         ds_wl = ds_wl.squeeze("warminglevel", drop=True)
-
+    else:
+        ds_wl.warminglevel.attrs.update(
+            baseline=f"{tas_baseline_period[0]}-{tas_baseline_period[1]}",
+            long_name=f"Warming level for {window}-year periods since {tas_baseline_period[0]}-{tas_baseline_period[1]}",
+        )
     return ds_wl
 
 
