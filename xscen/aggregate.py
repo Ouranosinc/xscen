@@ -374,7 +374,7 @@ def spatial_mean(
     *,
     spatial_subset: bool = None,
     call_clisops: bool = False,
-    region: dict = None,
+    region: Union[dict, str] = None,
     kwargs: dict = None,
     simplify_tolerance: float = None,
     to_domain: str = None,
@@ -394,13 +394,14 @@ def spatial_mean(
     spatial_subset : bool
         If True, xscen.spatial.subset will be called prior to the other operations. This requires the 'region' argument.
         If None, this will automatically become True if 'region' is provided and the subsetting method is either 'cos-lat' or 'mean'.
-    region : dict
+    region : dict or str
         Description of the region and the subsetting method (required fields listed in the Notes).
         If method=='interp_centroid', this is used to find the region's centroid.
         If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
+        Can also be "global", for global averages. This is simply a shortcut for `{'name': 'global', 'method': 'bbox', 'lon_bnds' [-180, 180], 'lat_bnds': [-90, 90]}`.
     kwargs : dict
         Arguments to send to either mean(), interp() or SpatialAverager().
-        For SpatialAverager, one can give `skipna` here, to be passed to the averager call itself.
+        For SpatialAverager, one can give `skipna` or  `out_chunks` here, to be passed to the averager call itself.
     simplify_tolerance : float
         Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
         The simpler the polygons, the faster the averaging, but it will lose some precision.
@@ -450,6 +451,18 @@ def spatial_mean(
             category=FutureWarning,
         )
         spatial_subset = call_clisops
+
+    if region == "global":
+        region = {
+            "name": "global",
+            "method": "bbox",
+            "lat_bnds": [-90 + 1e-5, 90 - 1e-5],
+        }
+        # `spatial_subset` won't wrap coords on the bbox, we need to fit the system used on ds.
+        if ds.cf["longitude"].min() >= 0:
+            region["lon_bnds"] = [0, 360]
+        else:
+            region["lon_bnds"] = [-180, 180]
 
     if (
         (region is not None)
@@ -587,26 +600,14 @@ def spatial_mean(
 
     # Uses xesmf.SpatialAverager
     elif method == "xesmf":
-        logger.warning(
-            "A bug has been found with xesmf.SpatialAverager that appears to impact big regions. "
-            "Until this is fixed, make sure that the computation is right or use multiple smaller regions."
-        )
         # If the region is a bounding box, call shapely and geopandas to transform it into an input compatible with xesmf
         if region["method"] == "bbox":
-            lon_point_list = [
+            polygon_geom = shapely.box(
                 region["lon_bnds"][0],
-                region["lon_bnds"][0],
-                region["lon_bnds"][1],
-                region["lon_bnds"][1],
-            ]
-            lat_point_list = [
                 region["lat_bnds"][0],
+                region["lon_bnds"][1],
                 region["lat_bnds"][1],
-                region["lat_bnds"][1],
-                region["lat_bnds"][0],
-            ]
-
-            polygon_geom = Polygon(zip(lon_point_list, lat_point_list))
+            )
             polygon = gpd.GeoDataFrame(index=[0], geometry=[polygon_geom])
 
             # Prepare the History field
@@ -619,8 +620,10 @@ def spatial_mean(
         elif region["method"] == "shape":
             if not isinstance(region["shape"], gpd.GeoDataFrame):
                 polygon = gpd.read_file(region["shape"])
+                name = Path(region["shape"]).name
             else:
                 polygon = region["shape"]
+                name = f"{len(polygon)} polygons"
 
             # Simplify the geometries to a given tolerance, if needed.
             # The simpler the polygons, the faster the averaging, but it will lose some precision.
@@ -632,14 +635,19 @@ def spatial_mean(
             # Prepare the History field
             new_history = (
                 f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-                f"xesmf.SpatialAverager over {Path(region['shape']).name} - xESMF v{xe.__version__}"
+                f"xesmf.SpatialAverager over {name} - xESMF v{xe.__version__}"
             )
 
         else:
             raise ValueError("'method' should be one of [bbox, shape].")
 
         kwargs_copy = deepcopy(kwargs)
-        skipna = kwargs_copy.pop("skipna", False)
+        call_kwargs = {"skipna": kwargs_copy.pop("skipna", False)}
+        if "out_chunks" in kwargs:
+            call_kwargs["out_chunks"] = kwargs_copy.pop("out_chunks")
+
+        # Pre-emptive segmentization. Same threshold as xESMF, but there's not strong analysis behind this choice
+        geoms = shapely.segmentize(polygon.geometry, 1)
 
         if (
             ds.cf["longitude"].ndim == 2
@@ -650,8 +658,8 @@ def spatial_mean(
 
             ds = ds.update(create_bounds_rotated_pole(ds))
 
-        savg = xe.SpatialAverager(ds, polygon.geometry, **kwargs_copy)
-        ds_agg = savg(ds, keep_attrs=True, skipna=skipna)
+        savg = xe.SpatialAverager(ds, geoms, **kwargs_copy)
+        ds_agg = savg(ds, keep_attrs=True, **call_kwargs)
         extra_coords = {
             col: xr.DataArray(polygon[col], dims=("geom",))
             for col in polygon.columns

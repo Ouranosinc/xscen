@@ -49,8 +49,8 @@ def regrid_dataset(
         Destination grid. The Dataset needs to have lat/lon coordinates.
         Supports a 'mask' variable compatible with ESMF standards.
     regridder_kwargs : dict
-        Arguments to send xe.Regridder(). If it contains `skipna`, that
-        one is passed to the regridder call directly.
+        Arguments to send xe.Regridder(). If it contains `skipna` or `out_chunks`, those
+        are passed to the regridder call directly.
     intermediate_grids : dict
         This argument is used to do a regridding in many steps, regridding to regular
         grids before regridding to the final ds_grid.
@@ -123,7 +123,13 @@ def regrid_dataset(
             ):
                 kwargs["weights"] = weights_filename
                 kwargs["reuse_weights"] = True
-            skipna = regridder_kwargs.pop("skipna", False)
+
+            # Extract args that are to be given at call time.
+            # out_chunks is only valid for xesmf >= 0.8, so don't add it be default to the call_kwargs
+            call_kwargs = {"skipna": regridder_kwargs.pop("skipna", False)}
+            if "out_chunks" in regridder_kwargs:
+                call_kwargs["out_chunks"] = regridder_kwargs.pop("out_chunks")
+
             regridder = _regridder(
                 ds_in=ds, ds_grid=ds_grid, filename=weights_filename, **regridder_kwargs
             )
@@ -131,7 +137,8 @@ def regrid_dataset(
             # The regridder (when fed Datasets) doesn't like if 'mask' is present.
             if "mask" in ds:
                 ds = ds.drop_vars(["mask"])
-            out = regridder(ds, keep_attrs=True, skipna=skipna)
+
+            out = regridder(ds, keep_attrs=True, **call_kwargs)
 
             # double-check that grid_mapping information is transferred
             gridmap_out = any(

@@ -13,6 +13,11 @@ Announcements
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Added the ability to search for simulations that reach a given warming level. (:pull:`251`).
+* ``xs.spatial_mean`` now accepts the ``region="global"`` keyword to perform a global average (:issue:`94`, :pull:`260`).
+* ``xs.spatial_mean`` with ``method='xESMF'`` will also automatically segmentize polygons (down to a 1° resolution) to ensure a correct average (:pull:`260`).
+* Added documentation for `require_all_on` in `search_data_catalogs`. (:pull:`263`).
+* ``xs.save_to_table`` and ``xs.io.to_table`` to transform datasets and arrays to DataFrames, but with support for multi-columns, multi-sheets and localized table of content generation.
+* Better ``xs.extract.resample`` : support for weighted resampling operations when starting with frequencies coarser than daily and missing timesteps/values handling. (:issue:`80`, :issue:`93`, :pull:`265`).
 * New argument attribute_weights to ``generate_weights`` to allow for custom weights. (:pull:`252`).
 
 Breaking changes
@@ -23,6 +28,7 @@ Bug fixes
 ^^^^^^^^^
 * Fixed a bug in ``xs.search_data_catalogs`` when searching for fixed fields and specific experiments/members. (:pull:`251`).
 * Fixed a bug in the documentation build configuration that prevented stable/latest and tagged documentation builds from resolving on ReadTheDocs. (:pull:`256`).
+* Fixed ``get_warming_level`` to avoid incomplete matches. (:pull:`269`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -35,6 +41,7 @@ Internal changes
 * Reduced the size of the files in /docs/notebooks/samples and changed the Notebooks and tests accordingly. (:issue:`247`, :pull:`248`).
 * Added a new `xscen.testing` module with the `datablock_3d` function previously located in `/tests/conftest.py`. (:pull:`248`).
 * New function `xscen.testing.fake_data` to generate fake data for testing. (:pull:`248`).
+* xESMF 0.8 Regridder and SpatialAverager argument ``out_chunks`` is now accepted by ``xs.regrid_dataset``  and ``xs.spatial_mean``. (:pull:`260`).
 
 v0.7.1 (2023-08-23)
 -------------------
