@@ -255,7 +255,7 @@ def generate_weights(
     info = {key: dict(defdict, **get_cat_attrs(datasets[key])) for key in keys}
 
     # Check if there are both RCMs and GCMs in datasets, with attribute_weights set to weight them.
-    if (
+    if attribute_weights and (
         any(a in ["source", "driving_model"] for a in list(attribute_weights.keys()))
         and len(list(groupby([info[k]["driving_model"] is None for k in info.keys()])))
         > 1
@@ -481,17 +481,18 @@ def generate_weights(
         non_stationary_weights = {}
         for att, v_att in attribute_weights.items():
             # Add warning when a mismatch between independance_level/experiment_weight and attribute_weights is detected
-            if att != independence_level or (
-                att == "experiment" and not balance_experiments
-            ):
-                if att != "experiment":
-                    warnings.warn(
-                        f"The {att} weights do not match the {independence_level} independence_level"
-                    )
-                else:
-                    warnings.warn(
-                        "Key experiment given in attribute_weights without argument balance_experiments=True"
-                    )
+            if att == "experiment" and not balance_experiments:
+                warnings.warn(
+                    "Key experiment given in attribute_weights without argument balance_experiments=True"
+                )
+
+            if (
+                att in ["driving_model", "source"]
+                and independence_level not in ["model", "GCM"]
+            ) or (att == "institution" and independence_level != "institution"):
+                warnings.warn(
+                    f"The {att} weights do not match the {independence_level} independence_level"
+                )
 
             # Verification
             if att not in info[k] or any(
@@ -523,9 +524,10 @@ def generate_weights(
         # Non-stationary weights (xr.DataArray)
         if non_stationary_weights:
             for att, da in non_stationary_weights.items():
-                # verification
+                # check if the attribute is in the xr.DataArray coords
                 if att not in da.coords:
                     raise ValueError(f"{att} is not in the xr.DataArray coords.")
+                # find the coordinate (coord) to broadcast the weights (not equal to the attribute), ex: time / horizon
                 ls_coord = list(da.coords)
                 ls_coord.remove(att)
                 if len(ls_coord) > 1:
@@ -534,7 +536,7 @@ def generate_weights(
                     )
                 else:
                     coord = ls_coord[0]
-                # coord which will be used for broadcasting
+                # broadcast coord to the weights DataArray
                 if coord not in weights.coords:
                     weights = weights.expand_dims({coord: da[coord].values})
                 ls_da = []
@@ -551,9 +553,6 @@ def generate_weights(
                 weights = weights * nw
 
     if standardize:
-        if attribute_weights:
-            weights = weights / weights.sum(dim=weights.dims)
-        else:
-            weights = weights / weights.sum(dim="realization")
+        weights = weights / weights.sum(dim="realization")
 
     return weights

@@ -521,7 +521,7 @@ class TestGenerateWeights:
             (
                 True,
                 True,
-                {"institution": {"CCCma": 2, "CSIRO-QCCCE": 3, "ECMWF": 0, "GFDL": 5}},
+                {"institution": {"CCCma": 2, "ECMWF": 0, "GFDL": 5}},
             ),
         ],
     )
@@ -537,10 +537,8 @@ class TestGenerateWeights:
             attribute_weights=attribute_weights,
         )
         if standardize:
-            if not attribute_weights:
-                np.testing.assert_allclose(out.sum(), 1 if skipna else 4)
-            else:
-                np.testing.assert_allclose(out.sum(), 1)
+            np.testing.assert_allclose(out.sum(), 1 if skipna else 4)
+
         else:
             np.testing.assert_allclose(out.sum(), 10)
 
