@@ -18,11 +18,11 @@ New features and enhancements
 * Added documentation for `require_all_on` in `search_data_catalogs`. (:pull:`263`).
 * ``xs.save_to_table`` and ``xs.io.to_table`` to transform datasets and arrays to DataFrames, but with support for multi-columns, multi-sheets and localized table of content generation.
 * Better ``xs.extract.resample`` : support for weighted resampling operations when starting with frequencies coarser than daily and missing timesteps/values handling. (:issue:`80`, :issue:`93`, :pull:`265`).
-* New argument attribute_weights to ``generate_weights`` to allow for custom weights. (:pull:`252`).
+* New argument ``attribute_weights`` to ``generate_weights`` to allow for custom weights. (:pull:`252`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* N/A
+* ``experiment_weights`` argument in ``generate_weights`` was renamed to ``balance_experiments``. (:pull:`252`).
 
 Bug fixes
 ^^^^^^^^^
