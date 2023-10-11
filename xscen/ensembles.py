@@ -486,10 +486,7 @@ def generate_weights(
                     "Key experiment given in attribute_weights without argument balance_experiments=True"
                 )
 
-            if (
-                att in ["driving_model", "source"]
-                and independence_level not in ["model", "GCM"]
-            ) or (att == "institution" and independence_level != "institution"):
+            if ((att == "source" and independence_level != "model") or (att == "driving_model" and independence_level != "GCM") or (att == "institution" and independence_level != "institution"):
                 warnings.warn(
                     f"The {att} weights do not match the {independence_level} independence_level"
                 )
