@@ -127,3 +127,5 @@ class TestComputeIndicators:
                 "rain_season_length",
             ]
         )
+
+    def test_select_inds_for_avail_vars(self):

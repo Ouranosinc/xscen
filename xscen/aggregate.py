@@ -197,6 +197,174 @@ def climatological_mean(
 
 
 @parse_config
+def climatological_op(
+    ds: xr.Dataset,
+    *,
+    op: Union[str, dict] = "mean",
+    window: int = None,
+    min_periods: int = None,
+    interval: int = 1,
+    periods: list = None,
+    to_level: str = "climatology",
+) -> xr.Dataset:
+    """Compute the mean over 'year' for given time periods, respecting the temporal resolution of ds.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset to use for the computation.
+    op : str
+        Operation to perform. Can be a method name of xarray.Dataset or a dictionary. If 'op' is a dictionary
+        the key is the operation name and the value is a list of arguments to pass to the operation
+        TODO: What do we really need? For 'trend' we need to define return values, there may be other cases with args
+    window : int
+        Number of years to use for the time periods.
+        If left at None and periods is given, window will be the size of the first period.
+        If left at None and periods is not given, the window will be the size of the input dataset.
+    min_periods : int
+        For the rolling operation, minimum number of years required for a value to be computed.
+        If left at None and the xrfreq is either QS or AS and doesn't start in January, min_periods will be one less than window.
+        If left at None, it will be deemed the same as 'window'.
+    interval : int
+        Interval (in years) at which to provide an output.
+    periods : list
+        Either [start, end] or list of [start, end] of continuous periods to be considered. This is needed when the time axis of ds contains some jumps in time.
+        If None, the dataset will be considered continuous.
+    to_level : str, optional
+        The processing level to assign to the output.
+        If None, the processing level of the inputs is preserved.
+
+    Returns
+    -------
+    xr.Dataset
+        Returns a Dataset of the climatological mean
+
+    """
+    if len(ds.time) > 3 and xr.infer_freq(ds.time) == "D":
+        raise NotImplementedError(
+            "xs.climatological_mean does not currently support daily data."
+        )
+
+    # there is one less occurrence when a period crosses years
+    freq_across_year = [
+        f"{f}-{mon}"
+        for mon in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values()
+        for f in ["AS", "QS"]
+        if mon != "JAN"
+    ]
+
+    # separate 1d time in coords (day, month, and year) to make climatological mean faster
+    ind = pd.MultiIndex.from_arrays(
+        [ds.time.dt.year.values, ds.time.dt.month.values, ds.time.dt.day.values],
+        names=["year", "month", "day"],
+    )
+    ds_unstack = ds.assign(time=ind).unstack("time")
+
+    # Rolling will ignore jumps in time, so we want to raise an exception beforehand
+    if (not all(ds_unstack.year.diff(dim="year", n=1) == 1)) & (periods is None):
+        raise ValueError("Data is not continuous. Use the 'periods' argument.")
+
+    # Compute temporal means
+    concats = []
+    periods = standardize_periods(
+        periods or [[int(ds_unstack.year[0]), int(ds_unstack.year[-1])]]
+    )
+
+    window = window or int(periods[0][1]) - int(periods[0][0]) + 1
+
+    if (
+        any(
+            x in freq_across_year
+            for x in [
+                ds.attrs.get("cat:xrfreq"),
+                (xr.infer_freq(ds.time) if len(ds.time) > 3 else None),
+            ]
+        )
+        and min_periods is None
+    ):
+        min_periods = window - 1
+    min_periods = min_periods or window
+    if min_periods > window:
+        raise ValueError("'min_periods' should be smaller or equal to 'window'")
+
+    for period in periods:
+        # Rolling average
+        ds_rolling = (
+            getattr(
+                ds_unstack.sel(year=slice(period[0], period[1]))
+                .rolling(year=window, min_periods=min_periods),
+                op)()
+        )
+
+        # Select every horizons in 'x' year intervals, starting from the first full windowed mean
+        ds_rolling = ds_rolling.isel(
+            year=slice(window - 1, None)
+        )  # Select from the first full windowed mean
+        intervals = ds_rolling.year.values % interval
+        ds_rolling = ds_rolling.sel(year=(intervals - intervals[0] == 0))
+        horizons = xr.DataArray(
+            [f"{yr - (window - 1)}-{yr}" for yr in ds_rolling.year.values],
+            dims=dict(year=ds_rolling.year),
+        ).astype(str)
+        ds_rolling = ds_rolling.assign_coords(horizon=horizons)
+
+        # get back to 1D time
+        ds_rolling = ds_rolling.stack(time=("year", "month", "day"))
+        # rebuild time coord
+        if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
+            time_coord = list(
+                pd.to_datetime(
+                    {
+                        "year": ds_rolling.year.values - window + 1,
+                        "month": ds_rolling.month.values,
+                        "day": ds_rolling.day.values,
+                    }
+                ).values
+            )
+        elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
+            time_coord = [
+                xclim.core.calendar.datetime_classes[ds.time.dt.calendar](
+                    y - window + 1, m, d
+                )
+                for y, m, d in zip(
+                    ds_rolling.year.values,
+                    ds_rolling.month.values,
+                    ds_rolling.day.values,
+                )
+            ]
+        else:
+            raise ValueError("The type of 'time' could not be understood.")
+        ds_rolling = ds_rolling.drop_vars({"month", "year", "time", "day"})
+        ds_rolling = ds_rolling.assign_coords(time=time_coord).transpose("time", ...)
+
+        concats.extend([ds_rolling])
+    ds_rolling = xr.concat(concats, dim="time", data_vars="minimal")
+
+    # modify attrs and history
+    for vv in ds_rolling.data_vars:
+        for a in ["description", "long_name"]:
+            if hasattr(ds_rolling[vv], a):
+                ds_rolling[vv].attrs[
+                    a
+                ] = f"{window}-year {op} of {ds_rolling[vv].attrs[a]}"
+
+        new_history = (
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {window}-year rolling average (non-centered) "
+            f"with a minimum of {min_periods} years of data - xarray v{xr.__version__}"
+        )
+        history = (
+            new_history + " \n " + ds_rolling[vv].attrs["history"]
+            if "history" in ds_rolling[vv].attrs
+            else new_history
+        )
+        ds_rolling[vv].attrs["history"] = history
+    if to_level is not None:
+        ds_rolling.attrs["cat:processing_level"] = to_level
+
+    return ds_rolling
+
+
+@parse_config
 def compute_deltas(
     ds: xr.Dataset,
     reference_horizon: Union[str, xr.Dataset],
