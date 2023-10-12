@@ -222,6 +222,46 @@ def compute_indicators(
     return out_dict
 
 
+def select_inds_for_avail_vars(
+    ds: xr.Dataset,
+    indicators: Union[
+        str, Path, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
+    ],
+) -> Sequence[Indicator]:
+    """Filter the indicators from a YAML file for which the necessary variables are available.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset to use for the indicators.
+    indicators : Union[str, Path, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+        Path to a YAML file that instructs on how to calculate missing variables.
+        Can also be only the "stem", if translations and custom indices are implemented.
+        Can be the indicator module directly, or a sequence of indicators or a sequence of
+        tuples (indicator name, indicator) as returned by `iter_indicators()`.
+
+    Returns
+    -------
+    Sequence[Indicator]
+        A sequence of tuples of (indicator name, indicator).
+
+    See Also
+    --------
+    xclim.indicators, xclim.core.indicator.build_indicator_module_from_yaml
+    """
+    if isinstance(indicators, (str, Path)):
+        logger.debug("Loading indicator module.")
+        indicators = load_xclim_module(indicators, reload=True)
+
+    if hasattr(indicators, "iter_indicators"):
+        indicators = [(name, ind) for name, ind in indicators.iter_indicators()]
+
+    available_vars = {var for var in ds.data_vars if var in xc.core.utils.VARIABLES.keys()}
+    available_ind = [(name, ind) for var in available_vars
+                     for name, ind in indicators if var in ind.parameters.keys()]
+    return available_ind
+
+
 def registry_from_module(
     module, registry=None, variable_column="variable"
 ) -> DerivedVariableRegistry:
