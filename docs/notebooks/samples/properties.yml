@@ -23,7 +23,7 @@ indicators:
   mean-tas:
     base: xclim.sdba.properties.mean
     cf_attrs:
-      long_name: Ratio of the mean temperature
+      long_name: Bias of the mean temperature
     input:
       da: tas
-    measure: xclim.sdba.measures.RATIO
+    measure: xclim.sdba.measures.BIAS

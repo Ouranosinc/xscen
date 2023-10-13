@@ -17,6 +17,7 @@ from . import (
     regrid,
     scripting,
     spatial,
+    testing,
     utils,
 )
 
@@ -35,7 +36,7 @@ from .extract import (  # noqa
     subset_warming_level,
 )
 from .indicators import compute_indicators  # noqa
-from .io import save_to_netcdf, save_to_zarr  # noqa
+from .io import save_to_netcdf, save_to_table, save_to_zarr  # noqa
 from .reduce import build_reduction_data, reduce_ensemble
 from .regrid import *
 from .scripting import (
@@ -51,7 +52,7 @@ from .utils import clean_up
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.6.15-beta"
+__version__ = "0.7.14-beta"
 
 
 # monkeypatch so that warnings.warn() doesn't mention itself
@@ -62,3 +63,19 @@ def warning_on_one_line(
 
 
 warnings.formatwarning = warning_on_one_line
+
+# FIXME: This is a temporary fix for the FutureWarning spam from intake-esm.
+# Print FutureWarnings from intake-esm only once
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    module="intake_esm",
+    message="The default of observed=False is deprecated and will be changed to True in a future version of pandas. "
+    "Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.",
+)
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    module="intake_esm",
+    message="DataFrame.applymap has been deprecated. Use DataFrame.map instead.",
+)

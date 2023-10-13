@@ -1,6 +1,25 @@
 #!/usr/bin/env python
 """The setup script."""
 from setuptools import find_packages, setup
+from setuptools.command.install import install
+
+
+class InstallWithCompile(install):
+    """Injection of the catalog compilation in the installation process."""
+
+    # Taken from https://stackoverflow.com/a/41120180/9291575
+
+    def run(self):
+        """Install the package, but compile the i18n catalogs first."""
+        from babel.messages.frontend import compile_catalog
+
+        compiler = compile_catalog(self.distribution)
+        option_dict = self.distribution.get_option_dict("compile_catalog")
+        compiler.domain = [option_dict["domain"][1]]
+        compiler.directory = option_dict["directory"][1]
+        compiler.run()
+        super().run()
+
 
 with open("README.rst") as readme_file:
     readme = readme_file.read()
@@ -27,31 +46,33 @@ requirements = [
     "fsspec",
     "geopandas",
     "h5netcdf",
-    "intake",
-    "intake-esm>=2022.9.18",
+    "h5py",
+    "intake-esm>=2023.07.07",
     "matplotlib",
     "netCDF4",
     "numpy",
-    "pandas>=2",
+    "pandas>=2.0",
     "parse",
     "pyarrow",  # Used when opening catalogs.
-    "pydantic<2.0",  # See: https://github.com/intake/intake-esm/issues/617
-    "pygeos",
     "pyyaml",
     "rechunker",
-    "shapely",
+    "shapely>=2.0",
+    "sparse",
+    "toolz",
     "xarray",
     "xclim>=0.43",
-    "xesmf>=0.7",
+    "xesmf>=0.7.0",
     "zarr",
 ]
+
+dev_requirements = ["pytest", "pytest-cov", "xdoctest"]
 
 setup(
     author="Gabriel Rondeau-Genesse",
     author_email="rondeau-genesse.gabriel@ouranos.ca",
     python_requires=">=3.9",
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: Apache Software License",
@@ -62,12 +83,14 @@ setup(
         "Programming Language :: Python :: 3.11",
         "Topic :: Scientific/Engineering :: Atmospheric Science",
     ],
+    cmdclass={"install": InstallWithCompile},
     description="A climate change scenario-building analysis framework, built with xclim/xarray.",
     install_requires=requirements,
     long_description=readme,
     long_description_content_type="text/x-rst",
     include_package_data=True,
     keywords="xscen",
+    message_extractors={"xscen": [("**.py", "python", None)]},
     name="xscen",
     packages=find_packages(include=["xscen", "xscen.*"]),
     project_urls={
@@ -75,9 +98,10 @@ setup(
         "Changelog": "https://xscen.readthedocs.io/en/stable/history.html",
         "Issue tracker": "https://github.com/Ouranosinc/xscen/issues",
     },
+    setup_requires=["babel"],
     test_suite="tests",
-    tests_require=["pytest", "pytest-cov"],
+    extras_require={"dev": dev_requirements},
     url="https://github.com/Ouranosinc/xscen",
-    version="0.6.15-beta",
+    version="0.7.14-beta",
     zip_safe=False,
 )

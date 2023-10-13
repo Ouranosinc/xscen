@@ -22,3 +22,4 @@ Contributors
 * Sarah Gammon <gammon.sarah@ouranos.ca> `@SarahG-579462 <https://github.com/SarahG-579462>`_
 * Yannick Rousseau
 * Marco Braun <Braun.Marco@ouranos.ca> `@vindelico <https://github.com/vindelico>`_
+* Sarah-Claude Bourdeau-Goulet <bourdeau-goulet.sarah-claude@ouranos.ca> `@sarahclaude <https://github.com/sarahclaude>`_

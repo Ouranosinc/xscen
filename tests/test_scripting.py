@@ -1,12 +1,11 @@
 import shutil as sh
 
 import numpy as np
+from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
 from xscen import scripting as sc
-
-from .conftest import notebooks
 
 
 class TestScripting:
@@ -23,6 +22,10 @@ class TestScripting:
         "cat:source": "CanESM5",
         "cat:experiment": "ssp585",
         "cat:member": "r1i1p1f1",
+        "cat:domain": "global",
+        "cat:mip_era": "CMIP6",
+        "cat:institution": "CCCma",
+        "cat:activity": "ScenarioMIP",
     }
 
     def test_save_and_update(self):
@@ -50,7 +53,7 @@ class TestScripting:
         assert (
             cat.df.path[1]
             == root
-            + "/simulation/raw/CanESM5/ssp585/r1i1p1f1/yr/tas/tas_yr_CanESM5_ssp585_r1i1p1f1_2000-2049.nc"
+            + "/simulation/raw/CMIP6/ScenarioMIP/global/CCCma/CanESM5/ssp585/r1i1p1f1/yr/tas/tas_yr_CMIP6_ScenarioMIP_global_CCCma_CanESM5_ssp585_r1i1p1f1_2000-2049.nc"
         )
         assert cat.df.source[1] == "CanESM5"
 
@@ -79,6 +82,20 @@ class TestScripting:
         )
         cat.update()
 
-        # f2 should be moved to dir2 and f1 should be deleted (not in row 0  anymore)
+        # f2 should be moved to dir2 and dir1 should be deleted (not in row 0  anymore)
         assert cat.df.path[0] == root + "/dir2/test_r1i1p1f2.zarr"
         assert len(cat.df) == 1  # only one file left
+
+        sc.move_and_delete(
+            moving=[
+                [root + "/dir2/test_r1i1p1f2.zarr", root + "/dir1/test_r1i1p1f2.zarr"]
+            ],
+            pcat=cat,
+            copy=True,
+        )
+        cat.update()
+
+        # f2 should be copied to dir1 and f1 should still exist
+        assert cat.df.path[0] == root + "/dir2/test_r1i1p1f2.zarr"
+        assert cat.df.path[1] == root + "/dir1/test_r1i1p1f2.zarr"
+        assert len(cat.df) == 2  # only one file left

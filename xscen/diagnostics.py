@@ -2,110 +2,292 @@
 import logging
 import warnings
 from collections.abc import Sequence
+from copy import deepcopy
 from pathlib import Path, PosixPath
 from types import ModuleType
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
+import xclim as xc
+import xclim.core.dataflags
 from xclim.core.indicator import Indicator
 
-from .catalog import DataCatalog
 from .config import parse_config
 from .indicators import load_xclim_module
 from .io import save_to_zarr
-from .utils import change_units, clean_up, standardize_periods, unstack_fill_nan
+from .utils import (
+    add_attr,
+    change_units,
+    clean_up,
+    date_parser,
+    standardize_periods,
+    unstack_fill_nan,
+    update_attr,
+)
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "fix_unphysical_values",
+    "health_checks",
     "properties_and_measures",
     "measures_heatmap",
     "measures_improvement",
 ]
 
-# TODO: Implement logging, warnings, etc.
-# TODO: Change all paths to PosixPath objects, including in the catalog?
+
+# Dummy function to make gettext aware of translatable-strings
+def _(s):
+    return s
 
 
-def fix_unphysical_values(
-    catalog: DataCatalog,
-):  # noqa: D401
-    """Base checkups for impossible values such as tasmin > tasmax, or negative precipitation.
+def health_checks(
+    ds: Union[xr.Dataset, xr.DataArray],
+    *,
+    structure: dict = None,
+    calendar: str = None,
+    start_date: str = None,
+    end_date: str = None,
+    variables_and_units: dict = None,
+    cfchecks: dict = None,
+    freq: str = None,
+    missing: Union[dict, str, list] = None,
+    flags: dict = None,
+    flags_kwargs: dict = None,
+    return_flags: bool = False,
+    raise_on: list = None,
+) -> Union[None, xr.Dataset]:
+    """
+    Perform a series of health checks on the dataset. Be aware that missing data checks and flag checks can be slow.
 
     Parameters
     ----------
-    catalog : DataCatalog
-    """
-    if len(catalog.unique("processing_level")) > 1:
-        raise NotImplementedError
-
-    for domain in catalog.unique("domain"):
-        for id in catalog.unique("id"):
-            sim = catalog.search(id=id, domain=domain)
-
-            # tasmin > tasmax
-            if len(sim.search(variable=["tasmin", "tasmax"]).catalog) == 2:
-                # TODO: Do something with the last output
-                ds_tn = xr.open_zarr(
-                    sim.search(variable="tasmin").catalog.df.iloc[0]["path"]
-                )
-                ds_tx = xr.open_zarr(
-                    sim.search(variable="tasmax").catalog.df.iloc[0]["path"]
-                )
-
-                tn, tx, _ = _invert_unphysical_temperatures(
-                    ds_tn["tasmin"], ds_tx["tasmax"]
-                )
-                ds_tn["tasmin"] = tn
-                ds_tx["tasmax"] = tx
-                # TODO: History, attrs, etc.
-
-                save_to_zarr(
-                    ds=ds_tn,
-                    filename=sim.search(variable="tasmin").catalog.df.iloc[0]["path"],
-                    zarr_kwargs={"mode": "w"},
-                )
-                save_to_zarr(
-                    ds=ds_tx,
-                    filename=sim.search(variable="tasmax").catalog.df.iloc[0]["path"],
-                    zarr_kwargs={"mode": "w"},
-                )
-
-            # TODO: "clip" function for pr, sfcWind, huss/hurs, etc. < 0 (and > 1/100, when applicable).
-            #   Can we easily detect the variables that need to be clipped ? From the units ?
-
-
-def _invert_unphysical_temperatures(
-    tasmin: xr.DataArray, tasmax: xr.Dataset
-) -> tuple[xr.DataArray, xr.DataArray, xr.DataArray]:
-    """
-    Invert tasmin and tasmax points where tasmax <  tasmin.
+    ds: xr.Dataset | xr.DataArray
+        Dataset to check.
+    structure: dict
+        Dictionary with keys "dims" and "coords" containing the expected dimensions and coordinates.
+        This check will fail is extra dimensions or coordinates are found.
+    calendar: str
+        Expected calendar. Synonyms should be detected correctly (e.g. "standard" and "gregorian").
+    start_date: str
+        To check if the dataset starts at least at this date.
+    end_date: str
+        To check if the dataset ends at least at this date.
+    variables_and_units: dict
+        Dictionary containing the expected variables and units.
+    cfchecks: dict
+        Dictionary where the key is the variable to check and the values are the cfchecks.
+        The cfchecks themselves must be a dictionary with the keys being the cfcheck names and the values being the arguments to pass to the cfcheck.
+        See `xclim.core.cfchecks` for more details.
+    freq: str
+        Expected frequency, written as the result of xr.infer_freq(ds.time).
+    missing: dict | str | list
+        String, list of strings, or dictionary where the key is the method to check for missing data and the values are the arguments to pass to the method.
+        The methods are: "missing_any", "at_least_n_valid", "missing_pct", "missing_wmo". See :py:func:`xclim.core.missing` for more details.
+    flags: dict
+        Dictionary where the key is the variable to check and the values are the flags.
+        The flags themselves must be a dictionary with the keys being the data_flags names and the values being the arguments to pass to the data_flags.
+        If `None` is passed instead of a dictionary, then xclim's default flags for the given variable are run. See :py:data:`xclim.core.utils.VARIABLES`.
+        See :py:func:`xclim.core.dataflags.data_flags` for the list of possible flags.
+    flags_kwargs: dict
+        Additional keyword arguments to pass to the data_flags ("dims" and "freq").
+    return_flags: bool
+        Whether to return the Dataset created by data_flags.
+    raise_on: list
+        Whether to raise an error if a check fails, else there will only be a warning. The possible values are the names of the checks.
+        Use ["all"] to raise on all checks.
 
     Returns
     -------
-    tasmin : xr.DataArray
-      New tasmin.
-    tasmax : xr.DataArray
-      New tasmax
-    switched : xr.DataArray
-      A scalar DataArray with the number of switched data points.
+    xr.Dataset | None
+        Dataset containing the flags if return_flags is True & raise_on is False for the "flags" check.
     """
-    is_bad = tasmax < tasmin
-    mask = tasmax.isel(time=0).notnull()
-    switch = is_bad & mask
-    tn = xr.where(switch, tasmax, tasmin)
-    tx = xr.where(switch, tasmin, tasmax)
+    if isinstance(ds, xr.DataArray):
+        ds = ds.to_dataset()
+    raise_on = raise_on or []
+    if "all" in raise_on:
+        raise_on = [
+            "structure",
+            "calendar",
+            "start_date",
+            "end_date",
+            "variables_and_units",
+            "cfchecks",
+            "freq",
+            "missing",
+            "flags",
+        ]
 
-    tn.attrs.update(tasmin.attrs)
-    tx.attrs.update(tasmax.attrs)
-    return tn, tx, switch.sum()
+    warns = []
+    errs = []
+
+    def _error(msg, check):
+        if check in raise_on:
+            errs.append(msg)
+        else:
+            warns.append(msg)
+
+    def _message():
+        base = "The following health checks failed:"
+        if len(warns) > 0:
+            msg = "\n  - ".join([base] + warns)
+            warnings.warn(msg, UserWarning, stacklevel=2)
+        if len(errs) > 0:
+            msg = "\n  - ".join([base] + errs)
+            raise ValueError(msg)
+
+    # Check the dimensions and coordinates
+    if structure is not None:
+        if "dims" in structure:
+            for dim in structure["dims"]:
+                if dim not in ds.dims:
+                    _error(f"The dimension '{dim}' is missing.", "structure")
+            extra_dims = [dim for dim in ds.dims if dim not in structure["dims"]]
+            if len(extra_dims) > 0:
+                _error(
+                    f"Extra dimensions found: {extra_dims}.",
+                    "structure",
+                )
+        if "coords" in structure:
+            for coord in structure["coords"]:
+                if coord not in ds.coords:
+                    if coord in ds.data_vars:
+                        _error(
+                            f"'{coord}' is detected as a data variable, not a coordinate.",
+                            "structure",
+                        )
+                    else:
+                        _error(f"The coordinate '{coord}' is missing.", "structure")
+            extra_coords = [
+                coord for coord in ds.coords if coord not in structure["coords"]
+            ]
+            if len(extra_coords) > 0:
+                _error(f"Extra coordinates found: {extra_coords}.", "structure")
+
+    # Check the calendar
+    if calendar is not None:
+        cal = xc.core.calendar.get_calendar(ds.time)
+        if xc.core.calendar.common_calendar([calendar]).replace(
+            "default", "standard"
+        ) != xc.core.calendar.common_calendar([cal]).replace("default", "standard"):
+            _error(f"The calendar is not '{calendar}'. Received '{cal}'.", "calendar")
+
+    # Check the start/end dates
+    if (start_date is not None) or (end_date is not None):
+        ds_start = date_parser(ds.time.min().dt.floor("D").item())
+        ds_end = date_parser(ds.time.max().dt.floor("D").item())
+    if start_date is not None:
+        # Create cf_time objects to compare the dates
+        start_date = date_parser(start_date)
+        if not ((ds_start <= start_date) and (ds_end > start_date)):
+            _error(
+                f"The start date is not at least {start_date}. Received {ds_start}.",
+                "start_date",
+            )
+    if end_date is not None:
+        # Create cf_time objects to compare the dates
+        end_date = date_parser(end_date)
+        if not ((ds_start < end_date) and (ds_end >= end_date)):
+            _error(
+                f"The end date is not at least {end_date}. Received {ds_end}.",
+                "end_date",
+            )
+
+    # Check variables
+    if variables_and_units is not None:
+        for v in variables_and_units:
+            if v not in ds:
+                _error(f"The variable '{v}' is missing.", "variables_and_units")
+            elif ds[v].attrs.get("units", None) != variables_and_units[v]:
+                with xc.set_options(data_validation="raise"):
+                    try:
+                        xc.core.units.check_units(ds[v], variables_and_units[v])
+                    except xc.core.utils.ValidationError as e:
+                        _error(f"'{v}' ValidationError: {e}", "variables_and_units")
+                _error(
+                    f"The variable '{v}' does not have the expected units '{variables_and_units[v]}'. Received '{ds[v].attrs['units']}'.",
+                    "variables_and_units",
+                )
+
+    # Check CF conventions
+    if cfchecks is not None:
+        cfchecks = deepcopy(cfchecks)
+        for v in cfchecks:
+            for check in cfchecks[v]:
+                if check == "check_valid":
+                    cfchecks[v][check]["var"] = ds[v]
+                elif check == "cfcheck_from_name":
+                    cfchecks[v][check].setdefault("varname", v)
+                    cfchecks[v][check]["vardata"] = ds[v]
+                else:
+                    raise ValueError(f"Check '{check}' is not in xclim.")
+                with xc.set_options(cf_compliance="raise"):
+                    try:
+                        getattr(xc.core.cfchecks, check)(**cfchecks[v][check])
+                    except xc.core.utils.ValidationError as e:
+                        _error(f"'{v}' ValidationError: {e}", "cfchecks")
+
+    if freq is not None:
+        inferred_freq = xr.infer_freq(ds.time)
+        if inferred_freq is None:
+            _error(
+                "The timesteps are irregular or cannot be inferred by xarray.", "freq"
+            )
+        elif freq.replace("YS", "AS-JAN") != inferred_freq:
+            _error(
+                f"The frequency is not '{freq}'. Received '{inferred_freq}'.", "freq"
+            )
+
+    if missing is not None:
+        inferred_freq = xr.infer_freq(ds.time)
+        if inferred_freq not in ["M", "MS", "D", "H"]:
+            warnings.warn(
+                f"Frequency {inferred_freq} is not supported for missing data checks. That check will be skipped.",
+                UserWarning,
+                stacklevel=1,
+            )
+        else:
+            if isinstance(missing, str):
+                missing = {missing: {}}
+            elif isinstance(missing, list):
+                missing = {m: {} for m in missing}
+            for method, kwargs in missing.items():
+                kwargs.setdefault("freq", "YS")
+                for v in ds.data_vars:
+                    ms = getattr(xc.core.missing, method)(ds[v], **kwargs)
+                    if ms.any():
+                        _error(
+                            f"The variable '{v}' has missing values according to the '{method}' method.",
+                            "missing",
+                        )
+
+    if flags is not None:
+        if return_flags:
+            out = xr.Dataset()
+        for v in flags:
+            dsflags = xc.core.dataflags.data_flags(
+                ds[v],
+                ds,
+                flags=flags[v],
+                raise_flags=False,
+                **(flags_kwargs or {}),
+            )
+            if np.any([dsflags[dv] for dv in dsflags.data_vars]):
+                bad_checks = [dv for dv in dsflags.data_vars if dsflags[dv].any()]
+                _error(
+                    f"'{v}' has suspicious values according to the following flags: {bad_checks}.",
+                    "flags",
+                )
+            if return_flags:
+                dsflags = dsflags.rename({dv: f"{v}_{dv}" for dv in dsflags.data_vars})
+                out = xr.merge([out, dsflags])
+
+    _message()
+    if return_flags and flags is not None:
+        return out
 
 
 # TODO: just measures?
-
-
 @parse_config
 def properties_and_measures(
     ds: xr.Dataset,
@@ -221,9 +403,12 @@ def properties_and_measures(
                 sim=prop[vname], ref=dref_for_measure[vname]
             )
             # create a merged long_name
-            prop_ln = prop[vname].attrs.get("long_name", "").replace(".", "")
-            meas_ln = meas[vname].attrs.get("long_name", "").lower()
-            meas[vname].attrs["long_name"] = f"{prop_ln} {meas_ln}"
+            update_attr(
+                meas[vname],
+                "long_name",
+                "{attr1} {attr}",
+                others=[prop[vname]],
+            )
 
     for ds1 in [prop, meas]:
         ds1.attrs = ds.attrs
@@ -313,7 +498,7 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
     )
     ds_hmap.attrs["cat:processing_level"] = to_level
     ds_hmap.attrs.pop("cat:variable", None)
-    ds_hmap["heatmap"].attrs["long_name"] = "Ranking of measure performance"
+    add_attr(ds_hmap["heatmap"], "long_name", _("Ranking of measure performance"))
 
     return ds_hmap
 
@@ -369,9 +554,11 @@ def measures_improvement(
 
     ds_better = ds_better.to_dataset(name="improved_grid_points")
 
-    ds_better["improved_grid_points"].attrs[
-        "long_name"
-    ] = "Fraction of improved grid cells"
+    add_attr(
+        ds_better["improved_grid_points"],
+        "long_name",
+        _("Fraction of improved grid cells"),
+    )
     ds_better.attrs = ds2.attrs
     ds_better.attrs["cat:processing_level"] = to_level
     ds_better.attrs.pop("cat:variable", None)

@@ -3,26 +3,19 @@ include CONTRIBUTING.rst
 include HISTORY.rst
 include LICENSE
 include README.rst
-include requirements_dev.txt
-include requirements_docs.txt
 
-recursive-include xscen *.json *.yml *.py *.csv
+recursive-include xscen *.json *.yml *.py *.csv *.mo
 recursive-include tests *
+recursive-include docs notebooks *.rst conf.py Makefile make.bat *.jpg *.png *.gif *.ipynb *.csv *.json *.yml *.md
+recursive-include docs notebooks samples *.csv *.json
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
-recursive-exclude docs notebooks *.rst conf.py Makefile make.bat *.jpg *.png *.gif *.ipynb *.csv *.json *.yml *.md
-recursive-exclude docs notebooks samples *.csv *.json
+recursive-exclude conda *.yml
 recursive-exclude templates *.csv *.json *.py *.yml
+recursive-exclude docs notebooks samples tutorial *.nc
 
-exclude .cruft.json
-exclude .editorconfig
-exclude .gitlab-ci.yml
-exclude .gitmodules
-exclude .pre-commit-config.yaml
-exclude .readthedocs.yml
-exclude .secrets.baseline
-exclude .yamllint.yaml
+exclude .*
 exclude Makefile
 exclude environment.yml
 exclude environment-dev.yml

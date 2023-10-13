@@ -2,11 +2,11 @@ import numpy as np
 import pytest
 import xarray as xr
 import xclim
+from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
-
-from .conftest import notebooks
+from xscen.testing import datablock_3d
 
 
 class TestClimatologicalMean:
@@ -178,9 +178,7 @@ class TestComputeDeltas:
             )
 
         variable = "tas_delta_1981_2010" if rename_variables else "tas"
-        delta_kind = (
-            "absolute" if kind == "+" else "relative" if kind == "/" else "percentage"
-        )
+        delta_kind = "abs." if kind == "+" else "rel." if kind == "/" else "pct."
         results = (
             [0, 1, 2, 3]
             if kind == "+"
@@ -194,14 +192,12 @@ class TestComputeDeltas:
         assert variable in deltas.data_vars
         assert len(deltas.data_vars) == 1
         assert deltas.attrs["cat:processing_level"] == (
-            "for_testing"
-            if to_level is not None
-            else f"delta_{self.ds.attrs['cat:processing_level']}"
+            "for_testing" if to_level is not None else "deltas"
         )
         # Test metadata
         assert (
             deltas[variable].attrs["description"]
-            == f"{self.ds.tas.attrs['description']}: {delta_kind} delta compared to 1981-2010."
+            == f"{self.ds.tas.attrs['description'].strip(' .')}: {delta_kind} delta compared to 1981-2010."
         )
         assert f"{delta_kind} delta vs. 1981-2010" in deltas[variable].attrs["history"]
         # Test variable
@@ -320,49 +316,57 @@ class TestProduceHorizon:
         freq="D",
         as_dataset=True,
     )
+    ds.attrs["cat:source"] = "CanESM5"
+    ds.attrs["cat:experiment"] = "ssp585"
+    ds.attrs["cat:member"] = "r1i1p1f1"
+    ds.attrs["cat:mip_era"] = "CMIP6"
 
     yaml_file = notebooks / "samples" / "indicators.yml"
 
     @pytest.mark.parametrize(
-        "period, to_level",
+        "periods, to_level",
         [
             (None, None),
-            (["1995", "2007"], "for_testing"),
-            (["1995", "1996"], "for_testing"),
+            ([["1995", "2007"], ["1995", "1996"]], "for_testing"),
         ],
     )
-    def test_options(self, period, to_level):
+    def test_options(self, periods, to_level):
         if to_level is None:
-            out = xs.produce_horizon(self.ds, indicators=self.yaml_file, period=period)
-        else:
             out = xs.produce_horizon(
-                self.ds, indicators=self.yaml_file, period=period, to_level=to_level
+                self.ds, indicators=self.yaml_file, periods=periods
             )
+        else:
+            with pytest.warns(UserWarning, match="The attributes for variable tg_min"):
+                out = xs.produce_horizon(
+                    self.ds,
+                    indicators=self.yaml_file,
+                    periods=periods,
+                    to_level=to_level,
+                )
 
         assert "time" not in out.dims
-        assert len(out.horizon) == 1
-        assert out.horizon.item() == (
-            "1981-2010" if period is None else "-".join(period)
+        assert len(out.horizon) == 1 if periods is None else len(periods)
+        np.testing.assert_array_equal(
+            out.horizon,
+            ["1981-2010"] if periods is None else ["1995-2007", "1995-1996"],
         )
         assert out.attrs["cat:processing_level"] == (
-            "for_testing"
-            if to_level is not None
-            else f"climatology{out.horizon.item()}"
+            "for_testing" if to_level is not None else "horizons"
         )
         assert out.attrs["cat:xrfreq"] == "fx"
         assert all(v in out for v in ["tg_min", "growing_degree_days"])
         assert (
-            f"{30 if period is None else int(period[1]) - int(period[0]) + 1}-year mean of"
+            f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of"
             in out.tg_min.attrs["description"]
         )
         assert (
             out.tg_min.attrs["description"].split(
-                f"{30 if period is None else int(period[1]) - int(period[0]) + 1}-year mean of "
+                f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of "
             )[1]
             != self.ds.tas.attrs["description"]
         )
-        np.testing.assert_array_equal(out.tg_min, [1])
-        np.testing.assert_array_equal(out.growing_degree_days, [0])
+        np.testing.assert_array_equal(out.tg_min, [1] * len(out.horizon))
+        np.testing.assert_array_equal(out.growing_degree_days, [0] * len(out.horizon))
 
     def test_multiple_freqs(self):
         ds = timeseries(
@@ -423,11 +427,48 @@ class TestProduceHorizon:
         np.testing.assert_array_equal(out["tg_min_qs"].squeeze(), [3, 6, 9, 1])
         np.testing.assert_array_equal(out["tg_min_ms"].squeeze(), np.arange(1, 13))
 
-    def test_warminglevel(self):
+    @pytest.mark.parametrize("wl", [0.8, [0.8, 0.85]])
+    def test_warminglevels(self, wl):
+        out = xs.produce_horizon(
+            self.ds, indicators=self.yaml_file, warminglevels={"wl": wl}
+        )
+        assert "warminglevel" not in out.dims
+        assert len(out.horizon) == 1 if isinstance(wl, float) else len(wl)
+        np.testing.assert_array_equal(
+            out.horizon,
+            ["+0.8Cvs1850-1900"]
+            if isinstance(wl, float)
+            else ["+0.8Cvs1850-1900", "+0.85Cvs1850-1900"],
+        )
+
+    def test_combine(self):
+        out = xs.produce_horizon(
+            self.ds,
+            indicators=self.yaml_file,
+            periods=[["1982", "1988"]],
+            warminglevels={"wl": [0.8, 0.85]},
+        )
+        assert len(out.horizon) == 3
+        np.testing.assert_array_equal(
+            out.horizon, ["1982-1988", "+0.8Cvs1850-1900", "+0.85Cvs1850-1900"]
+        )
+
+    def test_single(self):
+        out = xs.produce_horizon(
+            self.ds,
+            indicators=self.yaml_file,
+            periods=[1982, 1988],
+        )
+        assert len(out.horizon) == 1
+        np.testing.assert_array_equal(out.horizon, ["1982-1988"])
+
+    def test_warminglevel_in_ds(self):
         ds = self.ds.copy().expand_dims({"warminglevel": ["+1Cvs1850-1900"]})
-        out = xs.produce_horizon(ds, indicators=self.yaml_file)
+        out = xs.produce_horizon(
+            ds, indicators=self.yaml_file, to_level="warminglevel{wl}"
+        )
         np.testing.assert_array_equal(out["horizon"], ds["warminglevel"])
-        assert out.attrs["cat:processing_level"] == "climatology1981-2010"
+        assert out.attrs["cat:processing_level"] == "warminglevel+1Cvs1850-1900"
 
         # Multiple warming levels
         ds = self.ds.copy().expand_dims(
@@ -435,3 +476,75 @@ class TestProduceHorizon:
         )
         with pytest.raises(ValueError):
             xs.produce_horizon(ds, indicators=self.yaml_file)
+
+    def test_to_level(self):
+        out = xs.produce_horizon(
+            self.ds, indicators=self.yaml_file, to_level="horizon{period0}-{period1}"
+        )
+        assert out.attrs["cat:processing_level"] == "horizon1981-2010"
+        out = xs.produce_horizon(
+            self.ds,
+            indicators=self.yaml_file,
+            warminglevels={"wl": 1, "tas_baseline_period": ["1851", "1901"]},
+            to_level="warminglevel{wl}",
+        )
+        assert out.attrs["cat:processing_level"] == "warminglevel+1Cvs1851-1901"
+
+    def test_errors(self):
+        # FutureWarning
+        with pytest.warns(FutureWarning, match="The 'period' argument is deprecated"):
+            xs.produce_horizon(
+                self.ds, indicators=self.yaml_file, period=["1982", "1988"]
+            )
+
+        # Bad input
+        with pytest.raises(
+            ValueError, match="Could not understand the format of warminglevels"
+        ):
+            xs.produce_horizon(
+                self.ds, indicators=self.yaml_file, warminglevels={"wl": "+1"}
+            )
+
+        # Insufficient data
+        with pytest.warns(
+            UserWarning, match="is not fully covered by the input dataset."
+        ):
+            with pytest.raises(
+                ValueError, match="No horizon could be computed. Check your inputs."
+            ):
+                xs.produce_horizon(
+                    self.ds, indicators=self.yaml_file, periods=[["1982", "2100"]]
+                )
+        with pytest.warns(
+            UserWarning, match="is not fully covered by the input dataset."
+        ):
+            with pytest.raises(
+                ValueError, match="No horizon could be computed. Check your inputs."
+            ):
+                xs.produce_horizon(
+                    self.ds, indicators=self.yaml_file, periods=[["1950", "1990"]]
+                )
+
+
+class TestSpatialMean:
+    # We test different longitude flavors : all < 0, crossing 0, all > 0
+    # the default global bbox changes because of subtleties in clisops
+    @pytest.mark.parametrize(
+        "method,exp", (["xesmf", 1.62032976], ["cos-lat", 1.63397460])
+    )
+    @pytest.mark.parametrize("lonstart", [-70, -30, 0])
+    def test_global(self, lonstart, method, exp):
+        ds = datablock_3d(
+            np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 3, "float"),
+            "tas",
+            "lon",
+            lonstart,
+            "lat",
+            15,
+            30,
+            30,
+            as_dataset=True,
+        )
+
+        avg = xs.aggregate.spatial_mean(ds, method=method, region="global")
+        np.testing.assert_allclose(avg.tas, exp)

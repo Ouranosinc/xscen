@@ -70,7 +70,11 @@ Ready to contribute? Here's how to set up `xscen` for local development.
     $ mamba env create -f environment-dev.yml
     $ pip install -e .
 
-3. To ensure a consistent style, please install the pre-commit hooks to your repo::
+3. As xscen was installed in editable mode, we also need to compile the translation catalogs manually:
+
+    $ make translate
+
+4. To ensure a consistent style, please install the pre-commit hooks to your repo::
 
     $ pre-commit install
 
@@ -79,13 +83,13 @@ Ready to contribute? Here's how to set up `xscen` for local development.
 
     $ pre-commit run -a
 
-4. Create a branch for local development::
+5. Create a branch for local development::
 
     $ git checkout -b name-of-your-bugfix-or-feature
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass flake8, black, and the
+6. When you're done making changes, check that your changes pass flake8, black, and the
    tests, including testing other Python versions with tox::
 
     $ tox
@@ -98,20 +102,61 @@ Ready to contribute? Here's how to set up `xscen` for local development.
    are installed in a conda-based environment. Running `pytest` demands that your runtime/dev environment have all necessary
    dependencies installed.
 
-6. Commit your changes and push your branch to GitHub::
+7. Commit your changes and push your branch to GitHub::
 
     $ git add .
     $ git commit -m "Your detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 
-7. If you are editing the docs, compile and open them with::
+8. If you are editing the docs, compile and open them with::
 
     $ make docs
     # or to simply generate the html
     $ cd docs/
     $ make html
 
-8. Submit a pull request through the GitHub website.
+.. note::
+
+    When building the documentation, the default behaviour is to evaluate notebooks ('nbsphinx_execute = "always"'), rather than simply parse the content ('nbsphinx_execute = "never"'). Due to their complexity, this can sometimes be a very computationally demanding task and should only be performed when necessary (i.e.: when the notebooks have been modified).
+
+    In order to speed up documentation builds, setting a value for the environment variable "SKIP_NOTEBOOKS" (e.g. "$ export SKIP_NOTEBOOKS=1") will prevent the notebooks from being evaluated on all subsequent "$ tox -e docs" or "$ make docs" invocations.
+
+9. Submit a pull request through the GitHub website.
+
+.. _translating-xscen:
+
+Translating xscen
+~~~~~~~~~~~~~~~~~
+If your additions to xscen play with plain text attributes like "long_name" or "description", you should also provide
+French translations for those fields. To manage translations, xscen uses python's `gettext` with the help of `babel`.
+
+To update an attribute while enabling translation, use :py:func:`utils.add_attr` instead of a normal set-item. For example:
+
+.. code python
+    ds.attrs['description'] = "The English description"
+
+becomes
+
+.. code python
+    from xscen.utils import add_attr
+
+    def _(s):
+        return s
+
+    add_attr(ds, "description", _("English description of {a}"), a="var")
+
+See also :py:func:`update_attr` for the special case where an attribute is updated using its previous version.
+
+Once the code is implemented and translatable strings are marked as such, we need to extract them and catalog them
+in the French translation map. From the root directory of xscen, run::
+
+    $ make findfrench
+
+Then go edit ``xscen/xscen/data/fr/LC_MESSAGES/xscen.po`` with the correct French translations. Finally, running::
+
+    $ make translate
+
+will compile the edited catalogs, allowing python to detect and use them.
 
 Pull Request Guidelines
 -----------------------

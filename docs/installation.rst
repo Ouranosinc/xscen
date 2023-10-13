@@ -5,14 +5,13 @@ Installation
 Official Sources
 ----------------
 
-Because of some packages being absent from PyPI (such as `xESMF`), we strongly recommend installing
-`xscen` in an Anaconda environment.
+Because of some packages being absent from PyPI (such as `xESMF`), we strongly recommend installing `xscen` in an Anaconda Python environment.
 
-`xscen` can be installed directly from Anaconda.org:
+`xscen` can be installed directly from conda-forge:
 
 .. code-block:: console
 
-    $ conda install -c ouranosinc xscen
+    $ conda install -c conda-forge xscen
 
 .. note::
 
@@ -24,8 +23,8 @@ If for some reason you wish to install the `PyPI` version of `xscen` into an exi
 
     $ pip install xscen
 
-Development Installation (conda + pip)
---------------------------------------
+Development Installation (Anaconda + pip)
+-----------------------------------------
 
 For development purposes, we provide the means for generating a conda environment with the latest dependencies in an `environment.yml` file at the top-level of the `Github repo`_.
 
@@ -42,10 +41,11 @@ Then you can create the environment and install the package:
     $ cd xscen
     $ conda env create -f environment.yml
 
-Finally, perform an `--editable` install of xscen:
+Finally, perform an `--editable` install of xscen and compile the translation catalogs:
 
 .. code-block:: console
 
     $ pip install -e .
+    $ make translate
 
 .. _Github repo: https://github.com/Ouranosinc/xscen

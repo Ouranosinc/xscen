@@ -33,6 +33,13 @@ logging:
         level: INFO
         handlers: [console]
 
+xclim:
+  ## Enable french translation for xclim indicators, but also some xscen methods.
+  metadata_locales:
+    - fr
+  ## Disable warnings when cf metadata is inexact on input data
+  cf_compliance: log
+
 main:
     ## Path to a project catalog, the workflow creates it if needed
     catalog:

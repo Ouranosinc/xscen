@@ -1,0 +1,51 @@
+# French translations for xscen.
+# Copyright (C) 2023 ORGANIZATION
+# This file is distributed under the same license as the xscen project.
+# Équipe Xscen <Rondeau-Genesse.Gabriel@ouranos.ca>, 2023.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: xscen 0.6.18b0\n"
+"Report-Msgid-Bugs-To: Rondeau-Genesse.Gabriel@ouranos.ca\n"
+"POT-Creation-Date: 2023-09-29 11:45-0400\n"
+"PO-Revision-Date: 2023-08-15 16:48-0400\n"
+"Last-Translator: Pascal Bourgault <bourgault.pascal@ouranos.ca>\n"
+"Language: fr\n"
+"Language-Team: fr <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: xscen/aggregate.py:185
+msgid "{window}-year mean of {attr}."
+msgstr "Moyenne {window} ans de {attr}."
+
+#: xscen/aggregate.py:319
+msgid "{attr1}: {kind} delta compared to {refhoriz}."
+msgstr "{attr1}: Delta {kind} comparé à {refhoriz}."
+
+#: xscen/diagnostics.py:501
+msgid "Ranking of measure performance"
+msgstr "Classement de performance de la mesure"
+
+#: xscen/diagnostics.py:560
+msgid "Fraction of improved grid cells"
+msgstr "Fraction de points de grille améliorés"
+
+#: xscen/io.py:650
+msgid "Variable"
+msgstr "Variable"
+
+#: xscen/io.py:650
+msgid "Description"
+msgstr "Description"
+
+#: xscen/io.py:650
+msgid "Units"
+msgstr "Unités"
+
+#: xscen/io.py:654
+msgid "Content"
+msgstr "Contenu"

@@ -14,6 +14,7 @@ import pandas as pd
 import xarray as xr
 import xclim as xc
 from intake_esm.derived import DerivedVariableRegistry
+from xclim.core.calendar import compare_offsets
 
 from .catalog import DataCatalog  # noqa
 from .catalog import ID_COLUMNS, concat_data_catalogs, generate_id, subset_file_coverage
@@ -23,7 +24,7 @@ from .indicators import load_xclim_module, registry_from_module
 from .spatial import subset
 from .utils import CV
 from .utils import ensure_correct_time as _ensure_correct_time
-from .utils import get_cat_attrs, natural_sort, standardize_periods
+from .utils import get_cat_attrs, natural_sort, standardize_periods, xrfreq_to_timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -368,44 +369,44 @@ def resample(
     *,
     ds: Optional[xr.Dataset] = None,
     method: Optional[str] = None,
+    missing: Union[str, dict] = None,
 ) -> xr.DataArray:
     """Aggregate variable to the target frequency.
+
+    If the input frequency is greater than a week, the resampling operation is weighted by
+    the number of days in each sampling period.
 
     Parameters
     ----------
     da  : xr.DataArray
         DataArray of the variable to resample, must have a "time" dimension and be of a
-        finer temporal resolution than "target_timestep".
+        finer temporal resolution than "target_frequency".
     target_frequency : str
-        The target frequency/freq str, must be one of the frequency supported by pandas.
+        The target frequency/freq str, must be one of the frequency supported by xarray.
     ds : xr.Dataset, optional
         The "wind_direction" resampling method needs extra variables, which can be given here.
     method : {'mean', 'min', 'max', 'sum', 'wind_direction'}, optional
         The resampling method. If None (default), it is guessed from the variable name and frequency,
         using the mapping in CVs/resampling_methods.json. If the variable is not found there,
         "mean" is used by default.
+    missing: {'mask', 'drop'} or dict, optional
+        If 'mask' or 'drop', target periods that would have been computed from fewer timesteps than expected are masked or dropped, using a threshold of 5% of missing data.
+        For example, the first season of a `target_frequency` of "QS-DEC" will be masked or dropped if data only starts in January.
+        If a dict, it points to a xclim check missing method which will mask periods according to their number of NaN values.
+        The dict must contain a "method" field corresponding to the xclim method name and may contain
+        any other args to pass. Options are documented in :py:mod:`xclim.core.missing`.
 
     Returns
     -------
     xr.DataArray
         Resampled variable
-
     """
     var_name = da.name
 
     initial_frequency = xr.infer_freq(da.time.dt.round("T")) or "undetected"
-    initial_frequency_td = pd.Timedelta(
-        CV.xrfreq_to_timedelta(xr.infer_freq(da.time.dt.round("T")), None)
-    )
-    if initial_frequency_td == pd.Timedelta("1D"):
-        logger.warning(
-            "You appear to be resampling daily data using extract_dataset. "
-            "It is advised to use compute_indicators instead, as it is far more robust."
-        )
-    elif initial_frequency_td > pd.Timedelta("1D"):
-        logger.warning(
-            "You appear to be resampling data that is coarser than daily. "
-            "Be aware that this is not currently explicitely supported by xscen and might result in erroneous manipulations."
+    if initial_frequency == "undetected":
+        warnings.warn(
+            "Could not infer the frequency of the dataset. Be aware that this might result in erroneous manipulations."
         )
 
     if method is None:
@@ -427,6 +428,35 @@ def resample(
         else:
             method = "mean"
             logger.info(f"Resampling method for {var_name} defaulted to: 'mean'.")
+
+    weights = None
+    if (
+        initial_frequency != "undetected"
+        and compare_offsets(initial_frequency, ">", "W")
+        and method in ["mean", "median", "std", "var", "wind_direction"]
+    ):
+        # More than a week -> non-uniform sampling length!
+        t = xr.date_range(
+            da.indexes["time"][0],
+            periods=da.time.size + 1,
+            freq=initial_frequency,
+            calendar=da.time.dt.calendar,
+        )
+        # This is the number of days in each sampling period
+        days_per_step = (
+            xr.DataArray(t, dims=("time",), coords={"time": t})
+            .diff("time", label="lower")
+            .dt.days
+        )
+        days_per_period = (
+            days_per_step.resample(time=target_frequency)
+            .sum()  # Total number of days per period
+            .sel(time=days_per_step.time, method="ffill")  # Upsample to initial freq
+            .assign_coords(
+                time=days_per_step.time
+            )  # Not sure why we need this, but time coord is from the resample even after sel
+        )
+        weights = days_per_step / days_per_period
 
     # TODO : Support non-surface wind?
     if method == "wind_direction":
@@ -454,7 +484,11 @@ def resample(
             )
 
         # Resample first to find the average wind speed and components
-        ds = ds.resample(time=target_frequency).mean(dim="time", keep_attrs=True)
+        if weights is not None:
+            with xr.set_options(keep_attrs=True):
+                ds = (ds * weights).resample(time=target_frequency).sum(dim="time")
+        else:
+            ds = ds.resample(time=target_frequency).mean(dim="time", keep_attrs=True)
 
         # Based on Vector Magnitude and Direction equations
         # For example: https://www.khanacademy.org/math/precalculus/x9e81a4f98389efdf:vectors/x9e81a4f98389efdf:component-form/a/vector-magnitude-and-direction-review
@@ -475,14 +509,69 @@ def resample(
         else:
             out = ds[var_name]
 
+    elif weights is not None:
+        if method == "mean":
+            # Avoiding resample().map() is much more performant
+            with xr.set_options(keep_attrs=True):
+                out = (
+                    (da * weights)
+                    .resample(time=target_frequency)
+                    .sum(dim="time")
+                    .rename(da.name)
+                )
+        else:
+            kws = {"q": 0.5} if method == "median" else {}
+            ds = xr.merge([da, weights.rename("weights")])
+            out = ds.resample(time=target_frequency).map(
+                lambda grp: getattr(
+                    grp.drop_vars("weights").weighted(grp.weights),
+                    method if method != "median" else "quantile",
+                )(dim="time", **kws)
+            )[da.name]
     else:
         out = getattr(da.resample(time=target_frequency), method)(
             dim="time", keep_attrs=True
         )
 
+    missing_note = " "
+    initial_td = xrfreq_to_timedelta(initial_frequency)
+    if missing in ["mask", "drop"] and not pd.isnull(initial_td):
+        steps_per_period = (
+            xr.ones_like(da.time, dtype="int").resample(time=target_frequency).sum()
+        )
+        t = xr.date_range(
+            steps_per_period.indexes["time"][0],
+            periods=steps_per_period.time.size + 1,
+            freq=target_frequency,
+        )
+
+        expected = (
+            xr.DataArray(t, dims=("time",), coords={"time": t}).diff(
+                "time", label="lower"
+            )
+            / initial_td
+        )
+        complete = (steps_per_period / expected) > 0.95
+        action = "masking" if missing == "mask" else "dropping"
+        missing_note = f", {action} incomplete periods "
+    elif isinstance(missing, dict):
+        missmeth = missing.pop("method")
+        complete = ~xc.core.missing.MISSING_METHODS[missmeth](
+            da, target_frequency, initial_frequency
+        )(**missing)
+        funcstr = xc.core.formatting.gen_call_string(
+            f"xclim.core.missing_{missmeth}", **missing
+        )
+        missing = "mask"
+        missing_note = f", masking incomplete periods according to {funcstr} "
+    if missing in {"mask", "drop"}:
+        out = out.where(complete, drop=(missing == "drop"))
+
     new_history = (
-        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {method} "
-        f"resample from {initial_frequency} to {target_frequency} - xarray v{xr.__version__}"
+        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+        f"{'weighted' if weights is not None else ''} {method} "
+        f"resample from {initial_frequency} to {target_frequency}"
+        f"{missing_note}- xarray v{xr.__version__}"
     )
     history = (
         new_history + " \n " + out.attrs["history"]
@@ -524,6 +613,8 @@ def search_data_catalogs(
         Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format. A list of strings can also be provided.
     other_search_criteria : dict, optional
         Other criteria to search for in the catalogs' columns, following a 'column_name: list(subset)' format.
+        You can also pass 'require_all_on: list(columns_name)' in order to only return results that correspond to all other criteria across the listed columns.
+        More details available at https://intake-esm.readthedocs.io/en/stable/how-to/enforce-search-query-criteria-via-require-all-on.html .
     exclusions : dict, optional
         Same as other_search_criteria, but for eliminating results.
     match_hist_and_fut: bool, optional
@@ -552,11 +643,13 @@ def search_data_catalogs(
         Currently only supports {"ordered": int} format.
     restrict_warming_level : bool, dict
         Used to restrict the results only to datasets that exist in the csv used to compute warming levels in `subset_warming_level`.
-        If True, this will only keep the datasets that have a mip_era, source, experiment
-        and member combination that exist in the csv. This does not guarantees that a given warming level will be reached, only that the datasets have corresponding columns in the csv.
+        If True, this will only keep the datasets that have a mip_era, source, experiment and member combination that exist in the csv.
+        This does not guarantee that a given warming level will be reached, only that the datasets have corresponding columns in the csv.
         More option can be added by passing a dictionary instead of a boolean.
         If {'ignore_member':True}, it will disregard the member when trying to match the dataset to a column.
         If {tas_csv: Path_to_csv}, it will use an alternative csv instead of the default one provided by xscen.
+        If 'wl' is a provided key, then `xs.get_warming_level` will be called and only datasets that reach the given warming level will be kept.
+        This can be combined with other arguments of the function, for example {'wl': 1.5, 'window': 30}.
 
     Notes
     -----
@@ -586,43 +679,31 @@ def search_data_catalogs(
             "registry": registry_from_module(load_xclim_module(conversion_yaml))
         }
 
-    # Cast paths to single item list
-    if isinstance(data_catalogs, (str, Path)):
+    # Cast single items to a list
+    if isinstance(data_catalogs, (str, os.PathLike, DataCatalog)):
         data_catalogs = [data_catalogs]
+    # Open the catalogs given as paths
+    for i, dc in enumerate(data_catalogs):
+        if isinstance(dc, (str, os.PathLike)):
+            data_catalogs[i] = (
+                DataCatalog(dc, **cat_kwargs)
+                if Path(dc).suffix == ".json"
+                else DataCatalog.from_df(dc)
+            )
 
-    # Prepare a unique catalog to search from, with the DerivedCat added if required
-    if isinstance(data_catalogs, DataCatalog):
-        catalog = DataCatalog(
-            {"esmcat": data_catalogs.esmcat.dict(), "df": data_catalogs.df},
-            **cat_kwargs,
-        )
-        data_catalogs = [catalog]  # simply for a meaningful logging line
-    elif isinstance(data_catalogs, list) and all(
+    if not isinstance(data_catalogs, list) or not all(
         isinstance(dc, DataCatalog) for dc in data_catalogs
     ):
-        catalog = DataCatalog(
-            {
-                "esmcat": data_catalogs[0].esmcat.dict(),
-                "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
-            },
-            **cat_kwargs,
-        )
-    elif isinstance(data_catalogs, list) and all(
-        isinstance(dc, str) for dc in data_catalogs
-    ):
-        data_catalogs = [
-            DataCatalog(path) if path.endswith(".json") else DataCatalog.from_df(path)
-            for path in data_catalogs
-        ]
-        catalog = DataCatalog(
-            {
-                "esmcat": data_catalogs[0].esmcat.dict(),
-                "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
-            },
-            **cat_kwargs,
-        )
-    else:
         raise ValueError("Catalogs type not recognized.")
+
+    # Prepare a unique catalog to search from, with the DerivedCat added if required
+    catalog = DataCatalog(
+        {
+            "esmcat": data_catalogs[0].esmcat.dict(),
+            "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
+        },
+        **cat_kwargs,
+    )
     logger.info(f"Catalog opened: {catalog} from {len(data_catalogs)} files.")
 
     if match_hist_and_fut:
@@ -630,16 +711,17 @@ def search_data_catalogs(
         catalog = _dispatch_historical_to_future(catalog, id_columns)
 
     # Cut entries that do not match search criteria
-    if other_search_criteria:
-        catalog = catalog.search(**other_search_criteria)
-        logger.info(
-            f"{len(catalog.df)} assets matched the criteria : {other_search_criteria}."
-        )
     if exclusions:
         ex = catalog.search(**exclusions)
         catalog.esmcat._df = pd.concat([catalog.df, ex.df]).drop_duplicates(keep=False)
         logger.info(
             f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
+        )
+    full_catalog = deepcopy(catalog)  # Used for searching for fixed fields
+    if other_search_criteria:
+        catalog = catalog.search(**other_search_criteria)
+        logger.info(
+            f"{len(catalog.df)} assets matched the criteria : {other_search_criteria}."
         )
     if restrict_warming_level:
         if isinstance(restrict_warming_level, bool):
@@ -654,11 +736,16 @@ def search_data_catalogs(
             # Recreate id from user specifications
             catalog.df["id"] = ids
         else:
-            # Only fill in the missing IDs
+            # Only fill in the missing IDs.
+            # Unreachable line if 'id' is in the aggregation control columns, but this is a safety measure.
             catalog.df["id"] = catalog.df["id"].fillna(ids)
 
     if catalog.df.empty:
-        logger.warning("Found no match corresponding to the 'other' search criteria.")
+        warnings.warn(
+            "Found no match corresponding to the search criteria.",
+            UserWarning,
+            stacklevel=1,
+        )
         return {}
 
     coverage_kwargs = coverage_kwargs or {}
@@ -687,11 +774,14 @@ def search_data_catalogs(
                             scat_id = {
                                 i: scat.df[i].iloc[0]
                                 for i in id_columns or ID_COLUMNS
-                                if i in scat.df.columns
+                                if (
+                                    (i in scat.df.columns)
+                                    and (not pd.isnull(scat.df[i].iloc[0]))
+                                )
                             }
                             scat_id.pop("experiment", None)
                             scat_id.pop("member", None)
-                            varcat = catalog.search(
+                            varcat = full_catalog.search(
                                 **scat_id,
                                 xrfreq=xrfreq,
                                 variable=var_id,
@@ -700,8 +790,10 @@ def search_data_catalogs(
                             if len(varcat) > 1:
                                 varcat.esmcat._df = varcat.df.iloc[[0]]
                             if len(varcat) == 1:
-                                logger.warning(
-                                    f"Dataset {sim_id} doesn't have the fixed field {var_id}, but it can be acquired from {varcat.df['id'].iloc[0]}."
+                                warnings.warn(
+                                    f"Dataset {sim_id} doesn't have the fixed field {var_id}, but it can be acquired from {varcat.df['id'].iloc[0]}.",
+                                    UserWarning,
+                                    stacklevel=1,
                                 )
                                 for i in {"member", "experiment", "id"}.intersection(
                                     varcat.df.columns
@@ -851,7 +943,7 @@ def get_warming_level(
     tas_baseline_period : list
        [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
     ignore_member : bool
-       Only used for Datasets. Decides whether to ignore the member when searching for the model run in tas_csv.
+       Decides whether to ignore the member when searching for the model run in tas_csv.
     tas_csv : str
        Path to a csv of annual global mean temperature with a row for each year and a column for each dataset.
        If None, it will default to data/IPCC_annual_global_tas.csv which was built from
@@ -879,7 +971,6 @@ def get_warming_level(
     if tas_csv is None:
         tas_csv = Path(__file__).parent / "data" / "IPCC_annual_global_tas.csv"
 
-    info = {}
     if isinstance(realization, (xr.Dataset, str, dict)):
         realization = [realization]
     info_models = []
@@ -902,6 +993,8 @@ def get_warming_level(
                 info["experiment"],
                 info["member"],
             ) = real.split("_")
+            if ignore_member:
+                info["member"] = ".*"
         elif isinstance(real, dict) and set(real.keys()).issuperset(
             (set(FIELDS) - {"member"}) if ignore_member else FIELDS
         ):
@@ -925,13 +1018,13 @@ def get_warming_level(
     out = {}
     for model in info_models:
         # choose colum based in ds cat attrs
-        mip = models.mip_era.str.match(model["mip_era"])
-        src = models.source.str.match(model["source"])
+        mip = models.mip_era.str.fullmatch(model["mip_era"])
+        src = models.source.str.fullmatch(model["source"])
         if not src.any():
             # Maybe it's an RCM, then source may contain the institute
             src = models.source.apply(lambda s: model["source"].endswith(s))
-        exp = models.experiment.str.match(model["experiment"])
-        mem = models.member.str.match(model["member"])
+        exp = models.experiment.str.fullmatch(model["experiment"])
+        mem = models.member.str.fullmatch(model["member"])
 
         candidates = models[mip & src & exp & mem]
         if candidates.empty:
@@ -1354,7 +1447,7 @@ def _restrict_wl(df, restrictions: dict):
     # open csv
     annual_tas = pd.read_csv(tas_csv, index_col="year")
 
-    if restrictions["ignore_member"]:
+    if restrictions["ignore_member"] and "wl" not in restrictions:
         df["csv_name"] = df["mip_era"].str.cat(
             [df["source"], df["experiment"]], sep="_"
         )
@@ -1365,7 +1458,15 @@ def _restrict_wl(df, restrictions: dict):
         )
         csv_source = list(annual_tas.columns[1:])
 
-    to_keep = df["csv_name"].isin(csv_source)
+    if "wl" in restrictions:
+        to_keep = pd.Series(
+            [
+                get_warming_level(x, **restrictions)[0] is not None
+                for x in df["csv_name"]
+            ]
+        )
+    else:
+        to_keep = df["csv_name"].isin(csv_source)
     removed = pd.unique(df[~to_keep]["id"])
 
     df = df[to_keep]

@@ -3,11 +3,10 @@ import warnings
 import numpy as np
 import pytest
 import xclim
+from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
-
-from .conftest import notebooks
 
 
 class TestComputeIndicators:
@@ -128,4 +127,31 @@ class TestComputeIndicators:
             ]
         )
 
+
     def test_select_inds_for_avail_vars(self):
+        return Null
+
+    @pytest.mark.parametrize("restrict_years", [True, False])
+    def test_as_jul(self, restrict_years):
+        indicator = xclim.core.indicator.Indicator.from_dict(
+            data={"base": "freezing_degree_days", "parameters": {"freq": "AS-JUL"}},
+            identifier="degree_days_below_0_annual_start_july",
+            module="tests",
+        )
+        ind_dict = xs.compute_indicators(
+            self.ds,
+            indicators=[("degree_days_below_0_annual_start_july", indicator)],
+            restrict_years=restrict_years,
+        )
+
+        assert "AS-JUL" in ind_dict["AS-JUL"].attrs["cat:xrfreq"]
+        out = ind_dict["AS-JUL"]
+        if restrict_years:
+            assert len(out.time) == 3  # same length as input ds
+            assert out.time[0].dt.strftime("%Y-%m-%d").item() == "2001-07-01"
+            assert out.time[-1].dt.strftime("%Y-%m-%d").item() == "2003-07-01"
+        else:
+            assert len(out.time) == 4
+            assert out.time[0].dt.strftime("%Y-%m-%d").item() == "2000-07-01"
+            assert out.time[-1].dt.strftime("%Y-%m-%d").item() == "2003-07-01"
+

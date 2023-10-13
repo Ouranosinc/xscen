@@ -1,8 +1,11 @@
 """Common utilities to be used in many places."""
+import fnmatch
+import gettext
 import json
 import logging
 import os
 import re
+from collections import defaultdict
 from collections.abc import Sequence
 from datetime import datetime
 from io import StringIO
@@ -18,6 +21,8 @@ import pandas as pd
 import xarray as xr
 from xclim.core import units
 from xclim.core.calendar import convert_calendar, get_calendar, parse_offset
+from xclim.core.options import METADATA_LOCALES
+from xclim.core.options import OPTIONS as XC_OPTIONS
 from xclim.core.utils import uses_dask
 from xclim.testing.utils import show_versions as _show_versions
 
@@ -26,6 +31,7 @@ from .config import parse_config
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "add_attr",
     "change_units",
     "clean_up",
     "date_parser",
@@ -39,7 +45,100 @@ __all__ = [
     "translate_time_chunk",
     "unstack_fill_nan",
     "unstack_dates",
+    "update_attr",
 ]
+
+TRANSLATOR = defaultdict(lambda: lambda s: s)
+"""Dictionary of translating objects.
+
+Each key is a two letter locale code and values are functions that return the translated message as compiled in the gettext catalogs.
+If a language is not defined or a message not translated, the function will return the raw message.
+"""
+
+
+for loc in (Path(__file__).parent / "data").iterdir():
+    if loc.is_dir() and len(loc.name) == 2:
+        TRANSLATOR[loc.name] = gettext.translation(
+            "xscen", localedir=loc.parent, languages=[loc.name]
+        ).gettext
+
+
+def update_attr(ds, attr, new, others=None, **fmt):
+    """Format an attribute referencing itself in a translatable way.
+
+    Parameters
+    ----------
+    ds: Dataset or DataArray
+        The input object with the attribute to update.
+    attr : str
+        Attribute name.
+    new : str
+        New attribute as a template string. It may refer to the old version
+        of the attribute with the "{attr}" field.
+    others: Sequence of Datasets or DataArrays
+        Other objects from which we can extract the attribute `attr`.
+        These can be be referenced as "{attrXX}" in `new`, where XX is the based-1 index of the other source in `others`.
+        If they don't have the `attr` attribute, an empty string is sent to the string formatting.
+        See notes.
+    fmt:
+        Other formatting data.
+
+    Returns
+    -------
+    `ds`, but updated with the new version of `attr`, in each of the activated languages.
+
+    Notes
+    -----
+    This is meant for constructing attributes by extending a previous version
+    or combining it from different sources. For example, given a `ds` that has `long_name="Variability"`:
+
+    >>> update_attr(ds, "long_name", _("Mean of {attr}"))
+
+    Will update the "long_name" of `ds` with `long_name="Mean of Variability"`.
+    The use of `_(...)` allows the detection of this string by the translation manager. The function
+    will be able to add a translatable version of the string for each activated languages, for example adding
+    a `long_name_fr="Moyenne de Variabilité"` (assuming a `long_name_fr` was present on the initial `ds`).
+
+    If the new attribute is an aggregation from multiple sources, these can be passed in `others`.
+
+    >>> update_attr(
+    ...     ds0,
+    ...     "long_name",
+    ...     _("Addition of {attr} and {attr1}, divided by {attr2}"),
+    ...     others=[ds1, ds2],
+    ... )
+
+    Here, `ds0` will have it's `long_name` updated with the passed string, where  `attr1` is the `long_name` of `ds1`
+    and `attr2` the `long_name` of `ds2`. The process will be repeated for each localized `long_name` available on `ds0`.
+    For example, if `ds0` has a `long_name_fr`, the template string is translated and
+    filled with the `long_name_fr` attributes of  `ds0`, `ds1` and `ds2`.
+    If the latter don't exist, the english version is used instead.
+    """
+    others = others or []
+    # .strip(' .') removes trailing and leading whitespaces and dots
+    if attr in ds.attrs:
+        others = {
+            f"attr{i}": dso.attrs.get(attr, "").strip(" .")
+            for i, dso in enumerate(others, 1)
+        }
+        ds.attrs[attr] = new.format(attr=ds.attrs[attr].strip(" ."), **others, **fmt)
+    # All existing locales
+    for key in fnmatch.filter(ds.attrs.keys(), f"{attr}_??"):
+        loc = key[-2:]
+        others = {
+            f"attr{i}": dso.attrs.get(key, dso.attrs.get(attr, "")).strip(" .")
+            for i, dso in enumerate(others, 1)
+        }
+        ds.attrs[key] = TRANSLATOR[loc](new).format(
+            attr=ds.attrs[key].strip(" ."), **others, **fmt
+        )
+
+
+def add_attr(ds, attr, new, **fmt):
+    """Add a formatted translatable attribute to a dataset."""
+    ds.attrs[attr] = new.format(**fmt)
+    for loc in XC_OPTIONS[METADATA_LOCALES]:
+        ds.attrs[f"{attr}_{loc}"] = TRANSLATOR[loc](new).format(**fmt)
 
 
 def date_parser(
@@ -107,7 +206,7 @@ def date_parser(
         except (KeyError, ValueError):
             try:
                 date = pd.Timestamp(date)
-            except pd._libs.tslibs.parsing.DateParseError:
+            except (pd._libs.tslibs.parsing.DateParseError, ValueError):
                 date = pd.NaT
     elif isinstance(date, cftime.datetime):
         for n in range(3):
@@ -129,10 +228,13 @@ def date_parser(
         date = pd.Timestamp(date)
 
     if isinstance(end_of_period, str) or (end_of_period is True and fmt):
+        quasiday = (pd.Timedelta(1, "d") - pd.Timedelta(1, "s")).as_unit(date.unit)
         if end_of_period == "Y" or "m" not in fmt:
-            date = pd.tseries.frequencies.to_offset("A-DEC").rollforward(date)
+            date = (
+                pd.tseries.frequencies.to_offset("A-DEC").rollforward(date) + quasiday
+            )
         elif end_of_period == "M" or "d" not in fmt:
-            date = pd.tseries.frequencies.to_offset("M").rollforward(date)
+            date = pd.tseries.frequencies.to_offset("M").rollforward(date) + quasiday
         # TODO: Implement subdaily ?
 
     if out_dtype == "str":
@@ -374,7 +476,9 @@ def natural_sort(_list: list):
     return sorted(_list, key=alphanum_key)
 
 
-def get_cat_attrs(ds: Union[xr.Dataset, dict], prefix: str = "cat:") -> dict:
+def get_cat_attrs(
+    ds: Union[xr.Dataset, dict], prefix: str = "cat:", var_as_str=False
+) -> dict:
     """Return the catalog-specific attributes from a dataset or dictionary.
 
     Parameters
@@ -383,6 +487,8 @@ def get_cat_attrs(ds: Union[xr.Dataset, dict], prefix: str = "cat:") -> dict:
         Dataset to be parsed.
     prefix: str
         Prefix automatically generated by intake-esm. With xscen, this should be 'cat:'
+    var_as_str: bool
+        If True, variable will be returned as a string if there is only one.
 
     Returns
     -------
@@ -394,7 +500,19 @@ def get_cat_attrs(ds: Union[xr.Dataset, dict], prefix: str = "cat:") -> dict:
         attrs = ds.attrs
     else:
         attrs = ds
-    return {k[len(prefix) :]: v for k, v in attrs.items() if k.startswith(f"{prefix}")}
+    facets = {
+        k[len(prefix) :]: v for k, v in attrs.items() if k.startswith(f"{prefix}")
+    }
+
+    # to be usable in a path
+    if (
+        var_as_str
+        and "variable" in facets
+        and not isinstance(facets["variable"], str)
+        and len(facets["variable"]) == 1
+    ):
+        facets["variable"] = facets["variable"][0]
+    return facets
 
 
 @parse_config
@@ -733,7 +851,12 @@ def clean_up(
                     del ds.attrs[a_key]
 
         # generate a new id
-        ds.attrs["cat:id"] = generate_id(ds).iloc[0]
+        try:
+            ds.attrs["cat:id"] = generate_id(ds).iloc[0]
+        except IndexError as err:
+            logger.warning(f"Unable to generate a new id for the dataset. Got {err}.")
+            if "cat:id" in ds.attrs:
+                del ds.attrs["cat:id"]
 
     if to_level:
         ds.attrs["cat:processing_level"] = to_level
@@ -1030,11 +1153,13 @@ def show_versions(
             "xcollection",
             "xclim",
             "xarray",
+            "sparse",
             "shapely",
             "requests",
             "rechunker",
             "pydantic",
             "pyarrow",
+            "parse",
             "pandas",
             "netCDF4",
             "nc_time_axis",
@@ -1042,6 +1167,7 @@ def show_versions(
             "intake_esm",
             "intake",
             "h5py",
+            "h5netcdf",
             "geopandas",
             "fsspec",
             "fastprogress",
@@ -1112,3 +1238,45 @@ def standardize_periods(periods, multiple=True):
                 f"'period' should be a single instance of [start, end], received {len(periods)}."
             )
         return periods[0]
+
+
+def season_sort_key(idx: pd.Index, name: str = None):
+    """Get a proper sort key for a "season"  or "month" index to avoid alphabetical sorting.
+
+    If any of the values in the index is not recognized as a 3-letter
+    season code or a 3-letter month abbreviation, the operation is
+    aborted and the index is returned untouched.
+    DJF is the first season of the year.
+
+    Parameters
+    ----------
+    idx : pd.Index
+      Any array that implements a `map` method.
+      If name is "month", index elements are expected to be 3-letter month abbreviations, uppercase (JAN, FEB, etc).
+      If name is "season", index elements are expected to be 3-letter season abbreviations, uppercase (DJF, AMJ, OND, etc.)
+      If anything else, the index is returned untouched.
+    name : str, optional
+      The index name. By default, the `name` attribute of the index is used, if present.
+
+    Returns
+    -------
+    idx : Integer sort key for months and seasons, the input index untouched otherwise.
+    """
+    try:
+        if (name or getattr(idx, "name", None)) == "season":
+            m = "DJFMAMJJASONDJ"
+            return idx.map(m.index)
+        if (name or getattr(idx, "name", None)) == "month":
+            m = list(xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values())
+            return idx.map(m.index)
+    except (ValueError, TypeError):
+        # ValueError if string not in seasons, or value not in months
+        # TypeError if season element was not a string.
+        pass
+    return idx
+
+
+def xrfreq_to_timedelta(freq):
+    """Approximate the length of a period based on its frequency offset."""
+    N, B, _, _ = parse_offset(freq)
+    return N * pd.Timedelta(CV.xrfreq_to_timedelta(B, "NaT"))
