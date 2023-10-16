@@ -1,7 +1,9 @@
 # noqa: D100
+import datetime
 import logging
 import os
 import shutil as sh
+from collections import defaultdict
 from collections.abc import Sequence
 from inspect import signature
 from pathlib import Path
@@ -13,6 +15,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import zarr
+from numcodecs.bitround import BitRound
 from rechunker import rechunk as _rechunk
 from xclim.core.calendar import get_calendar
 from xclim.core.options import METADATA_LOCALES
@@ -23,6 +26,7 @@ from .scripting import TimeoutException
 from .utils import TRANSLATOR, season_sort_key, translate_time_chunk
 
 logger = logging.getLogger(__name__)
+KEEPBITS = defaultdict(lambda: 12)
 
 
 __all__ = [
@@ -32,6 +36,7 @@ __all__ = [
     "make_toc",
     "rechunk",
     "rechunk_for_saving",
+    "round_bits",
     "save_to_table",
     "save_to_netcdf",
     "save_to_zarr",
@@ -292,12 +297,54 @@ def _coerce_attrs(attrs):
             attrs[k] = str(attrs[k])
 
 
+def _np_bitround(array, keepbits):
+    """Bitround for Arrays."""
+    codec = BitRound(keepbits=keepbits)
+    data = array.copy()  # otherwise overwrites the input
+    encoded = codec.encode(data)
+    return codec.decode(encoded)
+
+
+def round_bits(da: xr.DataArray, keepbits: int):
+    """Round floating point variable by keeping a given number of bits in the mantissa, dropping the rest."""
+    da = xr.apply_ufunc(
+        _np_bitround, da, keepbits, dask="parallelized", keep_attrs=True
+    )
+    da.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] = keepbits
+    new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Data compressed with BitRound by keeping {keepbits} bits."
+    history = (
+        new_history + " \n " + da.attrs["history"]
+        if "history" in da.attrs
+        else new_history
+    )
+    da.attrs["history"] = history
+    return da
+
+
+def _get_keepbits(bitround, varname, vartype):
+    # Guess the number of bits to keep depending on how bitround was passed, the var dtype and the var name.
+    if not np.issubdtype(vartype, np.floating) or bitround is False:
+        if isinstance(bitround, dict) and varname in bitround:
+            raise ValueError(
+                f"A keepbits value was given for variable {varname} even though it is not of a floating dtype."
+            )
+        return None
+    if bitround is True:
+        return KEEPBITS[varname]
+    if isinstance(bitround, int):
+        return bitround
+    if isinstance(bitround, dict):
+        return bitround.get(varname, KEEPBITS[varname])
+    return None
+
+
 @parse_config
 def save_to_netcdf(
     ds: xr.Dataset,
     filename: str,
     *,
     rechunk: Optional[dict] = None,
+    bitround: Union[bool, int, dict] = False,
     compute: bool = True,
     netcdf_kwargs: Optional[dict] = None,
 ) -> None:
@@ -314,6 +361,11 @@ def save_to_netcdf(
         Spatial dimensions can be generalized as 'X' and 'Y', which will be mapped to the actual grid type's
         dimension names.
         Rechunking is only done on *data* variables sharing dimensions with this argument.
+    bitround : bool or int or dict
+      If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa, allowing for a much better compression.
+      If an int, this is the number of bits to keep for all float variables.
+      If a dict, a mapping from variable name to the number of bits to keep.
+      If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12, which yields a relative error below 0.013%.
     compute : bool
         Whether to start the computation or return a delayed object.
     netcdf_kwargs : dict, optional
@@ -338,6 +390,10 @@ def save_to_netcdf(
     netcdf_kwargs.setdefault("engine", "h5netcdf")
     netcdf_kwargs.setdefault("format", "NETCDF4")
 
+    for var in list(ds.data_vars.keys()):
+        if keepbits := _get_keepbits(bitround, var, ds[var].dtype):
+            ds = ds.assign({var: round_bits(ds[var], keepbits)})
+
     _coerce_attrs(ds.attrs)
     for var in ds.variables.values():
         _coerce_attrs(var.attrs)
@@ -354,6 +410,7 @@ def save_to_zarr(
     zarr_kwargs: Optional[dict] = None,
     compute: bool = True,
     encoding: dict = None,
+    bitround: Union[bool, int, dict] = False,
     mode: str = "f",
     itervar: bool = False,
     timeout_cleanup: bool = True,
@@ -383,6 +440,11 @@ def save_to_zarr(
       if 'a', skip existing variables, writes the others.
     encoding : dict, optional
       If given, skipped variables are popped in place.
+    bitround : bool or int or dict
+      If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa, allowing for a much better compression.
+      If an int, this is the number of bits to keep for all float variables.
+      If a dict, a mapping from variable name to the number of bits to keep.
+      If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12, which yields a relative error of 0.012%.
     itervar : bool
       If True, (data) variables are written one at a time, appending to the zarr.
       If False, this function computes, no matter what was passed to kwargs.
@@ -430,7 +492,7 @@ def save_to_zarr(
         if mode == "o":
             if exists:
                 var_path = path / var
-                print(f"Removing {var_path} to overwrite.")
+                logger.warning(f"Removing {var_path} to overwrite.")
                 sh.rmtree(var_path)
             return False
 
@@ -439,12 +501,14 @@ def save_to_zarr(
                 return exists
             return False
 
-    for var in ds.data_vars.keys():
+    for var in list(ds.data_vars.keys()):
         if _skip(var):
             logger.info(f"Skipping {var} in {path}.")
             ds = ds.drop_vars(var)
             if encoding:
                 encoding.pop(var)
+        if keepbits := _get_keepbits(bitround, var, ds[var].dtype):
+            ds = ds.assign({var: round_bits(ds[var], keepbits)})
 
     if len(ds.data_vars) == 0:
         return None
