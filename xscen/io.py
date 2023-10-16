@@ -326,7 +326,7 @@ def _guess_keepbits(bitround, varname, vartype):
     if not np.issubdtype(vartype, np.floating) or bitround is False:
         if isinstance(bitround, dict) and varname in bitround:
             raise ValueError(
-                f"A keepbits value was given for variable {varname} even though it is not of a floatig dtype."
+                f"A keepbits value was given for variable {varname} even though it is not of a floating dtype."
             )
         return None
     if bitround is True:
@@ -365,7 +365,7 @@ def save_to_netcdf(
       If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa, allowing for a much better compression.
       If an int, this is the number of bits to keep for all float variables.
       If a dict, a mapping from variable name to the number of bits to keep.
-      If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12, which yields a relative error of 0.012%.
+      If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12, which yields a relative error below 0.013%.
     compute : bool
         Whether to start the computation or return a delayed object.
     netcdf_kwargs : dict, optional
