@@ -207,7 +207,16 @@ class TestGenerateWeights:
                             ] = ds2
         return {o: out[o] for o in sorted(out)}
 
+    @staticmethod
+    def make_ensemble_rcm(ens):
+        ens_rcm = ens.copy()
+        for k in ens.keys():
+            if "cat:driving_model" not in ens_rcm[k].attrs.keys():
+                ens_rcm.pop(k)
+        return ens_rcm
+
     ens = make_ensemble.__func__()
+    ens_rcm = make_ensemble_rcm.__func__(ens)
 
     @staticmethod
     def make_answer(independence_level, exp_weights, skipna):
@@ -469,7 +478,7 @@ class TestGenerateWeights:
         out = xs.generate_weights(
             self.ens,
             independence_level=independence_level,
-            experiment_weights=exp_weights,
+            balance_experiments=exp_weights,
             skipna=skipna,
         )
 
@@ -504,12 +513,32 @@ class TestGenerateWeights:
         )
 
     @pytest.mark.parametrize(
-        "standardize, skipna", [(True, True), (True, False), (False, True)]
+        "standardize, skipna, attribute_weights",
+        [
+            (True, True, None),
+            (True, False, None),
+            (False, True, None),
+            (
+                True,
+                True,
+                {"institution": {"CCCma": 2, "ECMWF": 0, "GFDL": 5}},
+            ),
+        ],
     )
-    def test_standardize(self, standardize, skipna):
-        out = xs.generate_weights(self.ens, standardize=standardize, skipna=skipna)
+    def test_standardize(self, standardize, skipna, attribute_weights):
+        if attribute_weights:
+            datasets = self.ens_rcm
+        else:
+            datasets = self.ens
+        out = xs.generate_weights(
+            datasets,
+            standardize=standardize,
+            skipna=skipna,
+            attribute_weights=attribute_weights,
+        )
         if standardize:
             np.testing.assert_allclose(out.sum(), 1 if skipna else 4)
+
         else:
             np.testing.assert_allclose(out.sum(), 10)
 
@@ -581,7 +610,7 @@ class TestGenerateWeights:
         with pytest.raises(
             ValueError, match="The 'cat:experiment' attribute is missing"
         ):
-            xs.generate_weights(ens2, experiment_weights=True)
+            xs.generate_weights(ens2, balance_experiments=True)
         ens2 = deepcopy(self.ens)
         ens2["CCCma-CanESM2-rcp45-r1i1p1-CanESM2"].attrs["cat:institution"] = None
         with pytest.raises(
@@ -597,7 +626,7 @@ class TestGenerateWeights:
             UserWarning,
             match="The 'cat:experiment' attribute is missing from all datasets",
         ):
-            xs.generate_weights(ens2, experiment_weights=False)
+            xs.generate_weights(ens2, balance_experiments=False)
         ens2 = deepcopy(self.ens)
         ens2["CCCma-CanESM2-rcp45-r1i1p1-CanESM2"].attrs["cat:member"] = None
         with pytest.warns(
@@ -605,3 +634,267 @@ class TestGenerateWeights:
             match="The 'cat:member' attribute is inconsistent across datasets.",
         ):
             xs.generate_weights(ens2)
+
+    @staticmethod
+    def answer_attribute_weight(can45, can85, clim, csi45, csi85, ec85, gfd45):
+        ans = np.concatenate(
+            (
+                np.array(
+                    np.split(
+                        np.array(
+                            [
+                                0.08333,
+                                0.25,
+                                0.25,
+                                0.25,
+                                0.25,
+                            ]
+                        ),
+                        5,
+                    )
+                )
+                * can45,  # CanESM2 family, RCP4.5
+                np.array(
+                    np.split(
+                        np.array(
+                            [
+                                0.08333,
+                                0.25,
+                                0.25,
+                                0.25,
+                                0.25,
+                            ]
+                        ),
+                        5,
+                    )
+                )
+                * can85,  # CanESM2 family, RCP8.5
+                np.array(np.split(np.repeat(np.array(0.08333), 10, 0), 10))
+                * clim,  # ClimEx
+                np.array(np.split(np.repeat(0.2, 5, 0), 5))
+                * csi45,  # CSIRO-Mk6, RCP4.5
+                np.array([1], ndmin=2) * csi85,  # CSIRO2, RCP8.5
+                np.array(np.split(np.array([1, 1]), 2)) * ec85,  # EC-EARTH RCMs, RCP8.5
+                np.array(np.split(np.array([0.5, 0.5]), 2))
+                * gfd45,  # GFDL-ESM2G family, RCP4.5
+                np.array(np.split(np.array([1, 1]), 2))
+                * gfd45,  # GFDL-ESM2M family, RCP4.5
+            )
+        )
+        return np.squeeze(ans)
+
+    @pytest.mark.parametrize(
+        "coefs, weights",
+        [
+            (
+                {
+                    "can45": 2,
+                    "can85": 2,
+                    "clim": 2,
+                    "csi45": 3,
+                    "csi85": 3,
+                    "ec85": 0,
+                    "gfd45": 5,
+                },
+                {"institution": {"CCCma": 2, "CSIRO-QCCCE": 3, "ECMWF": 0, "GFDL": 5}},
+            ),
+            (
+                {
+                    "can45": 2,
+                    "can85": 2,
+                    "clim": 2,
+                    "csi45": 1,
+                    "csi85": 1,
+                    "ec85": 1,
+                    "gfd45": 1,
+                },
+                {"institution": {"CCCma": 2, "others": 1}},
+            ),
+            (
+                {
+                    "can45": 2,
+                    "can85": 1,
+                    "clim": 1,
+                    "csi45": 2,
+                    "csi85": 1,
+                    "ec85": 1,
+                    "gfd45": 2,
+                },
+                {"experiment": {"rcp45": 2, "rcp85": 1}},
+            ),
+            (
+                {
+                    "can45": [0, 0, 1, 1],
+                    "can85": [0, 1, 0, 1],
+                    "clim": [0, 1, 0, 1],
+                    "csi45": [0, 0, 1, 1],
+                    "csi85": [0, 1, 0, 1],
+                    "ec85": [0, 1, 0, 1],
+                    "gfd45": [0, 0, 1, 1],
+                },
+                {
+                    "experiment": xr.DataArray(
+                        data=np.array([[0, 0], [0, 1], [1, 0], [1, 1]]),
+                        dims=["horizon", "experiment"],
+                        coords=dict(
+                            horizon=["1981-2010", "2041-2070", "+2C", "+4C"],
+                            experiment=["rcp45", "rcp85"],
+                        ),
+                        attrs=dict(
+                            description="Experiment weight through horizons",
+                            units="",
+                        ),
+                    )
+                },
+            ),
+            (
+                {
+                    "can45": [0, 0, 1, 1],
+                    "can85": [0, 1, 0, 1],
+                    "clim": [0, 1, 0, 1],
+                    "csi45": [0, 0, 1, 1],
+                    "csi85": [0, 1, 0, 1],
+                    "ec85": [0, 1, 0, 1],
+                    "gfd45": [0, 0, 1, 1],
+                },
+                {
+                    "experiment": xr.DataArray(
+                        data=np.array([[0, 0], [0, 1], [1, 0], [1, 1]]),
+                        dims=["horizon", "experiment"],
+                        coords=dict(
+                            horizon=["1981-2010", "2041-2070", "+2C", "+4C"],
+                            experiment=["rcp45", "others"],
+                        ),
+                        attrs=dict(
+                            description="Experiment weight through horizons",
+                            units="",
+                        ),
+                    )
+                },
+            ),
+        ],
+    )
+    def test_attribute_weight(self, coefs, weights):
+        # only test for RCMs
+
+        # generate ans
+        ans = self.answer_attribute_weight(**coefs)
+        ind = [
+            index
+            for index, value in enumerate(list(self.ens.keys()))
+            if value in list(self.ens_rcm.keys())
+        ]
+        ans_rcms = ans[ind]
+        if len(ans_rcms.shape) > 1:
+            ans_rcms = ans_rcms.transpose()
+        out = xs.generate_weights(self.ens_rcm, attribute_weights=weights)
+        np.testing.assert_array_almost_equal(out, ans_rcms, decimal=4)
+
+    def test_attribute_weight_error(self):
+        # Required attributes
+        with pytest.raises(
+            ValueError,
+            match="Attribute_weights should be dict or xr.DataArray.",
+        ):
+            xs.generate_weights(
+                self.ens_rcm, attribute_weights={"experiment": [1, 2, 3]}
+            )
+        with pytest.raises(
+            ValueError,
+            match="The test attribute is missing from some simulations.",
+        ):
+            xs.generate_weights(
+                self.ens_rcm, attribute_weights={"test": {"CCCma": 2, "others": 1}}
+            )
+        with pytest.raises(
+            ValueError,
+            match="The institution ECMWF or others are not in the attribute_weights dict.",
+        ):
+            xs.generate_weights(
+                self.ens_rcm, attribute_weights={"institution": {"CCCma": 2, "GFDL": 1}}
+            )
+        with pytest.raises(
+            ValueError, match="experiment is not in the xr.DataArray coords."
+        ):
+            xs.generate_weights(
+                self.ens_rcm,
+                attribute_weights={
+                    "experiment": xr.DataArray(
+                        data=np.array([[0, 0], [0, 1], [1, 0], [1, 1]]),
+                        dims=["horizon", "test"],
+                        coords=dict(
+                            horizon=["1981-2010", "2041-2070", "+2C", "+4C"],
+                            test=["rcp45", "rcp85"],
+                        ),
+                    )
+                },
+            )
+        with pytest.raises(
+            ValueError,
+            match="The experiment DataArray has more than one coord dimension to apply weights",
+        ):
+            xs.generate_weights(
+                self.ens_rcm,
+                attribute_weights={
+                    "experiment": xr.DataArray(
+                        data=np.array(
+                            [
+                                [[0, 0], [0, 1]],
+                                [[0, 1], [2, 1]],
+                                [[1, 0], [1, 2]],
+                                [[1, 1], [2, 2]],
+                            ]
+                        ),
+                        dims=["horizon", "experiment", "test"],
+                        coords=dict(
+                            horizon=["1981-2010", "2041-2070", "+2C", "+4C"],
+                            experiment=["rcp45", "rcp85"],
+                            test=[0, 1],
+                        ),
+                    )
+                },
+            )
+        with pytest.raises(
+            ValueError,
+            match="The experiment rcp85 or others are not in the attribute_weights datarray coords.",
+        ):
+            xs.generate_weights(
+                self.ens_rcm,
+                attribute_weights={
+                    "experiment": xr.DataArray(
+                        data=np.array([[0], [0], [1], [1]]),
+                        dims=["horizon", "experiment"],
+                        coords=dict(
+                            horizon=["1981-2010", "2041-2070", "+2C", "+4C"],
+                            experiment=["rcp45"],
+                        ),
+                    )
+                },
+            )
+            # mismatch RCMs & GCMs
+            with pytest.raises(
+                NotImplementedError,
+                match="Management of RCM and GCM in same datasets dictionary not "
+                "yet implemented with attribute_weights.",
+            ):
+                xs.generate_weights(
+                    self.ens,
+                    attribute_weights={"institution": {"CCCma": 2, "others": 1}},
+                )
+            # warning mismatch attribute_weights & independance_level
+            with pytest.warns(
+                UserWarning,
+                match="The institution weights do not match the model independance_level",
+            ):
+                xs.generate_weights(
+                    self.ens_rcm,
+                    attribute_weights={"institution": {"CCCma": 2, "others": 1}},
+                )
+            with pytest.warns(
+                UserWarning,
+                match="Key experiment given in attribute_weights without argument balance_experiments=True",
+            ):
+                xs.generate_weights(
+                    self.ens_rcm,
+                    attribute_weights={"experiment": {"rcp45": 2, "rcp85": 1}},
+                )

@@ -4,7 +4,7 @@ History
 
 v0.8.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah-Claude Bourdeau-Goulet (:user:`sarahclaude`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -23,6 +23,8 @@ New features and enhancements
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
+* New argument ``attribute_weights`` to ``generate_weights`` to allow for custom weights. (:pull:`252`).
+* ``experiment_weights`` argument in ``generate_weights`` was renamed to ``balance_experiments``. (:pull:`252`).
 * For a sequence of models, the output of ``xs.get_warming_level`` is now a list. Revert to a dictionary with ``output='selected'`` (:pull:`270`).
 
 Bug fixes
