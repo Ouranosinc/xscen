@@ -321,7 +321,7 @@ def round_bits(da: xr.DataArray, keepbits: int):
     return da
 
 
-def _guess_keepbits(bitround, varname, vartype):
+def _get_keepbits(bitround, varname, vartype):
     # Guess the number of bits to keep depending on how bitround was passed, the var dtype and the var name.
     if not np.issubdtype(vartype, np.floating) or bitround is False:
         if isinstance(bitround, dict) and varname in bitround:
@@ -391,7 +391,7 @@ def save_to_netcdf(
     netcdf_kwargs.setdefault("format", "NETCDF4")
 
     for var in list(ds.data_vars.keys()):
-        if keepbits := _guess_keepbits(bitround, var, ds[var].dtype):
+        if keepbits := _get_keepbits(bitround, var, ds[var].dtype):
             ds = ds.assign({var: round_bits(ds[var], keepbits)})
 
     _coerce_attrs(ds.attrs)
@@ -507,7 +507,7 @@ def save_to_zarr(
             ds = ds.drop_vars(var)
             if encoding:
                 encoding.pop(var)
-        if keepbits := _guess_keepbits(bitround, var, ds[var].dtype):
+        if keepbits := _get_keepbits(bitround, var, ds[var].dtype):
             ds = ds.assign({var: round_bits(ds[var], keepbits)})
 
     if len(ds.data_vars) == 0:

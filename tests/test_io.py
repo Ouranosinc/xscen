@@ -130,7 +130,10 @@ def test_round_bits(datablock_3d):
     dar = xs.io.round_bits(da, 12)
     # Close but NOT equal, meaning something happened
     np.testing.assert_allclose(da, dar, rtol=0.013)
-    assert not (da == dar).any()
+    # There's always a chance of having a randomly chosen number with only zeros in the bit rounded part of the mantissa
+    # Assuming a uniform distribution of binary numbers (which it is not), the chance of this happening should be:
+    # 2^(23 - 12 + 1) / 2^24 = 2^(-12) ~ 0.02 % (but we'll allow 1% of values to be safe)
+    assert (da != dar).sum() > (0.99 * da.size)
 
 
 class TestSaveToZarr:
