@@ -62,6 +62,8 @@ Which can also be activated in the code using :py:func:`xclim.core.options.set_o
 
 Translation is of course not automatic but relies on manually populated `gettext <https://docs.python.org/3/library/gettext.html?highlight=gettext#module-gettext>`_ catalogs. xscen ships with a catalog of french (fr) translations. See :ref:`translating-xscen` to learn how to add translations to xscen. xclim's documentation of the same subject is `here <https://xclim.readthedocs.io/en/stable/internationalization.html>`_.
 
+If your xscen is installed in "editable" mode in its source directory (``pip install -e .``), you should run ``make translate`` each time you pull changes from the upstream source.
+
 Module-wide options
 -------------------
 
