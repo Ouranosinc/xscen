@@ -4,7 +4,7 @@ History
 
 v0.8.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah-Claude Bourdeau-Goulet (:user:`sarahclaude`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -17,16 +17,19 @@ New features and enhancements
 * ``xs.spatial_mean`` with ``method='xESMF'`` will also automatically segmentize polygons (down to a 1° resolution) to ensure a correct average (:pull:`260`).
 * Added documentation for `require_all_on` in `search_data_catalogs`. (:pull:`263`).
 * ``xs.save_to_table`` and ``xs.io.to_table`` to transform datasets and arrays to DataFrames, but with support for multi-columns, multi-sheets and localized table of content generation.
+* Better ``xs.extract.resample`` : support for weighted resampling operations when starting with frequencies coarser than daily and missing timesteps/values handling. (:issue:`80`, :issue:`93`, :pull:`265`).
+* New argument ``attribute_weights`` to ``generate_weights`` to allow for custom weights. (:pull:`252`).
 * ``xs.io.round_bits`` to round floating point variable up to a number of bits, allowing for a better compression. This can be combined with the saving step through argument "bitround" of ``save_to_netcdf`` and ``save_to_zarr``. (:pull:`266`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* N/A
+* ``experiment_weights`` argument in ``generate_weights`` was renamed to ``balance_experiments``. (:pull:`252`).
 
 Bug fixes
 ^^^^^^^^^
 * Fixed a bug in ``xs.search_data_catalogs`` when searching for fixed fields and specific experiments/members. (:pull:`251`).
 * Fixed a bug in the documentation build configuration that prevented stable/latest and tagged documentation builds from resolving on ReadTheDocs. (:pull:`256`).
+* Fixed ``get_warming_level`` to avoid incomplete matches. (:pull:`269`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^

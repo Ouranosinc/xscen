@@ -14,6 +14,7 @@ import pandas as pd
 import xarray as xr
 import xclim as xc
 from intake_esm.derived import DerivedVariableRegistry
+from xclim.core.calendar import compare_offsets
 
 from .catalog import DataCatalog  # noqa
 from .catalog import ID_COLUMNS, concat_data_catalogs, generate_id, subset_file_coverage
@@ -23,7 +24,7 @@ from .indicators import load_xclim_module, registry_from_module
 from .spatial import subset
 from .utils import CV
 from .utils import ensure_correct_time as _ensure_correct_time
-from .utils import get_cat_attrs, natural_sort, standardize_periods
+from .utils import get_cat_attrs, natural_sort, standardize_periods, xrfreq_to_timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -368,44 +369,44 @@ def resample(
     *,
     ds: Optional[xr.Dataset] = None,
     method: Optional[str] = None,
+    missing: Union[str, dict] = None,
 ) -> xr.DataArray:
     """Aggregate variable to the target frequency.
+
+    If the input frequency is greater than a week, the resampling operation is weighted by
+    the number of days in each sampling period.
 
     Parameters
     ----------
     da  : xr.DataArray
         DataArray of the variable to resample, must have a "time" dimension and be of a
-        finer temporal resolution than "target_timestep".
+        finer temporal resolution than "target_frequency".
     target_frequency : str
-        The target frequency/freq str, must be one of the frequency supported by pandas.
+        The target frequency/freq str, must be one of the frequency supported by xarray.
     ds : xr.Dataset, optional
         The "wind_direction" resampling method needs extra variables, which can be given here.
     method : {'mean', 'min', 'max', 'sum', 'wind_direction'}, optional
         The resampling method. If None (default), it is guessed from the variable name and frequency,
         using the mapping in CVs/resampling_methods.json. If the variable is not found there,
         "mean" is used by default.
+    missing: {'mask', 'drop'} or dict, optional
+        If 'mask' or 'drop', target periods that would have been computed from fewer timesteps than expected are masked or dropped, using a threshold of 5% of missing data.
+        For example, the first season of a `target_frequency` of "QS-DEC" will be masked or dropped if data only starts in January.
+        If a dict, it points to a xclim check missing method which will mask periods according to their number of NaN values.
+        The dict must contain a "method" field corresponding to the xclim method name and may contain
+        any other args to pass. Options are documented in :py:mod:`xclim.core.missing`.
 
     Returns
     -------
     xr.DataArray
         Resampled variable
-
     """
     var_name = da.name
 
     initial_frequency = xr.infer_freq(da.time.dt.round("T")) or "undetected"
-    initial_frequency_td = pd.Timedelta(
-        CV.xrfreq_to_timedelta(xr.infer_freq(da.time.dt.round("T")), None)
-    )
-    if initial_frequency_td == pd.Timedelta("1D"):
-        logger.warning(
-            "You appear to be resampling daily data using extract_dataset. "
-            "It is advised to use compute_indicators instead, as it is far more robust."
-        )
-    elif initial_frequency_td > pd.Timedelta("1D"):
-        logger.warning(
-            "You appear to be resampling data that is coarser than daily. "
-            "Be aware that this is not currently explicitely supported by xscen and might result in erroneous manipulations."
+    if initial_frequency == "undetected":
+        warnings.warn(
+            "Could not infer the frequency of the dataset. Be aware that this might result in erroneous manipulations."
         )
 
     if method is None:
@@ -427,6 +428,35 @@ def resample(
         else:
             method = "mean"
             logger.info(f"Resampling method for {var_name} defaulted to: 'mean'.")
+
+    weights = None
+    if (
+        initial_frequency != "undetected"
+        and compare_offsets(initial_frequency, ">", "W")
+        and method in ["mean", "median", "std", "var", "wind_direction"]
+    ):
+        # More than a week -> non-uniform sampling length!
+        t = xr.date_range(
+            da.indexes["time"][0],
+            periods=da.time.size + 1,
+            freq=initial_frequency,
+            calendar=da.time.dt.calendar,
+        )
+        # This is the number of days in each sampling period
+        days_per_step = (
+            xr.DataArray(t, dims=("time",), coords={"time": t})
+            .diff("time", label="lower")
+            .dt.days
+        )
+        days_per_period = (
+            days_per_step.resample(time=target_frequency)
+            .sum()  # Total number of days per period
+            .sel(time=days_per_step.time, method="ffill")  # Upsample to initial freq
+            .assign_coords(
+                time=days_per_step.time
+            )  # Not sure why we need this, but time coord is from the resample even after sel
+        )
+        weights = days_per_step / days_per_period
 
     # TODO : Support non-surface wind?
     if method == "wind_direction":
@@ -454,7 +484,11 @@ def resample(
             )
 
         # Resample first to find the average wind speed and components
-        ds = ds.resample(time=target_frequency).mean(dim="time", keep_attrs=True)
+        if weights is not None:
+            with xr.set_options(keep_attrs=True):
+                ds = (ds * weights).resample(time=target_frequency).sum(dim="time")
+        else:
+            ds = ds.resample(time=target_frequency).mean(dim="time", keep_attrs=True)
 
         # Based on Vector Magnitude and Direction equations
         # For example: https://www.khanacademy.org/math/precalculus/x9e81a4f98389efdf:vectors/x9e81a4f98389efdf:component-form/a/vector-magnitude-and-direction-review
@@ -475,14 +509,69 @@ def resample(
         else:
             out = ds[var_name]
 
+    elif weights is not None:
+        if method == "mean":
+            # Avoiding resample().map() is much more performant
+            with xr.set_options(keep_attrs=True):
+                out = (
+                    (da * weights)
+                    .resample(time=target_frequency)
+                    .sum(dim="time")
+                    .rename(da.name)
+                )
+        else:
+            kws = {"q": 0.5} if method == "median" else {}
+            ds = xr.merge([da, weights.rename("weights")])
+            out = ds.resample(time=target_frequency).map(
+                lambda grp: getattr(
+                    grp.drop_vars("weights").weighted(grp.weights),
+                    method if method != "median" else "quantile",
+                )(dim="time", **kws)
+            )[da.name]
     else:
         out = getattr(da.resample(time=target_frequency), method)(
             dim="time", keep_attrs=True
         )
 
+    missing_note = " "
+    initial_td = xrfreq_to_timedelta(initial_frequency)
+    if missing in ["mask", "drop"] and not pd.isnull(initial_td):
+        steps_per_period = (
+            xr.ones_like(da.time, dtype="int").resample(time=target_frequency).sum()
+        )
+        t = xr.date_range(
+            steps_per_period.indexes["time"][0],
+            periods=steps_per_period.time.size + 1,
+            freq=target_frequency,
+        )
+
+        expected = (
+            xr.DataArray(t, dims=("time",), coords={"time": t}).diff(
+                "time", label="lower"
+            )
+            / initial_td
+        )
+        complete = (steps_per_period / expected) > 0.95
+        action = "masking" if missing == "mask" else "dropping"
+        missing_note = f", {action} incomplete periods "
+    elif isinstance(missing, dict):
+        missmeth = missing.pop("method")
+        complete = ~xc.core.missing.MISSING_METHODS[missmeth](
+            da, target_frequency, initial_frequency
+        )(**missing)
+        funcstr = xc.core.formatting.gen_call_string(
+            f"xclim.core.missing_{missmeth}", **missing
+        )
+        missing = "mask"
+        missing_note = f", masking incomplete periods according to {funcstr} "
+    if missing in {"mask", "drop"}:
+        out = out.where(complete, drop=(missing == "drop"))
+
     new_history = (
-        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {method} "
-        f"resample from {initial_frequency} to {target_frequency} - xarray v{xr.__version__}"
+        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+        f"{'weighted' if weights is not None else ''} {method} "
+        f"resample from {initial_frequency} to {target_frequency}"
+        f"{missing_note}- xarray v{xr.__version__}"
     )
     history = (
         new_history + " \n " + out.attrs["history"]
@@ -929,13 +1018,13 @@ def get_warming_level(
     out = {}
     for model in info_models:
         # choose colum based in ds cat attrs
-        mip = models.mip_era.str.match(model["mip_era"])
-        src = models.source.str.match(model["source"])
+        mip = models.mip_era.str.fullmatch(model["mip_era"])
+        src = models.source.str.fullmatch(model["source"])
         if not src.any():
             # Maybe it's an RCM, then source may contain the institute
             src = models.source.apply(lambda s: model["source"].endswith(s))
-        exp = models.experiment.str.match(model["experiment"])
-        mem = models.member.str.match(model["member"])
+        exp = models.experiment.str.fullmatch(model["experiment"])
+        mem = models.member.str.fullmatch(model["member"])
 
         candidates = models[mip & src & exp & mem]
         if candidates.empty:
