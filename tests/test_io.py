@@ -151,6 +151,6 @@ class TestSaveToZarr:
     def test_guess_bitround(self, vname, vtype, bitr, exp):
         if exp == "error":
             with pytest.raises(ValueError):
-                xs.io._guess_keepbits(bitr, vname, vtype)
+                xs.io._get_keepbits(bitr, vname, vtype)
         else:
-            assert xs.io._guess_keepbits(bitr, vname, vtype) == exp
+            assert xs.io._get_keepbits(bitr, vname, vtype) == exp
