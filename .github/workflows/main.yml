@@ -64,28 +64,31 @@ jobs:
         with:
           path: $HOME/.esmf-cache
           key: ubuntu-latest-esmf_${{ env.ESMF_VERSION }}
+      - name: Set up Python${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Install ESMF
         uses: esmf-org/install-esmf-action@v1
         env:
           ESMF_NETCDF: nc-config
         with:
           cache: true
+          esmpy: true
           version: ${{ env.ESMF_VERSION }}
-      - name: Set up Python${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Generate translations
+      - name: Compile language catalogs
         run: |
           make translate
-      - name: Install tox
+      - name: Install xscen
         run: |
-          pip install tox
-      - name: Test with tox
+          pip install --editable .
+      - name: Test with pytest
         run: |
-          tox -e ${{ matrix.tox-env }}
+          pytest --cov xscen
+      - name: Report coverage
+        run: |
+          coveralls
         env:
-          ESMF_VERSION: ${{ env.ESMF_VERSION }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
           COVERALLS_PARALLEL: true
