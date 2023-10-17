@@ -49,6 +49,7 @@ requirements = [
     "h5py",
     "intake-esm>=2023.07.07",
     "matplotlib",
+    "nc-time-axis>=1.3.1",
     "netCDF4",
     "numpy",
     "pandas>=2.0",
@@ -59,13 +60,30 @@ requirements = [
     "shapely>=2.0",
     "sparse",
     "toolz",
-    "xarray",
+    # FIXME: Unpin xarray when xclim 0.46 is released
+    "xarray<2023.09.0",
     "xclim>=0.43",
     "xesmf>=0.7.0",
     "zarr",
 ]
 
 dev_requirements = ["pytest", "pytest-cov", "xdoctest"]
+
+docs_requirements = [
+    "ipykernel",
+    "ipython",
+    "jupyter_client",
+    "nbsphinx",
+    "nbval",
+    "sphinx",
+    "sphinx-autoapi",
+    "sphinx-rtd-theme>=1.0",
+    "sphinxcontrib-napoleon",
+    "sphinx-codeautolink",
+    "sphinx-copybutton",
+]
+
+setup_requirements = ["babel"]
 
 setup(
     author="Gabriel Rondeau-Genesse",
@@ -98,9 +116,9 @@ setup(
         "Changelog": "https://xscen.readthedocs.io/en/stable/history.html",
         "Issue tracker": "https://github.com/Ouranosinc/xscen/issues",
     },
-    setup_requires=["babel"],
+    setup_requires=setup_requirements,
     test_suite="tests",
-    extras_require={"dev": dev_requirements},
+    extras_require={"dev": dev_requirements, "docs": docs_requirements},
     url="https://github.com/Ouranosinc/xscen",
     version="0.7.15-beta",
     zip_safe=False,
