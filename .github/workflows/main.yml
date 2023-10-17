@@ -45,11 +45,11 @@ jobs:
       matrix:
         include:
           - python-version: "3.9"
-            tox-env: "py39-esmpy-coveralls"
+#            tox-env: "py39-esmpy-coveralls"
           - python-version: "3.10"
-            tox-env: "py310-esmpy-coveralls"
+#            tox-env: "py310-esmpy-coveralls"
           - python-version: "3.11"
-            tox-env: "py311-esmpy-coveralls"
+#            tox-env: "py311-esmpy-coveralls"
     defaults:
       run:
         shell: bash -l {0}
@@ -81,7 +81,7 @@ jobs:
           make translate
       - name: Install xscen
         run: |
-          pip install --editable .
+          pip install --editable ".[dev]"
       - name: Test with pytest
         run: |
           pytest --cov xscen
