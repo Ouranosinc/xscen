@@ -45,11 +45,11 @@ jobs:
       matrix:
         include:
           - python-version: "3.9"
-            tox-build: "py39"
+            tox-env: "py39-esmpy-coveralls"
           - python-version: "3.10"
-            tox-build: "py310"
+            tox-env: "py310-esmpy-coveralls"
           - python-version: "3.11"
-            tox-build: "py311"
+            tox-env: "py311-esmpy-coveralls"
     defaults:
       run:
         shell: bash -l {0}
@@ -94,7 +94,7 @@ jobs:
 #          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   testing-conda:
-    name: Test with Python${{ matrix.python-version }}m (conda)
+    name: Test with Python${{ matrix.python-version }} (Anaconda)
     needs: black
     runs-on: ubuntu-latest
     strategy:
