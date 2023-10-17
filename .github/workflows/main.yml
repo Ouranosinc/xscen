@@ -39,7 +39,7 @@ jobs:
     needs: black
     runs-on: ubuntu-latest
     env:
-      ESMF_VERSION: "v8.5.0"
+      ESMF_VERSION: "v8.4.2"
     strategy:
       fail-fast: false
       matrix:
