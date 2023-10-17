@@ -23,7 +23,7 @@ jobs:
         uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.9"
@@ -34,8 +34,67 @@ jobs:
         run: |
           tox -e black
 
-  testing:
-    name: Test with Python${{ matrix.python-version }}
+  testing-pypi:
+    name: Test with Python${{ matrix.python-version }} (tox)
+    needs: black
+    runs-on: ubuntu-latest
+    env:
+      ESMF_VERSION: "v8.5.0"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python-version: "3.9"
+            tox-build: "py39"
+          - python-version: "3.10"
+            tox-build: "py310"
+          - python-version: "3.11"
+            tox-build: "py311"
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install NetCDF
+        run: |
+          sudo apt-get -y update
+          sudo apt install libnetcdf-dev libnetcdff-dev
+      - name: Install ESMF
+        uses: esmf-org/install-esmf-action@v1
+        env:
+          ESMF_NETCDF: nc-config
+        with:
+          cache: true
+          version: ${{ env.ESMF_VERSION }}
+      - name: Set up Python${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install tox
+        run: |
+          pip install tox
+      - name: Test with tox
+        run: |
+          tox -e ${{ matrix.tox-env }}
+        env:
+          ESMF_VERSION: ${{ env.ESMF_VERSION }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
+          COVERALLS_PARALLEL: true
+          COVERALLS_SERVICE_NAME: github
+
+#      - name: Install tox-current-env
+#        run: |
+#          pip install tox tox-conda tox-current-env
+#      - name: Test with tox
+#        run: |
+#          tox -vv -e ${{ matrix.tox-build }} --current-env
+#        env:
+#          CONDA_EXE: mamba
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  testing-conda:
+    name: Test with Python${{ matrix.python-version }}m (conda)
     needs: black
     runs-on: ubuntu-latest
     strategy:
@@ -43,16 +102,13 @@ jobs:
       matrix:
         include:
           - python-version: "3.9"
-#            tox-build: "py39"
           - python-version: "3.10"
-#            tox-build: "py310"
           - python-version: "3.11"
-#            tox-build: "py311"
     defaults:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
         uses: mamba-org/setup-micromamba@v1
         with:
@@ -85,23 +141,14 @@ jobs:
           coveralls
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
+          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}-conda
           COVERALLS_PARALLEL: true
           COVERALLS_SERVICE_NAME: github
 
-#      - name: Install tox-current-env
-#        run: |
-#          pip install tox tox-conda tox-current-env
-#      - name: Test with tox
-#        run: |
-#          tox -vv -e ${{ matrix.tox-build }} --current-env
-#        env:
-#          CONDA_EXE: mamba
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   finish:
     needs:
-      - testing
+      - testing-pypi
+      - testing-conda
     runs-on: ubuntu-latest
     container: python:3-slim
     steps:
