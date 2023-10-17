@@ -59,12 +59,16 @@ jobs:
         run: |
           sudo apt-get -y update
           sudo apt install libnetcdf-dev libnetcdff-dev
+      - name: Cache libraries
+        uses: actions/cache@v3
+        with:
+          key: ubuntu-latest-esmf_${{ env.ESMF_VERSION }}
       - name: Install ESMF
         uses: esmf-org/install-esmf-action@v1
         env:
           ESMF_NETCDF: nc-config
         with:
-          build-key: 'ubuntu-latest-esmf_${{ env.ESMF_VERSION }}'
+          build-key: ubuntu-latest-esmf_${{ env.ESMF_VERSION }}
           cache: true
           rebuild-check: quick
           version: ${{ env.ESMF_VERSION }}
@@ -105,10 +109,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - python-version: "3.9"
-          - python-version: "3.10"
-          - python-version: "3.11"
+        python-version: ["3.9", "3.10", "3.11"]
     defaults:
       run:
         shell: bash -l {0}
