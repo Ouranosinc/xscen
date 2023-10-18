@@ -88,7 +88,7 @@ jobs:
           pip check
       - name: Test with pytest
         run: |
-          pytest xscen
+          pytest tests
       - name: Report coverage
         run: |
           coveralls
@@ -147,7 +147,7 @@ jobs:
           pip check
       - name: Test with pytest
         run: |
-          pytest xscen
+          pytest tests
       - name: Report coverage
         run: |
           coveralls
