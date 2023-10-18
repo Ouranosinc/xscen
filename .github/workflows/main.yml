@@ -63,22 +63,25 @@ jobs:
         uses: actions/cache@v3
         with:
           path: $HOME/.esmf-cache
-          key: ubuntu-latest-esmf_${{ env.ESMF_VERSION }}
-      - name: Set up Python${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
+          key: ubuntu-latest-esmf-${{ env.ESMF_VERSION }}
       - name: Install ESMF
         uses: esmf-org/install-esmf-action@v1
         env:
           ESMF_NETCDF: nc-config
         with:
+          build-key: ubuntu-latest-esmf-${{ env.ESMF_VERSION }}
           cache: true
-          esmpy: true
           version: ${{ env.ESMF_VERSION }}
+      - name: Set up Python${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Compile language catalogs
         run: |
           make translate
+      - name: Install esmpy
+        run: |
+          pip install git+https://github.com/esmf-org/esmf.git@${{ env.ESMF_VERSION }}#subdirectory=src/addon/esmpy
       - name: Install xscen
         run: |
           pip install --editable ".[dev]"
