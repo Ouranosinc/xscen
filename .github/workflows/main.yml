@@ -82,9 +82,13 @@ jobs:
       - name: Install xscen
         run: |
           pip install --editable ".[dev]"
+      - name: Check versions
+        run: |
+          pip list
+          pip check
       - name: Test with pytest
         run: |
-          pytest --cov xscen
+          pytest xscen
       - name: Report coverage
         run: |
           coveralls
@@ -143,7 +147,7 @@ jobs:
           pip check
       - name: Test with pytest
         run: |
-          pytest --cov xscen
+          pytest xscen
       - name: Report coverage
         run: |
           coveralls

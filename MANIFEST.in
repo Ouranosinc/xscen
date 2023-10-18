@@ -4,10 +4,11 @@ include HISTORY.rst
 include LICENSE
 include README.rst
 
-recursive-include xscen *.yml *.py
-recursive-include xscen/CVs *.json
-recursive-include xscen/data *.yml *.csv *.mo *.po
-recursive-include tests *
+recursive-include xscen *.py *.yml
+recursive-include xscen CVs *.json
+recursive-include xscen data fr *.yml *.csv
+recursive-include xscen data fr LC_MESSAGES *.mo *.po
+recursive-include tests *.py
 recursive-include docs notebooks *.rst conf.py Makefile make.bat *.jpg *.png *.gif *.ipynb *.csv *.json *.yml *.md
 recursive-include docs notebooks samples *.csv *.json
 
