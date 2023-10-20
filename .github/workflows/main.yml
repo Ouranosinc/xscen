@@ -42,7 +42,13 @@ jobs:
       fail-fast: false
       matrix:
         esmf-version: ["8.4.2"]
-        python-version: ["3.9", "3.11"]
+        include:
+          - python-version: "3.9"
+            tox-build: "py39-esmpy-coveralls"
+          - python-version: "3.10"
+            tox-build: "py310-esmpy-coveralls"
+          - python-version: "3.11"
+            tox-build: "py311-esmpy-coveralls"
     defaults:
       run:
         shell: bash -l {0}
@@ -54,34 +60,45 @@ jobs:
           cache-downloads: true
           environment-name: xscen-pypi
           create-args: >-
-            coveralls
             esmf=${{ matrix.esmf-version }}
             mamba
             python=${{ matrix.python-version }}
-      - name: Compile language catalogs
+            tox
+      - name: Test with tox
         run: |
-          make translate
-      - name: Install esmpy
-        run: |
-          pip install git+https://github.com/esmf-org/esmf.git@v${{ matrix.esmf-version }}#subdirectory=src/addon/esmpy
-      - name: Install xscen
-        run: |
-          pip install --editable ".[dev]"
-      - name: Check versions
-        run: |
-          pip list
-          pip check
-      - name: Test with pytest
-        run: |
-          pytest tests
-      - name: Report coverage
-        run: |
-          coveralls
+          tox -e ${{ matrix.tox-build }}
         env:
+          ESMF_VERSION: ${{ matrix.esmf-version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
           COVERALLS_PARALLEL: true
           COVERALLS_SERVICE_NAME: github
+
+  #      - name: Compile language catalogs
+#        run: |
+#          make translate
+#      - name: Install esmpy
+#        run: |
+#          pip install git+https://github.com/esmf-org/esmf.git@v${{ matrix.esmf-version }}#subdirectory=src/addon/esmpy
+#      - name: Install xscen
+#        run: |
+#          pip install --editable ".[dev]"
+#      - name: Check versions
+#        run: |
+#          pip list
+#          pip check
+#      - name: Test with pytest
+#        run: |
+#          pytest tests
+#      - name: Report coverage
+#        run: |
+#          coveralls
+#        env:
+#          ESMF_VERSION: ${{ matrix.esmf-version }}
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
+#          COVERALLS_PARALLEL: true
+#          COVERALLS_SERVICE_NAME: github
 
 #      - name: Install tox-current-env
 #        run: |
@@ -99,10 +116,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version:
-          - "3.9"
-          - "3.10"
-          - "3.11"
+        python-version: ["3.9", "3.10", "3.11"]
     defaults:
       run:
         shell: bash -l {0}
