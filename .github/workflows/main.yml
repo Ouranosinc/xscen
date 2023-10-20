@@ -91,7 +91,7 @@ jobs:
           pip check
       - name: Test with pytest
         run: |
-          pytest tests
+          pytest tests --mark "not requires_netcdf"
       - name: Report coverage
         run: |
           coveralls

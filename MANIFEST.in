@@ -9,8 +9,9 @@ recursive-include xscen CVs *.json
 recursive-include xscen data fr *.yml *.csv
 recursive-include xscen data fr LC_MESSAGES *.mo *.po
 recursive-include tests *.py
-recursive-include docs notebooks *.rst conf.py Makefile make.bat *.jpg *.png *.gif *.ipynb *.csv *.json *.yml *.md
-recursive-include docs notebooks samples *.csv *.json
+recursive-include docs conf.py Makefile make.bat *.png *.rst *.yml
+recursive-include docs notebooks *.ipynb
+recursive-include docs notebooks samples *.csv *.json *.yml
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
