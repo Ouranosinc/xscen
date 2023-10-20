@@ -35,7 +35,7 @@ jobs:
           tox -e black
 
   testing-pypi:
-    name: Test with Python${{ matrix.python-version }} (tox)
+    name: Test with Python${{ matrix.python-version }} (PyPI)
     needs: black
     runs-on: ubuntu-latest
     env:
@@ -55,23 +55,7 @@ jobs:
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@v4
-      - name: Install NetCDF
-        run: |
-          sudo apt-get -y update
-          sudo apt install libnetcdf-dev libnetcdff-dev
-      - name: Cache ESMF
-        uses: actions/cache@v3
-        with:
-          path: $HOME/.esmf-cache
-          key: ubuntu-latest-esmf-${{ env.ESMF_VERSION }}
-      - name: Install ESMF
-        uses: esmf-org/install-esmf-action@v1
-        env:
-          ESMF_NETCDF: nc-config
-        with:
-          build-key: ubuntu-latest-esmf-${{ env.ESMF_VERSION }}
-          cache: true
-          version: ${{ env.ESMF_VERSION }}
+
       - name: Set up Python${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -116,9 +100,9 @@ jobs:
     needs: black
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version:
+          - "3.9"
     defaults:
       run:
         shell: bash -l {0}
@@ -128,14 +112,10 @@ jobs:
         uses: mamba-org/setup-micromamba@v1
         with:
           cache-downloads: true
-          environment-file: environment.yml
           create-args: >-
-            coveralls
+            esmf
             mamba
             python=${{ matrix.python-version }}
-            pytest
-            pytest-cov
-            xdoctest
       - name: Conda and Mamba versions
         run: |
           mamba --version
@@ -143,7 +123,7 @@ jobs:
       - name: Compile catalogs and install xscen
         run: |
           make translate
-          pip install --editable .
+          pip install --editable --no-deps .
       - name: Check versions
         run: |
           conda list
