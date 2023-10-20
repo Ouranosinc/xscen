@@ -38,11 +38,10 @@ jobs:
     name: Test with Python${{ matrix.python-version }} (PyPI)
     needs: black
     runs-on: ubuntu-latest
-    env:
-      ESMF_VERSION: "v8.4.2"
     strategy:
       fail-fast: false
       matrix:
+        esmf-version: ["8.4.2"]
         python-version: ["3.9", "3.11"]
     defaults:
       run:
@@ -56,7 +55,7 @@ jobs:
           environment-name: xscen-pypi
           create-args: >-
             coveralls
-            esmf
+            esmf=${{ matrix.esmf-version }}
             mamba
             python=${{ matrix.python-version }}
       - name: Compile language catalogs
@@ -64,7 +63,7 @@ jobs:
           make translate
       - name: Install esmpy
         run: |
-          pip install git+https://github.com/esmf-org/esmf.git@${{ env.ESMF_VERSION }}#subdirectory=src/addon/esmpy
+          pip install git+https://github.com/esmf-org/esmf.git@v${{ matrix.esmf-version }}#subdirectory=src/addon/esmpy
       - name: Install xscen
         run: |
           pip install --editable ".[dev]"
@@ -74,7 +73,7 @@ jobs:
           pip check
       - name: Test with pytest
         run: |
-          pytest tests --mark "not requires_netcdf"
+          pytest tests
       - name: Report coverage
         run: |
           coveralls
@@ -124,7 +123,7 @@ jobs:
       - name: Compile catalogs and install xscen
         run: |
           make translate
-          pip install --editable --no-deps .
+          pip install --no-deps --editable .
       - name: Check versions
         run: |
           conda list
