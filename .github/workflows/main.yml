@@ -38,10 +38,12 @@ jobs:
     name: Test with Python${{ matrix.python-version }} (PyPI)
     needs: black
     runs-on: ubuntu-latest
+    env:
+      COVERALLS_PARALLEL: true
+      COVERALLS_SERVICE_NAME: github
+      esmf-version: 8.4.2
     strategy:
-      fail-fast: false
       matrix:
-        esmf-version: ["8.4.2"]
         include:
           - python-version: "3.9"
             tox-build: "py39-esmpy-coveralls"
@@ -60,7 +62,7 @@ jobs:
           cache-downloads: true
           environment-name: xscen-pypi
           create-args: >-
-            esmf=${{ matrix.esmf-version }}
+            esmf=${{ env.esmf-version }}
             mamba
             python=${{ matrix.python-version }}
             tox
@@ -68,11 +70,9 @@ jobs:
         run: |
           tox -e ${{ matrix.tox-build }}
         env:
-          ESMF_VERSION: ${{ matrix.esmf-version }}
+          ESMF_VERSION: ${{ env.esmf-version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
-          COVERALLS_PARALLEL: true
-          COVERALLS_SERVICE_NAME: github
 
   #      - name: Compile language catalogs
 #        run: |
@@ -99,16 +99,6 @@ jobs:
 #          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
 #          COVERALLS_PARALLEL: true
 #          COVERALLS_SERVICE_NAME: github
-
-#      - name: Install tox-current-env
-#        run: |
-#          pip install tox tox-conda tox-current-env
-#      - name: Test with tox
-#        run: |
-#          tox -vv -e ${{ matrix.tox-build }} --current-env
-#        env:
-#          CONDA_EXE: mamba
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   testing-conda:
     name: Test with Python${{ matrix.python-version }} (Anaconda)
