@@ -19,6 +19,7 @@ New features and enhancements
 * ``xs.save_to_table`` and ``xs.io.to_table`` to transform datasets and arrays to DataFrames, but with support for multi-columns, multi-sheets and localized table of content generation.
 * Better ``xs.extract.resample`` : support for weighted resampling operations when starting with frequencies coarser than daily and missing timesteps/values handling. (:issue:`80`, :issue:`93`, :pull:`265`).
 * New argument ``attribute_weights`` to ``generate_weights`` to allow for custom weights. (:pull:`252`).
+* ``xs.io.round_bits`` to round floating point variable up to a number of bits, allowing for a better compression. This can be combined with the saving step through argument "bitround" of ``save_to_netcdf`` and ``save_to_zarr``. (:pull:`266`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^

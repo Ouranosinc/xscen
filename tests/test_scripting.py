@@ -1,5 +1,3 @@
-import shutil as sh
-
 import numpy as np
 from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
