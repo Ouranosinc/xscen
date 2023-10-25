@@ -18,8 +18,11 @@ New features and enhancements
 * Added documentation for `require_all_on` in `search_data_catalogs`. (:pull:`263`).
 * ``xs.save_to_table`` and ``xs.io.to_table`` to transform datasets and arrays to DataFrames, but with support for multi-columns, multi-sheets and localized table of content generation.
 * Better ``xs.extract.resample`` : support for weighted resampling operations when starting with frequencies coarser than daily and missing timesteps/values handling. (:issue:`80`, :issue:`93`, :pull:`265`).
+* New argument ``attribute_weights`` to ``generate_weights`` to allow for custom weights. (:pull:`252`).
+* ``xs.io.round_bits`` to round floating point variable up to a number of bits, allowing for a better compression. This can be combined with the saving step through argument "bitround" of ``save_to_netcdf`` and ``save_to_zarr``. (:pull:`266`).
 * Added annual global tas timeseries for CMIP6's models CMCC-ESM2 (ssp245, ssp370, ssp585), EC-Earth3-CC (ssp245, ssp585), KACE-1-0-G (ssp245, ssp370, ssp585) and TaiESM1 (ssp245, ssp370). Moved global tas database to a netCDF file. (:issue:`268`, :pull:`270`).
 * Implemented support for multiple levels and models in ``xs.subset_warming_level``. Better support for `DataArray` and `DataFrame` in ``xs.get_warming_level``. (:pull:`270`).
+
 
 Breaking changes
 ^^^^^^^^^^^^^^^^

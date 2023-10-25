@@ -116,3 +116,41 @@ class TestToTable:
         np.testing.assert_array_equal(
             tab.loc[("1993", "pr"), ("JFM",)], self.ds.pr.sel(time="1993", season="JFM")
         )
+
+
+def test_round_bits(datablock_3d):
+    da = datablock_3d(
+        np.random.random((30, 30, 50)),
+        variable="tas",
+        x="lon",
+        x_start=-70,
+        y="lat",
+        y_start=45,
+    )
+    dar = xs.io.round_bits(da, 12)
+    # Close but NOT equal, meaning something happened
+    np.testing.assert_allclose(da, dar, rtol=0.013)
+    # There's always a chance of having a randomly chosen number with only zeros in the bit rounded part of the mantissa
+    # Assuming a uniform distribution of binary numbers (which it is not), the chance of this happening should be:
+    # 2^(23 - 12 + 1) / 2^24 = 2^(-12) ~ 0.02 % (but we'll allow 1% of values to be safe)
+    assert (da != dar).sum() > (0.99 * da.size)
+
+
+class TestSaveToZarr:
+    @pytest.mark.parametrize(
+        "vname,vtype,bitr,exp",
+        [
+            ("tas", np.float32, 12, 12),
+            ("tas", np.float32, False, None),
+            ("tas", np.int32, 12, None),
+            ("tas", np.int32, {"tas": 2}, "error"),
+            ("tas", object, {"pr": 2}, None),
+            ("tas", np.float64, True, 12),
+        ],
+    )
+    def test_guess_bitround(self, vname, vtype, bitr, exp):
+        if exp == "error":
+            with pytest.raises(ValueError):
+                xs.io._get_keepbits(bitr, vname, vtype)
+        else:
+            assert xs.io._get_keepbits(bitr, vname, vtype) == exp
