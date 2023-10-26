@@ -43,7 +43,7 @@ requirements = [
     "clisops>=0.10",
     "dask",
     "flox",
-    "fsspec",
+    "fsspec<2023.10.0",
     "geopandas",
     "h5netcdf",
     "h5py",
@@ -102,6 +102,6 @@ setup(
     test_suite="tests",
     extras_require={"dev": dev_requirements},
     url="https://github.com/Ouranosinc/xscen",
-    version="0.7.15-beta",
+    version="0.7.16-beta",
     zip_safe=False,
 )
