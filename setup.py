@@ -43,7 +43,7 @@ requirements = [
     "clisops>=0.10",
     "dask",
     "flox",
-    "fsspec",
+    "fsspec<2023.10.0",
     "geopandas",
     "h5netcdf",
     "h5py",
