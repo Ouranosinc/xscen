@@ -616,7 +616,7 @@ def search_data_catalogs(
         You can also pass 'require_all_on: list(columns_name)' in order to only return results that correspond to all other criteria across the listed columns.
         More details available at https://intake-esm.readthedocs.io/en/stable/how-to/enforce-search-query-criteria-via-require-all-on.html .
     exclusions : dict, optional
-        Same as other_search_criteria, but for eliminating results.
+        Same as other_search_criteria, but for eliminating results. Any result that matches any of the exclusions will be removed.
     match_hist_and_fut: bool, optional
         If True, historical and future simulations will be combined into the same line, and search results lacking one of them will be rejected.
     periods : list
@@ -712,11 +712,14 @@ def search_data_catalogs(
 
     # Cut entries that do not match search criteria
     if exclusions:
-        ex = catalog.search(**exclusions)
-        catalog.esmcat._df = pd.concat([catalog.df, ex.df]).drop_duplicates(keep=False)
-        logger.info(
-            f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
-        )
+        for k in exclusions.keys():
+            ex = catalog.search(**{k: exclusions[k]})
+            catalog.esmcat._df = pd.concat([catalog.df, ex.df]).drop_duplicates(
+                keep=False
+            )
+            logger.info(
+                f"Removing {len(ex.df)} assets based on exclusion dict '{k}': {exclusions[k]}."
+            )
     full_catalog = deepcopy(catalog)  # Used for searching for fixed fields
     if other_search_criteria:
         catalog = catalog.search(**other_search_criteria)
