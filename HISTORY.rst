@@ -31,6 +31,7 @@ Bug fixes
 * Fixed a bug in the documentation build configuration that prevented stable/latest and tagged documentation builds from resolving on ReadTheDocs. (:pull:`256`).
 * Fixed ``get_warming_level`` to avoid incomplete matches. (:pull:`269`).
 * `search_data_catalogs` now eliminates anything that matches any entry in `exclusions`. (:issue:`275`, :pull:`280`).
+* Fixed a bug in ``xs.scripting.save_and_update`` where ``build_path_kwargs`` was ignored when trying to guess the file format. (:pull:`282`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -44,6 +45,7 @@ Internal changes
 * Added a new `xscen.testing` module with the `datablock_3d` function previously located in `/tests/conftest.py`. (:pull:`248`).
 * New function `xscen.testing.fake_data` to generate fake data for testing. (:pull:`248`).
 * xESMF 0.8 Regridder and SpatialAverager argument ``out_chunks`` is now accepted by ``xs.regrid_dataset``  and ``xs.spatial_mean``. (:pull:`260`).
+* Multiple improvements to the docstrings and type annotations. (:pull:`282`).
 
 v0.7.1 (2023-08-23)
 -------------------
