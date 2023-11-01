@@ -7,7 +7,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from inspect import signature
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 import h5py
 import netCDF4

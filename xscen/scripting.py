@@ -159,9 +159,9 @@ exit_watcher.hook()
 @parse_config
 def send_mail_on_exit(
     *,
-    subject: Optional[str] = None,
-    msg_ok: Optional[str] = None,
-    msg_err: Optional[str] = None,
+    subject: str = None,
+    msg_ok: str = None,
+    msg_err: str = None,
     on_error_only: bool = False,
     skip_ctrlc: bool = True,
     **mail_kwargs,
@@ -243,7 +243,7 @@ class measure_time:
 
     def __init__(
         self,
-        name: Optional[str] = None,
+        name: str = None,
         cpu: bool = False,
         logger: logging.Logger = logger,
     ):
@@ -367,7 +367,7 @@ def save_and_update(
         Dataset to save.
     pcat: ProjectCatalog
         Catalog to update after saving the dataset.
-    path: str | os.pathlike
+    path: str or os.pathlike, optional
         Path where to save the dataset.
         If the string contains variables in curly bracket. They will be filled by catalog attributes.
         If None, the `catutils.build_path` fonction will be used to create a path.
@@ -375,11 +375,11 @@ def save_and_update(
         Format of the file.
         If None, look for the following in order: build_path_kwargs['format'], a suffix in path, ds.attrs['cat:format'].
         If nothing is found, it will default to zarr.
-    build_path_kwargs: dict
+    build_path_kwargs: dict, optional
         Arguments to pass to `build_path`.
-    save_kwargs:
+    save_kwargs: dict, optional
         Arguments to pass to `save_to_netcdf` or `save_to_zarr`.
-    update_kwargs: dict
+    update_kwargs: dict, optional
         Arguments to pass to `update_from_ds`.
     """
     build_path_kwargs = build_path_kwargs or {}
@@ -388,8 +388,9 @@ def save_and_update(
 
     # try to guess file format if not given.
     if file_format is None:
-        file_format = build_path_kwargs.get("format", None)
-        if path is not None and Path(path).suffix:
+        if "format" in build_path_kwargs:
+            file_format = build_path_kwargs.get("format")
+        elif path is not None and Path(path).suffix:
             file_format = Path(path).suffix.split(".")[-1]
         else:
             file_format = ds.attrs.get("cat:format", "zarr")
@@ -423,7 +424,12 @@ def save_and_update(
     logger.info(f"File {path} has saved succesfully and the catalog was updated.")
 
 
-def move_and_delete(moving, pcat, deleting=None, copy=False):
+def move_and_delete(
+    moving: list[list[Union[str, os.PathLike]]],
+    pcat: ProjectCatalog,
+    deleting: list[Union[str, os.PathLike]] = None,
+    copy: bool = False,
+):
     """
     First, move files, then update the catalog with new locations. Finally, delete directories.
 
@@ -431,14 +437,14 @@ def move_and_delete(moving, pcat, deleting=None, copy=False):
 
     Parameters
     ----------
-    moving: list
-        list of lists of path of files to move with format: [[source 1, destination1], [source 2, destination2],...]
+    moving: list of lists of str or os.PathLike
+        list of lists of path of files to move, following the format: [[source 1, destination1], [source 2, destination2],...]
     pcat: ProjectCatalog
         Catalog to update with new destinations
-    deleting: list
+    deleting: list of str or os.PathLike, optional
         list of directories to be deleted including all contents and recreated empty.
         E.g. the working directory of a workflow.
-    copy: bool
+    copy: bool, optional
         If True, copy directories instead of moving them.
 
     """

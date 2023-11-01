@@ -23,7 +23,7 @@ __all__ = [
 
 
 @parse_config
-def creep_weights(mask, n=1, mode="clip"):
+def creep_weights(mask: xr.DataArray, n: int = 1, mode: str = "clip") -> xr.DataArray:
     """Compute weights for the creep fill.
 
     The output is a sparse matrix with the same dimensions as `mask`, twice.
@@ -84,7 +84,7 @@ def creep_weights(mask, n=1, mode="clip"):
 
 
 @parse_config
-def creep_fill(da, w):
+def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
     """Creep fill using pre-computed weights.
 
     Parameters
@@ -128,7 +128,7 @@ def subset(
     region: dict = None,
     *,
     name: str = None,
-    method: str = None,
+    method: str = None,  # FIXME: Once the region argument is removed, this should be made mandatory.
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
@@ -144,7 +144,7 @@ def subset(
         Dataset to be subsetted.
     region: dict
         Deprecated argument that is there for legacy reasons and will be abandoned eventually.
-    name: str
+    name: str, optional
         Used to rename the 'cat:domain' attribute.
     method : str
         ['gridpoint', 'bbox', shape','sel']
