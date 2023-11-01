@@ -192,9 +192,9 @@ class DataCatalog(intake_esm.esm_datastore, ABC):
     def from_df(
         cls,
         data: Union[pd.DataFrame, os.PathLike, Sequence[os.PathLike]],
-        esmdata: Optional[Union[os.PathLike, dict]] = None,
+        esmdata: Union[os.PathLike, dict] = None,
         *,
-        read_csv_kwargs: Optional[Mapping[str, Any]] = None,
+        read_csv_kwargs: Mapping[str, Any] = None,
         name: str = "virtual",
         **intake_kwargs,
     ):
@@ -256,7 +256,7 @@ class DataCatalog(intake_esm.esm_datastore, ABC):
         else:
             return data.apply(_find_unique, result_type="reduce").to_dict()
 
-    def unique(self, columns: Optional[Union[str, Sequence[str]]] = None):
+    def unique(self, columns: Union[str, Sequence[str]] = None):
         """Return a series of unique values in the catalog.
 
         Parameters
@@ -302,7 +302,7 @@ class DataCatalog(intake_esm.esm_datastore, ABC):
             )
         return cat
 
-    def drop_duplicates(self, columns: Optional[list[str]] = None):
+    def drop_duplicates(self, columns: list[str] = None):
         """Drop duplicates in the catalog based on a subset of columns.
 
         Parameters
@@ -397,8 +397,8 @@ class DataCatalog(intake_esm.esm_datastore, ABC):
 
     def to_dataset(
         self,
-        concat_on: Optional[Union[list[str], str]] = None,
-        create_ensemble_on: Optional[Union[list[str], str]] = None,
+        concat_on: Union[list[str], str] = None,
+        create_ensemble_on: Union[list[str], str] = None,
         calendar: Optional[str] = "standard",
         **kwargs,
     ) -> xr.Dataset:
@@ -529,7 +529,7 @@ class ProjectCatalog(DataCatalog, ABC):
         cls,
         filename: Union[os.PathLike, str],
         *,
-        project: Optional[dict] = None,
+        project: dict = None,
         overwrite: bool = False,
     ):
         r"""Create a new project catalog from some project metadata.
@@ -610,8 +610,8 @@ class ProjectCatalog(DataCatalog, ABC):
         df: Union[str, dict],
         *args,
         create: bool = False,
-        overwrite: Optional[bool] = None,
-        project: Optional[dict] = None,
+        overwrite: bool = None,
+        project: dict = None,
         **kwargs,
     ):
         """Open or create a project catalog.
@@ -648,14 +648,12 @@ class ProjectCatalog(DataCatalog, ABC):
     # TODO: Implement a way to easily destroy part of the catalog to "reset" some steps
     def update(
         self,
-        df: Optional[
-            Union[
-                DataCatalog,
-                intake_esm.esm_datastore,
-                pd.DataFrame,
-                pd.Series,
-                Sequence[pd.Series],
-            ]
+        df: Union[
+            DataCatalog,
+            intake_esm.esm_datastore,
+            pd.DataFrame,
+            pd.Series,
+            Sequence[pd.Series],
         ] = None,
     ):
         """Update the catalog with new data and writes the new data to the csv file.
@@ -673,7 +671,7 @@ class ProjectCatalog(DataCatalog, ABC):
         Parameters
         ----------
         df : Union[DataCatalog, intake_esm.esm_datastore, pd.DataFrame, pd.Series, Sequence[pd.Series]], optional
-          Data to be added to the catalog. If None, nothing is added, but the catalog is still updated.
+            Data to be added to the catalog. If None, nothing is added, but the catalog is still updated.
         """
         # Append the new DataFrame or Series
         if isinstance(df, DataCatalog) or isinstance(df, intake_esm.esm_datastore):
@@ -739,7 +737,7 @@ class ProjectCatalog(DataCatalog, ABC):
         self,
         ds: xarray.Dataset,
         path: Union[os.PathLike, str],
-        info_dict: Optional[dict] = None,
+        info_dict: dict = None,
         **info_kwargs,
     ):
         """Update the catalog with new data and writes the new data to the csv file.
@@ -855,7 +853,7 @@ def _build_id(element: pd.Series, columns: list[str]):
 
 
 def generate_id(
-    df: Union[pd.DataFrame, xr.Dataset], id_columns: Optional[list] = None
+    df: Union[pd.DataFrame, xr.Dataset], id_columns: list = None
 ) -> pd.Series:
     """Create an ID from column entries.
 
