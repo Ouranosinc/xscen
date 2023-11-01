@@ -4,9 +4,9 @@ import os
 import warnings
 from collections.abc import Sequence
 from copy import deepcopy
-from pathlib import Path, PosixPath
+from pathlib import Path
 from types import ModuleType
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import xarray as xr

@@ -12,8 +12,8 @@ from copy import deepcopy
 from fnmatch import fnmatch
 from functools import partial, reduce
 from multiprocessing import Pool
-from pathlib import Path, PosixPath
-from typing import Any, Optional, Union
+from pathlib import Path
+from typing import Any, Union
 
 import cftime
 import netCDF4

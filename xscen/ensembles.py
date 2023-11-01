@@ -6,7 +6,7 @@ import warnings
 from copy import deepcopy
 from itertools import chain, groupby
 from pathlib import Path
-from typing import Any, Union
+from typing import Union
 
 import numpy as np
 import xarray as xr
@@ -22,7 +22,9 @@ __all__ = ["ensemble_stats", "generate_weights"]
 
 @parse_config
 def ensemble_stats(
-    datasets: Union[dict, list[Union[str, os.PathLike, xr.Dataset, xr.DataArray]]],
+    datasets: Union[
+        dict, list[Union[str, os.PathLike]], list[xr.Dataset], list[xr.DataArray]
+    ],
     statistics: dict,
     *,
     create_kwargs: dict = None,
@@ -36,7 +38,6 @@ def ensemble_stats(
     ----------
     datasets : dict or list of str, Path, Dataset or DataArray
         List of file paths or xarray Dataset/DataArray objects to include in the ensemble.
-        If using a list, all objects must be of the same type.
         A dictionary can be passed instead of a list, in which case the keys are used as coordinates along the new
         `realization` axis.
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
