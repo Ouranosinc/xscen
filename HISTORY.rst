@@ -4,7 +4,7 @@ History
 
 v0.8.0 (unreleased)
 -------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah-Claude Bourdeau-Goulet (:user:`sarahclaude`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah-Claude Bourdeau-Goulet (:user:`sarahclaude`), Trevor James Smith (:user:`Zeitsperre`).
 
 Announcements
 ^^^^^^^^^^^^^
@@ -19,7 +19,7 @@ New features and enhancements
 * ``xs.save_to_table`` and ``xs.io.to_table`` to transform datasets and arrays to DataFrames, but with support for multi-columns, multi-sheets and localized table of content generation.
 * Better ``xs.extract.resample`` : support for weighted resampling operations when starting with frequencies coarser than daily and missing timesteps/values handling. (:issue:`80`, :issue:`93`, :pull:`265`).
 * New argument ``attribute_weights`` to ``generate_weights`` to allow for custom weights. (:pull:`252`).
-* ``xs.io.round_bits`` to round floating point variable up to a number of bits, allowing for a better compression. This can be combined with the saving step through argument "bitround" of ``save_to_netcdf`` and ``save_to_zarr``. (:pull:`266`).
+* ``xs.io.round_bits`` to round floating point variable up to a number of bits, allowing for a better compression. This can be combined with the saving step through argument ``"bitround"`` of ``save_to_netcdf`` and ``save_to_zarr``. (:pull:`266`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -35,15 +35,23 @@ Bug fixes
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Continued work on adding tests. (:pull:`251`).
-* Fixed pre-commit's pretty-format-json so it ignores notebooks. (:pull:`254`).
+* Fixed `pre-commit`'s `pretty-format-json` hook so that it ignores notebooks. (:pull:`254`).
 * Fixed the labeler so docs/CI isn't automatically added for contributions by new collaborators. (:pull:`254`).
 * Made it so that `tests` are no longer treated as an installable package. (:pull:`248`).
-* Renamed the pytest marker from `requires_docs` to `requires_netcdf`. (:pull:`248`).
+* Renamed the pytest marker from ``requires_docs`` to ``requires_netcdf``. (:pull:`248`).
 * Included the documentation in the source distribution, while excluding the NetCDF files. (:pull:`248`).
-* Reduced the size of the files in /docs/notebooks/samples and changed the Notebooks and tests accordingly. (:issue:`247`, :pull:`248`).
-* Added a new `xscen.testing` module with the `datablock_3d` function previously located in `/tests/conftest.py`. (:pull:`248`).
+* Reduced the size of the files in ``/docs/notebooks/samples`` and changed the notebooks and tests accordingly. (:issue:`247`, :pull:`248`).
+* Added a new `xscen.testing` module with the `datablock_3d` function previously located in ``/tests/conftest.py``. (:pull:`248`).
 * New function `xscen.testing.fake_data` to generate fake data for testing. (:pull:`248`).
 * xESMF 0.8 Regridder and SpatialAverager argument ``out_chunks`` is now accepted by ``xs.regrid_dataset``  and ``xs.spatial_mean``. (:pull:`260`).
+* Testing, Packaging, and CI adjustments. (:pull:`274`):
+    * `xscen` builds now install in a `tox` environment with `conda`-provided `ESMF` in GitHub Workflows.
+    * `tox` now offers a method for installing esmpy from a tag/branch (via ESMF_VERSION environment variable).
+    * `$ make translate` is now called on ReadTheDocs and within `tox`.
+    * Linters are now called by order of most common failures first, to speed up the CI.
+    * `Manifest.in` is much more specific about what is installed.
+    * Re-adds a dev recipe to the `setup.py`.
+
 
 v0.7.1 (2023-08-23)
 -------------------
