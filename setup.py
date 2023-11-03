@@ -65,7 +65,13 @@ requirements = [
     "zarr",
 ]
 
-dev_requirements = ["pytest", "pytest-cov", "xdoctest"]
+dev_requirements = [
+    "black",
+    "flake8",
+    "flake8-rst-docstrings",
+    "pytest",
+    "pytest-cov",
+]
 
 docs_requirements = [
     "ipykernel",
