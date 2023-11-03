@@ -55,12 +55,16 @@ Each key is a two letter locale code and values are functions that return the tr
 If a language is not defined or a message not translated, the function will return the raw message.
 """
 
-
-for loc in (Path(__file__).parent / "data").iterdir():
-    if loc.is_dir() and len(loc.name) == 2:
-        TRANSLATOR[loc.name] = gettext.translation(
-            "xscen", localedir=loc.parent, languages=[loc.name]
-        ).gettext
+try:
+    for loc in (Path(__file__).parent / "data").iterdir():
+        if loc.is_dir() and len(loc.name) == 2:
+            TRANSLATOR[loc.name] = gettext.translation(
+                "xscen", localedir=loc.parent, languages=[loc.name]
+            ).gettext
+except FileNotFoundError as err:
+    raise ImportError(
+        "Your xscen installation doesn't have compiled translations. Run `make translate` from the source directory to fix."
+    ) from err
 
 
 def update_attr(ds, attr, new, others=None, **fmt):
