@@ -59,8 +59,7 @@ requirements = [
     "shapely>=2.0",
     "sparse",
     "toolz",
-    # FIXME: Unpin xarray when xclim 0.46 is released
-    "xarray<2023.09.0",
+    "xarray",
     "xclim>=0.43",
     "xesmf>=0.7.0",
     "zarr",
