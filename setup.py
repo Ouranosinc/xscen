@@ -125,6 +125,6 @@ setup(
     test_suite="tests",
     extras_require={"dev": dev_requirements, "docs": docs_requirements},
     url="https://github.com/Ouranosinc/xscen",
-    version="0.7.17-beta",
+    version="0.7.18-beta",
     zip_safe=False,
 )
