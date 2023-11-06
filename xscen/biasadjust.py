@@ -1,4 +1,4 @@
-"""Functions to train and adjust a bias-adjustment algorithm."""
+"""Functions to train and adjust a dataset using a bias-adjustment algorithm."""
 import logging
 from copy import deepcopy
 from typing import Optional, Union
@@ -56,7 +56,7 @@ def _add_preprocessing_attr(scen, train_kwargs):
 def train(
     dref: xr.Dataset,
     dhist: xr.Dataset,
-    var: Union[str, list],
+    var: Union[str, list[str]],
     period: list[str],
     *,
     method: str = "DetrendedQuantileMapping",

@@ -456,7 +456,7 @@ def parse_directory(
 
     Parameters
     ----------
-    directories : list of paths
+    directories : list of os.PathLike or list of str
         List of directories to parse. The parse is recursive.
     patterns : list of str
         List of possible patterns to be used by :py:func:`parse.parse` to decode the file names. See Notes below.

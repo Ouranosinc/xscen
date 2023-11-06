@@ -260,7 +260,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Parameters
         ----------
-        columns : str or list of str, optional
+        columns : str or sequence of str, optional
           The columns to get unique values from. If None, all columns are used.
         """
         if self.df.size == 0:
@@ -301,7 +301,7 @@ class DataCatalog(intake_esm.esm_datastore):
             )
         return cat
 
-    def drop_duplicates(self, columns: list[str] = None):
+    def drop_duplicates(self, columns: Optional[list[str]] = None):
         """Drop duplicates in the catalog based on a subset of columns.
 
         Parameters
@@ -397,7 +397,7 @@ class DataCatalog(intake_esm.esm_datastore):
     def to_dataset(
         self,
         concat_on: Union[list[str], str] = None,
-        create_ensemble_on: Union[list[str], str] = None,
+        create_ensemble_on: Optional[Union[list[str], str]] = None,
         calendar: Optional[str] = "standard",
         **kwargs,
     ) -> xr.Dataset:
