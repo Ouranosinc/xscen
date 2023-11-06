@@ -7,7 +7,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from inspect import signature
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import h5py
 import netCDF4
@@ -350,10 +350,10 @@ def save_to_netcdf(
     ds: xr.Dataset,
     filename: Union[str, os.PathLike],
     *,
-    rechunk: dict = None,
+    rechunk: Optional[dict] = None,
     bitround: Union[bool, int, dict] = False,
     compute: bool = True,
-    netcdf_kwargs: dict = None,
+    netcdf_kwargs: Optional[dict] = None,
 ):
     """Save a Dataset to NetCDF, rechunking or compressing if requested.
 
@@ -413,10 +413,10 @@ def save_to_zarr(
     ds: xr.Dataset,
     filename: Union[str, os.PathLike],
     *,
-    rechunk: dict = None,
-    zarr_kwargs: dict = None,
+    rechunk: Optional[dict] = None,
+    zarr_kwargs: Optional[dict] = None,
     compute: bool = True,
-    encoding: dict = None,
+    encoding: Optional[dict] = None,
     bitround: Union[bool, int, dict] = False,
     mode: str = "f",
     itervar: bool = False,
@@ -620,9 +620,9 @@ def _to_dataframe(
 def to_table(
     ds: Union[xr.Dataset, xr.DataArray],
     *,
-    row: Union[str, Sequence[str]] = None,
-    column: Union[str, Sequence[str]] = None,
-    sheet: Union[str, Sequence[str]] = None,
+    row: Optional[Union[str, Sequence[str]]] = None,
+    column: Optional[Union[str, Sequence[str]]] = None,
+    sheet: Optional[Union[str, Sequence[str]]] = None,
     coords: Union[bool, str, Sequence[str]] = True,
 ) -> Union[pd.DataFrame, dict]:
     """Convert a dataset to a pandas DataFrame with support for multicolumns and multisheet.
@@ -717,7 +717,9 @@ def to_table(
     return _to_dataframe(da, **table_kwargs)
 
 
-def make_toc(ds: Union[xr.Dataset, xr.DataArray], loc: str = None) -> pd.DataFrame:
+def make_toc(
+    ds: Union[xr.Dataset, xr.DataArray], loc: Optional[str] = None
+) -> pd.DataFrame:
     """Make a table of content describing a dataset's variables.
 
     This return a simple DataFrame with variable names as index, the long_name as "description" and units.
@@ -765,14 +767,14 @@ TABLE_FORMATS = {".csv": "csv", ".xls": "excel", ".xlsx": "excel"}
 def save_to_table(
     ds: Union[xr.Dataset, xr.DataArray],
     filename: Union[str, os.PathLike],
-    output_format: str = None,
+    output_format: Optional[str] = None,
     *,
-    row: Union[str, Sequence[str]] = None,
+    row: Optional[Union[str, Sequence[str]]] = None,
     column: Union[None, str, Sequence[str]] = "variable",
-    sheet: Union[str, Sequence[str]] = None,
+    sheet: Optional[Union[str, Sequence[str]]] = None,
     coords: Union[bool, Sequence[str]] = True,
     col_sep: str = "_",
-    row_sep: str = None,
+    row_sep: Optional[str] = None,
     add_toc: Union[bool, pd.DataFrame] = False,
     **kwargs,
 ):
@@ -910,10 +912,10 @@ def rechunk(
     path_in: Union[os.PathLike, str, xr.Dataset],
     path_out: Union[os.PathLike, str],
     *,
-    chunks_over_var: dict = None,
-    chunks_over_dim: dict = None,
+    chunks_over_var: Optional[dict] = None,
+    chunks_over_dim: Optional[dict] = None,
     worker_mem: str,
-    temp_store: Union[os.PathLike, str] = None,
+    temp_store: Optional[Union[os.PathLike, str]] = None,
     overwrite: bool = False,
 ) -> None:
     """Rechunk a dataset into a new zarr.

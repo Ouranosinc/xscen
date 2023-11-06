@@ -13,7 +13,7 @@ from fnmatch import fnmatch
 from functools import partial, reduce
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 import cftime
 import netCDF4
@@ -109,7 +109,7 @@ def _find_assets(
     root: Union[str, os.PathLike],
     exts: set[str],
     lengths: set[int],
-    dirglob: str = None,
+    dirglob: Optional[str] = None,
 ):
     """Walk recursively over files in a directory, filtering according to a glob pattern, path depth and extensions.
 
@@ -180,9 +180,9 @@ def _name_parser(
     path: Union[os.PathLike, str],
     root: Union[os.PathLike, str],
     patterns: list[Union[str, parse.Parser]],
-    read_from_file: Union[list[str], dict] = None,
-    attrs_map: dict = None,
-    xr_open_kwargs: dict = None,
+    read_from_file: Optional[Union[list[str], dict]] = None,
+    attrs_map: Optional[dict] = None,
+    xr_open_kwargs: Optional[dict] = None,
 ) -> Union[dict, None]:
     """Extract metadata information from the file path.
 
@@ -255,11 +255,11 @@ def _name_parser(
 def _parse_dir(
     root: Union[os.PathLike, str],
     patterns: list[str],
-    dirglob: str = None,
-    checks: list[str] = None,
-    read_from_file: Union[list[str], dict] = None,
-    attrs_map: dict = None,
-    xr_open_kwargs: dict = None,
+    dirglob: Optional[str] = None,
+    checks: Optional[list[str]] = None,
+    read_from_file: Optional[Union[list[str], dict]] = None,
+    attrs_map: Optional[dict] = None,
+    xr_open_kwargs: Optional[dict] = None,
     progress: bool = False,
 ):
     """Iterate and parses files in a directory, filtering according to basic pattern properties and optional checks.
@@ -436,21 +436,21 @@ def parse_directory(
     directories: list[Union[str, os.PathLike]],
     patterns: list[str],
     *,
-    id_columns: list[str] = None,
+    id_columns: Optional[list[str]] = None,
     read_from_file: Union[
         bool,
         Sequence[str],
         tuple[Sequence[str], Sequence[str]],
         Sequence[tuple[Sequence[str], Sequence[str]]],
     ] = False,
-    homogenous_info: dict = None,
-    cvs: Union[str, os.PathLike, dict] = None,
-    dirglob: str = None,
-    xr_open_kwargs: Mapping[str, Any] = None,
+    homogenous_info: Optional[dict] = None,
+    cvs: Optional[Union[str, os.PathLike, dict]] = None,
+    dirglob: Optional[str] = None,
+    xr_open_kwargs: Optional[Mapping[str, Any]] = None,
     only_official_columns: bool = True,
     progress: bool = False,
     parallel_dirs: Union[bool, int] = False,
-    file_checks: list[str] = None,
+    file_checks: Optional[list[str]] = None,
 ) -> pd.DataFrame:
     r"""Parse files in a directory and return them as a pd.DataFrame.
 
@@ -698,7 +698,7 @@ def parse_directory(
 def parse_from_ds(
     obj: Union[str, os.PathLike, xr.Dataset],
     names: Sequence[str],
-    attrs_map: Mapping[str, str] = None,
+    attrs_map: Optional[Mapping[str, str]] = None,
     **xrkwargs,
 ):
     """Parse a list of catalog fields from the file/dataset itself.
@@ -1094,8 +1094,8 @@ def _build_path(
 @parse_config
 def build_path(
     data: Union[dict, xr.Dataset, xr.DataArray, pd.Series, DataCatalog, pd.DataFrame],
-    schemas: Union[str, os.PathLike, dict] = None,
-    root: Union[str, os.PathLike] = None,
+    schemas: Optional[Union[str, os.PathLike, dict]] = None,
+    root: Optional[Union[str, os.PathLike]] = None,
     **extra_facets,
 ) -> Union[Path, DataCatalog, pd.DataFrame]:
     r"""Parse the schema from a configuration and construct path using a dictionary of facets.

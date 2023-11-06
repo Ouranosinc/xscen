@@ -1,5 +1,5 @@
 """Testing utilities for xscen."""
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,7 @@ def datablock_3d(
     y_step: float = 0.1,
     start: str = "7/1/2000",
     freq: str = "D",
-    units: str = None,
+    units: Optional[str] = None,
     as_dataset: bool = False,
 ) -> Union[xr.DataArray, xr.Dataset]:
     """Create a generic timeseries object based on pre-defined dictionaries of existing variables.

@@ -44,10 +44,10 @@ def _(s):
 def climatological_mean(
     ds: xr.Dataset,
     *,
-    window: int = None,
-    min_periods: int = None,
+    window: Optional[int] = None,
+    min_periods: Optional[int] = None,
     interval: int = 1,
-    periods: Union[list[str], list[list[str]]] = None,
+    periods: Optional[Union[list[str], list[list[str]]]] = None,
     to_level: Optional[str] = "climatology",
 ) -> xr.Dataset:
     """Compute the mean over 'year' for given time periods, respecting the temporal resolution of ds.
@@ -372,13 +372,13 @@ def spatial_mean(
     ds: xr.Dataset,
     method: str,
     *,
-    spatial_subset: bool = None,
-    call_clisops: bool = False,
-    region: Union[dict, str] = None,
-    kwargs: dict = None,
-    simplify_tolerance: float = None,
-    to_domain: str = None,
-    to_level: str = None,
+    spatial_subset: Optional[bool] = None,
+    call_clisops: Optional[bool] = False,
+    region: Optional[Union[dict, str]] = None,
+    kwargs: Optional[dict] = None,
+    simplify_tolerance: Optional[float] = None,
+    to_domain: Optional[str] = None,
+    to_level: Optional[str] = None,
 ) -> xr.Dataset:
     """Compute the spatial mean using a variety of available methods.
 
@@ -703,10 +703,10 @@ def produce_horizon(
         ModuleType,
     ],
     *,
-    periods: Union[list[str], list[list[str]]] = None,
-    warminglevels: dict = None,
+    periods: Optional[Union[list[str], list[list[str]]]] = None,
+    warminglevels: Optional[dict] = None,
     to_level: Optional[str] = "horizons",
-    period: list = None,
+    period: Optional[list] = None,
 ) -> xr.Dataset:
     """Compute indicators, then the climatological mean, and finally unstack dates in order to have a single dataset with all indicators of different frequencies.
 

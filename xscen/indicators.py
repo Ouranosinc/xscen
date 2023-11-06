@@ -73,7 +73,7 @@ def compute_indicators(
         ModuleType,
     ],
     *,
-    periods: Union[list[str], list[list[str]]] = None,
+    periods: Optional[Union[list[str], list[list[str]]]] = None,
     restrict_years: bool = True,
     to_level: Optional[str] = "indicators",
 ) -> dict:
@@ -241,7 +241,7 @@ def compute_indicators(
 
 def registry_from_module(
     module: ModuleType,
-    registry: DerivedVariableRegistry = None,
+    registry: Optional[DerivedVariableRegistry] = None,
     variable_column: str = "variable",
 ) -> DerivedVariableRegistry:
     """Convert a xclim virtual indicators module to an intake_esm Derived Variable Registry.

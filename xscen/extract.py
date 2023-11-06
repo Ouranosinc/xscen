@@ -82,14 +82,14 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
 def extract_dataset(
     catalog: DataCatalog,
     *,
-    variables_and_freqs: dict = None,
-    periods: Union[list[str], list[list[str]]] = None,
-    region: dict = None,
+    variables_and_freqs: Optional[dict] = None,
+    periods: Optional[Union[list[str], list[list[str]]]] = None,
+    region: Optional[dict] = None,
     to_level: str = "extracted",
     ensure_correct_time: bool = True,
-    xr_open_kwargs: dict = None,
-    xr_combine_kwargs: dict = None,
-    preprocess: Callable = None,
+    xr_open_kwargs: Optional[dict] = None,
+    xr_combine_kwargs: Optional[dict] = None,
+    preprocess: Optional[Callable] = None,
     resample_methods: Optional[dict] = None,
     mask: Union[bool, xr.Dataset, xr.DataArray] = False,
 ) -> dict:
@@ -366,9 +366,9 @@ def resample(
     da: xr.DataArray,
     target_frequency: str,
     *,
-    ds: xr.Dataset = None,
-    method: str = None,
-    missing: Union[str, dict] = None,
+    ds: Optional[xr.Dataset] = None,
+    method: Optional[str] = None,
+    missing: Optional[Union[str, dict]] = None,
 ) -> xr.DataArray:
     """Aggregate variable to the target frequency.
 
@@ -589,18 +589,18 @@ def search_data_catalogs(
     ],
     variables_and_freqs: dict,
     *,
-    other_search_criteria: dict = None,
-    exclusions: dict = None,
+    other_search_criteria: Optional[dict] = None,
+    exclusions: Optional[dict] = None,
     match_hist_and_fut: bool = False,
-    periods: Union[list[str], list[list[str]]] = None,
-    coverage_kwargs: dict = None,
-    id_columns: list[str] = None,
+    periods: Optional[Union[list[str], list[list[str]]]] = None,
+    coverage_kwargs: Optional[dict] = None,
+    id_columns: Optional[list[str]] = None,
     allow_resampling: bool = False,
     allow_conversion: bool = False,
-    conversion_yaml: str = None,
-    restrict_resolution: str = None,
-    restrict_members: dict = None,
-    restrict_warming_level: Union[dict, bool] = None,
+    conversion_yaml: Optional[str] = None,
+    restrict_resolution: Optional[str] = None,
+    restrict_members: Optional[dict] = None,
+    restrict_warming_level: Optional[Union[dict, bool]] = None,
 ) -> dict:
     """Search through DataCatalogs.
 
@@ -920,9 +920,9 @@ def get_warming_level(
     wl: float,
     *,
     window: int = 20,
-    tas_baseline_period: list[str] = None,
+    tas_baseline_period: Optional[list[str]] = None,
     ignore_member: bool = False,
-    tas_csv: str = None,
+    tas_csv: Optional[str] = None,
     return_horizon: bool = True,
 ) -> Union[dict, list[str], str]:
     """Use the IPCC Atlas method to return the window of time over which the requested level of global warming is first reached.
@@ -1181,7 +1181,7 @@ def subset_warming_level(
 
 
 def _dispatch_historical_to_future(
-    catalog: DataCatalog, id_columns: list[str] = None
+    catalog: DataCatalog, id_columns: Optional[list[str]] = None
 ) -> DataCatalog:
     """Update a DataCatalog by recopying each "historical" entry to its corresponding future experiments.
 
@@ -1287,7 +1287,7 @@ def _dispatch_historical_to_future(
 
 
 def _restrict_by_resolution(
-    catalogs: dict, restrictions: str, id_columns: list[str] = None
+    catalogs: dict, restrictions: str, id_columns: Optional[list[str]] = None
 ) -> dict:
     """Update the results from search_data_catalogs by removing simulations with multiple resolutions available.
 
@@ -1427,7 +1427,7 @@ def _restrict_by_resolution(
 
 
 def _restrict_multimembers(
-    catalogs: dict, restrictions: dict, id_columns: list[str] = None
+    catalogs: dict, restrictions: dict, id_columns: Optional[list[str]] = None
 ):
     """Update the results from search_data_catalogs by removing simulations with multiple members available.
 

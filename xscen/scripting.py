@@ -42,7 +42,7 @@ def send_mail(
     *,
     subject: str,
     msg: str,
-    to: str = None,
+    to: Optional[str] = None,
     server: str = "127.0.0.1",
     port: int = 25,
     attachments: Optional[
@@ -159,9 +159,9 @@ exit_watcher.hook()
 @parse_config
 def send_mail_on_exit(
     *,
-    subject: str = None,
-    msg_ok: str = None,
-    msg_err: str = None,
+    subject: Optional[str] = None,
+    msg_ok: Optional[str] = None,
+    msg_err: Optional[str] = None,
     on_error_only: bool = False,
     skip_ctrlc: bool = True,
     **mail_kwargs,
@@ -243,7 +243,7 @@ class measure_time:
 
     def __init__(
         self,
-        name: str = None,
+        name: Optional[str] = None,
         cpu: bool = False,
         logger: logging.Logger = logger,
     ):
@@ -308,7 +308,9 @@ def timeout(seconds: int, task: str = ""):
 
 
 @contextmanager
-def skippable(seconds: int = 2, task: str = "", logger: logging.Logger = None):
+def skippable(
+    seconds: int = 2, task: str = "", logger: Optional[logging.Logger] = None
+):
     """Skippable context manager.
 
     When CTRL-C (SIGINT, KeyboardInterrupt) is sent within the context,
@@ -350,11 +352,11 @@ def skippable(seconds: int = 2, task: str = "", logger: logging.Logger = None):
 def save_and_update(
     ds: xr.Dataset,
     pcat: ProjectCatalog,
-    path: Union[str, os.PathLike] = None,
-    file_format: str = None,
-    build_path_kwargs: dict = None,
-    save_kwargs: dict = None,
-    update_kwargs: dict = None,
+    path: Optional[Union[str, os.PathLike]] = None,
+    file_format: Optional[str] = None,
+    build_path_kwargs: Optional[dict] = None,
+    save_kwargs: Optional[dict] = None,
+    update_kwargs: Optional[dict] = None,
 ):
     """
     Construct the path, save and delete.
@@ -427,7 +429,7 @@ def save_and_update(
 def move_and_delete(
     moving: list[list[Union[str, os.PathLike]]],
     pcat: ProjectCatalog,
-    deleting: list[Union[str, os.PathLike]] = None,
+    deleting: Optional[list[Union[str, os.PathLike]]] = None,
     copy: bool = False,
 ):
     """

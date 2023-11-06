@@ -60,12 +60,12 @@ def train(
     period: list[str],
     *,
     method: str = "DetrendedQuantileMapping",
-    group: Union[sdba.Grouper, str, dict] = None,
-    xclim_train_args: dict = None,
+    group: Optional[Union[sdba.Grouper, str, dict]] = None,
+    xclim_train_args: Optional[dict] = None,
     maximal_calendar: str = "noleap",
-    adapt_freq: dict = None,
-    jitter_under: dict = None,
-    jitter_over: dict = None,
+    adapt_freq: Optional[dict] = None,
+    jitter_under: Optional[dict] = None,
+    jitter_over: Optional[dict] = None,
     align_on: Optional[str] = "year",
 ) -> xr.Dataset:
     """
@@ -191,11 +191,11 @@ def adjust(
     dsim: xr.Dataset,
     periods: Union[list[str], list[list[str]]],
     *,
-    xclim_adjust_args: dict = None,
+    xclim_adjust_args: Optional[dict] = None,
     to_level: str = "biasadjusted",
-    bias_adjust_institution: str = None,
-    bias_adjust_project: str = None,
-    moving_yearly_window: dict = None,
+    bias_adjust_institution: Optional[str] = None,
+    bias_adjust_project: Optional[str] = None,
+    moving_yearly_window: Optional[dict] = None,
     align_on: Optional[str] = "year",
 ) -> xr.Dataset:
     """

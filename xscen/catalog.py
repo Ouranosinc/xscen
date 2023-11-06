@@ -191,9 +191,9 @@ class DataCatalog(intake_esm.esm_datastore):
     def from_df(
         cls,
         data: Union[pd.DataFrame, os.PathLike, Sequence[os.PathLike]],
-        esmdata: Union[os.PathLike, dict] = None,
+        esmdata: Optional[Union[os.PathLike, dict]] = None,
         *,
-        read_csv_kwargs: Mapping[str, Any] = None,
+        read_csv_kwargs: Optional[Mapping[str, Any]] = None,
         name: str = "virtual",
         **intake_kwargs,
     ):
@@ -255,7 +255,7 @@ class DataCatalog(intake_esm.esm_datastore):
         else:
             return data.apply(_find_unique, result_type="reduce").to_dict()
 
-    def unique(self, columns: Union[str, Sequence[str]] = None):
+    def unique(self, columns: Optional[Union[str, Sequence[str]]] = None):
         """Return a series of unique values in the catalog.
 
         Parameters
@@ -396,7 +396,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
     def to_dataset(
         self,
-        concat_on: Union[list[str], str] = None,
+        concat_on: Optional[Union[list[str], str]] = None,
         create_ensemble_on: Optional[Union[list[str], str]] = None,
         calendar: Optional[str] = "standard",
         **kwargs,
@@ -528,7 +528,7 @@ class ProjectCatalog(DataCatalog):
         cls,
         filename: Union[os.PathLike, str],
         *,
-        project: dict = None,
+        project: Optional[dict] = None,
         overwrite: bool = False,
     ):
         r"""Create a new project catalog from some project metadata.
@@ -609,8 +609,8 @@ class ProjectCatalog(DataCatalog):
         df: Union[str, dict],
         *args,
         create: bool = False,
-        overwrite: bool = None,
-        project: dict = None,
+        overwrite: bool = False,
+        project: Optional[dict] = None,
         **kwargs,
     ):
         """Open or create a project catalog.
@@ -622,7 +622,7 @@ class ProjectCatalog(DataCatalog):
             If dict, this must be a dict representation of an ESM catalog.  See the notes below.
         create : bool
             If True, and if 'df' is a string, this will create an empty ProjectCatalog if none already exists.
-        overwrite : bool, optional
+        overwrite : bool
             If this and 'create' are True, this will overwrite any existing JSON and CSV file with an empty catalog.
         project : dict, optional
             Metadata to create the catalog, if required.
@@ -647,12 +647,14 @@ class ProjectCatalog(DataCatalog):
     # TODO: Implement a way to easily destroy part of the catalog to "reset" some steps
     def update(
         self,
-        df: Union[
-            DataCatalog,
-            intake_esm.esm_datastore,
-            pd.DataFrame,
-            pd.Series,
-            Sequence[pd.Series],
+        df: Optional[
+            Union[
+                DataCatalog,
+                intake_esm.esm_datastore,
+                pd.DataFrame,
+                pd.Series,
+                Sequence[pd.Series],
+            ]
         ] = None,
     ):
         """Update the catalog with new data and writes the new data to the csv file.
@@ -736,7 +738,7 @@ class ProjectCatalog(DataCatalog):
         self,
         ds: xarray.Dataset,
         path: Union[os.PathLike, str],
-        info_dict: dict = None,
+        info_dict: Optional[dict] = None,
         **info_kwargs,
     ):
         """Update the catalog with new data and writes the new data to the csv file.
@@ -852,7 +854,7 @@ def _build_id(element: pd.Series, columns: list[str]):
 
 
 def generate_id(
-    df: Union[pd.DataFrame, xr.Dataset], id_columns: list = None
+    df: Union[pd.DataFrame, xr.Dataset], id_columns: Optional[list] = None
 ) -> pd.Series:
     """Create an ID from column entries.
 

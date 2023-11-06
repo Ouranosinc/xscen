@@ -4,6 +4,7 @@ import itertools
 import warnings
 from copy import deepcopy
 from pathlib import Path
+from typing import Optional
 
 import clisops.core.subset
 import dask
@@ -125,10 +126,12 @@ def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
 
 def subset(
     ds: xr.Dataset,
-    region: dict = None,
+    region: Optional[dict] = None,
     *,
-    name: str = None,
-    method: str = None,  # FIXME: Once the region argument is removed, this should be made mandatory.
+    name: Optional[str] = None,
+    method: Optional[
+        str
+    ] = None,  # FIXME: Once the region argument is removed, this should be made mandatory.
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:

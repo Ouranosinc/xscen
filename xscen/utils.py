@@ -71,7 +71,7 @@ def update_attr(
     ds: Union[xr.Dataset, xr.DataArray],
     attr: str,
     new: str,
-    others: Sequence[Union[xr.Dataset, xr.DataArray]] = None,
+    others: Optional[Sequence[Union[xr.Dataset, xr.DataArray]]] = None,
     **fmt,
 ) -> Union[xr.Dataset, xr.DataArray]:
     """Format an attribute referencing itself in a translatable way.
@@ -300,7 +300,7 @@ def stack_drop_nans(
     mask: xr.DataArray,
     *,
     new_dim: str = "loc",
-    to_file: str = None,
+    to_file: Optional[str] = None,
 ) -> xr.Dataset:
     """Stack dimensions into a single axis and drops indexes where the mask is false.
 
@@ -373,7 +373,9 @@ def unstack_fill_nan(
     ds: xr.Dataset,
     *,
     dim: str = "loc",
-    coords: Union[str, os.PathLike, Sequence[Union[str, os.PathLike]], dict] = None,
+    coords: Optional[
+        Union[str, os.PathLike, Sequence[Union[str, os.PathLike]], dict]
+    ] = None,
 ):
     """Unstack a Dataset that was stacked by :py:func:`stack_drop_nans`.
 
@@ -531,8 +533,8 @@ def get_cat_attrs(
 @parse_config
 def maybe_unstack(
     ds: xr.Dataset,
-    coords: str = None,
-    rechunk: bool = None,
+    coords: Optional[str] = None,
+    rechunk: Optional[bool] = None,
     stack_drop_nans: bool = False,
 ) -> xr.Dataset:
     """If stack_drop_nans is True, unstack and rechunk.
@@ -717,18 +719,20 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
 def clean_up(
     ds: xr.Dataset,
     *,
-    variables_and_units: dict = None,
-    convert_calendar_kwargs: dict = None,
-    missing_by_var: dict = None,
-    maybe_unstack_dict: dict = None,
-    round_var: dict = None,
-    common_attrs_only: Union[dict, list[Union[xr.Dataset, str, os.PathLike]]] = None,
-    common_attrs_open_kwargs: dict = None,
-    attrs_to_remove: dict = None,
-    remove_all_attrs_except: dict = None,
-    add_attrs: dict = None,
-    change_attr_prefix: str = None,
-    to_level: str = None,
+    variables_and_units: Optional[dict] = None,
+    convert_calendar_kwargs: Optional[dict] = None,
+    missing_by_var: Optional[dict] = None,
+    maybe_unstack_dict: Optional[dict] = None,
+    round_var: Optional[dict] = None,
+    common_attrs_only: Optional[
+        Union[dict, list[Union[xr.Dataset, str, os.PathLike]]]
+    ] = None,
+    common_attrs_open_kwargs: Optional[dict] = None,
+    attrs_to_remove: Optional[dict] = None,
+    remove_all_attrs_except: Optional[dict] = None,
+    add_attrs: Optional[dict] = None,
+    change_attr_prefix: Optional[str] = None,
+    to_level: Optional[str] = None,
 ) -> xr.Dataset:
     """Clean up of the dataset.
 
@@ -931,7 +935,7 @@ def clean_up(
 
 
 def publish_release_notes(
-    style: str = "md", file: Union[os.PathLike, StringIO, TextIO] = None
+    style: str = "md", file: Optional[Union[os.PathLike, StringIO, TextIO]] = None
 ) -> Optional[str]:
     """Format release history in Markdown or ReStructuredText.
 
@@ -1005,7 +1009,7 @@ def publish_release_notes(
 
 def unstack_dates(
     ds: xr.Dataset,
-    seasons: dict[int, str] = None,
+    seasons: Optional[dict[int, str]] = None,
     new_dim: str = "season",
     winter_starts_year: bool = False,
 ):
@@ -1161,8 +1165,8 @@ def unstack_dates(
 
 
 def show_versions(
-    file: Union[os.PathLike, StringIO, TextIO] = None,
-    deps: list = None,
+    file: Optional[Union[os.PathLike, StringIO, TextIO]] = None,
+    deps: Optional[list] = None,
 ) -> Optional[str]:
     """Print the versions of xscen and its dependencies.
 
@@ -1282,7 +1286,7 @@ def standardize_periods(
         return periods[0]
 
 
-def season_sort_key(idx: pd.Index, name: str = None):
+def season_sort_key(idx: pd.Index, name: Optional[str] = None):
     """Get a proper sort key for a "season"  or "month" index to avoid alphabetical sorting.
 
     If any of the values in the index is not recognized as a 3-letter

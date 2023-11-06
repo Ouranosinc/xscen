@@ -17,8 +17,8 @@ __all__ = ["build_reduction_data", "reduce_ensemble"]
 def build_reduction_data(
     datasets: Union[dict, list[xr.Dataset]],
     *,
-    xrfreqs: list[str] = None,
-    horizons: list[str] = None,
+    xrfreqs: Optional[list[str]] = None,
+    horizons: Optional[list[str]] = None,
 ) -> xr.DataArray:
     """Construct the input required for ensemble reduction.
 

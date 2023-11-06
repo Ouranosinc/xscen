@@ -6,7 +6,7 @@ import warnings
 from copy import deepcopy
 from itertools import chain, groupby
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -27,8 +27,8 @@ def ensemble_stats(
     ],
     statistics: dict,
     *,
-    create_kwargs: dict = None,
-    weights: xr.DataArray = None,
+    create_kwargs: Optional[dict] = None,
+    weights: Optional[xr.DataArray] = None,
     common_attrs_only: bool = True,
     to_level: str = "ensemble",
 ) -> xr.Dataset:
@@ -146,9 +146,9 @@ def generate_weights(
     *,
     independence_level: str = "model",
     balance_experiments: bool = False,
-    attribute_weights: dict = None,
+    attribute_weights: Optional[dict] = None,
     skipna: bool = True,
-    v_for_skipna: str = None,
+    v_for_skipna: Optional[str] = None,
     standardize: bool = False,
     experiment_weights: bool = False,
 ) -> xr.DataArray:

@@ -1,4 +1,4 @@
-"""Regrid datasets using xESMF."""
+"""Functions to regrid datasets."""
 import datetime
 import operator
 import os
@@ -28,8 +28,8 @@ def regrid_dataset(
     ds_grid: xr.Dataset,
     weights_location: Union[str, os.PathLike],
     *,
-    regridder_kwargs: dict = None,
-    intermediate_grids: dict = None,
+    regridder_kwargs: Optional[dict] = None,
+    intermediate_grids: Optional[dict] = None,
     to_level: str = "regridded",
 ) -> xr.Dataset:
     """Regrid a dataset according to weights and a reference grid.

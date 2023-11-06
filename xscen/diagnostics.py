@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -45,18 +45,18 @@ def _(s):
 def health_checks(
     ds: Union[xr.Dataset, xr.DataArray],
     *,
-    structure: dict = None,
-    calendar: str = None,
-    start_date: str = None,
-    end_date: str = None,
-    variables_and_units: dict = None,
-    cfchecks: dict = None,
-    freq: str = None,
-    missing: Union[dict, str, list] = None,
-    flags: dict = None,
-    flags_kwargs: dict = None,
+    structure: Optional[dict] = None,
+    calendar: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    variables_and_units: Optional[dict] = None,
+    cfchecks: Optional[dict] = None,
+    freq: Optional[str] = None,
+    missing: Optional[Union[dict, str, list]] = None,
+    flags: Optional[dict] = None,
+    flags_kwargs: Optional[dict] = None,
     return_flags: bool = False,
-    raise_on: list = None,
+    raise_on: Optional[list] = None,
 ) -> Union[None, xr.Dataset]:
     """
     Perform a series of health checks on the dataset. Be aware that missing data checks and flag checks can be slow.
@@ -299,11 +299,11 @@ def properties_and_measures(
         Sequence[tuple[str, Indicator]],
         ModuleType,
     ],
-    period: list[str] = None,
+    period: Optional[list[str]] = None,
     unstack: bool = False,
-    rechunk: dict = None,
-    dref_for_measure: xr.Dataset = None,
-    change_units_arg: dict = None,
+    rechunk: Optional[dict] = None,
+    dref_for_measure: Optional[xr.Dataset] = None,
+    change_units_arg: Optional[dict] = None,
     to_level_prop: str = "diag-properties",
     to_level_meas: str = "diag-measures",
 ) -> tuple[xr.Dataset, xr.Dataset]:
