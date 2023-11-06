@@ -398,7 +398,7 @@ class DataCatalog(intake_esm.esm_datastore, ABC):
     def to_dataset(
         self,
         concat_on: Union[list[str], str] = None,
-        create_ensemble_on: Union[list[str], str] = None,
+        create_ensemble_on: Optional[Union[list[str], str]] = None,
         calendar: Optional[str] = "standard",
         **kwargs,
     ) -> xr.Dataset:
