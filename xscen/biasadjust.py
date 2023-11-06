@@ -56,7 +56,7 @@ def _add_preprocessing_attr(scen, train_kwargs):
 def train(
     dref: xr.Dataset,
     dhist: xr.Dataset,
-    var: Union[str, list],
+    var: Union[str, list[str]],
     period: list[str],
     *,
     method: str = "DetrendedQuantileMapping",
