@@ -41,6 +41,7 @@ def _(s):
     return s
 
 
+@parse_config
 def health_checks(
     ds: Union[xr.Dataset, xr.DataArray],
     *,
