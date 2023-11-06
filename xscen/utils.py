@@ -546,7 +546,7 @@ def maybe_unstack(
     coords : str, optional
         Path to a dataset containing the coords to unstack (and only those).
     rechunk : dict, optional
-        If True, rechunk the dataset after unstacking.
+        If not None, rechunk the dataset after unstacking.
     stack_drop_nans : bool
         If True, unstack the dataset and rechunk it.
         If False, do nothing.
