@@ -266,7 +266,6 @@ def climatological_op(
         [ds.time.dt.year.values, ds.time.dt.month.values, ds.time.dt.day.values],
         names=["year", "month", "day"],
     )
-    print('ds before unstacking', ds.dims)
     ds_unstack = ds.assign(time=ind).unstack("time")
 
     # Rolling will ignore jumps in time, so we want to raise an exception beforehand
@@ -317,7 +316,7 @@ def climatological_op(
     else:
         op_kwargs = {'keep_attrs': True}  # ToDo: Is thera a global setting in xscen so we don't need this?
 
-    # special case for averaging standard deviations: need to convert to variance before averaging
+    # special case for averaging standard deviations, need to average the variance
     ds_has_std = ('std' in ds_unstack.data_vars or any(
         ['standard deviation' in ds_unstack[vv].attrs['description'].lower() for vv in ds_unstack.data_vars]))
     if op == 'mean' and ds_has_std:
@@ -327,78 +326,53 @@ def climatological_op(
 
     for period in periods:
         # Rolling average
-        print('ds_unstack before rolling', ds_unstack.dims)
         ds_rolling = ds_unstack.sel(year=slice(period[0], period[1])).rolling(year=window, min_periods=min_periods)
-        print('ds_rolling as construct', ds_rolling.construct(window_dim="window", stride=stride, keep_attrs=True).dims)
 
         if hasattr(ds_rolling, op) and callable(getattr(ds_rolling, op)):
             if op not in ['max', 'mean', 'median', 'min', 'quantile', 'std', 'sum', 'var']:
                 warnings.warn(
                     f"The requested operation '{op}' has not been tested and may produce unexpected results."
-                )  # ToDo Make sure this is true, and all tests are implemented!
-
+                )
             ds_rolling = getattr(ds_rolling, op)(**op_kwargs)
-
-            # revert the variance to std
-            if op == 'mean' and ds_has_std:
-                for vv in ds_rolling.data_vars:
-                    if 'std' in vv or 'standard deviation' in ds_rolling[vv].attrs['description'].lower():
-                        ds_rolling[vv] = np.sqrt(ds_rolling[vv])
-
-            # Select the windows at provided stride, starting from the first full window's operation result
-            ds_rolling = ds_rolling.isel(year=slice(window - 1, None, stride))
-            # ds_rolling = ds_rolling.isel(
-            #     year=slice(window - 1, None)
-            # )  # Select from the first full windowed mean
-            # print('ds_rolling after slicing:', ds_rolling.dims)
-            # strides = ds_rolling.year.values % stride
-            # print('ds_rolling after strides:', ds_rolling.dims)
-            # ds_rolling = ds_rolling.sel(year=(strides - strides[0] == 0))
 
         elif op == "linregress":
             # ToDo: include min_periods in linregress
             def _ulinregress(x, y, **kwargs):
                 # Wrapper for scipy.stats.linregress to unpack multiple return values in xr.apply_ufunc
-                valid_x = ~np.isnan(x)
-                valid_y = ~np.isnan(y)
-                mask = valid_x & valid_y
-                if np.sum(mask) >= kwargs.get('min_periods', 1):
-                    reg = scipy.stats.linregress(x, y, alternative=kwargs.get('alternative', 'two-sided'))
-                    out = np.array([reg.slope, reg.intercept, reg.rvalue, reg.pvalue, reg.stderr, reg.intercept_stderr])
-                else:
-                    out = np.full(6, np.nan)
-                return out
+                reg = scipy.stats.linregress(x, y, **kwargs)
+                return np.array([reg.slope, reg.intercept, reg.rvalue, reg.pvalue, reg.stderr, reg.intercept_stderr])
 
             dsr_construct = ds_rolling.construct(window_dim="window", stride=stride, keep_attrs=True)
-            print('dsr_construct:', dsr_construct.dims)
-            dsr_construct = dsr_construct.isel(year=slice(window - 1, None, stride))
-            # strides = dsr_construct.year.values % stride
-            # dsr_construct = dsr_construct.sel(window=(strides - strides[0] == 0))
-
-            linreg_kwargs = {k: v for k, v in op_kwargs.items() if 'keep_attrs' not in k}
-            linreg_kwargs['min_periods'] = min_periods
-            # construct array to use years as x values
-            x = np.arange(dsr_construct.window.size).repeat(dsr_construct.year.size).reshape(
-                dsr_construct.window.size, dsr_construct.year.size) + dsr_construct.year.values - window + 1
             ds_rolling = xr.apply_ufunc(
                 _ulinregress,
-                np.arange(dsr_construct.window.size),  # ToDo: can we get the actual year values here?
                 dsr_construct,
+                #dsr_construct.year.values,
+                np.arange(dsr_construct.window.size),  # ToDo: can we get the actual year values here?
                 input_core_dims=[["window"], ["window"]],
                 output_core_dims=[["linreg_param"]],
                 vectorize=True,
                 dask="parallelized",
                 output_dtypes=["float32"],
-                dask_gufunc_kwargs={"output_sizes": {"linreg_param": 6}},
+                dask_gufunc_kwargs={"output_sizes":{"linreg_param": 6}},
                 keep_attrs=True,  # ToDo: Is thera a global setting in xscen so we don't need this?
-                kwargs=linreg_kwargs,
+                kwargs=op_kwargs,
             )
             ds_rolling.coords['linreg_param'] = ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr']
-            print('ds_rolling after linregress: ', ds_rolling.dims)
 
         else:
             raise ValueError(f"Operation '{op}' not available.")
 
+        if op == 'mean' and ds_has_std:
+            for vv in ds_rolling.data_vars:
+                if 'std' in vv or 'standard deviation' in ds_rolling[vv].attrs['description'].lower():
+                    ds_rolling[vv] = np.sqrt(ds_rolling[vv])
+
+        # Select the windows at provided stride, starting from the first full window's operation result
+        ds_rolling = ds_rolling.isel(
+            year=slice(window - 1, None)
+        )  # Select from the first full windowed mean
+        strides = ds_rolling.year.values % stride
+        ds_rolling = ds_rolling.sel(year=(strides - strides[0] == 0))  # ToDo: Check if this does not interfer with strides used in linregress.
         horizons = xr.DataArray(
             [f"{yr - (window - 1)}-{yr}" for yr in ds_rolling.year.values],
             dims=dict(year=ds_rolling.year),
@@ -435,7 +409,6 @@ def climatological_op(
         ds_rolling = ds_rolling.assign_coords(time=time_coord).transpose("time", ...)
 
         concats.extend([ds_rolling])
-    # end loop period
     ds_rolling = xr.concat(concats, dim="time", data_vars="minimal")
 
     # modify data_vars names, attrs and history
