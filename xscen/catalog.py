@@ -6,7 +6,6 @@ import logging
 import os
 import re
 import warnings
-from abc import ABC
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from functools import reduce
@@ -136,7 +135,7 @@ csv_kwargs = {
 """Kwargs to pass to `pd.read_csv` when opening an official Ouranos catalog."""
 
 
-class DataCatalog(intake_esm.esm_datastore, ABC):
+class DataCatalog(intake_esm.esm_datastore):
     r"""
     A read-only intake_esm catalog adapted to xscen's syntax.
 
@@ -516,7 +515,7 @@ class DataCatalog(intake_esm.esm_datastore, ABC):
         return ds
 
 
-class ProjectCatalog(DataCatalog, ABC):
+class ProjectCatalog(DataCatalog):
     """A DataCatalog with additional 'write' functionalities that can update and upload itself.
 
     See Also
