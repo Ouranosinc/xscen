@@ -302,7 +302,7 @@ class DataCatalog(intake_esm.esm_datastore, ABC):
             )
         return cat
 
-    def drop_duplicates(self, columns: list[str] = None):
+    def drop_duplicates(self, columns: Optional[list[str]] = None):
         """Drop duplicates in the catalog based on a subset of columns.
 
         Parameters
