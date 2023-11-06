@@ -50,10 +50,10 @@ repos:
       - id: pydocstyle
         args: [ '--config=setup.cfg' ]
   - repo: https://github.com/keewis/blackdoc
-    rev: v0.3.8
+    rev: v0.3.9
     hooks:
       - id: blackdoc
-        additional_dependencies: [ 'black==23.10.0' ]
+        additional_dependencies: [ 'black==23.10.1' ]
         exclude: config.py
   - repo: https://github.com/adrienverge/yamllint.git
     rev: v1.32.0
@@ -68,7 +68,7 @@ repos:
         additional_dependencies: [ 'pyupgrade==3.15.0' ]
       - id: nbqa-black
         args: [ '--target-version=py39' ]
-        additional_dependencies: [ 'black==23.10.0' ]
+        additional_dependencies: [ 'black==23.10.1' ]
       - id: nbqa-isort
         args: [ "--settings-file=setup.cfg" ]
         additional_dependencies: [ 'isort==5.12.0' ]
