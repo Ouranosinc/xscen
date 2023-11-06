@@ -261,7 +261,7 @@ class DataCatalog(intake_esm.esm_datastore, ABC):
 
         Parameters
         ----------
-        columns : str or list of str, optional
+        columns : str or sequence of str, optional
           The columns to get unique values from. If None, all columns are used.
         """
         if self.df.size == 0:
