@@ -183,7 +183,7 @@ def _name_parser(
     read_from_file: Optional[Union[list[str], dict]] = None,
     attrs_map: Optional[dict] = None,
     xr_open_kwargs: Optional[dict] = None,
-) -> Union[dict, None]:
+) -> Optional[dict]:
     """Extract metadata information from the file path.
 
     Parameters

@@ -534,7 +534,7 @@ def get_cat_attrs(
 def maybe_unstack(
     ds: xr.Dataset,
     coords: Optional[str] = None,
-    rechunk: Optional[bool] = None,
+    rechunk: Optional[dict] = None,
     stack_drop_nans: bool = False,
 ) -> xr.Dataset:
     """If stack_drop_nans is True, unstack and rechunk.
@@ -545,7 +545,7 @@ def maybe_unstack(
         Dataset to unstack.
     coords : str, optional
         Path to a dataset containing the coords to unstack (and only those).
-    rechunk : bool, optional
+    rechunk : dict, optional
         If True, rechunk the dataset after unstacking.
     stack_drop_nans : bool
         If True, unstack the dataset and rechunk it.
