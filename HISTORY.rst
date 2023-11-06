@@ -31,6 +31,7 @@ Bug fixes
 * Fixed a bug in the documentation build configuration that prevented stable/latest and tagged documentation builds from resolving on ReadTheDocs. (:pull:`256`).
 * Fixed ``get_warming_level`` to avoid incomplete matches. (:pull:`269`).
 * `search_data_catalogs` now eliminates anything that matches any entry in `exclusions`. (:issue:`275`, :pull:`280`).
+* Fixed a bug in ``xs.scripting.save_and_update`` where ``build_path_kwargs`` was ignored when trying to guess the file format. (:pull:`282`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -51,7 +52,7 @@ Internal changes
     * Linters are now called by order of most common failures first, to speed up the CI.
     * `Manifest.in` is much more specific about what is installed.
     * Re-adds a dev recipe to the `setup.py`.
-
+* Multiple improvements to the docstrings and type annotations. (:pull:`282`).
 
 v0.7.1 (2023-08-23)
 -------------------

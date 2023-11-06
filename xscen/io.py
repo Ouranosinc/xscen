@@ -1,4 +1,4 @@
-# noqa: D100
+"""Input/Output functions for xscen."""
 import datetime
 import logging
 import os
@@ -45,12 +45,12 @@ __all__ = [
 ]
 
 
-def get_engine(file: Union[str, Path]) -> str:
+def get_engine(file: Union[str, os.PathLike]) -> str:
     """Use functionality of h5py to determine if a NetCDF file is compatible with h5netcdf.
 
     Parameters
     ----------
-    file : str
+    file : str or os.PathLike
         Path to the file.
 
     Returns
@@ -70,7 +70,7 @@ def get_engine(file: Union[str, Path]) -> str:
 
 
 def estimate_chunks(
-    ds: Union[str, xr.Dataset],
+    ds: Union[str, os.PathLike, xr.Dataset],
     dims: list,
     target_mb: float = 50,
     chunk_per_variable: bool = False,
@@ -83,7 +83,7 @@ def estimate_chunks(
         Either a xr.Dataset or the path to a NetCDF file. Existing chunks are not taken into account.
     dims : list
         Dimension(s) on which to estimate the chunking. Not implemented for more than 2 dimensions.
-    target_mb : float, optional
+    target_mb : float
         Roughly the size of chunks (in Mb) to aim for.
     chunk_per_variable : bool
         If True, the output will be separated per variable. Otherwise, a common chunking will be found.
@@ -91,8 +91,7 @@ def estimate_chunks(
     Returns
     -------
     dict
-        dictionary of estimated chunks
-
+        A dictionary mapping dimensions to chunk sizes.
     """
 
     def _estimate_chunks(ds, target_mb, size_of_slice, rechunk_dims):
@@ -154,7 +153,7 @@ def estimate_chunks(
 
     out = {}
     # If ds is the path to a file, use NetCDF4
-    if isinstance(ds, str):
+    if isinstance(ds, (str, os.PathLike)):
         ds = netCDF4.Dataset(ds, "r")
 
         # Loop on variables
@@ -231,7 +230,7 @@ def subset_maxsize(
     Returns
     -------
     list
-        list of xr.Dataset subsetted alongside 'time' to limit the filesize to the requested maximum.
+        List of xr.Dataset subsetted alongside 'time' to limit the filesize to the requested maximum.
     """
     # Estimate the size of the dataset
     size_of_file = 0
@@ -297,7 +296,7 @@ def _coerce_attrs(attrs):
             attrs[k] = str(attrs[k])
 
 
-def _np_bitround(array, keepbits):
+def _np_bitround(array: xr.DataArray, keepbits: int):
     """Bitround for Arrays."""
     codec = BitRound(keepbits=keepbits)
     data = array.copy()  # otherwise overwrites the input
@@ -306,7 +305,15 @@ def _np_bitround(array, keepbits):
 
 
 def round_bits(da: xr.DataArray, keepbits: int):
-    """Round floating point variable by keeping a given number of bits in the mantissa, dropping the rest."""
+    """Round floating point variable by keeping a given number of bits in the mantissa, dropping the rest. This allows for a much better compression.
+
+    Parameters
+    ----------
+    da : xr.DataArray
+        Variable to be rounded.
+    keepbits : int
+        The number of bits of the mantissa to keep.
+    """
     da = xr.apply_ufunc(
         _np_bitround, da, keepbits, dask="parallelized", keep_attrs=True
     )
@@ -321,7 +328,7 @@ def round_bits(da: xr.DataArray, keepbits: int):
     return da
 
 
-def _get_keepbits(bitround, varname, vartype):
+def _get_keepbits(bitround: Union[bool, int, dict], varname: str, vartype):
     # Guess the number of bits to keep depending on how bitround was passed, the var dtype and the var name.
     if not np.issubdtype(vartype, np.floating) or bitround is False:
         if isinstance(bitround, dict) and varname in bitround:
@@ -341,20 +348,20 @@ def _get_keepbits(bitround, varname, vartype):
 @parse_config
 def save_to_netcdf(
     ds: xr.Dataset,
-    filename: str,
+    filename: Union[str, os.PathLike],
     *,
     rechunk: Optional[dict] = None,
     bitround: Union[bool, int, dict] = False,
     compute: bool = True,
     netcdf_kwargs: Optional[dict] = None,
-) -> None:
-    """Save a Dataset to NetCDF, rechunking if requested.
+):
+    """Save a Dataset to NetCDF, rechunking or compressing if requested.
 
     Parameters
     ----------
     ds : xr.Dataset
         Dataset to be saved.
-    filename : str
+    filename : str or os.PathLike
         Name of the NetCDF file to be saved.
     rechunk : dict, optional
         This is a mapping from dimension name to new chunks (in any format understood by dask).
@@ -362,10 +369,10 @@ def save_to_netcdf(
         dimension names.
         Rechunking is only done on *data* variables sharing dimensions with this argument.
     bitround : bool or int or dict
-      If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa, allowing for a much better compression.
-      If an int, this is the number of bits to keep for all float variables.
-      If a dict, a mapping from variable name to the number of bits to keep.
-      If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12, which yields a relative error below 0.013%.
+        If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa, allowing for a much better compression.
+        If an int, this is the number of bits to keep for all float variables.
+        If a dict, a mapping from variable name to the number of bits to keep.
+        If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12, which yields a relative error below 0.013%.
     compute : bool
         Whether to start the computation or return a delayed object.
     netcdf_kwargs : dict, optional
@@ -404,18 +411,18 @@ def save_to_netcdf(
 @parse_config
 def save_to_zarr(
     ds: xr.Dataset,
-    filename: str,
+    filename: Union[str, os.PathLike],
     *,
     rechunk: Optional[dict] = None,
     zarr_kwargs: Optional[dict] = None,
     compute: bool = True,
-    encoding: dict = None,
+    encoding: Optional[dict] = None,
     bitround: Union[bool, int, dict] = False,
     mode: str = "f",
     itervar: bool = False,
     timeout_cleanup: bool = True,
-) -> None:
-    """Save a Dataset to Zarr format, rechunking if requested.
+):
+    """Save a Dataset to Zarr format, rechunking and compressing if requested.
 
     According to mode, removes variables that we don't want to re-compute in ds.
 
@@ -613,9 +620,9 @@ def _to_dataframe(
 def to_table(
     ds: Union[xr.Dataset, xr.DataArray],
     *,
-    row: Union[None, str, Sequence[str]] = None,
-    column: Union[None, str, Sequence[str]] = None,
-    sheet: Union[None, str, Sequence[str]] = None,
+    row: Optional[Union[str, Sequence[str]]] = None,
+    column: Optional[Union[str, Sequence[str]]] = None,
+    sheet: Optional[Union[str, Sequence[str]]] = None,
     coords: Union[bool, str, Sequence[str]] = True,
 ) -> Union[pd.DataFrame, dict]:
     """Convert a dataset to a pandas DataFrame with support for multicolumns and multisheet.
@@ -710,11 +717,25 @@ def to_table(
     return _to_dataframe(da, **table_kwargs)
 
 
-def make_toc(ds: Union[xr.Dataset, xr.DataArray], loc: str = None) -> pd.DataFrame:
+def make_toc(
+    ds: Union[xr.Dataset, xr.DataArray], loc: Optional[str] = None
+) -> pd.DataFrame:
     """Make a table of content describing a dataset's variables.
 
     This return a simple DataFrame with variable names as index, the long_name as "description" and units.
     Column names and long names are taken from the activated locale if found, otherwise the english version is taken.
+
+    Parameters
+    ----------
+    ds : xr.Dataset or xr.DataArray
+      Dataset or DataArray from which to extract the relevant metadata.
+    loc : str, optional
+        The locale to use. If None, either the first locale in the list of activated xclim locales is used, or "en" if none is activated.
+
+    Returns
+    -------
+    pd.DataFrame
+      A DataFrame with variables as index, and columns "description" and "units".
     """
     if loc is None:
         loc = (XC_OPTIONS[METADATA_LOCALES] or ["en"])[0]
@@ -745,15 +766,15 @@ TABLE_FORMATS = {".csv": "csv", ".xls": "excel", ".xlsx": "excel"}
 
 def save_to_table(
     ds: Union[xr.Dataset, xr.DataArray],
-    filename: str,
+    filename: Union[str, os.PathLike],
     output_format: Optional[str] = None,
     *,
-    row: Union[None, str, Sequence[str]] = None,
+    row: Optional[Union[str, Sequence[str]]] = None,
     column: Union[None, str, Sequence[str]] = "variable",
-    sheet: Union[None, str, Sequence[str]] = None,
+    sheet: Optional[Union[str, Sequence[str]]] = None,
     coords: Union[bool, Sequence[str]] = True,
     col_sep: str = "_",
-    row_sep: str = None,
+    row_sep: Optional[str] = None,
     add_toc: Union[bool, pd.DataFrame] = False,
     **kwargs,
 ):
@@ -767,7 +788,7 @@ def save_to_table(
       Dataset or DataArray to be saved.
       If a Dataset with more than one variable is given, the dimension "variable"
       must appear in one of `row`, `column` or `sheet`.
-    filename : str
+    filename : str or os.PathLike
       Name of the file to be saved.
     output_format: {'csv', 'excel', ...}, optional
       The output format. If None (default), it is inferred
@@ -848,7 +869,7 @@ def save_to_table(
         getattr(out, f"to_{output_format}")(filename, **kwargs)
 
 
-def rechunk_for_saving(ds, rechunk):
+def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
     """Rechunk before saving to .zarr or .nc, generalized as Y/X for different axes lat/lon, rlat/rlon.
 
     Parameters
@@ -914,7 +935,7 @@ def rechunk(
         The maximal memory usage of each task.
         When using a distributed Client, this an approximate memory per thread.
         Each worker of the client should have access to 10-20% more memory than this times the number of threads.
-    temp_store : path, str, optional
+    temp_store : path or str, optional
         A path to a zarr where to store intermediate results.
     overwrite : bool
         If True, it will delete whatever is in path_out before doing the rechunking.

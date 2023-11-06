@@ -1,4 +1,5 @@
 """Testing utilities for xscen."""
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -19,9 +20,9 @@ def datablock_3d(
     y_step: float = 0.1,
     start: str = "7/1/2000",
     freq: str = "D",
-    units: str = None,
+    units: Optional[str] = None,
     as_dataset: bool = False,
-):
+) -> Union[xr.DataArray, xr.Dataset]:
     """Create a generic timeseries object based on pre-defined dictionaries of existing variables.
 
     Parameters
@@ -46,8 +47,8 @@ def datablock_3d(
         The starting date of the time coordinate.
     freq : str
         The frequency of the time coordinate.
-    units : str
-        The units of the variable.
+    units : str, optional
+        The units of the variable. If None, the units are inferred from the variable name.
     as_dataset : bool
         If True, return a Dataset, else a DataArray.
     """
@@ -165,7 +166,13 @@ def datablock_3d(
 
 
 def fake_data(
-    nyears, nx, ny, rand_type="random", seed=0, amplitude=1, offset=0
+    nyears: int,
+    nx: int,
+    ny: int,
+    rand_type: str = "random",
+    seed: int = 0,
+    amplitude: float = 1.0,
+    offset: float = 0.0,
 ) -> np.ndarray:
     """Generate fake data for testing.
 

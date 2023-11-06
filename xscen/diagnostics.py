@@ -1,9 +1,10 @@
-# noqa: D100
+"""Functions to perform diagnostics on datasets."""
 import logging
+import os
 import warnings
 from collections.abc import Sequence
 from copy import deepcopy
-from pathlib import Path, PosixPath
+from pathlib import Path
 from types import ModuleType
 from typing import Optional, Union
 
@@ -15,7 +16,6 @@ from xclim.core.indicator import Indicator
 
 from .config import parse_config
 from .indicators import load_xclim_module
-from .io import save_to_zarr
 from .utils import (
     add_attr,
     change_units,
@@ -41,65 +41,66 @@ def _(s):
     return s
 
 
+@parse_config
 def health_checks(
     ds: Union[xr.Dataset, xr.DataArray],
     *,
-    structure: dict = None,
-    calendar: str = None,
-    start_date: str = None,
-    end_date: str = None,
-    variables_and_units: dict = None,
-    cfchecks: dict = None,
-    freq: str = None,
-    missing: Union[dict, str, list] = None,
-    flags: dict = None,
-    flags_kwargs: dict = None,
+    structure: Optional[dict] = None,
+    calendar: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    variables_and_units: Optional[dict] = None,
+    cfchecks: Optional[dict] = None,
+    freq: Optional[str] = None,
+    missing: Optional[Union[dict, str, list]] = None,
+    flags: Optional[dict] = None,
+    flags_kwargs: Optional[dict] = None,
     return_flags: bool = False,
-    raise_on: list = None,
+    raise_on: Optional[list] = None,
 ) -> Union[None, xr.Dataset]:
     """
     Perform a series of health checks on the dataset. Be aware that missing data checks and flag checks can be slow.
 
     Parameters
     ----------
-    ds: xr.Dataset | xr.DataArray
+    ds: xr.Dataset or xr.DataArray
         Dataset to check.
-    structure: dict
+    structure: dict, optional
         Dictionary with keys "dims" and "coords" containing the expected dimensions and coordinates.
         This check will fail is extra dimensions or coordinates are found.
-    calendar: str
+    calendar: str, optional
         Expected calendar. Synonyms should be detected correctly (e.g. "standard" and "gregorian").
-    start_date: str
+    start_date: str, optional
         To check if the dataset starts at least at this date.
-    end_date: str
+    end_date: str, optional
         To check if the dataset ends at least at this date.
-    variables_and_units: dict
+    variables_and_units: dict, optional
         Dictionary containing the expected variables and units.
-    cfchecks: dict
+    cfchecks: dict, optional
         Dictionary where the key is the variable to check and the values are the cfchecks.
         The cfchecks themselves must be a dictionary with the keys being the cfcheck names and the values being the arguments to pass to the cfcheck.
         See `xclim.core.cfchecks` for more details.
-    freq: str
+    freq: str, optional
         Expected frequency, written as the result of xr.infer_freq(ds.time).
-    missing: dict | str | list
+    missing: dict or str or list of str, optional
         String, list of strings, or dictionary where the key is the method to check for missing data and the values are the arguments to pass to the method.
         The methods are: "missing_any", "at_least_n_valid", "missing_pct", "missing_wmo". See :py:func:`xclim.core.missing` for more details.
-    flags: dict
+    flags: dict, optional
         Dictionary where the key is the variable to check and the values are the flags.
         The flags themselves must be a dictionary with the keys being the data_flags names and the values being the arguments to pass to the data_flags.
         If `None` is passed instead of a dictionary, then xclim's default flags for the given variable are run. See :py:data:`xclim.core.utils.VARIABLES`.
         See :py:func:`xclim.core.dataflags.data_flags` for the list of possible flags.
-    flags_kwargs: dict
+    flags_kwargs: dict, optional
         Additional keyword arguments to pass to the data_flags ("dims" and "freq").
     return_flags: bool
         Whether to return the Dataset created by data_flags.
-    raise_on: list
+    raise_on: list of str, optional
         Whether to raise an error if a check fails, else there will only be a warning. The possible values are the names of the checks.
         Use ["all"] to raise on all checks.
 
     Returns
     -------
-    xr.Dataset | None
+    xr.Dataset or None
         Dataset containing the flags if return_flags is True & raise_on is False for the "flags" check.
     """
     if isinstance(ds, xr.DataArray):
@@ -292,39 +293,43 @@ def health_checks(
 def properties_and_measures(
     ds: xr.Dataset,
     properties: Union[
-        str, PosixPath, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
+        str,
+        os.PathLike,
+        Sequence[Indicator],
+        Sequence[tuple[str, Indicator]],
+        ModuleType,
     ],
-    period: list = None,
+    period: Optional[list[str]] = None,
     unstack: bool = False,
-    rechunk: dict = None,
+    rechunk: Optional[dict] = None,
     dref_for_measure: Optional[xr.Dataset] = None,
     change_units_arg: Optional[dict] = None,
     to_level_prop: str = "diag-properties",
     to_level_meas: str = "diag-measures",
-):
+) -> tuple[xr.Dataset, xr.Dataset]:
     """Calculate properties and measures of a dataset.
 
     Parameters
     ----------
     ds : xr.Dataset
         Input dataset.
-    properties : Union[str, PosixPath, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+    properties : Union[str, os.PathLike, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType]
         Path to a YAML file that instructs on how to calculate properties.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
         tuples (indicator name, indicator) as returned by `iter_indicators()`.
-    period : list
+    period : list of str, optional
         [start, end] of the period to be evaluated. The period will be selected on ds
         and dref_for_measure if it is given.
     unstack : bool
         Whether to unstack ds before computing the properties.
-    rechunk : dict
+    rechunk : dict, optional
         Dictionary of chunks to use for a rechunk before computing the properties.
-    dref_for_measure : xr.Dataset
+    dref_for_measure : xr.Dataset, optional
         Dataset of properties to be used as the ref argument in the computation of the measure.
         Ideally, this is the first output (prop) of a previous call to this function.
         Only measures on properties that are provided both in this dataset and in the properties list will be computed.
         If None, the second output of the function (meas) will be an empty Dataset.
-    change_units_arg : dict
+    change_units_arg : dict, optional
         If not None, calls `xscen.utils.change_units` on ds before computing properties using
         this dictionary for the `variables_and_units` argument.
         It can be useful to convert units before computing the properties, because it is sometimes
@@ -426,7 +431,9 @@ def properties_and_measures(
     return prop, meas
 
 
-def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-heatmap"):
+def measures_heatmap(
+    meas_datasets: Union[list[xr.Dataset], dict], to_level: str = "diag-heatmap"
+) -> xr.Dataset:
     """Create a heatmap to compare the performance of the different datasets.
 
     The columns are properties and the rows are datasets.
@@ -435,7 +442,7 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
 
     Parameters
     ----------
-    meas_datasets : list or dict
+    meas_datasets : list of xr.Dataset or dict
         List or dictionary of datasets of measures of properties.
         If it is a dictionary, the keys will be used to name the rows.
         If it is a list, the rows will be given a number.
@@ -444,7 +451,8 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
 
     Returns
     -------
-    xr.DataArray
+    xr.Dataset
+        Dataset containing the heatmap.
     """
     name_of_datasets = None
     if isinstance(meas_datasets, dict):
@@ -504,24 +512,24 @@ def measures_heatmap(meas_datasets: Union[list, dict], to_level: str = "diag-hea
 
 
 def measures_improvement(
-    meas_datasets: Union[list, dict], to_level: str = "diag-improved"
-):
+    meas_datasets: Union[list[xr.Dataset], dict], to_level: str = "diag-improved"
+) -> xr.Dataset:
     """
-    Calculate the fraction of improved grid points for each properties between two datasets of measures.
+    Calculate the fraction of improved grid points for each property between two datasets of measures.
 
     Parameters
     ----------
-    meas_datasets: list|dict
-     List of 2 datasets: Initial dataset of measures and final (improved) dataset of measures.
-     Both datasets must have the same variables.
-     It is also possible to pass a dictionary where the values are the datasets and the key are not used.
+    meas_datasets: list of xr.Dataset or dict
+        List of 2 datasets: Initial dataset of measures and final (improved) dataset of measures.
+        Both datasets must have the same variables.
+        It is also possible to pass a dictionary where the values are the datasets and the key are not used.
     to_level: str
         processing_level to assign to the output dataset
 
     Returns
     -------
     xr.Dataset
-
+        Dataset containing information on the fraction of improved grid points for each property.
     """
     if isinstance(meas_datasets, dict):
         meas_datasets = list(meas_datasets.values())
@@ -566,7 +574,9 @@ def measures_improvement(
     return ds_better
 
 
-def measures_improvement_2d(dict_input: dict, to_level: str = "diag-improved-2d"):
+def measures_improvement_2d(
+    dict_input: dict, to_level: str = "diag-improved-2d"
+) -> xr.Dataset:
     """
     Create a 2D dataset with dimension `realization` showing the fraction of improved grid cell.
 
