@@ -3,7 +3,8 @@ channels:
   - conda-forge
 dependencies:
   - python >=3.9
-  # Don't forget to sync the changes here with environment-dev.yml!
+  # Don't forget to sync changes between environment.yml, environment-dev.yml, and setup.py!
+  # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
   - cartopy
   - cftime
