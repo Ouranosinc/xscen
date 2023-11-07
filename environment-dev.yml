@@ -28,7 +28,7 @@ dependencies:
   - sparse
   - toolz
   - xarray
-  - xclim >=0.43.0
+  - xclim >=0.46.0
   - xesmf >=0.7
   - zarr
   # Opt
