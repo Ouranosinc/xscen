@@ -20,11 +20,11 @@ dependencies:
   - matplotlib
   - netCDF4
   - numpy
-  - pandas >= 2
+  - pandas >=2.0
   - parse
   - pyyaml
   - rechunker
-  - shapely >= 2
+  - shapely >=2.0
   - sparse
   - toolz
   - xarray
