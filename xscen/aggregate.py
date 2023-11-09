@@ -266,7 +266,7 @@ def climatological_op(
         [ds.time.dt.year.values, ds.time.dt.month.values, ds.time.dt.day.values],
         names=["year", "month", "day"],
     )
-    print('ds before unstacking', ds.dims)
+    # print('ds before unstacking', ds.dims)
     ds_unstack = ds.assign(time=ind).unstack("time")
 
     # Rolling will ignore jumps in time, so we want to raise an exception beforehand
@@ -282,6 +282,7 @@ def climatological_op(
     window = window or int(periods[0][1]) - int(periods[0][0]) + 1
 
     # there is one less occurrence when a period crosses years
+    # ToDo: Is this restrictive if the input has values beyond the first and last year?
     freq_across_year = [
         f"{f}-{mon}"
         for mon in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values()
@@ -327,9 +328,9 @@ def climatological_op(
 
     for period in periods:
         # Rolling average
-        print('ds_unstack before rolling', ds_unstack.dims)
+        # print('ds_unstack before rolling', ds_unstack.dims)
         ds_rolling = ds_unstack.sel(year=slice(period[0], period[1])).rolling(year=window, min_periods=min_periods)
-        print('ds_rolling as construct', ds_rolling.construct(window_dim="window", stride=stride, keep_attrs=True).dims)
+        # print('ds_rolling as construct', ds_rolling.construct(window_dim="window", stride=stride, keep_attrs=True).dims)
 
         if hasattr(ds_rolling, op) and callable(getattr(ds_rolling, op)):
             if op not in ['max', 'mean', 'median', 'min', 'quantile', 'std', 'sum', 'var']:
@@ -347,13 +348,6 @@ def climatological_op(
 
             # Select the windows at provided stride, starting from the first full window's operation result
             ds_rolling = ds_rolling.isel(year=slice(window - 1, None, stride))
-            # ds_rolling = ds_rolling.isel(
-            #     year=slice(window - 1, None)
-            # )  # Select from the first full windowed mean
-            # print('ds_rolling after slicing:', ds_rolling.dims)
-            # strides = ds_rolling.year.values % stride
-            # print('ds_rolling after strides:', ds_rolling.dims)
-            # ds_rolling = ds_rolling.sel(year=(strides - strides[0] == 0))
 
         elif op == "linregress":
             # ToDo: include min_periods in linregress
@@ -364,22 +358,22 @@ def climatological_op(
                 mask = valid_x & valid_y
                 if np.sum(mask) >= kwargs.get('min_periods', 1):
                     reg = scipy.stats.linregress(x, y, alternative=kwargs.get('alternative', 'two-sided'))
-                    out = np.array([reg.slope, reg.intercept, reg.rvalue, reg.pvalue, reg.stderr, reg.intercept_stderr])
+                    out = np.array([reg.slope, reg.intercept, reg.rvalue,
+                                    reg.pvalue, reg.stderr, None])  # reg.intercept_stderr])
                 else:
                     out = np.full(6, np.nan)
                 return out
 
-            dsr_construct = ds_rolling.construct(window_dim="window", stride=stride, keep_attrs=True)
-            print('dsr_construct:', dsr_construct.dims)
+            dsr_construct = ds_rolling.construct(window_dim="window", keep_attrs=True)
+            # print('dsr_construct:', dsr_construct.dims)
             dsr_construct = dsr_construct.isel(year=slice(window - 1, None, stride))
-            # strides = dsr_construct.year.values % stride
-            # dsr_construct = dsr_construct.sel(window=(strides - strides[0] == 0))
+            win_start_years = dsr_construct.year.values - window + 1
 
             linreg_kwargs = {k: v for k, v in op_kwargs.items() if 'keep_attrs' not in k}
             linreg_kwargs['min_periods'] = min_periods
-            # construct array to use years as x values
-            x = np.arange(dsr_construct.window.size).repeat(dsr_construct.year.size).reshape(
-                dsr_construct.window.size, dsr_construct.year.size) + dsr_construct.year.values - window + 1
+            # construct array to use years as x values - ToDo: couldn't yet get apply_ufunc to use this correctly.
+            # x = np.arange(dsr_construct.window.size).repeat(dsr_construct.year.size).reshape(
+            #     dsr_construct.window.size, dsr_construct.year.size) + dsr_construct.year.values - window + 1
             ds_rolling = xr.apply_ufunc(
                 _ulinregress,
                 np.arange(dsr_construct.window.size),  # ToDo: can we get the actual year values here?
@@ -394,7 +388,15 @@ def climatological_op(
                 kwargs=linreg_kwargs,
             )
             ds_rolling.coords['linreg_param'] = ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr']
-            print('ds_rolling after linregress: ', ds_rolling.dims)
+            # print('ds_rolling after linregress: ', ds_rolling.dims)
+
+            # adjust the intercept to be relative to the first year of the window
+            # can't be done for intercept_stderr, will need to adjust computation with actual year values
+            for year in ds_rolling.year.values:
+                ds_rolling.loc[{'year': year, 'linreg_param': 'intercept'}] = (
+                    ds_rolling.loc[{'year': year, 'linreg_param': 'intercept'}] -
+                    ds_rolling.loc[{'year': year, 'linreg_param': 'slope'}] * (year - window + 1)
+                )
 
         else:
             raise ValueError(f"Operation '{op}' not available.")
@@ -440,7 +442,7 @@ def climatological_op(
 
     # modify data_vars names, attrs and history
     if rename_variables:
-        ds_rolling = ds_rolling.rename_vars({vv: f"{vv}_clim-{op}" for vv in ds_rolling.data_vars})
+        ds_rolling = ds_rolling.rename_vars({vv: f"{vv}_clim_{op}" for vv in ds_rolling.data_vars})
 
     for vv in ds_rolling.data_vars:
 
@@ -450,7 +452,7 @@ def climatological_op(
             except ValueError:
                 opr = op
             update_attr(
-                ds_rolling[vv], a, _("{window}-year {operation} of {attr}.".lower()), window=window,
+                ds_rolling[vv], a, _("Climatological {operation} of {attr}.".lower()),
                 operation=opr
             )
 
