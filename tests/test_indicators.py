@@ -174,7 +174,7 @@ class TestComputeIndicators:
                 identifier="tg_min_qs",
                 module="tests"),
             xclim.core.indicator.Indicator.from_dict(
-                data={"base": "precip_average", "parameters": {"freq": "MS"}},
+                data={"base": "days_over_precip_thresh", "parameters": {"freq": "MS"}},
                 identifier="precip_average_ms",
                 module="tests")
         ]
