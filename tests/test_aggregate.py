@@ -588,7 +588,7 @@ class TestClimatologicalOp:
                         np.zeros(o),
                         np.ones(o),
                         np.zeros(o),
-                        np.full(o, np.nan)]).T})
+                        np.zeros(o)]).T})
                     )
         # Test output variable name, values, length, horizon
         assert list(out.data_vars.keys()) == [f"tas_clim_{op}"]
@@ -632,7 +632,7 @@ class TestClimatologicalOp:
                         np.zeros(o),
                         np.ones(o),
                         np.zeros(o),
-                        np.full(o, np.nan)]), len(np.unique(out.horizon.values))).T})
+                        np.zeros(o)]), len(np.unique(out.horizon.values))).T})
                     )
         # Test output values
         np.testing.assert_array_equal(

@@ -227,10 +227,10 @@ def climatological_op(
         the key is the operation name and the value is a dict of kwargs accepted by the operation.
         While other operations are technically possible, the following are recommended: ToDo: recommended or tested?
         ['max', 'mean', 'median', 'min', 'std', 'sum', 'var', 'linregress'].
-        Operations beyond methods of xarray.Dataset:
-        - 'linregress' : Computes the linear regression over the period or it's windows. Creates a new dimension
-          'linreg_param' in the returned dataset with coordinates: ['slope', 'intercept', 'rvalue', 'pvalue',
-          'stderr', 'intercept_stderr'].
+        Available operations include methods of xarray.Dataset and the following:
+        - 'linregress' : Computes the linear regression over the period or it's windows, using years as regressors.
+          Creates a new dimension 'linreg_param' in the returned dataset with coordinates:
+          ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr'].
     window : int
         Number of years to use for the time periods.
         If left at None and periods is given, window will be the size of the first period.
@@ -313,7 +313,6 @@ def climatological_op(
         raise ValueError("'min_periods' should be smaller or equal to 'window'")
 
     # if op is a dict unpack it
-    op_kwargs = {'keep_attrs': True}  # ToDo: Is thera a global setting in xscen so we don't need this?
     if isinstance(op, dict):
         op, op_kwargs = list(op.items())[0]
         op_kwargs['keep_attrs'] = True if 'keep_attrs' not in op_kwargs else op_kwargs['keep_attrs']
@@ -352,7 +351,7 @@ def climatological_op(
             ds_rolling = ds_rolling.isel(year=slice(window - 1, None, stride))
 
         elif op == "linregress":
-            # ToDo: include min_periods in linregress
+
             def _ulinregress(x, y, **kwargs):
                 # Wrapper for scipy.stats.linregress to unpack multiple return values in xr.apply_ufunc
                 valid_x = ~np.isnan(x)
@@ -361,30 +360,30 @@ def climatological_op(
                 if np.sum(mask) >= kwargs.get('min_periods', 1):
                     reg = scipy.stats.linregress(x, y, alternative=kwargs.get('alternative', 'two-sided'))
                     out = np.array([reg.slope, reg.intercept, reg.rvalue,
-                                    reg.pvalue, reg.stderr, None])  # reg.intercept_stderr])
+                                    reg.pvalue, reg.stderr, reg.intercept_stderr])
                 else:
                     out = np.full(6, np.nan)
                 return out
 
-            dsr_construct = ds_rolling.construct(window_dim="window", keep_attrs=True)
-            # print('dsr_construct:', dsr_construct.dims)
-            dsr_construct = dsr_construct.isel(year=slice(window - 1, None, stride))
-            win_start_years = dsr_construct.year.values - window + 1
-
+            # prepare kwargs
             linreg_kwargs = {k: v for k, v in op_kwargs.items() if 'keep_attrs' not in k}
             linreg_kwargs['min_periods'] = min_periods
-            # construct array to use years as x values - ToDo: couldn't yet get apply_ufunc to use this correctly.
-            # x = np.arange(dsr_construct.window.size).repeat(dsr_construct.year.size).reshape(
-            #     dsr_construct.window.size, dsr_construct.year.size) + dsr_construct.year.values - window + 1
-            x = xr.DataArray(
+
+            # unwrap DatasetRolling object
+            dsr_construct = ds_rolling.construct(window_dim="window", keep_attrs=True)
+            dsr_construct = dsr_construct.isel(year=slice(window - 1, None, stride))
+
+            # construct array to use years as x values
+            years_as_x_values = xr.DataArray(
                 np.arange(dsr_construct.window.size).repeat(dsr_construct.year.size).reshape(
                     dsr_construct.window.size, dsr_construct.year.size) + dsr_construct.year.values - window + 1,
                 dims=['window', 'year'],
                 coords={'window': dsr_construct.window.values, 'year': dsr_construct.year.values}
             )
+
             ds_rolling = xr.apply_ufunc(
                 _ulinregress,
-                np.arange(dsr_construct.window.size),  # ToDo: can we get the actual year values here?
+                years_as_x_values,
                 dsr_construct,
                 input_core_dims=[["window"], ["window"]],
                 output_core_dims=[["linreg_param"]],
@@ -392,19 +391,11 @@ def climatological_op(
                 dask="parallelized",
                 output_dtypes=["float32"],
                 dask_gufunc_kwargs={"output_sizes": {"linreg_param": 6}},
-                keep_attrs=True,  # ToDo: Is thera a global setting in xscen so we don't need this?
+                keep_attrs="no_conflicts",
                 kwargs=linreg_kwargs,
             )
+            # label new coords
             ds_rolling.coords['linreg_param'] = ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr']
-            # print('ds_rolling after linregress: ', ds_rolling.dims)
-
-            # adjust the intercept to be relative to the first year of the window
-            # can't be done for intercept_stderr, will need to adjust computation with actual year values
-            for year in ds_rolling.year.values:
-                ds_rolling.loc[{'year': year, 'linreg_param': 'intercept'}] = (
-                    ds_rolling.loc[{'year': year, 'linreg_param': 'intercept'}] -
-                    ds_rolling.loc[{'year': year, 'linreg_param': 'slope'}] * (year - window + 1)
-                )
 
         else:
             raise ValueError(f"Operation '{op}' not implemented.")
@@ -445,7 +436,8 @@ def climatological_op(
         ds_rolling = ds_rolling.assign_coords(time=time_coord).transpose("time", ...)
 
         concats.extend([ds_rolling])
-    # end loop period
+        # end loop period
+
     ds_rolling = xr.concat(concats, dim="time", data_vars="minimal")
 
     # modify data_vars names, attrs and history
@@ -456,16 +448,16 @@ def climatological_op(
 
         for a in ["description", "long_name"]:
             try:
-                opr = xc.core.formatting.default_formatter.format_field(op, 'adj')
+                operation = xc.core.formatting.default_formatter.format_field(op, 'adj')
             except ValueError:
-                opr = op
+                operation = op
             update_attr(
                 ds_rolling[vv], a, _("Climatological {operation} of {attr}."),
-                operation=opr
+                operation=operation
             )
 
         new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Climatological {opr} (non-centered) "
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Climatological {operation} (non-centered) "
             f"with a minimum of {min_periods} years of data - xarray v{xr.__version__}"
         )
         history = (
