@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "climatological_mean",
+    "climatological_op",
     "compute_deltas",
     "spatial_mean",
     "produce_horizon",
@@ -225,7 +226,7 @@ def climatological_op(
         Operation can be any method name of xarray.Dataset or a dictionary. If 'op' is a dictionary
         the key is the operation name and the value is a dict of kwargs accepted by the operation.
         While other operations are technically possible, the following are recommended: ToDo: recommended or tested?
-        ['max', 'mean', 'median', 'min', 'quantile', 'std', 'sum', 'var', 'linregress'].
+        ['max', 'mean', 'median', 'min', 'std', 'sum', 'var', 'linregress'].
         Operations beyond methods of xarray.Dataset:
         - 'linregress' : Computes the linear regression over the period or it's windows. Creates a new dimension
           'linreg_param' in the returned dataset with coordinates: ['slope', 'intercept', 'rvalue', 'pvalue',
@@ -312,6 +313,7 @@ def climatological_op(
         raise ValueError("'min_periods' should be smaller or equal to 'window'")
 
     # if op is a dict unpack it
+    op_kwargs = {'keep_attrs': True}  # ToDo: Is thera a global setting in xscen so we don't need this?
     if isinstance(op, dict):
         op, op_kwargs = list(op.items())[0]
         op_kwargs['keep_attrs'] = True if 'keep_attrs' not in op_kwargs else op_kwargs['keep_attrs']
@@ -333,7 +335,7 @@ def climatological_op(
         # print('ds_rolling as construct', ds_rolling.construct(window_dim="window", stride=stride, keep_attrs=True).dims)
 
         if hasattr(ds_rolling, op) and callable(getattr(ds_rolling, op)):
-            if op not in ['max', 'mean', 'median', 'min', 'quantile', 'std', 'sum', 'var']:
+            if op not in ['max', 'mean', 'median', 'min', 'std', 'sum', 'var']:
                 warnings.warn(
                     f"The requested operation '{op}' has not been tested and may produce unexpected results."
                 )  # ToDo Make sure this is true, and all tests are implemented!
@@ -374,6 +376,12 @@ def climatological_op(
             # construct array to use years as x values - ToDo: couldn't yet get apply_ufunc to use this correctly.
             # x = np.arange(dsr_construct.window.size).repeat(dsr_construct.year.size).reshape(
             #     dsr_construct.window.size, dsr_construct.year.size) + dsr_construct.year.values - window + 1
+            x = xr.DataArray(
+                np.arange(dsr_construct.window.size).repeat(dsr_construct.year.size).reshape(
+                    dsr_construct.window.size, dsr_construct.year.size) + dsr_construct.year.values - window + 1,
+                dims=['window', 'year'],
+                coords={'window': dsr_construct.window.values, 'year': dsr_construct.year.values}
+            )
             ds_rolling = xr.apply_ufunc(
                 _ulinregress,
                 np.arange(dsr_construct.window.size),  # ToDo: can we get the actual year values here?
@@ -399,7 +407,7 @@ def climatological_op(
                 )
 
         else:
-            raise ValueError(f"Operation '{op}' not available.")
+            raise ValueError(f"Operation '{op}' not implemented.")
 
         horizons = xr.DataArray(
             [f"{yr - (window - 1)}-{yr}" for yr in ds_rolling.year.values],
@@ -452,12 +460,12 @@ def climatological_op(
             except ValueError:
                 opr = op
             update_attr(
-                ds_rolling[vv], a, _("Climatological {operation} of {attr}.".lower()),
+                ds_rolling[vv], a, _("Climatological {operation} of {attr}."),
                 operation=opr
             )
 
         new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {window}-year {opr} (non-centered) "
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Climatological {opr} (non-centered) "
             f"with a minimum of {min_periods} years of data - xarray v{xr.__version__}"
         )
         history = (
