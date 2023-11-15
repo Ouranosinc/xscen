@@ -497,21 +497,21 @@ def climatological_op(
             4: {'season': ['MAM', 'JJA', 'SON', 'DJF']},
             12: {'month': calendar.month_abbr[1:]},
         }
-        out = (ds_rolling
-               .assign(time=ind)
-               .unstack('time')
-               .rename({'month': 'time'})
-               .drop_vars('horizon')
-               )
         # out = (ds_rolling
         #        .assign(time=ind)
         #        .unstack('time')
-        #        )
-        # out = (out
-        #        .rename({'month': list(new_time[out.month.size].keys())[0]})
-        #        .assign_coords(new_time[out.month.size])
+        #        .rename({'month': 'time'})
         #        .drop_vars('horizon')
         #        )
+        out = (ds_rolling
+               .assign(time=ind)
+               .unstack('time')
+               )
+        out = (out
+               .rename({'month': list(new_time[out.month.size].keys())[0]})
+               .assign_coords(new_time[out.month.size])
+               .drop_vars('horizon')
+               )
         return out
     else:
         return ds_rolling

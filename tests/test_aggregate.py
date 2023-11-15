@@ -737,3 +737,6 @@ class TestClimatologicalOp:
 
         out = xs.climatological_op(ds.convert_calendar(cal, align_on="date"), op='mean')
         assert out.time.dt.calendar == cal
+
+    def test_periods_as_dim(self):
+        pass
