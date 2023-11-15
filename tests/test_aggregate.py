@@ -10,6 +10,12 @@ from xscen.testing import datablock_3d
 
 
 class TestClimatologicalMean:
+    def _format(self, s):
+        import xclim
+        op_format = (dict.fromkeys(("mean", "std", "var", "sum"), "adj") |
+                     dict.fromkeys(("max", "min"), "noun"))
+        return xclim.core.formatting.default_formatter.format_field(s, op_format[s])
+
     def test_daily(self):
         ds = timeseries(
             np.tile(np.arange(1, 13), 3),
@@ -42,10 +48,12 @@ class TestClimatologicalMean:
         # Test metadata
         assert (
             out.tas.attrs["description"]
-            == f"30-year mean of {ds.tas.attrs['description']}"
+            # == f"30-year mean of {ds.tas.attrs['description']}" # Changed to reflect output from climatological_op
+            == f"Climatological 30-year average of {ds.tas.attrs['description']}"
         )
         assert (
-            "30-year rolling average (non-centered) with a minimum of 30 years of data"
+            # "30-year rolling average (non-centered) with a minimum of 30 years of data"
+            "Climatological 30-year average (non-centered) with a minimum of 30 years of data"
             in out.tas.attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "climatology"
@@ -76,10 +84,12 @@ class TestClimatologicalMean:
         # Test metadata
         assert (
             out.tas.attrs["description"]
-            == f"15-year mean of {ds.tas.attrs['description']}"
+            # == f"15-year mean of {ds.tas.attrs['description']}" # Changed to reflect output from climatological_op
+            == f"Climatological 15-year average of {ds.tas.attrs['description']}"
         )
         assert (
-            "15-year rolling average (non-centered) with a minimum of 15 years of data"
+            # "15-year rolling average (non-centered) with a minimum of 15 years of data"
+            "Climatological 15-year average (non-centered) with a minimum of 15 years of data"
             in out.tas.attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "for_testing"
@@ -356,12 +366,15 @@ class TestProduceHorizon:
         assert out.attrs["cat:xrfreq"] == "fx"
         assert all(v in out for v in ["tg_min", "growing_degree_days"])
         assert (
-            f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of"
+            #f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of"
+            f"Climatological {30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year average of"
             in out.tg_min.attrs["description"]
         )
         assert (
             out.tg_min.attrs["description"].split(
-                f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of "
+                # f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of "
+                f"Climatological {30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}"
+                f"-year average of "
             )[1]
             != self.ds.tas.attrs["description"]
         )
@@ -553,7 +566,9 @@ class TestSpatialMean:
 class TestClimatologicalOp:
     def _format(self, s):
         import xclim
-        return xclim.core.formatting.default_formatter.format_field(s, 'adj')
+        op_format = (dict.fromkeys(("mean", "std", "var" , "sum"), "adj") |
+                     dict.fromkeys(("max", "min"), "noun"))
+        return xclim.core.formatting.default_formatter.format_field(s, op_format[s])
 
     def test_daily(self):
         ds = timeseries(
@@ -597,13 +612,13 @@ class TestClimatologicalOp:
         np.testing.assert_array_equal(out.time[0], ds.time[0])
         assert (out.horizon == "2001-2030").all()
         # Test metadata
-        operation = self._format(op) if op not in ['median'] else op
+        operation = self._format(op) if op not in ['median', 'linregress'] else op
         assert (
             out[f"tas_clim_{op}"].attrs["description"]
-            == f"Climatological {operation} of {ds.tas.attrs['description']}"
+            == f"Climatological 30-year {operation} of {ds.tas.attrs['description']}"
         )
         assert (
-            f"Climatological {operation} (non-centered) with a minimum of 30 years of data"
+            f"Climatological 30-year {operation} (non-centered) with a minimum of 30 years of data"
             in out[f"tas_clim_{op}"].attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "climatology"
@@ -645,13 +660,13 @@ class TestClimatologicalOp:
             out.horizon.values
         )
         # Test metadata
-        operation = self._format(op) if op not in ['median'] else op
+        operation = self._format(op) if op not in ['median', 'linregress'] else op
         assert (
             out[f"tas_clim_{op}"].attrs["description"]
-            == f"Climatological {operation} of {ds.tas.attrs['description']}"
+            == f"Climatological 15-year {operation} of {ds.tas.attrs['description']}"
         )
         assert (
-            f"Climatological {operation} (non-centered) with a minimum of 15 years of data"
+            f"Climatological 15-year {operation} (non-centered) with a minimum of 15 years of data"
             in out[f"tas_clim_{op}"].attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "for_testing"
@@ -665,16 +680,22 @@ class TestClimatologicalOp:
             freq="QS-DEC",
             as_dataset=True,
         )
-        op = "mean"
         ds = ds.where(ds["time"].dt.strftime("%Y-%m-%d") != "2030-12-01")
 
+        op = 'mean'
         out = xs.climatological_op(ds, op=op, window=30)
         assert all(np.isreal(out[f"tas_clim_{op}"]))
         assert len(out.time) == 4
         np.testing.assert_array_equal(out[f"tas_clim_{op}"], np.arange(1, 5))
 
+        # min_periods as int
         out = xs.climatological_op(ds, op=op, window=30, min_periods=30)
         assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == 1
+
+        # min_periods as float
+        out = xs.climatological_op(ds, op=op, window=30, min_periods=.5)
+        assert "minimum of 15 years of data" in out[f"tas_clim_{op}"].attrs["history"]
+        assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == 0
 
         with pytest.raises(ValueError):
             xs.climatological_op(ds, op=op, window=5, min_periods=6)
