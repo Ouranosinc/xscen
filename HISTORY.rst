@@ -32,6 +32,7 @@ Bug fixes
 * Fixed ``get_warming_level`` to avoid incomplete matches. (:pull:`269`).
 * `search_data_catalogs` now eliminates anything that matches any entry in `exclusions`. (:issue:`275`, :pull:`280`).
 * Fixed a bug in ``xs.scripting.save_and_update`` where ``build_path_kwargs`` was ignored when trying to guess the file format. (:pull:`282`).
+* Add a warning to ``xs.extract._dispatch_historical_to_future``. (:issue:`286`, :pull:`287`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
