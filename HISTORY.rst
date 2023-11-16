@@ -54,6 +54,7 @@ Internal changes
     * `Manifest.in` is much more specific about what is installed.
     * Re-adds a dev recipe to the `setup.py`.
 * Multiple improvements to the docstrings and type annotations. (:pull:`282`).
+* `pip check` in conda builds in GitHub workflows have been temporarily set to always pass. (:pull:`288`).
 
 v0.7.1 (2023-08-23)
 -------------------
