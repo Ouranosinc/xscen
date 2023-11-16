@@ -1223,7 +1223,7 @@ def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
         hist = sdf[sdf.experiment == "historical"]
         if hist.empty:
             continue
-        if np.NaN in set(sdf.activity):
+        if pd.isna(sdf.activity).any():
             warnings.warn(
                 f"np.NaN was found in the activity column of {group}. The rows with np.NaN activity will be skipped."
                 "If you want them to be included in the matching historical and future matching, please put a valid activity (https://xscen.readthedocs.io/en/latest/columns.html)."
