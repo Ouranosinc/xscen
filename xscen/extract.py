@@ -1240,7 +1240,7 @@ def _dispatch_historical_to_future(
         if pd.isna(sdf.activity).any():
             warnings.warn(
                 f"np.NaN was found in the activity column of {group}. The rows with np.NaN activity will be skipped."
-                "If you want them to be included in the matching historical and future matching, please put a valid activity (https://xscen.readthedocs.io/en/latest/columns.html)."
+                "If you want them to be included in the historical and future matching, please put a valid activity (https://xscen.readthedocs.io/en/latest/columns.html)."
                 "For example, xscen expects experiment `historical` to have `CMIP` activity and experiments `sspXYZ` to have `ScenarioMIP` activity. "
             )
         for activity_id in set(sdf.activity) - {"HighResMip", np.NaN}:
