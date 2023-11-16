@@ -29,13 +29,13 @@ jobs:
           python-version: "3.9"
       - name: Install tox
         run: |
-          pip install tox
+          python -m pip install tox
       - name: Run linting suite
         run: |
-          tox -e black
+          python -m tox -e black
 
-  testing-pypi:
-    name: Test with Python${{ matrix.python-version }} (PyPI)
+  testing-tox:
+    name: Test with Python${{ matrix.python-version }} (PyPI/tox)
     needs: black
     runs-on: ubuntu-latest
     env:
@@ -68,7 +68,7 @@ jobs:
             tox
       - name: Test with tox
         run: |
-          tox -e ${{ matrix.tox-build }}
+          python -m tox -e ${{ matrix.tox-build }}
         env:
           ESMF_VERSION: ${{ env.esmf-version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -127,17 +127,17 @@ jobs:
       - name: Compile catalogs and install xscen
         run: |
           make translate
-          pip install --no-deps --editable .
+          python -m pip install --no-deps --editable .
       - name: Check versions
         run: |
           conda list
           python -m pip check || true
       - name: Test with pytest
         run: |
-          pytest tests
+          python -m pytest tests
       - name: Report coverage
         run: |
-          coveralls
+          python -m coveralls
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}-conda
@@ -146,7 +146,7 @@ jobs:
 
   finish:
     needs:
-      - testing-pypi
+      - testing-tox
       - testing-conda
     runs-on: ubuntu-latest
     container: python:3-slim
