@@ -36,6 +36,8 @@ with open("README.rst") as readme_file:
 # This list are the minimum requirements for xscen
 # this is only meant to make `pip check` work
 # xscen dependencies can only be installed through conda-forge.
+# Don't forget to sync changes between environment.yml, environment-dev.yml, and setup.py!
+# Also consider updating the list in xs.utils.show_versions if you add a new package.
 requirements = [
     "cartopy",
     "cftime",
@@ -125,6 +127,6 @@ setup(
     test_suite="tests",
     extras_require={"dev": dev_requirements, "docs": docs_requirements},
     url="https://github.com/Ouranosinc/xscen",
-    version="0.7.18-beta",
+    version="0.7.20-beta",
     zip_safe=False,
 )
