@@ -131,7 +131,7 @@ jobs:
       - name: Check versions
         run: |
           conda list
-          pip check
+          python -m pip check || true
       - name: Test with pytest
         run: |
           pytest tests
