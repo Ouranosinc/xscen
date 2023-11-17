@@ -17,7 +17,7 @@ jobs:
           python-version: "3.x"
       - name: Install packaging libraries
         run: |
-          pip install build wheel
+          python -m pip install build wheel
       - name: Build a binary wheel and a source tarball
         run: |
           python -m build --sdist --wheel

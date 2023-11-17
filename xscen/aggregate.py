@@ -1,12 +1,13 @@
-# noqa: D100
+"""Functions to aggregate data over time and space."""
 import datetime
 import logging
+import os
 import warnings
 from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
-from typing import Union
+from typing import Optional, Union
 
 import geopandas as gpd
 import numpy as np
@@ -16,7 +17,6 @@ import xarray as xr
 import xclim as xc
 import xclim.core.calendar
 import xesmf as xe
-from shapely.geometry import Polygon
 from xclim.core.indicator import Indicator
 
 from .config import parse_config
@@ -44,11 +44,11 @@ def _(s):
 def climatological_mean(
     ds: xr.Dataset,
     *,
-    window: int = None,
-    min_periods: int = None,
+    window: Optional[int] = None,
+    min_periods: Optional[int] = None,
     interval: int = 1,
-    periods: list = None,
-    to_level: str = "climatology",
+    periods: Optional[Union[list[str], list[list[str]]]] = None,
+    to_level: Optional[str] = "climatology",
 ) -> xr.Dataset:
     """Compute the mean over 'year' for given time periods, respecting the temporal resolution of ds.
 
@@ -56,17 +56,17 @@ def climatological_mean(
     ----------
     ds : xr.Dataset
         Dataset to use for the computation.
-    window : int
+    window : int, optional
         Number of years to use for the time periods.
         If left at None and periods is given, window will be the size of the first period.
         If left at None and periods is not given, the window will be the size of the input dataset.
-    min_periods : int
+    min_periods : int, optional
         For the rolling operation, minimum number of years required for a value to be computed.
         If left at None and the xrfreq is either QS or AS and doesn't start in January, min_periods will be one less than window.
         If left at None, it will be deemed the same as 'window'.
     interval : int
         Interval (in years) at which to provide an output.
-    periods : list
+    periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start, end] of continuous periods to be considered. This is needed when the time axis of ds contains some jumps in time.
         If None, the dataset will be considered continuous.
     to_level : str, optional
@@ -208,7 +208,7 @@ def compute_deltas(
     *,
     kind: Union[str, dict] = "+",
     rename_variables: bool = True,
-    to_level: str = "deltas",
+    to_level: Optional[str] = "deltas",
 ) -> xr.Dataset:
     """Compute deltas in comparison to a reference time period, respecting the temporal resolution of ds.
 
@@ -218,7 +218,7 @@ def compute_deltas(
         Dataset to use for the computation.
     reference_horizon : str or xr.Dataset
         Either a YYYY-YYYY string corresponding to the 'horizon' coordinate of the reference period, or a xr.Dataset containing the climatological mean.
-    kind : str
+    kind : str or dict
         ['+', '/', '%'] Whether to provide absolute, relative, or percentage deltas.
         Can also be a dictionary separated per variable name.
     rename_variables : bool
@@ -372,13 +372,13 @@ def spatial_mean(
     ds: xr.Dataset,
     method: str,
     *,
-    spatial_subset: bool = None,
-    call_clisops: bool = False,
-    region: Union[dict, str] = None,
-    kwargs: dict = None,
-    simplify_tolerance: float = None,
-    to_domain: str = None,
-    to_level: str = None,
+    spatial_subset: Optional[bool] = None,
+    call_clisops: Optional[bool] = False,
+    region: Optional[Union[dict, str]] = None,
+    kwargs: Optional[dict] = None,
+    simplify_tolerance: Optional[float] = None,
+    to_domain: Optional[str] = None,
+    to_level: Optional[str] = None,
 ) -> xr.Dataset:
     """Compute the spatial mean using a variety of available methods.
 
@@ -391,18 +391,18 @@ def spatial_mean(
         'interp_centroid' will find the region's centroid (if coordinates are not fed through kwargs), then perform a .interp() over the spatial dimensions of the Dataset.
         The coordinate can also be directly fed to .interp() through the 'kwargs' argument below.
         'xesmf' will make use of xESMF's SpatialAverager. This will typically be more precise, especially for irregular regions, but can be much slower than other methods.
-    spatial_subset : bool
+    spatial_subset : bool, optional
         If True, xscen.spatial.subset will be called prior to the other operations. This requires the 'region' argument.
         If None, this will automatically become True if 'region' is provided and the subsetting method is either 'cos-lat' or 'mean'.
-    region : dict or str
+    region : dict or str, optional
         Description of the region and the subsetting method (required fields listed in the Notes).
         If method=='interp_centroid', this is used to find the region's centroid.
         If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
         Can also be "global", for global averages. This is simply a shortcut for `{'name': 'global', 'method': 'bbox', 'lon_bnds' [-180, 180], 'lat_bnds': [-90, 90]}`.
-    kwargs : dict
+    kwargs : dict, optional
         Arguments to send to either mean(), interp() or SpatialAverager().
         For SpatialAverager, one can give `skipna` or  `out_chunks` here, to be passed to the averager call itself.
-    simplify_tolerance : float
+    simplify_tolerance : float, optional
         Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
         The simpler the polygons, the faster the averaging, but it will lose some precision.
     to_domain : str, optional
@@ -696,14 +696,18 @@ def spatial_mean(
 def produce_horizon(
     ds: xr.Dataset,
     indicators: Union[
-        str, Path, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
+        str,
+        os.PathLike,
+        Sequence[Indicator],
+        Sequence[tuple[str, Indicator]],
+        ModuleType,
     ],
     *,
-    periods: list = None,
-    warminglevels: dict = None,
-    to_level: str = "horizons",
-    period: list = None,
-):
+    periods: Optional[Union[list[str], list[list[str]]]] = None,
+    warminglevels: Optional[dict] = None,
+    to_level: Optional[str] = "horizons",
+    period: Optional[list] = None,
+) -> xr.Dataset:
     """Compute indicators, then the climatological mean, and finally unstack dates in order to have a single dataset with all indicators of different frequencies.
 
     Once this is done, the function drops 'time' in favor of 'horizon'.
@@ -714,16 +718,16 @@ def produce_horizon(
     ----------
     ds: xr.Dataset
         Input dataset with a time dimension.
-    indicators:  Union[str, Path, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+    indicators:  Union[str, os.PathLike, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType]
         Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
-    periods: list
+    periods: list of str or list of lists of str, optional
         Either [start, end] or list of [start_year, end_year] for the period(s) to be evaluated.
         If both periods and warminglevels are None, the full time series will be used.
-    warminglevels: dict
+    warminglevels: dict, optional
         Dictionary of arguments to pass to `py:func:xscen.subset_warming_level`.
         If 'wl' is a list, the function will be called for each value and produce multiple horizons.
         If both periods and warminglevels are None, the full time series will be used.
-    to_level:
+    to_level: str, optional
         The processing level to assign to the output.
         If there is only one horizon, you can use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
         that information in the processing level.

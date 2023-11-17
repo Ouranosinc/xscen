@@ -1,10 +1,11 @@
-# noqa: D100
+"""Functions to compute xclim indicators."""
 import logging
+import os
 from collections.abc import Sequence
 from functools import partial
-from pathlib import Path, PosixPath
+from pathlib import Path
 from types import ModuleType
-from typing import Tuple, Union
+from typing import Optional, Union
 
 import xarray as xr
 import xclim as xc
@@ -23,19 +24,22 @@ logger = logging.getLogger(__name__)
 __all__ = ["compute_indicators", "load_xclim_module"]
 
 
-def load_xclim_module(filename, reload=False) -> ModuleType:
+def load_xclim_module(
+    filename: Union[str, os.PathLike], reload: bool = False
+) -> ModuleType:
     """Return the xclim module described by the yaml file (or group of yaml, jsons and py).
 
     Parameters
     ----------
-    filename : pathlike
-      The filepath to the yaml file of the module or to the stem of yaml, jsons and py files.
+    filename : str or os.PathLike
+        The filepath to the yaml file of the module or to the stem of yaml, jsons and py files.
     reload : bool
-      If False (default) and the module already exists in `xclim.indicators`, it is not re-build.
+        If False (default) and the module already exists in `xclim.indicators`, it is not re-build.
 
     Returns
     -------
     ModuleType
+        The xclim module.
     """
     if not reload:
         # Same code as in xclim to get the module name.
@@ -62,13 +66,17 @@ def load_xclim_module(filename, reload=False) -> ModuleType:
 def compute_indicators(
     ds: xr.Dataset,
     indicators: Union[
-        str, Path, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
+        str,
+        os.PathLike,
+        Sequence[Indicator],
+        Sequence[tuple[str, Indicator]],
+        ModuleType,
     ],
     *,
-    periods: list = None,
+    periods: Optional[Union[list[str], list[list[str]]]] = None,
     restrict_years: bool = True,
-    to_level: str = "indicators",
-) -> Union[dict, xr.Dataset]:
+    to_level: Optional[str] = "indicators",
+) -> dict:
     """Calculate variables and indicators based on a YAML call to xclim.
 
     The function cuts the output to be the same years as the inputs.
@@ -79,12 +87,12 @@ def compute_indicators(
     ----------
     ds : xr.Dataset
         Dataset to use for the indicators.
-    indicators : Union[str, Path, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+    indicators : Union[str, os.PathLike, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType]
         Path to a YAML file that instructs on how to calculate missing variables.
         Can also be only the "stem", if translations and custom indices are implemented.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
         tuples (indicator name, indicator) as returned by `iter_indicators()`.
-    periods : list
+    periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start, end] of continuous periods over which to compute the indicators. This is needed when the time axis of ds contains some jumps in time.
         If None, the dataset will be considered continuous.
     restrict_years:
@@ -105,7 +113,7 @@ def compute_indicators(
     --------
     xclim.indicators, xclim.core.indicator.build_indicator_module_from_yaml
     """
-    if isinstance(indicators, (str, Path)):
+    if isinstance(indicators, (str, os.PathLike)):
         logger.debug("Loading indicator module.")
         module = load_xclim_module(indicators)
         indicators = module.iter_indicators()
@@ -272,7 +280,9 @@ def select_inds_for_avail_vars(
 
 
 def registry_from_module(
-    module, registry=None, variable_column="variable"
+    module: ModuleType,
+    registry: Optional[DerivedVariableRegistry] = None,
+    variable_column: str = "variable",
 ) -> DerivedVariableRegistry:
     """Convert a xclim virtual indicators module to an intake_esm Derived Variable Registry.
 

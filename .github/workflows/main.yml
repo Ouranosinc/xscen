@@ -23,48 +23,103 @@ jobs:
         uses: styfle/cancel-workflow-action@0.11.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
           python-version: "3.9"
       - name: Install tox
         run: |
-          pip install tox
+          python -m pip install tox
       - name: Run linting suite
         run: |
-          tox -e black
+          python -m tox -e black
 
-  testing:
-    name: Test with Python${{ matrix.python-version }}
+  testing-tox:
+    name: Test with Python${{ matrix.python-version }} (PyPI/tox)
     needs: black
     runs-on: ubuntu-latest
+    env:
+      COVERALLS_PARALLEL: true
+      COVERALLS_SERVICE_NAME: github
+      esmf-version: 8.4.2
     strategy:
-      fail-fast: false
       matrix:
         include:
           - python-version: "3.9"
-#            tox-build: "py39"
+            tox-build: "py39-esmpy-coveralls"
           - python-version: "3.10"
-#            tox-build: "py310"
+            tox-build: "py310-esmpy-coveralls"
           - python-version: "3.11"
-#            tox-build: "py311"
+            tox-build: "py311-esmpy-coveralls"
     defaults:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
         uses: mamba-org/setup-micromamba@v1
         with:
           cache-downloads: true
-          environment-file: environment.yml
+          environment-name: xscen-pypi
           create-args: >-
-            coveralls
+            esmf=${{ env.esmf-version }}
             mamba
             python=${{ matrix.python-version }}
-            pytest
-            pytest-cov
-            xdoctest
+            tox
+      - name: Test with tox
+        run: |
+          python -m tox -e ${{ matrix.tox-build }}
+        env:
+          ESMF_VERSION: ${{ env.esmf-version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
+
+  #      - name: Compile language catalogs
+#        run: |
+#          make translate
+#      - name: Install esmpy
+#        run: |
+#          pip install git+https://github.com/esmf-org/esmf.git@v${{ matrix.esmf-version }}#subdirectory=src/addon/esmpy
+#      - name: Install xscen
+#        run: |
+#          pip install --editable ".[dev]"
+#      - name: Check versions
+#        run: |
+#          pip list
+#          pip check
+#      - name: Test with pytest
+#        run: |
+#          pytest tests
+#      - name: Report coverage
+#        run: |
+#          coveralls
+#        env:
+#          ESMF_VERSION: ${{ matrix.esmf-version }}
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
+#          COVERALLS_PARALLEL: true
+#          COVERALLS_SERVICE_NAME: github
+
+  testing-conda:
+    name: Test with Python${{ matrix.python-version }} (Anaconda)
+    needs: black
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          cache-downloads: true
+          environment-file: environment-dev.yml
+          create-args: >-
+            mamba
+            python=${{ matrix.python-version }}
       - name: Conda and Mamba versions
         run: |
           mamba --version
@@ -72,36 +127,27 @@ jobs:
       - name: Compile catalogs and install xscen
         run: |
           make translate
-          pip install --editable .
+          python -m pip install --no-deps --editable .
       - name: Check versions
         run: |
           conda list
-          pip check
+          python -m pip check || true
       - name: Test with pytest
         run: |
-          pytest --cov xscen
+          python -m pytest tests
       - name: Report coverage
         run: |
-          coveralls
+          python -m coveralls
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
+          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}-conda
           COVERALLS_PARALLEL: true
           COVERALLS_SERVICE_NAME: github
 
-#      - name: Install tox-current-env
-#        run: |
-#          pip install tox tox-conda tox-current-env
-#      - name: Test with tox
-#        run: |
-#          tox -vv -e ${{ matrix.tox-build }} --current-env
-#        env:
-#          CONDA_EXE: mamba
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   finish:
     needs:
-      - testing
+      - testing-tox
+      - testing-conda
     runs-on: ubuntu-latest
     container: python:3-slim
     steps:

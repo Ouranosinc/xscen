@@ -3,7 +3,8 @@ channels:
   - conda-forge
 dependencies:
   - python >=3.9
-  # Don't forget to sync the changes here with environment-dev.yml!
+  # Don't forget to sync changes between environment.yml, environment-dev.yml, and setup.py!
+  # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
   - cartopy
   - cftime
@@ -11,7 +12,7 @@ dependencies:
   - clisops >=0.10
   - dask
   - flox
-  - fsspec
+  - fsspec < 2023.10.0
   - geopandas
   - h5netcdf
   - h5py
@@ -19,22 +20,20 @@ dependencies:
   - matplotlib
   - netCDF4
   - numpy
-  - pandas >= 2
+  - pandas >=2.0
   - parse
   - pyyaml
   - rechunker
-  - shapely >= 2
+  - shapely >=2.0
   - sparse
   - toolz
-  # FIXME: Unpin xarray when xclim 0.46 is released
-  - xarray < 2023.09.0
-  - xclim >=0.43.0
+  - xarray
+  - xclim >=0.46.0
   - xesmf >=0.7
   - zarr
   # Opt
   - nc-time-axis >=1.3.1
   - pyarrow >=1.0.0
-  - pip
   # Dev
   - babel
   - bumpversion
@@ -58,8 +57,8 @@ dependencies:
   - xdoctest
   - pip
   # Testing
-  - tox <4.0 # 2022-12-12: tox v4.0 is incompatible with tox-conda plugin
-  - tox-conda >=0.10.2
+  - tox # <4.0 # 2022-12-12: tox v4.0 is incompatible with tox-conda plugin
+  # - tox-conda >=0.10.2
   # packaging
   - build
   - wheel

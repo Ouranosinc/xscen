@@ -68,7 +68,7 @@ Ready to contribute? Here's how to set up `xscen` for local development.
 
     $ cd xscen/
     $ mamba env create -f environment-dev.yml
-    $ pip install -e .
+    $ pip install -e ".[dev]"
 
 3. As xscen was installed in editable mode, we also need to compile the translation catalogs manually:
 
@@ -89,18 +89,21 @@ Ready to contribute? Here's how to set up `xscen` for local development.
 
    Now you can make your changes locally.
 
-6. When you're done making changes, check that your changes pass flake8, black, and the
-   tests, including testing other Python versions with tox::
+6. When you're done making changes, check that your changes pass `flake8`, `black`, and the
+   tests, including testing other Python versions with `tox`::
 
     $ tox
 
-   To get flake8, black, and tox, just pip install them into your virtualenv.
+   Alternatively, you can run the tests using `make`::
+
+    $ make lint
+    $ make test
+
+   Running `make lint` and `make test` demands that your runtime/dev environment have all necessary development dependencies installed.
 
 .. warning::
 
-   Due to some dependencies only being available via Anaconda/conda-forge, `tox` will only work if both `tox` and `tox-conda`
-   are installed in a conda-based environment. Running `pytest` demands that your runtime/dev environment have all necessary
-   dependencies installed.
+   Due to some dependencies only being available via Anaconda/conda-forge or built from source, `tox`-based testing will only work if `ESMF`_ is available in your system path. This also requires that the `ESMF_VERSION` environment variable (matching the version of ESMF installed) be accessible within your shell as well (e.g.: `$ export ESMF_VERSION=8.5.0`).
 
 7. Commit your changes and push your branch to GitHub::
 
@@ -188,3 +191,5 @@ Then run::
 $ bumpversion patch # possible: major / minor / patch
 $ git push
 $ git push --tags
+
+.. _`ESMF`: http://earthsystemmodeling.org/download/
