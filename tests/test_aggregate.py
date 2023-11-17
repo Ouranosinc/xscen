@@ -366,7 +366,7 @@ class TestProduceHorizon:
         assert out.attrs["cat:xrfreq"] == "fx"
         assert all(v in out for v in ["tg_min", "growing_degree_days"])
         assert (
-            #f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of"
+            # f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of"
             f"Climatological {30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year average of"
             in out.tg_min.attrs["description"]
         )
@@ -566,7 +566,7 @@ class TestSpatialMean:
 class TestClimatologicalOp:
     def _format(self, s):
         import xclim
-        op_format = (dict.fromkeys(("mean", "std", "var" , "sum"), "adj") |
+        op_format = (dict.fromkeys(("mean", "std", "var", "sum"), "adj") |
                      dict.fromkeys(("max", "min"), "noun"))
         return xclim.core.formatting.default_formatter.format_field(s, op_format[s])
 
@@ -624,7 +624,7 @@ class TestClimatologicalOp:
         assert out.attrs["cat:processing_level"] == "climatology"
 
     @pytest.mark.parametrize("xrfreq", ["MS", "AS-JAN"])
-    @pytest.mark.parametrize("op", ['max', 'mean', 'median', 'min', 'std', 'sum', 'var', ])
+    @pytest.mark.parametrize("op", ['max', 'mean', 'median', 'min', 'std', 'sum', 'var', 'linregress'])
     def test_options(self, xrfreq, op):
         o = 12 if xrfreq == "MS" else 1
 
@@ -739,4 +739,18 @@ class TestClimatologicalOp:
         assert out.time.dt.calendar == cal
 
     def test_periods_as_dim(self):
-        pass
+        ds = timeseries(
+            np.tile(np.arange(1, 13), 30),
+            variable="tas",
+            start="2001-01-01",
+            freq="MS",
+            as_dataset=True,
+        )
+        out = xs.climatological_op(ds, op="mean", window=10, stride=5, periods_as_dim=True)
+        assert (out.tas_clim_mean.values == np.tile(np.arange(1, 13), (5, 1))).all()
+        assert out.dims == {'period': 5, 'month': 12}
+        assert out.time.dims == ('period', 'month')
+        assert (out.period.values == ['2001-2010', '2006-2015', '2011-2020', '2016-2025', '2021-2030']).all()
+        assert (out.month.values ==
+                ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']).all()
