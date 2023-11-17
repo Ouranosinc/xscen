@@ -12,7 +12,10 @@ import numpy as np
 import xarray as xr
 from xclim import ensembles
 
+from .catalog import DataCatalog
 from .config import parse_config
+from .regrid import regrid_dataset
+from .spatial import subset
 from .utils import clean_up, get_cat_attrs
 
 logger = logging.getLogger(__name__)
@@ -560,3 +563,99 @@ def generate_weights(
         weights = weights / weights.sum(dim="realization")
 
     return weights
+
+
+def get_partition_input(
+    cat: DataCatalog,
+    search_kw: dict = None,
+    partition_dim: list[str] = ["source", "experiment", "bias_adjust_project"],
+    # TODO: figure out if input should be xscen vocab or partition vocab? (or change xclim to xscen vocab)
+    to_dataset_kw: dict = None,
+    subset_kw: dict = None,
+    regrid_kw: dict = None,
+):
+    """Get the input for the xclim partition functions.
+
+    Search for the input data in the catalog and create a single dataset with
+    `partition_dim` dimensions (and time) to pass to one of the xclim partition functions
+    (https://xclim.readthedocs.io/en/stable/api.html#uncertainty-partitioning).
+    If the inputs have different grids (likely for different bias_adjust_project),
+    they have to be subsetted and regridded to a common grid/point.
+
+
+    Parameters
+    ----------
+    cat: DataCatalog
+        The catalog to use to get the input data.
+    search_kw: dict
+        Arguments to pass to `cat.search()`.
+    partition_dim: list[str]
+        Components of the partition. They will become the dimension of the output.
+    to_dataset_kw: dict
+        Arguments to pass to `to_dataset()`.
+    subset_kw: dict
+        Arguments to pass to `xs.spatial.subset()`.
+    regrid_kw:
+        Arguments to pass to `xs.regrid_dataset()`.
+
+    Returns
+    -------
+    xr.Dataset
+        The input data for the partition functions.
+
+    See Also
+    --------
+    xclim.ensembles
+
+    """
+    # initialize dict
+    search_kw = search_kw or {}
+    # TODO: figure out if I want to put 'xarray_open_kwargs': {'decode_timedelta': False} as default
+    to_dataset_kw = to_dataset_kw or {}
+    subset_kw = subset_kw or {}
+
+    # special case to handle source (create one dimension with institution_source_member)
+    ensemble_on_list = None
+    if "source" in partition_dim:
+        partition_dim.pop("source")
+        ensemble_on_list = ["institution", "source", "member"]
+
+    # subset catalog to only the data we need
+    subcat = cat.search(**search_kw)
+
+    # We assume different bias_adjust_projects will have different grids (and domain).
+    if (
+        len(subcat.df.bias_adjust_project.unique()) > 1
+        and subset_kw is None
+        and regrid_kw is None
+    ):
+        warnings.warn(
+            "The catalog contains multiple bias_adjust_project, but no subset_kw or regrid_kw where given."
+            "This might results in issues when creating a single the dataset if the grids are not identical."
+        )
+
+    # create a dataset for each bias_adjust_project, modify grid and concat them
+    list_ds = []
+    for bias_adjust_project in subcat.df.bias_adjust_project.unique():
+        ds = subcat.search(bias_adjust_project=bias_adjust_project).to_dataset(
+            concat_on=partition_dim,
+            create_ensemble_on=ensemble_on_list,
+            **to_dataset_kw,
+        )
+
+        if subset_kw:
+            ds = subset(ds, **subset_kw)
+
+        if regrid_kw:
+            ds = regrid_dataset(ds, **regrid_kw)
+        list_ds.append(ds)
+
+    ens = xr.concat(list_ds, dim="bias_adjust_project")
+
+    if "realization" in ens:
+        ens = ens.rename({"realization": "source"})
+
+    # TODO: maybe translate to partition vocab. (or change xclim to xscen vocab)
+    #  if translate add a new kwarg to pass the translation dict
+
+    return ens
