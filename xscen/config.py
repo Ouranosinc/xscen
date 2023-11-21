@@ -51,7 +51,7 @@ import warnings
 from copy import deepcopy
 from functools import wraps
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Any
 
 import xarray as xr
 import xclim as xc
@@ -129,7 +129,7 @@ def args_as_str(*args: tuple[Any, ...]) -> tuple[str, ...]:
     return tuple(new_args)
 
 
-def load_config(*elements, reset=False, verbose=False):
+def load_config(*elements, reset: bool = False, verbose: bool = False):
     """Load configuration from given files or key=value pairs.
 
     Once all elements are loaded, special sections are dispatched to their module, but only if

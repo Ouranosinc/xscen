@@ -1,11 +1,12 @@
-# noqa: D100
+"""Ensemble statistics and weights."""
 import inspect
 import logging
+import os
 import warnings
 from copy import deepcopy
 from itertools import chain, groupby
 from pathlib import Path
-from typing import Any, Union
+from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -21,11 +22,13 @@ __all__ = ["ensemble_stats", "generate_weights"]
 
 @parse_config
 def ensemble_stats(
-    datasets: Any,
+    datasets: Union[
+        dict, list[Union[str, os.PathLike]], list[xr.Dataset], list[xr.DataArray]
+    ],
     statistics: dict,
     *,
-    create_kwargs: dict = None,
-    weights: xr.DataArray = None,
+    create_kwargs: Optional[dict] = None,
+    weights: Optional[xr.DataArray] = None,
     common_attrs_only: bool = True,
     to_level: str = "ensemble",
 ) -> xr.Dataset:
@@ -33,7 +36,7 @@ def ensemble_stats(
 
     Parameters
     ----------
-    datasets : Any
+    datasets : dict or list of str, Path, Dataset or DataArray
         List of file paths or xarray Dataset/DataArray objects to include in the ensemble.
         A dictionary can be passed instead of a list, in which case the keys are used as coordinates along the new
         `realization` axis.
@@ -41,9 +44,9 @@ def ensemble_stats(
     statistics : dict
         xclim.ensembles statistics to be called. Dictionary in the format {function: arguments}.
         If a function requires 'ref', the dictionary entry should be the inputs of a .loc[], e.g. {"ref": {"horizon": "1981-2010"}}
-    create_kwargs : dict
+    create_kwargs : dict, optional
         Dictionary of arguments for xclim.ensembles.create_ensemble.
-    weights : xr.DataArray
+    weights : xr.DataArray, optional
         Weights to apply along the 'realization' dimension. This array cannot contain missing values.
     common_attrs_only : bool
         If True, keeps only the global attributes that are the same for all datasets and generate new id.
@@ -143,9 +146,9 @@ def generate_weights(
     *,
     independence_level: str = "model",
     balance_experiments: bool = False,
-    attribute_weights: dict = None,
+    attribute_weights: Optional[dict] = None,
     skipna: bool = True,
-    v_for_skipna: str = None,
+    v_for_skipna: Optional[str] = None,
     standardize: bool = False,
     experiment_weights: bool = False,
 ) -> xr.DataArray:
@@ -165,7 +168,7 @@ def generate_weights(
     balance_experiments : bool
         If True, each experiment will be given a total weight of 1 (prior to subsequent weighting made through `attribute_weights`).
         This option requires the 'cat:experiment' attribute to be present in all datasets.
-    attribute_weights : dict
+    attribute_weights : dict, optional
         Nested dictionaries of weights to apply to each dataset. These weights are applied after the independence weighting.
         The first level of keys are the attributes for which weights are being given.
         The second level of keys are unique entries for the attribute, with the value being either an individual weight
@@ -176,7 +179,7 @@ def generate_weights(
     skipna : bool
         If True, weights will be computed from attributes only. If False, weights will be computed from the number of non-missing values.
         skipna=False requires either a 'time' or 'horizon' dimension in the datasets.
-    v_for_skipna : str
+    v_for_skipna : str, optional
         Variable to use for skipna=False. If None, the first variable in the first dataset is used.
     standardize : bool
         If True, the weights are standardized to sum to 1 (per timestep/horizon, if skipna=False).
