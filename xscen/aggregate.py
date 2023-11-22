@@ -170,7 +170,12 @@ def climatological_op(
     # Daily data is not supported
     if len(ds.time) > 3 and xr.infer_freq(ds.time) == "D":
         raise NotImplementedError(
-            "xs.climatological_mean does not currently support daily data."
+            "xs.climatological_op does not currently support daily data."
+        )
+    # more than one operation per call is not supported (yet), case for dict
+    if isinstance(op, dict) and len(op) > 1:
+        raise NotImplementedError(
+            "xs.climatological_op does not currently support more than one operation per call."
         )
 
     # unstack 1D time in coords (day, month, and year) to make climatological mean faster
@@ -527,7 +532,7 @@ def compute_deltas(
     if "time" in ds:
         if (len(ds.time) >= 3) and (xr.infer_freq(ds.time) == "D"):
             raise NotImplementedError(
-                "xs.climatological_mean does not currently support daily data."
+                "xs.climatological_op does not currently support daily data."
             )
 
         # Remove references to 'year' in REF
@@ -1063,8 +1068,9 @@ def produce_horizon(
             ds_merge = xr.Dataset()
             for freq, ds_ind in ind_dict.items():
                 if freq != "fx":
-                    ds_mean = climatological_mean(
+                    ds_mean = climatological_op(
                         ds_ind,
+                        op="mean",
                     )
                 else:
                     ds_mean = ds_ind
