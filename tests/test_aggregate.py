@@ -12,8 +12,10 @@ from xscen.testing import datablock_3d
 class TestClimatologicalMean:
     def _format(self, s):
         import xclim
-        op_format = (dict.fromkeys(("mean", "std", "var", "sum"), "adj") |
-                     dict.fromkeys(("max", "min"), "noun"))
+
+        op_format = dict.fromkeys(("mean", "std", "var", "sum"), "adj") | dict.fromkeys(
+            ("max", "min"), "noun"
+        )
         return xclim.core.formatting.default_formatter.format_field(s, op_format[s])
 
     def test_daily(self):
@@ -48,12 +50,10 @@ class TestClimatologicalMean:
         # Test metadata
         assert (
             out.tas.attrs["description"]
-            # == f"30-year mean of {ds.tas.attrs['description']}" # Changed to reflect output from climatological_op
             == f"Climatological 30-year average of {ds.tas.attrs['description']}"
         )
         assert (
-            # "30-year rolling average (non-centered) with a minimum of 30 years of data"
-            "Climatological 30-year average (non-centered) with a minimum of 30 years of data"
+            "Climatological 30-year average over window (non-centered) with a minimum of 30 years of data"
             in out.tas.attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "climatology"
@@ -84,12 +84,10 @@ class TestClimatologicalMean:
         # Test metadata
         assert (
             out.tas.attrs["description"]
-            # == f"15-year mean of {ds.tas.attrs['description']}" # Changed to reflect output from climatological_op
             == f"Climatological 15-year average of {ds.tas.attrs['description']}"
         )
         assert (
-            # "15-year rolling average (non-centered) with a minimum of 15 years of data"
-            "Climatological 15-year average (non-centered) with a minimum of 15 years of data"
+            "Climatological 15-year average over window (non-centered) with a minimum of 15 years of data"
             in out.tas.attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "for_testing"
@@ -566,8 +564,10 @@ class TestSpatialMean:
 class TestClimatologicalOp:
     def _format(self, s):
         import xclim
-        op_format = (dict.fromkeys(("mean", "std", "var", "sum"), "adj") |
-                     dict.fromkeys(("max", "min"), "noun"))
+
+        op_format = dict.fromkeys(("mean", "std", "var", "sum"), "adj") | dict.fromkeys(
+            ("max", "min"), "noun"
+        )
         return xclim.core.formatting.default_formatter.format_field(s, op_format[s])
 
     def test_daily(self):
@@ -579,10 +579,12 @@ class TestClimatologicalOp:
             as_dataset=True,
         )
         with pytest.raises(NotImplementedError):
-            xs.climatological_op(ds, op='mean')
+            xs.climatological_op(ds, op="mean")
 
     @pytest.mark.parametrize("xrfreq", ["MS", "AS-JAN"])
-    @pytest.mark.parametrize("op", ["max", "mean", "median", "min", "std", "sum", "var", "linregress"])
+    @pytest.mark.parametrize(
+        "op", ["max", "mean", "median", "min", "std", "sum", "var", "linregress"]
+    )
     def test_all_default(self, xrfreq, op):
         o = 12 if xrfreq == "MS" else 1
 
@@ -594,17 +596,25 @@ class TestClimatologicalOp:
             as_dataset=True,
         )
         out = xs.climatological_op(ds, op=op)
-        expected = (dict.fromkeys(("max", "mean", "median", "min"), np.arange(1, o + 1)) |
-                    dict.fromkeys(("std", "var"), np.zeros(o)) |
-                    dict({"sum": np.arange(1, o + 1) * 30}) |
-                    dict({"linregress": np.array([
-                        np.zeros(o),
-                        np.arange(1, o + 1),
-                        np.zeros(o),
-                        np.ones(o),
-                        np.zeros(o),
-                        np.zeros(o)]).T})
-                    )
+        expected = (
+            dict.fromkeys(("max", "mean", "median", "min"), np.arange(1, o + 1))
+            | dict.fromkeys(("std", "var"), np.zeros(o))
+            | dict({"sum": np.arange(1, o + 1) * 30})
+            | dict(
+                {
+                    "linregress": np.array(
+                        [
+                            np.zeros(o),
+                            np.arange(1, o + 1),
+                            np.zeros(o),
+                            np.ones(o),
+                            np.zeros(o),
+                            np.zeros(o),
+                        ]
+                    ).T
+                }
+            )
+        )
         # Test output variable name, values, length, horizon
         assert list(out.data_vars.keys()) == [f"tas_clim_{op}"]
         np.testing.assert_array_equal(out[f"tas_clim_{op}"], expected[op])
@@ -612,19 +622,21 @@ class TestClimatologicalOp:
         np.testing.assert_array_equal(out.time[0], ds.time[0])
         assert (out.horizon == "2001-2030").all()
         # Test metadata
-        operation = self._format(op) if op not in ['median', 'linregress'] else op
+        operation = self._format(op) if op not in ["median", "linregress"] else op
         assert (
             out[f"tas_clim_{op}"].attrs["description"]
             == f"Climatological 30-year {operation} of {ds.tas.attrs['description']}"
         )
         assert (
-            f"Climatological 30-year {operation} (non-centered) with a minimum of 30 years of data"
+            f"Climatological 30-year {operation} over window (non-centered) with a minimum of 30 years of data"
             in out[f"tas_clim_{op}"].attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "climatology"
 
     @pytest.mark.parametrize("xrfreq", ["MS", "AS-JAN"])
-    @pytest.mark.parametrize("op", ['max', 'mean', 'median', 'min', 'std', 'sum', 'var', 'linregress'])
+    @pytest.mark.parametrize(
+        "op", ["max", "mean", "median", "min", "std", "sum", "var", "linregress"]
+    )
     def test_options(self, xrfreq, op):
         o = 12 if xrfreq == "MS" else 1
 
@@ -635,20 +647,42 @@ class TestClimatologicalOp:
             freq=xrfreq,
             as_dataset=True,
         )
-        out = xs.climatological_op(ds, op=op, window=15, stride=5, to_level="for_testing")
-        expected = (dict.fromkeys(("max", "mean", "median", "min"),
-                                  np.tile(np.arange(1, o + 1), len(np.unique(out.horizon.values)))) |
-                    dict.fromkeys(("std", "var"),
-                                  np.tile(np.zeros(o), len(np.unique(out.horizon.values)))) |
-                    dict({"sum": np.tile(np.arange(1, o + 1) * 15, len(np.unique(out.horizon.values)))}) |
-                    dict({"linregress": np.tile(np.array([
-                        np.zeros(o),
-                        np.arange(1, o + 1),
-                        np.zeros(o),
-                        np.ones(o),
-                        np.zeros(o),
-                        np.zeros(o)]), len(np.unique(out.horizon.values))).T})
+        out = xs.climatological_op(
+            ds, op=op, window=15, stride=5, to_level="for_testing"
+        )
+        expected = (
+            dict.fromkeys(
+                ("max", "mean", "median", "min"),
+                np.tile(np.arange(1, o + 1), len(np.unique(out.horizon.values))),
+            )
+            | dict.fromkeys(
+                ("std", "var"), np.tile(np.zeros(o), len(np.unique(out.horizon.values)))
+            )
+            | dict(
+                {
+                    "sum": np.tile(
+                        np.arange(1, o + 1) * 15, len(np.unique(out.horizon.values))
                     )
+                }
+            )
+            | dict(
+                {
+                    "linregress": np.tile(
+                        np.array(
+                            [
+                                np.zeros(o),
+                                np.arange(1, o + 1),
+                                np.zeros(o),
+                                np.ones(o),
+                                np.zeros(o),
+                                np.zeros(o),
+                            ]
+                        ),
+                        len(np.unique(out.horizon.values)),
+                    ).T
+                }
+            )
+        )
         # Test output values
         np.testing.assert_array_equal(
             out[f"tas_clim_{op}"],
@@ -660,13 +694,13 @@ class TestClimatologicalOp:
             out.horizon.values
         )
         # Test metadata
-        operation = self._format(op) if op not in ['median', 'linregress'] else op
+        operation = self._format(op) if op not in ["median", "linregress"] else op
         assert (
             out[f"tas_clim_{op}"].attrs["description"]
             == f"Climatological 15-year {operation} of {ds.tas.attrs['description']}"
         )
         assert (
-            f"Climatological 15-year {operation} (non-centered) with a minimum of 15 years of data"
+            f"Climatological 15-year {operation} over window (non-centered) with a minimum of 15 years of data"
             in out[f"tas_clim_{op}"].attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "for_testing"
@@ -682,7 +716,7 @@ class TestClimatologicalOp:
         )
         ds = ds.where(ds["time"].dt.strftime("%Y-%m-%d") != "2030-12-01")
 
-        op = 'mean'
+        op = "mean"
         out = xs.climatological_op(ds, op=op, window=30)
         assert all(np.isreal(out[f"tas_clim_{op}"]))
         assert len(out.time) == 4
@@ -693,7 +727,7 @@ class TestClimatologicalOp:
         assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == 1
 
         # min_periods as float
-        out = xs.climatological_op(ds, op=op, window=30, min_periods=.5)
+        out = xs.climatological_op(ds, op=op, window=30, min_periods=0.5)
         assert "minimum of 15 years of data" in out[f"tas_clim_{op}"].attrs["history"]
         assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == 0
 
@@ -721,7 +755,9 @@ class TestClimatologicalOp:
         with pytest.raises(ValueError):
             xs.climatological_op(ds, op=op)
 
-        out = xs.climatological_op(ds, op='mean', periods=[["2001", "2010"], ["2021", "2030"]])
+        out = xs.climatological_op(
+            ds, op="mean", periods=[["2001", "2010"], ["2021", "2030"]]
+        )
         assert len(out.time) == 2
         assert {"2001-2010", "2021-2030"}.issubset(out.horizon.values)
 
@@ -735,7 +771,7 @@ class TestClimatologicalOp:
             as_dataset=True,
         )
 
-        out = xs.climatological_op(ds.convert_calendar(cal, align_on="date"), op='mean')
+        out = xs.climatological_op(ds.convert_calendar(cal, align_on="date"), op="mean")
         assert out.time.dt.calendar == cal
 
     def test_periods_as_dim(self):
@@ -746,11 +782,30 @@ class TestClimatologicalOp:
             freq="MS",
             as_dataset=True,
         )
-        out = xs.climatological_op(ds, op="mean", window=10, stride=5, periods_as_dim=True)
+        out = xs.climatological_op(
+            ds, op="mean", window=10, stride=5, periods_as_dim=True
+        )
         assert (out.tas_clim_mean.values == np.tile(np.arange(1, 13), (5, 1))).all()
-        assert out.dims == {'period': 5, 'month': 12}
-        assert out.time.dims == ('period', 'month')
-        assert (out.period.values == ['2001-2010', '2006-2015', '2011-2020', '2016-2025', '2021-2030']).all()
-        assert (out.month.values ==
-                ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']).all()
+        assert out.dims == {"period": 5, "month": 12}
+        assert out.time.dims == ("period", "month")
+        assert (
+            out.period.values
+            == ["2001-2010", "2006-2015", "2011-2020", "2016-2025", "2021-2030"]
+        ).all()
+        assert (
+            out.month.values
+            == [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "May",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Oct",
+                "Nov",
+                "Dec",
+            ]
+        ).all()

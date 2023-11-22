@@ -1,4 +1,6 @@
 """Functions to aggregate data over time and space."""
+
+import calendar
 import datetime
 import logging
 import os
@@ -12,14 +14,12 @@ from typing import Optional, Union
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import scipy
 import shapely
 import xarray as xr
 import xclim as xc
 import xclim.core.calendar
 import xesmf as xe
-import scipy
-import calendar
-from shapely.geometry import Polygon
 from xclim.core.indicator import Indicator
 
 from .config import parse_config
@@ -80,137 +80,24 @@ def climatological_mean(
     Returns
     -------
     xr.Dataset
-        Returns a Dataset of the climatological mean
+        Returns a Dataset of the climatological mean, by calling climatological_op with option op=='mean'.
 
     """
-    # if len(ds.time) > 3 and xr.infer_freq(ds.time) == "D":
-    #     raise NotImplementedError(
-    #         "xs.climatological_mean does not currently support daily data."
-    #     )
-    #
-    # # there is one less occurrence when a period crosses years
-    # freq_across_year = [
-    #     f"{f}-{mon}"
-    #     for mon in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values()
-    #     for f in ["AS", "QS"]
-    #     if mon != "JAN"
-    # ]
-    #
-    # # separate 1d time in coords (day, month, and year) to make climatological mean faster
-    # ind = pd.MultiIndex.from_arrays(
-    #     [ds.time.dt.year.values, ds.time.dt.month.values, ds.time.dt.day.values],
-    #     names=["year", "month", "day"],
-    # )
-    # ds_unstack = ds.assign(time=ind).unstack("time")
-    #
-    # # Rolling will ignore jumps in time, so we want to raise an exception beforehand
-    # if (not all(ds_unstack.year.diff(dim="year", n=1) == 1)) & (periods is None):
-    #     raise ValueError("Data is not continuous. Use the 'periods' argument.")
-    #
-    # # Compute temporal means
-    # concats = []
-    # periods = standardize_periods(
-    #     periods or [[int(ds_unstack.year[0]), int(ds_unstack.year[-1])]]
-    # )
-    #
-    # window = window or int(periods[0][1]) - int(periods[0][0]) + 1
-    #
-    # if (
-    #     any(
-    #         x in freq_across_year
-    #         for x in [
-    #             ds.attrs.get("cat:xrfreq"),
-    #             (xr.infer_freq(ds.time) if len(ds.time) > 3 else None),
-    #         ]
-    #     )
-    #     and min_periods is None
-    # ):
-    #     min_periods = window - 1
-    # min_periods = min_periods or window
-    # if min_periods > window:
-    #     raise ValueError("'min_periods' should be smaller or equal to 'window'")
-    #
-    # for period in periods:
-    #     # Rolling average
-    #     ds_rolling = (
-    #         ds_unstack.sel(year=slice(period[0], period[1]))
-    #         .rolling(year=window, min_periods=min_periods)
-    #         .mean()
-    #     )
-    #
-    #     # Select every horizons in 'x' year intervals, starting from the first full windowed mean
-    #     ds_rolling = ds_rolling.isel(
-    #         year=slice(window - 1, None)
-    #     )  # Select from the first full windowed mean
-    #     intervals = ds_rolling.year.values % interval
-    #     ds_rolling = ds_rolling.sel(year=(intervals - intervals[0] == 0))
-    #     horizons = xr.DataArray(
-    #         [f"{yr - (window - 1)}-{yr}" for yr in ds_rolling.year.values],
-    #         dims=dict(year=ds_rolling.year),
-    #     ).astype(str)
-    #     ds_rolling = ds_rolling.assign_coords(horizon=horizons)
-    #
-    #     # get back to 1D time
-    #     ds_rolling = ds_rolling.stack(time=("year", "month", "day"))
-    #     # rebuild time coord
-    #     if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
-    #         time_coord = pd.to_datetime(
-    #             {
-    #                 "year": ds_rolling.year.values - window + 1,
-    #                 "month": ds_rolling.month.values,
-    #                 "day": ds_rolling.day.values,
-    #             }
-    #         ).to_list()
-    #     elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
-    #         time_coord = [
-    #             xclim.core.calendar.datetime_classes[ds.time.dt.calendar](
-    #                 y - window + 1, m, d
-    #             )
-    #             for y, m, d in zip(
-    #                 ds_rolling.year.values,
-    #                 ds_rolling.month.values,
-    #                 ds_rolling.day.values,
-    #             )
-    #         ]
-    #     else:
-    #         raise ValueError("The type of 'time' could not be understood.")
-    #     ds_rolling = ds_rolling.drop_vars({"month", "year", "time", "day"})
-    #     ds_rolling = ds_rolling.assign_coords(time=time_coord).transpose("time", ...)
-    #
-    #     concats.extend([ds_rolling])
-    # ds_rolling = xr.concat(concats, dim="time", data_vars="minimal")
-    #
-    # # modify attrs and history
-    # for vv in ds_rolling.data_vars:
-    #     for a in ["description", "long_name"]:
-    #         update_attr(
-    #             ds_rolling[vv], a, _("{window}-year mean of {attr}."), window=window
-    #         )
-    #
-    #     new_history = (
-    #         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {window}-year rolling average (non-centered) "
-    #         f"with a minimum of {min_periods} years of data - xarray v{xr.__version__}"
-    #     )
-    #     history = (
-    #         new_history + " \n " + ds_rolling[vv].attrs["history"]
-    #         if "history" in ds_rolling[vv].attrs
-    #         else new_history
-    #     )
-    #     ds_rolling[vv].attrs["history"] = history
-    # if to_level is not None:
-    #     ds_rolling.attrs["cat:processing_level"] = to_level
-    #
-    # return ds_rolling
+    warnings.warn(
+        "xs.climatological_mean is deprecated and will be abandoned in a future release. "
+        "Use xs.climatological_op with option op=='mean' instead.",
+        category=FutureWarning,
+    )
     return climatological_op(
         ds,
-        op='mean',
+        op="mean",
         window=window,
         min_periods=min_periods,
         stride=interval,
         periods=periods,
         rename_variables=False,
         to_level=to_level,
-        periods_as_dim=False
+        periods_as_dim=False,
     )
 
 
@@ -227,8 +114,7 @@ def climatological_op(
     to_level: str = "climatology",
     periods_as_dim: bool = False,
 ) -> xr.Dataset:
-    """Perform 'op' over the 'year' dimension for given time periods and windows,
-    respecting the temporal resolution of ds.
+    """Perform 'op' over the years in ds for given time periods, respecting the temporal resolution of ds.
 
     Parameters
     ----------
@@ -242,10 +128,13 @@ def climatological_op(
         the following are recommended and tested:
         ['max', 'mean', 'median', 'min', 'std', 'sum', 'var', 'linregress'].
         Operations beyond methods of xarray.core.rolling.DatasetRolling include:
-        - 'linregress' : Computes the linear regression over the periods or it's windows, using
-          scipy.stats.linregress employing years as regressors.
-          Here the output has a new dimension 'linreg_param' with coordinates:
-          ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr'].
+
+            - 'linregress' : Computes the linear regression over the periods or it's windows, using
+              scipy.stats.linregress employing years as regressors.
+              Here the output has a new dimension 'linreg_param' with coordinates:
+              ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr'].
+
+        Only one operation per call is supported, len(op)==1 if a dict.
     window : int
         Number of years to use for the time periods.
         If left at None and periods is given, window will be the size of the first period. Hence, if periods are of
@@ -278,11 +167,15 @@ def climatological_op(
         Returns a Dataset with resultf from the climatological operation.
 
     """
-
     # Daily data is not supported
     if len(ds.time) > 3 and xr.infer_freq(ds.time) == "D":
         raise NotImplementedError(
-            "xs.climatological_mean does not currently support daily data."
+            "xs.climatological_op does not currently support daily data."
+        )
+    # more than one operation per call is not supported (yet), case for dict
+    if isinstance(op, dict) and len(op) > 1:
+        raise NotImplementedError(
+            "xs.climatological_op does not currently support more than one operation per call."
         )
 
     # unstack 1D time in coords (day, month, and year) to make climatological mean faster
@@ -327,7 +220,9 @@ def climatological_op(
         if 0 < min_periods <= 1:
             min_periods = int(np.floor(min_periods * window))
         else:
-            raise ValueError(f"When 'min_periods' is passed as 'float' it must be between 0 and 1. Got {min_periods}.")
+            raise ValueError(
+                f"When 'min_periods' is passed as 'float' it must be between 0 and 1. Got {min_periods}."
+            )
 
     # set min_periods
     min_periods = min_periods or window
@@ -337,36 +232,53 @@ def climatological_op(
     # if op is a dict unpack it
     if isinstance(op, dict):
         op, op_kwargs = list(op.items())[0]
-        op_kwargs['keep_attrs'] = True if 'keep_attrs' not in op_kwargs else op_kwargs['keep_attrs']
+        op_kwargs["keep_attrs"] = (
+            True if "keep_attrs" not in op_kwargs else op_kwargs["keep_attrs"]
+        )
     else:
-        op_kwargs = {'keep_attrs': True}  # ToDo: Is ther a global setting in xscen so we don't need this?
+        op_kwargs = {
+            "keep_attrs": True
+        }  # ToDo: Is ther a global setting in xscen so we don't need this?
 
     # special case for averaging standard deviations: need to convert to variance before averaging
-    ds_has_std = ('std' in ds_unstack.data_vars or any(
-        ['standard deviation' in ds_unstack[vv].attrs['description'].lower() for vv in ds_unstack.data_vars]))
-    if op == 'mean' and ds_has_std:
+    ds_has_std = "std" in ds_unstack.data_vars or any(
+        [
+            "standard deviation" in ds_unstack[vv].attrs["description"].lower()
+            for vv in ds_unstack.data_vars
+        ]
+    )
+    if op == "mean" and ds_has_std:
         for vv in ds_unstack.data_vars:
-            if 'std' in vv or 'standard deviation' in ds_unstack[vv].attrs['description'].lower():
+            if (
+                "std" in vv
+                or "standard deviation" in ds_unstack[vv].attrs["description"].lower()
+            ):
                 ds_unstack[vv] = np.square(ds_unstack[vv])
 
     # Compute climatolgical operation
     concats = []
     for period in periods:
         # Rolling average
-        ds_rolling = ds_unstack.sel(year=slice(period[0], period[1])).rolling(year=window, min_periods=min_periods)
+        ds_rolling = ds_unstack.sel(year=slice(period[0], period[1])).rolling(
+            year=window, min_periods=min_periods
+        )
 
         # apply operation on rolling object
         if hasattr(ds_rolling, op) and callable(getattr(ds_rolling, op)):
-            if op not in ['max', 'mean', 'median', 'min', 'std', 'sum', 'var']:
+            if op not in ["max", "mean", "median", "min", "std", "sum", "var"]:
                 warnings.warn(
                     f"The requested operation '{op}' has not been tested and may produce unexpected results."
                 )
             ds_rolling = getattr(ds_rolling, op)(**op_kwargs)
 
             # revert variance to std, where applicable
-            if op == 'mean' and ds_has_std:
+            if op == "mean" and ds_has_std:
                 for vv in ds_rolling.data_vars:
-                    if 'std' in vv or 'standard deviation' in ds_rolling[vv].attrs['description'].lower():
+                    if (
+                        "std" in vv
+                        or "standard deviation"
+                        in ds_rolling[vv].attrs["description"].lower()
+                    ):
                         ds_rolling[vv] = np.sqrt(ds_rolling[vv])
 
             # Select the windows at provided stride, starting from the first full window's operation result
@@ -379,17 +291,29 @@ def climatological_op(
                 valid_x = ~np.isnan(x)
                 valid_y = ~np.isnan(y)
                 mask = valid_x & valid_y
-                if np.sum(mask) >= kwargs.get('min_periods', 1):
-                    reg = scipy.stats.linregress(x, y, alternative=kwargs.get('alternative', 'two-sided'))
-                    out = np.array([reg.slope, reg.intercept, reg.rvalue,
-                                    reg.pvalue, reg.stderr, reg.intercept_stderr])
+                if np.sum(mask) >= kwargs.get("min_periods", 1):
+                    reg = scipy.stats.linregress(
+                        x, y, alternative=kwargs.get("alternative", "two-sided")
+                    )
+                    out = np.array(
+                        [
+                            reg.slope,
+                            reg.intercept,
+                            reg.rvalue,
+                            reg.pvalue,
+                            reg.stderr,
+                            reg.intercept_stderr,
+                        ]
+                    )
                 else:
                     out = np.full(6, np.nan)
                 return out
 
             # prepare kwargs
-            linreg_kwargs = {k: v for k, v in op_kwargs.items() if 'keep_attrs' not in k}
-            linreg_kwargs['min_periods'] = min_periods
+            linreg_kwargs = {
+                k: v for k, v in op_kwargs.items() if "keep_attrs" not in k
+            }
+            linreg_kwargs["min_periods"] = min_periods
 
             # unwrap DatasetRolling object and select years subset
             dsr_construct = ds_rolling.construct(window_dim="window", keep_attrs=True)
@@ -397,10 +321,17 @@ def climatological_op(
 
             # construct array to use years as x values (==regressors) in xr.apply_ufunc
             years_as_x_values = xr.DataArray(
-                np.arange(dsr_construct.window.size).repeat(dsr_construct.year.size).reshape(
-                    dsr_construct.window.size, dsr_construct.year.size) + dsr_construct.year.values - window + 1,
-                dims=['window', 'year'],
-                coords={'window': dsr_construct.window.values, 'year': dsr_construct.year.values}
+                np.arange(dsr_construct.window.size)
+                .repeat(dsr_construct.year.size)
+                .reshape(dsr_construct.window.size, dsr_construct.year.size)
+                + dsr_construct.year.values
+                - window
+                + 1,
+                dims=["window", "year"],
+                coords={
+                    "window": dsr_construct.window.values,
+                    "year": dsr_construct.year.values,
+                },
             )
 
             # apply linregress along windows
@@ -418,7 +349,14 @@ def climatological_op(
                 kwargs=linreg_kwargs,
             )
             # label new coords
-            ds_rolling.coords['linreg_param'] = ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr']
+            ds_rolling.coords["linreg_param"] = [
+                "slope",
+                "intercept",
+                "rvalue",
+                "pvalue",
+                "stderr",
+                "intercept_stderr",
+            ]
 
         else:
             raise ValueError(f"Operation '{op}' not implemented.")
@@ -465,24 +403,32 @@ def climatological_op(
 
     # update data_vars names, attrs, history
     if rename_variables:
-        ds_rolling = ds_rolling.rename_vars({vv: f"{vv}_clim_{op}" for vv in ds_rolling.data_vars})
+        ds_rolling = ds_rolling.rename_vars(
+            {vv: f"{vv}_clim_{op}" for vv in ds_rolling.data_vars}
+        )
 
     for vv in ds_rolling.data_vars:
         for a in ["description", "long_name"]:
             try:
-                op_format = (dict.fromkeys(("mean", "std", "var", "sum"), "adj") |
-                             dict.fromkeys(("max", "min"), "noun"))
-                operation = xc.core.formatting.default_formatter.format_field(op, op_format[op])
+                op_format = dict.fromkeys(
+                    ("mean", "std", "var", "sum"), "adj"
+                ) | dict.fromkeys(("max", "min"), "noun")
+                operation = xc.core.formatting.default_formatter.format_field(
+                    op, op_format[op]
+                )
             except (ValueError, KeyError):
                 operation = op
             update_attr(
-                ds_rolling[vv], a, _("Climatological {window}-year {operation} of {attr}."),
-                window=window, operation=operation
+                ds_rolling[vv],
+                a,
+                _("Climatological {window}-year {operation} of {attr}."),
+                window=window,
+                operation=operation,
             )
 
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Climatological {window}-year {operation} "
-            f"(non-centered) with a minimum of {min_periods} years of data - xarray v{xr.__version__}"
+            f"over window (non-centered) with a minimum of {min_periods} years of data - xarray v{xr.__version__}"
         )
         history = (
             new_history + " \n " + ds_rolling[vv].attrs["history"]
@@ -498,29 +444,34 @@ def climatological_op(
     if periods_as_dim:
         # restructure output to have periods as a dimension instead of stacked horizons per year/season/month
         new_coords = {
-            1: {'year': ['ANN']},
-            4: {'season': ['MAM', 'JJA', 'SON', 'DJF']},
-            12: {'month': calendar.month_abbr[1:]},
+            1: {"year": ["ANN"]},
+            4: {"season": ["MAM", "JJA", "SON", "DJF"]},
+            12: {"month": calendar.month_abbr[1:]},
         }
         new_dim_size = len(np.unique(ds_rolling.time.dt.month))
         mindex_coords = xr.Coordinates.from_pandas_multiindex(
-                pd.MultiIndex.from_arrays(
-                    [ds_rolling.horizon.values, ds_rolling.time.dt.month.values],
-                    names=["period", "months"]
-                ), dim='time')
-        out = (ds_rolling
-               .assign(tmp_time=xr.DataArray(ds_rolling.time.values.copy(), dims=['time']))
-               .assign_coords(mindex_coords)
-               .unstack('time')
-               .rename({'months': next(iter(new_coords[new_dim_size]))})
-               .assign_coords(new_coords[new_dim_size])
-               .drop_vars('horizon')
-               .set_coords('tmp_time')
-               .rename({'tmp_time': 'time'})
-               )
+            pd.MultiIndex.from_arrays(
+                [ds_rolling.horizon.values, ds_rolling.time.dt.month.values],
+                names=["period", "months"],
+            ),
+            dim="time",
+        )
+        out = (
+            ds_rolling.assign(
+                tmp_time=xr.DataArray(ds_rolling.time.values.copy(), dims=["time"])
+            )
+            .assign_coords(mindex_coords)
+            .unstack("time")
+            .rename({"months": next(iter(new_coords[new_dim_size]))})
+            .assign_coords(new_coords[new_dim_size])
+            .drop_vars("horizon")
+            .set_coords("tmp_time")
+            .rename({"tmp_time": "time"})
+        )
         return out
     else:
         return ds_rolling
+
 
 @parse_config
 def compute_deltas(
@@ -581,7 +532,7 @@ def compute_deltas(
     if "time" in ds:
         if (len(ds.time) >= 3) and (xr.infer_freq(ds.time) == "D"):
             raise NotImplementedError(
-                "xs.climatological_mean does not currently support daily data."
+                "xs.climatological_op does not currently support daily data."
             )
 
         # Remove references to 'year' in REF
@@ -1117,8 +1068,9 @@ def produce_horizon(
             ds_merge = xr.Dataset()
             for freq, ds_ind in ind_dict.items():
                 if freq != "fx":
-                    ds_mean = climatological_mean(
+                    ds_mean = climatological_op(
                         ds_ind,
+                        op="mean",
                     )
                 else:
                     ds_mean = ds_ind
