@@ -150,3 +150,37 @@ class TestComputeIndicators:
             assert len(out.time) == 4
             assert out.time[0].dt.strftime("%Y-%m-%d").item() == "2000-07-01"
             assert out.time[-1].dt.strftime("%Y-%m-%d").item() == "2003-07-01"
+
+    def test_select_inds_for_avail_vars(self):
+        # Test that select_inds_for_avail_vars filters a list of indicators to only those that can be computed with the
+        # variables available in the input dataset.
+        ds = xs.testing.datablock_3d(
+            np.ones((365, 3, 3)),
+            variable="tas",
+            x="lon",
+            x_start=-75,
+            y="lat",
+            y_start=45,
+            x_step=1,
+            y_step=1,
+            start="2001-01-01",
+            freq="D",
+            units="K",
+            as_dataset=True,
+        )
+        indicators = [
+            xclim.core.indicator.Indicator.from_dict(
+                data={"base": "tg_min", "parameters": {"freq": "QS-DEC"}},
+                identifier="tg_min_qs",
+                module="tests",
+            ),
+            xclim.core.indicator.Indicator.from_dict(
+                data={"base": "days_over_precip_thresh", "parameters": {"freq": "MS"}},
+                identifier="precip_average_ms",
+                module="tests",
+            ),
+        ]
+        inds = xs.indicators.select_inds_for_avail_vars(ds=ds, indicators=indicators)
+        assert len(inds) == 1  # the precip-based indicator must be skipped
+        assert inds[0][0] == "tg_min_qs"
+        assert inds[0][1] == indicators[0]
