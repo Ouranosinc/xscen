@@ -20,6 +20,7 @@ from .utils import CV, standardize_periods
 
 logger = logging.getLogger(__name__)
 
+
 __all__ = ["compute_indicators", "load_xclim_module"]
 
 

@@ -50,12 +50,10 @@ class TestClimatologicalMean:
         # Test metadata
         assert (
             out.tas.attrs["description"]
-            # == f"30-year mean of {ds.tas.attrs['description']}" # Changed to reflect output from climatological_op
             == f"Climatological 30-year average of {ds.tas.attrs['description']}"
         )
         assert (
-            # "30-year rolling average (non-centered) with a minimum of 30 years of data"
-            "Climatological 30-year average (non-centered) with a minimum of 30 years of data"
+            "Climatological 30-year average over window (non-centered) with a minimum of 30 years of data"
             in out.tas.attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "climatology"
@@ -86,12 +84,10 @@ class TestClimatologicalMean:
         # Test metadata
         assert (
             out.tas.attrs["description"]
-            # == f"15-year mean of {ds.tas.attrs['description']}" # Changed to reflect output from climatological_op
             == f"Climatological 15-year average of {ds.tas.attrs['description']}"
         )
         assert (
-            # "15-year rolling average (non-centered) with a minimum of 15 years of data"
-            "Climatological 15-year average (non-centered) with a minimum of 15 years of data"
+            "Climatological 15-year average over window (non-centered) with a minimum of 15 years of data"
             in out.tas.attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "for_testing"
@@ -632,7 +628,7 @@ class TestClimatologicalOp:
             == f"Climatological 30-year {operation} of {ds.tas.attrs['description']}"
         )
         assert (
-            f"Climatological 30-year {operation} (non-centered) with a minimum of 30 years of data"
+            f"Climatological 30-year {operation} over window (non-centered) with a minimum of 30 years of data"
             in out[f"tas_clim_{op}"].attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "climatology"
@@ -704,7 +700,7 @@ class TestClimatologicalOp:
             == f"Climatological 15-year {operation} of {ds.tas.attrs['description']}"
         )
         assert (
-            f"Climatological 15-year {operation} (non-centered) with a minimum of 15 years of data"
+            f"Climatological 15-year {operation} over window (non-centered) with a minimum of 15 years of data"
             in out[f"tas_clim_{op}"].attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "for_testing"
