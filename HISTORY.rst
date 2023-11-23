@@ -12,6 +12,7 @@ Announcements
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* New function ``xscen.indicators.select_inds_for_avail_vars`` to filter the indicators that can be calculated with the variables available in a ``xarray.Dataset``. (:pull:`xyz`).
 * Replaced aggregation function ``climatological_mean()`` with ``climatological_op()`` offering more types of operations to aggregate over climate periods. (:pull:`290`)
 * Added the ability to search for simulations that reach a given warming level. (:pull:`251`).
 * ``xs.spatial_mean`` now accepts the ``region="global"`` keyword to perform a global average (:issue:`94`, :pull:`260`).
