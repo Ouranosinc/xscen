@@ -206,25 +206,3 @@ class TestComputeIndicators:
             assert [i for _, i in inds_for_avail_vars.iter_indicators()] == [
                 indicators[0]
             ]
-
-        # assert len(list(inds_for_avail_vars.iter_indicators())) == 1
-        # assert [n for n, _ in inds_for_avail_vars.iter_indicators()] == ["tg_min"]
-        # assert [i for _, i in inds_for_avail_vars.iter_indicators()] == [indicators[0]]
-
-        # inds_for_avail_vars = xs.indicators.select_inds_for_avail_vars(ds=ds, indicators=self.yaml_file)
-        # assert len(list(inds_for_avail_vars.iter_indicators())) == 2
-        # assert (sorted([n for n, _ in inds_for_avail_vars.iter_indicators()]) ==
-        #         sorted(['tg_min', 'growing_degree_days']))
-
-        # indicators as module
-
-        # assert len(list(inds_for_avail_vars.iter_indicators())) == 1
-        # assert [n for n, _ in inds_for_avail_vars.iter_indicators()] == ["tg_min"]
-        # assert [i for _, i in inds_for_avail_vars.iter_indicators()] == [indicators[0]]
-        #
-        # # indicators as list of tuples
-        # inds_for_avail_vars = xs.indicators.select_inds_for_avail_vars(
-        #     ds=ds, indicators=[(n, i) for n, i in module.iter_indicators()])
-        # assert len(list(inds_for_avail_vars.iter_indicators())) == 1
-        # assert [n for n, _ in inds_for_avail_vars.iter_indicators()] == ["tg_min"]
-        # assert [i for _, i in inds_for_avail_vars.iter_indicators()] == [indicators[0]]
