@@ -20,6 +20,7 @@ repos:
       - id: pretty-format-json
         args: [ '--autofix', '--no-ensure-ascii', '--no-sort-keys' ]
         exclude: .ipynb
+      - id: check-toml
       - id: check-yaml
         args: [ '--allow-multiple-documents' ]
         exclude: conda/xscen/meta.yaml
@@ -27,28 +28,30 @@ repos:
     rev: v1.10.0
     hooks:
       - id: rst-inline-touching-normal
+  - repo: https://github.com/pappasam/toml-sort
+    rev: v0.23.1
+    hooks:
+      - id: toml-sort-fix
   - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 23.11.0
     hooks:
       - id: black
         exclude: ^docs/
-  - repo: https://github.com/pycqa/flake8
-    rev: 6.1.0
-    hooks:
-      - id: flake8
-        additional_dependencies: [ 'flake8-rst-docstrings' ]
-        args: [ '--config=setup.cfg' ]
   - repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:
       - id: isort
-        args: [ '--settings-file=setup.cfg' ]
         exclude: ^docs/
-  - repo: https://github.com/pycqa/pydocstyle
-    rev: 6.3.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.4
     hooks:
-      - id: pydocstyle
-        args: [ '--config=setup.cfg' ]
+      - id: ruff
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        additional_dependencies: [ 'flake8-alphabetize', 'flake8-rst-docstrings' ]
+        args: [ '--config=.flake8' ]
   - repo: https://github.com/keewis/blackdoc
     rev: v0.3.9
     hooks:
@@ -83,11 +86,11 @@ repos:
       - id: detect-secrets
         exclude: .cruft.json|docs/notebooks
         args: [ '--baseline=.secrets.baseline' ]
-#  Currently commented because Git needs to be updated on our work environment.
-#  - repo: https://github.com/mgedmin/check-manifest
-#    rev: "0.49"
-#    hooks:
-#      - id: check-manifest
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.27.1
+    hooks:
+      - id: check-github-workflows
+      - id: check-readthedocs
   - repo: meta
     hooks:
       - id: check-hooks-apply

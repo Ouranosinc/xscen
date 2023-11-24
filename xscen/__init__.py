@@ -1,4 +1,4 @@
-"""Top-level package for xscen."""
+"""A climate change scenario-building analysis framework, built with xclim/xarray."""
 import warnings
 
 # Import the submodules

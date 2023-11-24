@@ -12,12 +12,13 @@ on:
   pull_request:
 
 jobs:
-  black:
-    name: Code Style Compliance
+  lint:
+    name: Lint (Python${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
+    strategy:
+      matrix:
+        python-version:
+          - "3.x"
     steps:
       - name: Cancel previous runs
         uses: styfle/cancel-workflow-action@0.11.0
@@ -26,15 +27,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
+          python-version: "3.x"
       - name: Install tox
         run: |
           python -m pip install tox
       - name: Run linting suite
         run: |
-          python -m tox -e black
+          python -m tox -e lint
 
-  testing-tox:
+  test-pypi:
     name: Test with Python${{ matrix.python-version }} (PyPI/tox)
     needs: black
     runs-on: ubuntu-latest
@@ -100,9 +101,9 @@ jobs:
 #          COVERALLS_PARALLEL: true
 #          COVERALLS_SERVICE_NAME: github
 
-  testing-conda:
+  test-conda:
     name: Test with Python${{ matrix.python-version }} (Anaconda)
-    needs: black
+    needs: lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -127,14 +128,14 @@ jobs:
       - name: Compile catalogs and install xscen
         run: |
           make translate
-          python -m pip install --no-deps --editable .
+          python -m pip install --no-deps .
       - name: Check versions
         run: |
           conda list
           python -m pip check || true
       - name: Test with pytest
         run: |
-          python -m pytest tests
+          python -m pytest --cov xscen
       - name: Report coverage
         run: |
           python -m coveralls
@@ -146,15 +147,15 @@ jobs:
 
   finish:
     needs:
-      - testing-tox
-      - testing-conda
+      - test-pypi
+      - test-conda
     runs-on: ubuntu-latest
     container: python:3-slim
     steps:
       - name: Coveralls Finished
         run: |
-          pip install --upgrade coveralls
-          coveralls --finish
+          python -m pip install --upgrade coveralls
+          python -m coveralls --finish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_SERVICE_NAME: github
