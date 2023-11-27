@@ -22,5 +22,4 @@ class InstallWithCompile(install):
 setup(
     cmdclass={"install": InstallWithCompile},
     message_extractors={"xscen": [("**.py", "python", None)]},
-    setup_requires=["babel"],
 )
