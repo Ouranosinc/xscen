@@ -6,6 +6,8 @@ on:
       - main
     paths-ignore:
       - CHANGES.rst
+      - README.rst
+      - pyproject.toml
       - setup.cfg
       - setup.py
       - xscen/__init__.py

@@ -13,12 +13,14 @@ on:
       - .gitlab-ci.yml
       - .gitmodules
       - .pre-commit-config.yaml
+      - .secrets.baseline
       - .yamllint.yaml
       - AUTHORS.rst
       - CHANGES.rst
       - CONTRIBUTING.rst
       - MANIFEST.in
       - Makefile
+      - conda/xscen/*.yaml
       - docs/*.py
       - docs/*.rst
       - docs/notebooks
@@ -27,6 +29,7 @@ on:
       - pyproject.toml
       - setup.cfg
       - setup.py
+      - templates
       - tests/*.py
       - tox.ini
       - xscen/__init__.py
