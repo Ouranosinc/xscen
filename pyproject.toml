@@ -253,7 +253,12 @@ include = [
   "environment.yml",
   "environment-dev.yml",
   "tests/*.py",
-  "xscen*",
+  "xscen/**/*.py",
+  "xscen/**/*.yml",
+  "xscen/CVs/*.json",
+  "xscen/data/*.csv",
+  "xscen/data/**/*.mo",
+  "xscen/data/**/*.po",
   "tox.ini"
 ]
 exclude = [
