@@ -8,7 +8,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal
 
 Announcements
 ^^^^^^^^^^^^^
-* N/A
+* `xscen` now adheres to PEPs 517/518/621 using the `setuptools` and `setuptools-scm` backend for building and packaging. (:pull:`292`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -24,6 +24,7 @@ New features and enhancements
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * ``experiment_weights`` argument in ``generate_weights`` was renamed to ``balance_experiments``. (:pull:`252`).
+* ``bump2version`` version-bumping utility was replaced by ``bump-my-version``. (:pull:`292`).
 
 Bug fixes
 ^^^^^^^^^
@@ -55,6 +56,17 @@ Internal changes
     * Re-adds a dev recipe to the `setup.py`.
 * Multiple improvements to the docstrings and type annotations. (:pull:`282`).
 * `pip check` in conda builds in GitHub workflows have been temporarily set to always pass. (:pull:`288`).
+* The `cookiecutter` template has been updated to the latest commit via `cruft`. (:pull:`292`):
+    * `setup.py` has been mostly hollowed-out, save for the `babel`-related translation function.
+    * `pyproject.toml` has been added, with most package configurations migrated into it.
+    * `HISTORY.rst` has been renamed to `CHANGES.rst`.
+    * `actions-version-updater.yml` has been added to automate the versioning of the package.
+    * `pre-commit` hooks have been updated to the latest versions; `check-toml` and `toml-sort` have been added to cleanup the `pyproject.toml` file, and `check-json-schema` has been added to ensure GitHub and ReadTheDocs workflow files are valid.
+    * `ruff` has been added to the linting tools to replace most `flake8` and `pydocstyle` verifications.
+    * `tox` builds are more pure Python environment/PyPI-friendly.
+    * `xscen` now uses `Trusted Publishing` for TestPyPI and PyPI uploads.
+* Linting checks now examine the testing folder, function complexity, and alphabetical order of `__all__` lists. (:pull:`292`).
+* ``publish_release_notes`` now uses better logic for finding and reformatting the `CHANGES.rst` file. (:pull:`292`).
 
 v0.7.1 (2023-08-23)
 -------------------
