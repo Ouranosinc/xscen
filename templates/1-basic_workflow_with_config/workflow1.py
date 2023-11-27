@@ -1,7 +1,6 @@
 """Template of a typical workflow."""
 import atexit
 import logging
-import os
 
 import xarray as xr
 from dask import config as dskconf
@@ -11,7 +10,8 @@ import xscen as xs
 from xscen.config import CONFIG
 
 # Load configuration
-# paths1.yml is used to add private information to your workflow, such as file paths, without running the risk of them being pushed to a public Github repo.
+# paths1.yml is used to add private information to your workflow, such as file paths,
+# without running the risk of them being pushed to a public GitHub repo.
 # For this to work as intended, 'paths1.yml' should be included in your .gitignore.
 # config1.yml (or any number of those) can then contain the rest of the configuration.
 # All configuration files are merged together into a single CONFIG instance when you call xs.load_config
@@ -23,7 +23,8 @@ xs.load_config(
 if "logging" in CONFIG:
     logger = logging.getLogger("xscen")
 
-# The workflow is made to be able to restart where it left off, in case of a crash or if you needed to stop it for some reason.
+# The workflow is made to be able to restart where it left off,
+# in case of a crash or if you needed to stop it for some reason.
 # To achieve this, it checks if the results of a task are already in the project catalog before doing it.
 # When a task is completed, the produced data files are added to the project catalog.
 # Files manually removed from disk will be noticed by the workflow and they will be produced again.
@@ -60,7 +61,8 @@ if __name__ == "__main__":
     # --- EXTRACT---
     # Check if that step is in list of tasks before doing it, hence when commented in the config it will be skipped.
     if "extract" in CONFIG["tasks"]:
-        # Iterate on types of data to extract (reconstruction, simulation) and get the respective dictionary from the config
+        # Iterate on types of data to extract (reconstruction, simulation)
+        # and get the respective dictionary from the config
         for source_type, type_dict in CONFIG["extract"].items():
             # Filter the catalog to get only the datasets that match the arguments in the config.
             # Arguments are not passed automatically, because the config is different for each type of data.
@@ -70,7 +72,8 @@ if __name__ == "__main__":
             # Iterate over the datasets that matched the search
             # 'ds_id' is the ID of the dataset, 'dc' is the sub-catalog for this dataset
             for ds_id, dc in cat.items():
-                # These are some relevant attributes that are used to check if the task was done already and to write the output path.
+                # These are some relevant attributes that are used to check if the task was done already
+                # and to write the output path.
                 cur = {
                     "id": ds_id,
                     "xrfreq": "D",
@@ -83,7 +86,8 @@ if __name__ == "__main__":
                         Client(**type_dict["dask"], **daskkws),
                         xs.measure_time(name=f"extract {cur}", logger=logger),
                     ):
-                        # Extract and create a dictionary of datasets from the sub-catalog, with the requested domain, period, and frequency.
+                        # Extract and create a dictionary of datasets from the sub-catalog,
+                        # with the requested domain, period, and frequency.
                         ds_dict = xs.extract_dataset(
                             catalog=dc,
                             # Once again, we manually pass the arguments from the config to the function.
@@ -92,7 +96,8 @@ if __name__ == "__main__":
 
                         # Iterate over the different frequencies
                         for key_freq, ds in ds_dict.items():
-                            # For future steps in the workflow, we can save a lot of time by stacking the spatial coordinates into a single dimension
+                            # For future steps in the workflow, we can save a lot of time
+                            # by stacking the spatial coordinates into a single dimension
                             # and dropping the NaNs. This is especially useful for big datasets.
                             if type_dict.get("stack_drop_nans", False):
                                 ds = xs.utils.stack_drop_nans(
@@ -104,7 +109,8 @@ if __name__ == "__main__":
                             # Prepare the filename for the zarr file, using the format specified in paths1.yml
                             path = CONFIG["paths"]["task"].format(**cur)
                             # Save to zarr
-                            # Once again, we manually pass the arguments from the config to the function, as they will differ for each task.
+                            # Once again, we manually pass the arguments from the config to the function,
+                            # as they will differ for each task.
                             xs.save_to_zarr(ds=ds, filename=path, **type_dict["save"])
                             pcat.update_from_ds(ds=ds, path=path)
 
@@ -123,7 +129,8 @@ if __name__ == "__main__":
     # --- REGRID ---
     if "regrid" in CONFIG["tasks"]:
         # Search the ProjectCatalog for the results of the previous step, then iterate over each dataset.
-        # We usually don't have to rely on search_data_catalogs anymore after the initial extraction, because the content of the ProjectCatalog is smaller and more manageable.
+        # We usually don't have to rely on search_data_catalogs anymore after the initial extraction,
+        # because the content of the ProjectCatalog is smaller and more manageable.
         # In most cases, we can just use the search function with the 'type' and 'processing_level' attributes.
         input_dict = pcat.search(**CONFIG["regrid"]["inputs"]).to_dataset_dict(**tdd)
         for key_input, ds_input in input_dict.items():
@@ -143,7 +150,8 @@ if __name__ == "__main__":
                     )
 
                     # Perform the regridding
-                    # Most arguments are passed automatically from the config, but we still need to manually pass the input and the grid.
+                    # Most arguments are passed automatically from the config,
+                    # but we still need to manually pass the input and the grid.
                     ds_regrid = xs.regrid_dataset(
                         ds=ds_input,
                         ds_grid=ds_grid,
@@ -205,8 +213,10 @@ if __name__ == "__main__":
     # - Convert the data to a standard calendar and fill the missing values.
     if "cleanup" in CONFIG["tasks"]:
         # In the previous step, we bias adjusted tasmax, dtr, and pr.
-        # Here, we can use search_data_catalogs with ['tasmin', 'tasmax', 'pr'] to instruct intake-esm to compute 'tasmin' from 'tasmax' and 'dtr'.
-        # You can find more details on DerivedVariables here: https://xscen.readthedocs.io/en/latest/notebooks/1_catalog.html#Derived-variables
+        # Here, we can use search_data_catalogs with ['tasmin', 'tasmax', 'pr']
+        # to instruct intake-esm to compute 'tasmin' from 'tasmax' and 'dtr'.
+        # You can find more details on DerivedVariables
+        # here: https://xscen.readthedocs.io/en/latest/notebooks/1_catalog.html#Derived-variables
         cu_cats = xs.search_data_catalogs(**CONFIG["cleanup"]["search_data_catalogs"])
         for cu_id, cu_cat in cu_cats.items():
             cur = {
@@ -219,7 +229,8 @@ if __name__ == "__main__":
                     Client(**CONFIG["cleanup"]["dask"], **daskkws),
                     xs.measure_time(name=f"{cur}", logger=logger),
                 ):
-                    # Alongside search_data_catalogs, extract_dataset will compute 'tasmin' and put the requested variables back together in one dataset.
+                    # Alongside search_data_catalogs, extract_dataset will compute 'tasmin'
+                    # and put the requested variables back together in one dataset.
                     freq_dict = xs.extract_dataset(catalog=cu_cat)
 
                     # Iterate over the frequencies (usually just 'D')
@@ -271,7 +282,8 @@ if __name__ == "__main__":
 
     # --- DIAGNOSTICS ---
     if "diagnostics" in CONFIG["tasks"]:
-        # The properties and measures that we want to compute are different for each type of data (ref, sim, scen), so we need to iterate over them.
+        # The properties and measures that we want to compute are different for each type of data (ref, sim, scen),
+        # so we need to iterate over them.
         for kind, kind_dict in CONFIG["diagnostics"]["kind"].items():
             # Search for the right datasets and iterate over them
             dict_input = pcat.search(**kind_dict["inputs"]).to_dataset_dict(**tdd)

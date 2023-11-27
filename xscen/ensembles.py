@@ -61,8 +61,9 @@ def ensemble_stats(
 
     See Also
     --------
-    xclim.ensembles._base.create_ensemble, xclim.ensembles._base.ensemble_percentiles, xclim.ensembles._base.ensemble_mean_std_max_min, xclim.ensembles._robustness.change_significance, xclim.ensembles._robustness.robustness_coefficient,
-
+    xclim.ensembles._base.create_ensemble, xclim.ensembles._base.ensemble_percentiles,
+    xclim.ensembles._base.ensemble_mean_std_max_min, xclim.ensembles._robustness.change_significance,
+    xclim.ensembles._robustness.robustness_coefficient,
     """
     create_kwargs = create_kwargs or {}
 
@@ -141,7 +142,7 @@ def ensemble_stats(
     return ens_stats
 
 
-def generate_weights(
+def generate_weights(  # noqa: C901
     datasets: Union[dict, list],
     *,
     independence_level: str = "model",
@@ -162,22 +163,27 @@ def generate_weights(
         A dictionary can be passed instead of a list, in which case the keys are used for the 'realization' coordinate.
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
     independence_level : str
-        'model': Weights using the method '1 model - 1 Vote', where every unique combination of 'source' and 'driving_model' is considered a model.
+        'model': Weights using the method '1 model - 1 Vote',
+        where every unique combination of 'source' and 'driving_model' is considered a model.
         'GCM': Weights using the method '1 GCM - 1 Vote'
         'institution': Weights using the method '1 institution - 1 Vote'
     balance_experiments : bool
-        If True, each experiment will be given a total weight of 1 (prior to subsequent weighting made through `attribute_weights`).
+        If True, each experiment will be given a total weight of 1
+        (prior to subsequent weighting made through `attribute_weights`).
         This option requires the 'cat:experiment' attribute to be present in all datasets.
     attribute_weights : dict, optional
-        Nested dictionaries of weights to apply to each dataset. These weights are applied after the independence weighting.
+        Nested dictionaries of weights to apply to each dataset.
+        These weights are applied after the independence weighting.
         The first level of keys are the attributes for which weights are being given.
         The second level of keys are unique entries for the attribute, with the value being either an individual weight
-        or a xr.DataArray. If a DataArray is used, its dimensions must be the same non-stationary coordinate as the datasets (ex: time, horizon) and the attribute being weighted (ex: experiment).
-        A `others` key can be used to give the same weight to all entries not specifically named in the dictionnary.
+        or a xr.DataArray. If a DataArray is used, its dimensions must be the same non-stationary coordinate
+        as the datasets (ex: time, horizon) and the attribute being weighted (ex: experiment).
+        A `others` key can be used to give the same weight to all entries not specifically named in the dictionary.
         Example #1: {'source': {'MPI-ESM-1-2-HAM': 0.25, 'MPI-ESM1-2-HR': 0.5}},
         Example #2: {'experiment': {'ssp585': xr.DataArray, 'ssp126': xr.DataArray}, 'institution': {'CCCma': 0.5, 'others': 1}}
     skipna : bool
-        If True, weights will be computed from attributes only. If False, weights will be computed from the number of non-missing values.
+        If True, weights will be computed from attributes only.
+        If False, weights will be computed from the number of non-missing values.
         skipna=False requires either a 'time' or 'horizon' dimension in the datasets.
     v_for_skipna : str, optional
         Variable to use for skipna=False. If None, the first variable in the first dataset is used.
@@ -241,7 +247,8 @@ def generate_weights(
         for k in other_dims:
             if len(other_dims[k]) > 0:
                 warnings.warn(
-                    f"Dataset {k} has dimensions that are not 'time' or 'horizon': {other_dims[k]}. The first indexes of these dimensions will be used to compute the weights."
+                    f"Dataset {k} has dimensions that are not 'time' or 'horizon': {other_dims[k]}. "
+                    "The first indexes of these dimensions will be used to compute the weights."
                 )
                 datasets[k] = datasets[k].isel({d: 0 for d in other_dims[k]})
 
@@ -264,7 +271,8 @@ def generate_weights(
         > 1
     ):
         raise NotImplementedError(
-            "Weighting `source` and/or `driving_model` through `attribute_weights` is not yet implemented when given a mix of GCMs and RCMs."
+            "Weighting `source` and/or `driving_model` through `attribute_weights` "
+            "is not yet implemented when given a mix of GCMs and RCMs."
         )
 
     # More easily manage GCMs and RCMs
@@ -341,7 +349,8 @@ def generate_weights(
             extra_dim[0].name
         )
 
-        # Check that the extra dimension is the same for all datasets. If not, modify the datasets to make them the same.
+        # Check that the extra dimension is the same for all datasets.
+        # If not, modify the datasets to make them the same.
         if not all(extra_dimension.equals(extra_dim[d]) for d in range(len(extra_dim))):
             warnings.warn(
                 f"Extra dimension {extra_dimension.name} is not the same for all datasets. Reindexing."

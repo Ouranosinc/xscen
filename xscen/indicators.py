@@ -63,7 +63,7 @@ def load_xclim_module(
 
 
 @parse_config
-def compute_indicators(
+def compute_indicators(  # noqa: C901
     ds: xr.Dataset,
     indicators: Union[
         str,
@@ -93,12 +93,14 @@ def compute_indicators(
         Can be the indicator module directly, or a sequence of indicators or a sequence of
         tuples (indicator name, indicator) as returned by `iter_indicators()`.
     periods : list of str or list of lists of str, optional
-        Either [start, end] or list of [start, end] of continuous periods over which to compute the indicators. This is needed when the time axis of ds contains some jumps in time.
+        Either [start, end] or list of [start, end] of continuous periods over which to compute the indicators.
+        This is needed when the time axis of ds contains some jumps in time.
         If None, the dataset will be considered continuous.
-    restrict_years:
+    restrict_years : bool
         If True, cut the time axis to be within the same years as the input.
         This is mostly useful for frequencies that do not start in January, such as QS-DEC.
-        In that instance, `xclim` would start on previous_year-12-01 (DJF), with a NaN. `restrict_years` will cut that first timestep.
+        In that instance, `xclim` would start on previous_year-12-01 (DJF), with a NaN.
+        `restrict_years` will cut that first timestep.
         This should have no effect on YS and MS indicators.
     to_level : str, optional
         The processing level to assign to the output.
@@ -249,21 +251,21 @@ def registry_from_module(
     Parameters
     ----------
     module : ModuleType
-      A module of xclim.
+        A module of xclim.
     registry : DerivedVariableRegistry, optional
-      If given, this registry is extended, instead of creating a new one.
+        If given, this registry is extended, instead of creating a new one.
     variable_column : str
-      The name of the variable column (the name used in the query).
+        The name of the variable column (the name used in the query).
 
     Returns
     -------
     DerivedVariableRegistry
-      A variable registry where each indicator and each of its output has been registered.
-      If an indicator returns multiple values, each of them is mapped individually, as
-      the DerivedVariableRegistry only supports single output function.
-      Each indicator was wrapped into a new function that only accepts a dataset and
-      returns it with the extra variable appended. This means all other parameters are
-      given their defaults.
+        A variable registry where each indicator and each of its output has been registered.
+        If an indicator returns multiple values, each of them is mapped individually, as
+        the DerivedVariableRegistry only supports single output function.
+        Each indicator was wrapped into a new function that only accepts a dataset and
+        returns it with the extra variable appended. This means all other parameters are
+        given their defaults.
     """
     dvr = registry or DerivedVariableRegistry()
     for name, ind in module.iter_indicators():
