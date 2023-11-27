@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths-ignore:
-      - HISTORY.rst
+      - CHANGES.rst
       - setup.cfg
       - setup.py
       - xscen/__init__.py

@@ -82,7 +82,8 @@ dev = [
   "pytest>=7.3.1",
   "ruff>=0.1.0",
   "tox>=4.5.1",
-  "watchdog>=3.0.0"
+  "watchdog>=3.0.0",
+  "xdoctest"
 ]
 docs = [
   # Documentation and examples
@@ -91,7 +92,6 @@ docs = [
   "jupyter_client",
   "nbsphinx",
   "nbval",
-  "pandoc",
   "sphinx",
   "sphinx-autoapi",
   "sphinx-codeautolink",

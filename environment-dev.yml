@@ -61,6 +61,7 @@ dependencies:
   - sphinx-codeautolink
   - sphinx-copybutton
   - watchdog >=3.0.0
+  - xdoctest
   - pip
   # Testing
   - tox >=4.5.1
