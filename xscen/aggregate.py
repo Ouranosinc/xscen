@@ -179,11 +179,19 @@ def climatological_op(
         )
 
     # unstack 1D time in coords (day, month, and year) to make climatological mean faster
-    ind = pd.MultiIndex.from_arrays(
-        [ds.time.dt.year.values, ds.time.dt.month.values, ds.time.dt.day.values],
-        names=["year", "month", "day"],
+    # ind = pd.MultiIndex.from_arrays(
+    #     [ds.time.dt.year.values, ds.time.dt.month.values, ds.time.dt.day.values],
+    #     names=["year", "month", "day"],
+    # )
+    # ds_unstack = ds.assign(time=ind).unstack("time")
+    mindex_coords = xr.Coordinates.from_pandas_multiindex(
+        pd.MultiIndex.from_arrays(
+            [ds.time.dt.year.values, ds.time.dt.month.values, ds.time.dt.day.values],
+            names=["year", "month", "day"],
+        ),
+        dim="time",
     )
-    ds_unstack = ds.assign(time=ind).unstack("time")
+    ds_unstack = ds.assign_coords(coords=mindex_coords).unstack("time")
 
     # Rolling will ignore gaps in time, so raise an exception beforehand
     if (not all(ds_unstack.year.diff(dim="year", n=1) == 1)) & (periods is None):
@@ -1071,6 +1079,7 @@ def produce_horizon(
                     ds_mean = climatological_op(
                         ds_ind,
                         op="mean",
+                        rename_variables=False,
                     )
                 else:
                     ds_mean = ds_ind
