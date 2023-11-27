@@ -1,5 +1,10 @@
 [build-system]
-requires = ["setuptools", "babel", "wheel"]
+requires = [
+  "setuptools>=60",
+  "setuptools-scm>=8.0",
+  "babel",
+  "wheel"
+]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -233,50 +238,54 @@ include-package-data = true
 version = {attr = "xscen.__version__"}
 
 [tool.setuptools.packages.find]
-include = [
-  ".zenodo.json",
-  "AUTHORS.rst",
-  "CHANGES.rst",
-  "CONTRIBUTING.rst",
-  "LICENSE",
-  "Makefile",
-  "README.rst",
-  "docs/*.rst",
-  "docs/Makefile",
-  "docs/_static/_images/*.png",
-  "docs/conf.py",
-  "docs/make.bat",
-  "docs/notebooks/.ipynb",
-  "docs/notebooks/samples/*.csv",
-  "docs/notebooks/samples/*.json",
-  "docs/notebooks/samples/*.yml",
-  "environment.yml",
-  "environment-dev.yml",
-  "tests/*.py",
-  "xscen/**/*.py",
-  "xscen/**/*.yml",
-  "xscen/CVs/*.json",
-  "xscen/data/*.csv",
-  "xscen/data/**/*.mo",
-  "xscen/data/**/*.po",
-  "tox.ini"
-]
-exclude = [
-  "*.py[co]",
-  "__pycache__",
-  ".coveralls.yml",
-  ".editorconfig",
-  ".flake8",
-  ".gitignore",
-  ".pre-commit-config.yaml",
-  ".readthedocs.yml",
-  ".yamllint.yaml",
-  "Makefile",
-  "conda",
-  "docs/_*",
-  "docs/modules.rst",
-  "docs/xscen*.rst",
-  "docs/notesbnooks/samples/tutorial/**/*.nc",
-  "templates"
-]
-namespaces = true
+where = ["."]
+include = ["xscen"]
+
+# [tool.setuptools.packages.find]
+# include = [
+# ".zenodo.json",
+# "AUTHORS.rst",
+# "CHANGES.rst",
+# "CONTRIBUTING.rst",
+# "LICENSE",
+# "Makefile",
+# "README.rst",
+# "docs/*.rst",
+# "docs/Makefile",
+# "docs/_static/_images/*.png",
+# "docs/conf.py",
+# "docs/make.bat",
+# "docs/notebooks/.ipynb",
+# "docs/notebooks/samples/*.csv",
+# "docs/notebooks/samples/*.json",
+# "docs/notebooks/samples/*.yml",
+# "environment.yml",
+# "environment-dev.yml",
+# "setup.cfg",
+# "setup.py",
+# "tests/*.py",
+# "xscen/**/*.py",
+# "xscen/**/*.yml",
+# "xscen/CVs/*.json",
+# "xscen/data/*.csv",
+# "xscen/data/**/*.mo",
+# "xscen/data/**/*.po",
+# "tox.ini"
+# ]
+# exclude = [
+# "*.py[co]",
+# "__pycache__",
+# ".coveralls.yml",
+# ".editorconfig",
+# ".flake8",
+# ".gitignore",
+# ".pre-commit-config.yaml",
+# ".readthedocs.yml",
+# ".yamllint.yaml",
+# "conda/xscen/*.yml",
+# "docs/_*",
+# "docs/modules.rst",
+# "docs/xscen*.rst",
+# "docs/notesbnooks/samples/tutorial/**/*.nc",
+# "templates"
+# ]
