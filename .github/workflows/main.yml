@@ -37,7 +37,7 @@ jobs:
 
   test-pypi:
     name: Test with Python${{ matrix.python-version }} (PyPI/tox)
-    needs: black
+    needs: lint
     runs-on: ubuntu-latest
     env:
       COVERALLS_PARALLEL: true
