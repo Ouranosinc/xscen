@@ -61,7 +61,7 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
 #. Install your local copy into a development environment. Using ``mamba``, you can create a new development environment with::
 
     $ mamba env create -f environment-dev.yml
-    $ conda activate xscen
+    $ mamba activate xscen-dev
     $ python -m pip install --editable ".[dev]"
 
 #. As xscen was installed in editable mode, we also need to compile the translation catalogs manually:
@@ -171,13 +171,13 @@ Pull Request Guidelines
 
 Before you submit a pull request, check that it meets these guidelines:
 
-#. The pull request should include tests.
+#. The pull request should include tests, and those should aim to cover all new lines of code. You can use `--cov-report html --cov .` during the call to `pytest` to generate an HTML report and analyse the current coverage of your tests.
 
 #. If the pull request adds functionality, the docs should be updated. Put your new functionality into a function with a docstring, and add the feature to the list in ``README.rst``.
 
 #. The pull request should not break the templates.
 
-#. The pull request should work for Python 3.8, 3.9, 3.10, and 3.11. Check that the tests pass for all supported Python versions.
+#. The pull request should work for Python 3.9, 3.10, and 3.11. Check that the tests pass for all supported Python versions.
 
 Tips
 ----
