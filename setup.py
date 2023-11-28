@@ -36,6 +36,8 @@ with open("README.rst") as readme_file:
 # This list are the minimum requirements for xscen
 # this is only meant to make `pip check` work
 # xscen dependencies can only be installed through conda-forge.
+# Don't forget to sync changes between environment.yml, environment-dev.yml, and setup.py!
+# Also consider updating the list in xs.utils.show_versions if you add a new package.
 requirements = [
     "cartopy",
     "cftime",
@@ -43,7 +45,7 @@ requirements = [
     "clisops>=0.10",
     "dask",
     "flox",
-    "fsspec",
+    "fsspec<2023.10.0",
     "geopandas",
     "h5netcdf",
     "h5py",
@@ -65,7 +67,30 @@ requirements = [
     "zarr",
 ]
 
-dev_requirements = ["pytest", "pytest-cov", "xdoctest"]
+dev_requirements = [
+    "black",
+    "flake8",
+    "flake8-rst-docstrings",
+    "pytest",
+    "pytest-cov",
+]
+
+docs_requirements = [
+    "ipykernel",
+    "ipython",
+    "jupyter_client",
+    "nbsphinx",
+    "nc-time-axis>=1.3.1",
+    "nbval",
+    "sphinx",
+    "sphinx-autoapi",
+    "sphinx-rtd-theme>=1.0",
+    "sphinxcontrib-napoleon",
+    "sphinx-codeautolink",
+    "sphinx-copybutton",
+]
+
+setup_requirements = ["babel"]
 
 setup(
     author="Gabriel Rondeau-Genesse",
@@ -98,10 +123,10 @@ setup(
         "Changelog": "https://xscen.readthedocs.io/en/stable/history.html",
         "Issue tracker": "https://github.com/Ouranosinc/xscen/issues",
     },
-    setup_requires=["babel"],
+    setup_requires=setup_requirements,
     test_suite="tests",
-    extras_require={"dev": dev_requirements},
+    extras_require={"dev": dev_requirements, "docs": docs_requirements},
     url="https://github.com/Ouranosinc/xscen",
-    version="0.7.15-beta",
+    version="0.7.20-beta",
     zip_safe=False,
 )

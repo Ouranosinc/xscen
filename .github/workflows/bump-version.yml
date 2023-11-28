@@ -48,9 +48,9 @@ jobs:
         run: echo "current_version=$(grep -E '__version__'  xscen/__init__.py | cut -d ' ' -f3)"
       - name: Bump Patch Version
         run: |
-          pip install bump2version
+          python -m pip install bump2version
           echo "Bumping version"
-          bump2version patch
+          python -m bump2version patch
           echo "new_version=$(grep -E '__version__'  xscen/__init__.py | cut -d ' ' -f3)"
       - name: Push Changes
         uses: ad-m/github-push-action@master

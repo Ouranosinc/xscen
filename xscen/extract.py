@@ -1,4 +1,4 @@
-# noqa: D100
+"""Functions to find and extract data from a catalog."""
 import datetime
 import logging
 import os
@@ -8,7 +8,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -84,17 +84,17 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
 def extract_dataset(
     catalog: DataCatalog,
     *,
-    variables_and_freqs: dict = None,
-    periods: list = None,
+    variables_and_freqs: Optional[dict] = None,
+    periods: Optional[Union[list[str], list[list[str]]]] = None,
     region: Optional[dict] = None,
     to_level: str = "extracted",
     ensure_correct_time: bool = True,
-    xr_open_kwargs: dict = None,
-    xr_combine_kwargs: dict = None,
-    preprocess: Callable = None,
+    xr_open_kwargs: Optional[dict] = None,
+    xr_combine_kwargs: Optional[dict] = None,
+    preprocess: Optional[Callable] = None,
     resample_methods: Optional[dict] = None,
     mask: Union[bool, xr.Dataset, xr.DataArray] = False,
-) -> Union[dict, xr.Dataset]:
+) -> dict:
     """Take one element of the output of `search_data_catalogs` and returns a dataset, performing conversions and resampling as needed.
 
     Nothing is written to disk within this function.
@@ -103,11 +103,11 @@ def extract_dataset(
     ----------
     catalog : DataCatalog
         Sub-catalog for a single dataset, one value of the output of `search_data_catalogs`.
-    variables_and_freqs : dict
+    variables_and_freqs : dict, optional
         Variables and freqs, following a 'variable: xrfreq-compatible str' format. A list of strings can also be provided.
         If None, it will be read from catalog._requested_variables and catalog._requested_variable_freqs
         (set by `variables_and_freqs` in `search_data_catalogs`)
-    periods : list
+    periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start, end] for the periods to be evaluated.
         Will be read from catalog._requested_periods if None. Leave both None to extract everything.
     region : dict, optional
@@ -134,7 +134,7 @@ def extract_dataset(
         If the method is not given for a variable, it is guessed from the variable name and frequency,
         using the mapping in CVs/resampling_methods.json. If the variable is not found there,
         "mean" is used by default.
-    mask: xr.Dataset, bool
+    mask: xr.Dataset or xr.DataArray or bool
         A mask that is applied to all variables and only keeps data where it is True.
         Where the mask is False, variable values are replaced by NaNs.
         The mask should have the same dimensions as the variables extracted.
@@ -143,10 +143,9 @@ def extract_dataset(
 
     Returns
     -------
-    dict, xr.Dataset
+    dict
         Dictionary (keys = xrfreq) with datasets containing all available and computed variables,
         subsetted to the region, everything resampled to the requested frequency.
-        If there is a single frequency, a Dataset will be returned instead.
 
     Notes
     -----
@@ -371,7 +370,7 @@ def resample(
     *,
     ds: Optional[xr.Dataset] = None,
     method: Optional[str] = None,
-    missing: Union[str, dict] = None,
+    missing: Optional[Union[str, dict]] = None,
 ) -> xr.DataArray:
     """Aggregate variable to the target frequency.
 
@@ -380,7 +379,7 @@ def resample(
 
     Parameters
     ----------
-    da  : xr.DataArray
+    da : xr.DataArray
         DataArray of the variable to resample, must have a "time" dimension and be of a
         finer temporal resolution than "target_frequency".
     target_frequency : str
@@ -588,28 +587,28 @@ def resample(
 @parse_config
 def search_data_catalogs(
     data_catalogs: Union[
-        Union[str, os.PathLike], list[Union[str, os.PathLike]], DataCatalog
+        str, os.PathLike, DataCatalog, list[Union[str, os.PathLike, DataCatalog]]
     ],
     variables_and_freqs: dict,
     *,
     other_search_criteria: Optional[dict] = None,
-    exclusions: dict = None,
+    exclusions: Optional[dict] = None,
     match_hist_and_fut: bool = False,
-    periods: list = None,
-    coverage_kwargs: dict = None,
+    periods: Optional[Union[list[str], list[list[str]]]] = None,
+    coverage_kwargs: Optional[dict] = None,
     id_columns: Optional[list[str]] = None,
     allow_resampling: bool = False,
     allow_conversion: bool = False,
-    conversion_yaml: str = None,
-    restrict_resolution: str = None,
-    restrict_members: dict = None,
-    restrict_warming_level: Union[dict, bool] = None,
+    conversion_yaml: Optional[str] = None,
+    restrict_resolution: Optional[str] = None,
+    restrict_members: Optional[dict] = None,
+    restrict_warming_level: Optional[Union[dict, bool]] = None,
 ) -> dict:
     """Search through DataCatalogs.
 
     Parameters
     ----------
-    data_catalogs : Union[Union[str, os.PathLike], List[Union[str, os.PathLike]], DataCatalog]
+    data_catalogs : str, os.PathLike, DataCatalog, or a list of those
         DataCatalog (or multiple, in a list) or paths to JSON/CSV data catalogs. They must use the same columns and aggregation options.
     variables_and_freqs : dict
         Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format. A list of strings can also be provided.
@@ -618,12 +617,12 @@ def search_data_catalogs(
         You can also pass 'require_all_on: list(columns_name)' in order to only return results that correspond to all other criteria across the listed columns.
         More details available at https://intake-esm.readthedocs.io/en/stable/how-to/enforce-search-query-criteria-via-require-all-on.html .
     exclusions : dict, optional
-        Same as other_search_criteria, but for eliminating results.
-    match_hist_and_fut: bool, optional
+        Same as other_search_criteria, but for eliminating results. Any result that matches any of the exclusions will be removed.
+    match_hist_and_fut: bool
         If True, historical and future simulations will be combined into the same line, and search results lacking one of them will be rejected.
-    periods : list
+    periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start, end] for the periods to be evaluated.
-    coverage_kwargs : dict
+    coverage_kwargs : dict, optional
         Arguments to pass to subset_file_coverage (only used when periods is not None).
     id_columns : list, optional
         List of columns used to create a id column. If None is given, the original
@@ -633,17 +632,17 @@ def search_data_catalogs(
     allow_conversion : bool
         If True (default) and if the requested variable cannot be found, intermediate variables are
         searched given that there exists a converting function in the "derived variable registry".
-    conversion_yaml : str
+    conversion_yaml : str, optional
         Path to a YAML file that defines the possible conversions (used alongside 'allow_conversion'=True).
         This file should follow the xclim conventions for building a virtual module.
         If None, the "derived variable registry" will be defined by the file in "xscen/xclim_modules/conversions.yml"
-    restrict_resolution : str
+    restrict_resolution : str, optional
         Used to restrict the results to the finest/coarsest resolution available for a given simulation.
         ['finest', 'coarsest'].
-    restrict_members : dict
+    restrict_members : dict, optional
         Used to restrict the results to a given number of members for a given simulation.
         Currently only supports {"ordered": int} format.
-    restrict_warming_level : bool, dict
+    restrict_warming_level : bool or dict, optional
         Used to restrict the results only to datasets that exist in the csv used to compute warming levels in `subset_warming_level`.
         If True, this will only keep the datasets that have a mip_era, source, experiment and member combination that exist in the csv.
         This does not guarantee that a given warming level will be reached, only that the datasets have corresponding columns in the csv.
@@ -655,7 +654,7 @@ def search_data_catalogs(
 
     Notes
     -----
-    - The "other_search_criteria" argument accepts wildcard (*) and regular expressions.
+    - The "other_search_criteria" and "exclusions" arguments accept wildcard (*) and regular expressions.
     - Frequency can be wildcarded with 'NA' in the `variables_and_freqs` dict.
     - Variable names cannot be wildcarded, they must be CMIP6-standard.
 
@@ -714,11 +713,14 @@ def search_data_catalogs(
 
     # Cut entries that do not match search criteria
     if exclusions:
-        ex = catalog.search(**exclusions)
-        catalog.esmcat._df = pd.concat([catalog.df, ex.df]).drop_duplicates(keep=False)
-        logger.info(
-            f"Removing {len(ex.df)} assets based on exclusion dict : {exclusions}."
-        )
+        for k in exclusions.keys():
+            ex = catalog.search(**{k: exclusions[k]})
+            catalog.esmcat._df = pd.concat([catalog.df, ex.df]).drop_duplicates(
+                keep=False
+            )
+            logger.info(
+                f"Removing {len(ex.df)} assets based on exclusion dict '{k}': {exclusions[k]}."
+            )
     full_catalog = deepcopy(catalog)  # Used for searching for fixed fields
     if other_search_criteria:
         catalog = catalog.search(**other_search_criteria)
@@ -905,10 +907,10 @@ def search_data_catalogs(
         logger.warning("Found no match corresponding to the search criteria.")
 
     if restrict_resolution is not None and len(catalogs) > 0:
-        catalogs = _restrict_by_resolution(catalogs, id_columns, restrict_resolution)
+        catalogs = _restrict_by_resolution(catalogs, restrict_resolution, id_columns)
 
     if restrict_members is not None and len(catalogs) > 0:
-        catalogs = _restrict_multimembers(catalogs, id_columns, restrict_members)
+        catalogs = _restrict_multimembers(catalogs, restrict_members, id_columns)
 
     return catalogs
 
@@ -921,12 +923,10 @@ def get_warming_level(
     window: int = 20,
     tas_baseline_period: Sequence[str] = ["1850", "1900"],
     ignore_member: bool = False,
-    tas_src: Union[str, Path] = (
-        Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
-    ),
+    tas_src: Optional[Union[str, Path]] = None,
     return_horizon: bool = True,
     output: str = "requested",
-):
+) -> Union[dict, list[str], str]:
     """Use the IPCC Atlas method to return the window of time over which the requested level of global warming is first reached.
 
     Parameters
@@ -944,10 +944,10 @@ def get_warming_level(
        e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
     window : int
        Size of the rolling window in years over which to compute the warming level.
-    tas_baseline_period : list
+    tas_baseline_period : list, optional
        [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
     ignore_member : bool
-       Decides whether to ignore the member when searching for the model run in tas_src.
+       Decides whether to ignore the member when searching for the model run in tas_csv.
     tas_src : str
        Path to a netCDF of annual global mean temperature (tas) with an annual "time" dimension
        and a "simulation" dimension with the following coordinates: "mip_era", "source", "experiment" and "member".
@@ -965,9 +965,10 @@ def get_warming_level(
     Returns
     -------
     dict, list or str
-        If `realization` is not a sequence, the output will follow the format indicated by `return_period`.
-        If `realization` is a sequence, the output will be a list or dict depending on `output`, which values following the format indicated by `return_period`.
+        If `realization` is not a sequence, the output will follow the format indicated by `return_horizon`.
+        If `realization` is a sequence, the output will be a list or dictionary depending on `output`, which values following the format indicated by `return_horizon`.
     """
+    tas_src = tas_src or Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
     tas_baseline_period = standardize_periods(tas_baseline_period, multiple=False)
 
     if (window % 2) not in {0, 1}:
@@ -1284,7 +1285,9 @@ def subset_warming_level(
     return ds_wl
 
 
-def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
+def _dispatch_historical_to_future(
+    catalog: DataCatalog, id_columns: Optional[list[str]] = None
+) -> DataCatalog:
     """Update a DataCatalog by recopying each "historical" entry to its corresponding future experiments.
 
     For examples, if an historical entry has corresponding "ssp245" and "ssp585" entries,
@@ -1293,6 +1296,19 @@ def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
     with "experiment='ssp245'" includes the _historical_ assets (with no apparent distinction).
 
     "Historical" assets that did not find a match are removed from the output catalog.
+
+    Parameters
+    ----------
+    catalog : DataCatalog
+        Catalog to be evaluated.
+    id_columns : list of str, optional
+        List of columns to be used to identify unique simulations.
+        If None, defaults to ID_COLUMNS.
+
+    Returns
+    -------
+    DataCatalog
+        Catalog with the historical entries duplicated and modified to match the future experiments.
     """
     expcols = [
         "experiment",
@@ -1326,6 +1342,12 @@ def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
         hist = sdf[sdf.experiment == "historical"]
         if hist.empty:
             continue
+        if pd.isna(sdf.activity).any():
+            warnings.warn(
+                f"np.NaN was found in the activity column of {group}. The rows with np.NaN activity will be skipped."
+                "If you want them to be included in the historical and future matching, please put a valid activity (https://xscen.readthedocs.io/en/latest/columns.html)."
+                "For example, xscen expects experiment `historical` to have `CMIP` activity and experiments `sspXYZ` to have `ScenarioMIP` activity. "
+            )
         for activity_id in set(sdf.activity) - {"HighResMip", np.NaN}:
             sub_sdf = sdf[sdf.activity == activity_id]
             for exp_id in set(sub_sdf.experiment) - {"historical", "piControl", np.NaN}:
@@ -1375,8 +1397,25 @@ def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list):
     )
 
 
-def _restrict_by_resolution(catalogs: dict, id_columns: list, restrictions: str):
+def _restrict_by_resolution(
+    catalogs: dict, restrictions: str, id_columns: Optional[list[str]] = None
+) -> dict:
     """Update the results from search_data_catalogs by removing simulations with multiple resolutions available.
+
+    Parameters
+    ----------
+    catalogs : dict
+        Dictionary of DataCatalogs to be evaluated.
+    restrictions : str
+        Either 'finest' or 'coarsest'.
+    id_columns : list of str, optional
+        List of columns to be used to identify unique simulations.
+        If None, defaults to ID_COLUMNS.
+
+    Returns
+    -------
+    dict
+        Catalogs with duplicate simulations removed according to the resolution restrictions.
 
     Notes
     -----
@@ -1498,10 +1537,27 @@ def _restrict_by_resolution(catalogs: dict, id_columns: list, restrictions: str)
     return catalogs
 
 
-def _restrict_multimembers(catalogs: dict, id_columns: list, restrictions: dict):
+def _restrict_multimembers(
+    catalogs: dict, restrictions: dict, id_columns: Optional[list[str]] = None
+):
     """Update the results from search_data_catalogs by removing simulations with multiple members available.
 
     Uses regex to try and adequately detect and order the member's identification number, but only tested for 'r-i-p'.
+
+    Parameters
+    ----------
+    catalogs : dict
+        Dictionary of DataCatalogs to be evaluated.
+    restrictions : dict
+        Dictionary of restrictions to be applied. Currently only supports {'ordered': int}.
+    id_columns : list of str, optional
+        List of columns to be used to identify unique simulations.
+        If None, defaults to ID_COLUMNS.
+
+    Returns
+    -------
+    dict
+        Catalogs where simulations with multiple members have been restricted to the requested maximum number.
     """
     df = pd.concat([catalogs[s].df for s in catalogs.keys()])
     # remove the member from the group_by
@@ -1544,8 +1600,23 @@ def _restrict_multimembers(catalogs: dict, id_columns: list, restrictions: dict)
     return catalogs
 
 
-def _restrict_wl(df, restrictions: dict):
-    """Update the results from search_data_catalogs by removing simulations that are not available in the warming level netCDF."""
+def _restrict_wl(df: pd.DataFrame, restrictions: dict):
+    """Update the results from search_data_catalogs according to warming level restrictions.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame to be evaluated.
+    restrictions : dict
+        Dictionary of restrictions to be applied. Entries are passed to get_warming_level.
+        If 'wl' is present, the warming level csv will be used to remove simulations that do not reach the requested warming level.
+        Otherwise, the warming level csv will be used to remove simulations that are not available in it.
+
+    Returns
+    -------
+    df :
+        Updated DataFrame.
+    """
     restrictions.setdefault("wl", 0)
     to_keep = get_warming_level(df, return_horizon=False, **restrictions).notnull()
     removed = pd.unique(df[~to_keep]["id"])

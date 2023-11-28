@@ -1,6 +1,5 @@
-# noqa: D100
+"""Functions to train and adjust a dataset using a bias-adjustment algorithm."""
 import logging
-import warnings
 from copy import deepcopy
 from typing import Optional, Union
 
@@ -13,9 +12,6 @@ from xclim.sdba import construct_moving_yearly_window, unpack_moving_yearly_wind
 from .catutils import parse_from_ds
 from .config import parse_config
 from .utils import minimum_calendar, standardize_periods
-
-# TODO: Change all paths to PosixPath objects, including in the catalog?
-# TODO: Compute sometimes fails randomly (in debug, pretty much always). Also (detrend?) fails with pr. Investigate why.
 
 logger = logging.getLogger(__name__)
 
@@ -60,12 +56,12 @@ def _add_preprocessing_attr(scen, train_kwargs):
 def train(
     dref: xr.Dataset,
     dhist: xr.Dataset,
-    var: list,
-    period: list,
+    var: Union[str, list[str]],
+    period: list[str],
     *,
     method: str = "DetrendedQuantileMapping",
-    group: Union[sdba.Grouper, str, dict] = {"group": "time.dayofyear", "window": 31},
-    xclim_train_args: dict = None,
+    group: Optional[Union[sdba.Grouper, str, dict]] = None,
+    xclim_train_args: Optional[dict] = None,
     maximal_calendar: str = "noleap",
     adapt_freq: Optional[dict] = None,
     jitter_under: Optional[dict] = None,
@@ -81,14 +77,15 @@ def train(
       The target timeseries, on the reference period.
     dhist : xr.Dataset
       The timeseries to adjust, on the reference period.
-    var : str
-      Variable on which to do the adjustment
-    period : list
+    var : str or list of str
+      Variable on which to do the adjustment. Currently only supports one variable.
+    period : list of str
       [start, end] of the reference period
     method : str
       Name of the `sdba.TrainAdjust` method of xclim.
-    group : str or sdba.Grouper
-      Grouping information
+    group : str or sdba.Grouper or dict, optional
+      Grouping information. If a string, it is interpreted as a grouper on the time dimension. If a dict, it is passed to `sdba.Grouper.from_kwargs`.
+      Defaults to {"group": "time.dayofyear", "window": 31}.
     xclim_train_args : dict
       Dict of arguments to pass to the `.train` of the adjustment object.
     maximal_calendar: str
@@ -101,7 +98,7 @@ def train(
     jitter_over: dict, optional
       If given, a dictionary of args to pass to `jitter_over_thresh`.
     align_on: str, optional
-      `align_on` argument for the fonction `xclim.core.calendar.convert_calendar`.
+      `align_on` argument for the function `xclim.core.calendar.convert_calendar`.
 
     Returns
     -------
@@ -114,6 +111,8 @@ def train(
 
     """
     # TODO: To be adequately fixed later when we add multivariate
+    if isinstance(var, str):
+        var = [var]
     if len(var) != 1:
         raise ValueError(
             "biasadjust currently does not support entries with multiple variables."
@@ -122,6 +121,7 @@ def train(
         ref = dref[var[0]]
         hist = dhist[var[0]]
 
+    group = group or {"group": "time.dayofyear", "window": 31}
     xclim_train_args = xclim_train_args or {}
     if method == "DetrendedQuantileMapping":
         xclim_train_args.setdefault("nquantiles", 15)
@@ -189,15 +189,15 @@ def train(
 def adjust(
     dtrain: xr.Dataset,
     dsim: xr.Dataset,
-    periods: list,
-    xclim_adjust_args: dict,
+    periods: Union[list[str], list[list[str]]],
     *,
+    xclim_adjust_args: Optional[dict] = None,
     to_level: str = "biasadjusted",
-    bias_adjust_institution: str = None,
-    bias_adjust_project: str = None,
+    bias_adjust_institution: Optional[str] = None,
+    bias_adjust_project: Optional[str] = None,
     moving_yearly_window: Optional[dict] = None,
     align_on: Optional[str] = "year",
-):
+) -> xr.Dataset:
     """
     Adjust a simulation.
 
@@ -207,11 +207,11 @@ def adjust(
       A trained algorithm's dataset, as returned by `train`.
     dsim : xr.Dataset
       Simulated timeseries, projected period.
-    periods : list
+    periods : list of str or list of lists of str
       Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
-    xclim_adjust_args : dict
+    xclim_adjust_args : dict, optional
       Dict of arguments to pass to the `.adjust` of the adjustment object.
-    to_level : str, optional
+    to_level : str
       The processing level to assign to the output.
       Defaults to 'biasadjusted'
     bias_adjust_institution : str, optional
@@ -240,6 +240,7 @@ def adjust(
     # TODO: To be adequately fixed later
 
     xclim_adjust_args = deepcopy(xclim_adjust_args)
+    xclim_adjust_args = xclim_adjust_args or {}
 
     if moving_yearly_window:
         dsim = construct_moving_yearly_window(dsim, **moving_yearly_window)
@@ -267,7 +268,6 @@ def adjust(
     if simcal != mincal:
         sim = convert_calendar(sim, mincal, align_on=align_on)
 
-    xclim_adjust_args = xclim_adjust_args or {}
     # do the adjustment for all the simulation_period lists
     periods = standardize_periods(periods)
     slices = []

@@ -1,10 +1,9 @@
-# noqa: D100
+"""Functions to regrid datasets."""
 import datetime
 import operator
 import os
 import warnings
 from copy import deepcopy
-from pathlib import PosixPath
 from typing import Optional, Union
 
 import cartopy.crs as ccrs
@@ -16,7 +15,6 @@ import xesmf as xe
 from .config import parse_config
 
 # TODO: Implement logging, warnings, etc.
-# TODO: Change all paths to PosixPath objects, including in the catalog?
 # TODO: Add an option to call xesmf.util.grid_2d or xesmf.util.grid_global
 # TODO: Implement support for an OBS2SIM kind of interpolation
 
@@ -28,7 +26,7 @@ __all__ = ["regrid_dataset", "create_mask"]
 def regrid_dataset(
     ds: xr.Dataset,
     ds_grid: xr.Dataset,
-    weights_location: Union[str, PosixPath],
+    weights_location: Union[str, os.PathLike],
     *,
     regridder_kwargs: Optional[dict] = None,
     intermediate_grids: Optional[dict] = None,
@@ -43,15 +41,15 @@ def regrid_dataset(
     ds : xarray.Dataset
         Dataset to regrid. The Dataset needs to have lat/lon coordinates.
         Supports a 'mask' variable compatible with ESMF standards.
-    weights_location : Union[str, PosixPath]
+    weights_location : Union[str, os.PathLike]
         Path to the folder where weight file is saved.
     ds_grid : xr.Dataset
         Destination grid. The Dataset needs to have lat/lon coordinates.
         Supports a 'mask' variable compatible with ESMF standards.
-    regridder_kwargs : dict
+    regridder_kwargs : dict, optional
         Arguments to send xe.Regridder(). If it contains `skipna` or `out_chunks`, those
         are passed to the regridder call directly.
-    intermediate_grids : dict
+    intermediate_grids : dict, optional
         This argument is used to do a regridding in many steps, regridding to regular
         grids before regridding to the final ds_grid.
         This is useful when there is a large jump in resolution between ds and ds grid.
@@ -291,9 +289,9 @@ def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.Data
 def _regridder(
     ds_in: xr.Dataset,
     ds_grid: xr.Dataset,
-    filename: str,
+    filename: Union[str, os.PathLike],
     *,
-    method: Optional[str] = "bilinear",
+    method: str = "bilinear",
     unmapped_to_nan: Optional[bool] = True,
     **kwargs,
 ) -> xe.frontend.Regridder:
@@ -305,9 +303,9 @@ def _regridder(
         Incoming grid. The Dataset needs to have lat/lon coordinates.
     ds_grid : xr.Dataset
         Destination grid. The Dataset needs to have lat/lon coordinates.
-    filename : str
+    filename : str or os.PathLike
         Path to the NetCDF file with weights information.
-    method : str, optional
+    method : str
         Interpolation method.
     unmapped_to_nan : bool, optional
         Arguments to send xe.Regridder().
@@ -346,7 +344,7 @@ def _regridder(
     return regridder
 
 
-def create_bounds_rotated_pole(ds):
+def create_bounds_rotated_pole(ds: xr.Dataset):
     """Create bounds for rotated pole datasets."""
     ds = ds.cf.add_bounds(["rlat", "rlon"])
 

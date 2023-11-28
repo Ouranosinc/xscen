@@ -28,9 +28,11 @@ class TestSearchDataCatalogs:
             other_search_criteria={"experiment": ["ssp585"]}
             if other_arg == "other"
             else None,
-            exclusions={"member": "r2.*"} if other_arg == "exclusion" else None,
+            exclusions={"member": "r2.*", "domain": ["gr2"]}
+            if other_arg == "exclusion"
+            else None,
         )
-        assert len(out) == 13 if other_arg is None else 2 if other_arg == "other" else 6
+        assert len(out) == 13 if other_arg is None else 2 if other_arg == "other" else 4
 
     @pytest.mark.parametrize(
         "periods, coverage_kwargs",

@@ -15,7 +15,6 @@ from typing import Any, Optional, Union
 
 import fsspec as fs
 import intake_esm
-import numpy as np
 import pandas as pd
 import tlz
 import xarray
@@ -41,7 +40,8 @@ __all__ = [
 ]
 
 
-# As much as possible, these catalog columns and entries should align with: https://github.com/WCRP-CMIP/CMIP6_CVs and https://github.com/ES-DOC/pyessv-archive
+# As much as possible, these catalog columns and entries should align with:
+# https://github.com/WCRP-CMIP/CMIP6_CVs and https://github.com/ES-DOC/pyessv-archive
 # See docs/columns.rst for a description of each entry.
 COLUMNS = [
     "id",
@@ -136,21 +136,36 @@ csv_kwargs = {
 
 
 class DataCatalog(intake_esm.esm_datastore):
-    """
+    r"""
     A read-only intake_esm catalog adapted to xscen's syntax.
 
     This class expects the catalog to have the columns listed in :py:data:`xscen.catalog.COLUMNS`
     and it comes with default arguments for reading the CSV files (:py:data:`xscen.catalog.csv_kwargs`).
-    For example, all string columns (except `path`) are casted to a categorical dtype and the
+    For example, all string columns (except `path`) are cast to a categorical dtype and the
     datetime columns are parsed with a special function that allows dates outside the conventional
     `datetime64[ns]` bounds by storing the data using :py:class:`pandas.Period` objects.
+
+    Parameters
+    ----------
+    \*args : str or os.PathLike or dict
+        Path to a catalog JSON file. If a dict, it must have two keys: 'esmcat' and 'df'.
+        'esmcat' must be a dict representation of the ESM catalog.
+        'df' must be a Pandas DataFrame containing content that would otherwise be in the CSV file.
+    check_valid : bool
+        If True, will check that all files in the catalog exist on disk and remove those that don't.
+    drop_duplicates : bool
+        If True, will drop duplicates in the catalog based on the 'id' and 'path' columns.
+    \**kwargs : dict
+        Any other arguments are passed to intake_esm.esm_datastore.
 
     See Also
     --------
     intake_esm.core.esm_datastore
     """
 
-    def __init__(self, *args, check_valid=False, drop_duplicates=False, **kwargs):
+    def __init__(
+        self, *args, check_valid: bool = False, drop_duplicates: bool = False, **kwargs
+    ):
         kwargs["read_csv_kwargs"] = recursive_update(
             csv_kwargs.copy(), kwargs.get("read_csv_kwargs", {})
         )
@@ -178,7 +193,7 @@ class DataCatalog(intake_esm.esm_datastore):
         data: Union[pd.DataFrame, os.PathLike, Sequence[os.PathLike]],
         esmdata: Optional[Union[os.PathLike, dict]] = None,
         *,
-        read_csv_kwargs: Mapping[str, Any] = None,
+        read_csv_kwargs: Optional[Mapping[str, Any]] = None,
         name: str = "virtual",
         **intake_kwargs,
     ):
@@ -186,14 +201,14 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Parameters
         ----------
-        data: DataFrame or path or sequence of path
+        data: DataFrame or path or sequence of paths
           A DataFrame or one or more paths to csv files.
         esmdata: path or dict, optional
           The "ESM collection data" as a path to a json file or a dict.
           If None (default), xscen's default :py:data:`esm_col_data` is used.
         read_csv_kwargs : dict, optional
           Extra kwargs to pass to `pd.read_csv`, in addition to the ones in :py:data:`csv_kwargs`.
-        name: str, optional
+        name: str
           If `metadata` doesn't contain it, a name to give to the catalog.
 
         See Also
@@ -240,10 +255,13 @@ class DataCatalog(intake_esm.esm_datastore):
         else:
             return data.apply(_find_unique, result_type="reduce").to_dict()
 
-    def unique(self, columns: Union[str, list] = None):
+    def unique(self, columns: Optional[Union[str, Sequence[str]]] = None):
         """Return a series of unique values in the catalog.
 
-        Subsets on a columns list if specified.
+        Parameters
+        ----------
+        columns : str or sequence of str, optional
+          The columns to get unique values from. If None, all columns are used.
         """
         if self.df.size == 0:
             raise ValueError("Catalog is empty.")
@@ -283,7 +301,14 @@ class DataCatalog(intake_esm.esm_datastore):
             )
         return cat
 
-    def drop_duplicates(self, columns: Optional[list[str]] = None):  # noqa: D102
+    def drop_duplicates(self, columns: Optional[list[str]] = None):
+        """Drop duplicates in the catalog based on a subset of columns.
+
+        Parameters
+        ----------
+        columns: list of str, optional
+            The columns used to identify duplicates. If None, 'id' and 'path' are used.
+        """
         # In case variables are being added in an existing Zarr, append them
         if columns is None:
             columns = ["id", "path"]
@@ -311,7 +336,13 @@ class DataCatalog(intake_esm.esm_datastore):
             subset=columns, keep="last", ignore_index=True, inplace=True
         )
 
-    def check_valid(self):  # noqa: D102
+    def check_valid(self):
+        """Verify that all files in the catalog exist on disk and remove those that don't.
+
+        If a file is a Zarr, it will also check that all variables are present and remove those that aren't.
+        """
+        len_df = len(self.df)  # This line is required to avoid a D202 pydocstyle error
+
         # In case files were deleted manually, double-check that files do exist
         def check_existing(row):
             path = Path(row.path)
@@ -338,14 +369,14 @@ class DataCatalog(intake_esm.esm_datastore):
                 exists = row.variable
             return exists
 
-        if len(self.df) > 0:
+        if len_df > 0:
             self.esmcat._df = self.df[
                 self.df.apply(check_existing, axis=1)
             ].reset_index(drop=True)
-            if len(self.df) > 0:
+            if len_df > 0:
                 self.esmcat._df["variable"] = self.df.apply(check_variables, axis=1)
 
-    def exists_in_cat(self, **columns):
+    def exists_in_cat(self, **columns) -> bool:
         """
         Check if there is an entry in the catalogue corresponding to the arguments given.
 
@@ -355,7 +386,8 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Returns
         -------
-        Boolean if an entry exist
+        bool
+            True if there is an entry in the catalogue corresponding to the arguments given.
         """
         exists = bool(len(self.search(**columns)))
         if exists:
@@ -383,13 +415,13 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Parameters
         ----------
-        concat_on : list of strings or str, optional
+        concat_on : list of str or str, optional
           A list of catalog columns over which to concat the datasets (in addition to 'time').
           Each will become a new dimension with the column values as coordinates.
           Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
-        create_ensemble_on : list of strings or str, optional
+        create_ensemble_on : list of str or str, optional
           The given column values will be merged into a new id-like "realization" column, which will be concatenated over.
-          The given columns are removed from the dataset id, so as to remove them from the groupby_attrs logic.
+          The given columns are removed from the dataset id, to remove them from the groupby_attrs logic.
           Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
         ensemble_name : list of strings, optional
           If `create_ensemble_on` is given, this can be a subset of those column names to use when constructing the realization coordinate.
@@ -507,7 +539,7 @@ class ProjectCatalog(DataCatalog):
         filename: Union[os.PathLike, str],
         *,
         project: Optional[dict] = None,
-        overwrite=False,
+        overwrite: bool = False,
     ):
         r"""Create a new project catalog from some project metadata.
 
@@ -515,9 +547,9 @@ class ProjectCatalog(DataCatalog):
 
         Parameters
         ----------
-        filename : PathLike
+        filename : os.PathLike or str
           A path to the json file (with or without suffix).
-        project : dict-like
+        project : dict, optional
           Metadata to create the catalog. If None, `CONFIG['project']` will be used.
           Valid fields are:
 
@@ -530,7 +562,7 @@ class ProjectCatalog(DataCatalog):
 
           At least one of `id` and `title` must be given, the rest is optional.
         overwrite : bool
-          If True, will overwrite any existing JSON and CSV file
+          If True, will overwrite any existing JSON and CSV file.
 
         Returns
         -------
@@ -587,23 +619,23 @@ class ProjectCatalog(DataCatalog):
         df: Union[str, dict],
         *args,
         create: bool = False,
-        overwrite: bool = None,
-        project: dict = None,
+        overwrite: bool = False,
+        project: Optional[dict] = None,
         **kwargs,
     ):
         """Open or create a project catalog.
 
         Parameters
         ----------
-        df : str, dict
+        df : str or dict
             If str, this must be a path or URL to a catalog JSON file.
             If dict, this must be a dict representation of an ESM catalog.  See the notes below.
         create : bool
             If True, and if 'df' is a string, this will create an empty ProjectCatalog if none already exists.
-        project : dict-like
-            Metadata to create the catalog, if required.
         overwrite : bool
             If this and 'create' are True, this will overwrite any existing JSON and CSV file with an empty catalog.
+        project : dict, optional
+            Metadata to create the catalog, if required.
 
         Notes
         -----
@@ -627,7 +659,7 @@ class ProjectCatalog(DataCatalog):
         self,
         df: Optional[
             Union[
-                "DataCatalog",
+                DataCatalog,
                 intake_esm.esm_datastore,
                 pd.DataFrame,
                 pd.Series,
@@ -649,8 +681,8 @@ class ProjectCatalog(DataCatalog):
 
         Parameters
         ----------
-        df : Union[pd.DataFrame, pd.Series, DataCatalog]
-          Data to be added to the catalog.
+        df : Union[DataCatalog, intake_esm.esm_datastore, pd.DataFrame, pd.Series, Sequence[pd.Series]], optional
+            Data to be added to the catalog. If None, nothing is added, but the catalog is still updated.
         """
         # Append the new DataFrame or Series
         if isinstance(df, DataCatalog) or isinstance(df, intake_esm.esm_datastore):
@@ -715,7 +747,7 @@ class ProjectCatalog(DataCatalog):
     def update_from_ds(
         self,
         ds: xarray.Dataset,
-        path: str,
+        path: Union[os.PathLike, str],
         info_dict: Optional[dict] = None,
         **info_kwargs,
     ):
@@ -738,10 +770,10 @@ class ProjectCatalog(DataCatalog):
         ds : xarray.Dataset
             Dataset that we want to add to the catalog.
             The columns of the catalog will be filled from the global attributes starting with 'cat:' of the dataset.
-        info_dict : dict
-            Optional extra information to fill the catalog.
-        path : str
-            Path where ds is stored
+        info_dict : dict, optional
+            Extra information to fill in the catalog.
+        path : os.PathLike or str
+            Path to the file that contains the dataset. This will be added to the 'path' column of the catalog.
         """
         d = {}
 
@@ -761,7 +793,7 @@ class ProjectCatalog(DataCatalog):
                 ds.isel(time=-1).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
             )
 
-        d["path"] = str(path)
+        d["path"] = str(Path(path))
 
         # variable should be based on the Dataset
         d["variable"] = tuple(v for v in ds.data_vars if len(ds[v].dims) > 0)
@@ -799,7 +831,7 @@ class ProjectCatalog(DataCatalog):
 def concat_data_catalogs(*dcs):
     """Concatenate a multiple DataCatalogs.
 
-    Output catalog is the union of all rows and all derived variables, with the the "esmcat"
+    Output catalog is the union of all rows and all derived variables, with the "esmcat"
     of the first DataCatalog. Duplicate rows are dropped and the index is reset.
     """
     registry = {}
@@ -833,16 +865,21 @@ def _build_id(element: pd.Series, columns: list[str]):
 
 def generate_id(
     df: Union[pd.DataFrame, xr.Dataset], id_columns: Optional[list] = None
-):  # noqa: D401
-    """Utility to create an ID from column entries.
+) -> pd.Series:
+    """Create an ID from column entries.
 
     Parameters
     ----------
     df: pd.DataFrame, xr.Dataset
       Data for which to create an ID.
-    id_columns : list
+    id_columns : list, optional
       List of column names on which to base the dataset definition. Empty columns will be skipped.
       If None (default), uses :py:data:`ID_COLUMNS`.
+
+    Returns
+    -------
+    pd.Series
+        A series of IDs, one per row of the input DataFrame.
     """
     if isinstance(df, xr.Dataset):
         df = pd.DataFrame.from_dict(
@@ -858,15 +895,13 @@ def generate_id(
     return df.apply(_build_id, axis=1, args=(id_columns,))
 
 
-def unstack_id(
-    df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]
-) -> dict:  # noqa: D401
-    """Utility that reverse-engineers an ID using catalog entries.
+def unstack_id(df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]) -> dict:
+    """Reverse-engineer an ID using catalog entries.
 
     Parameters
     ----------
     df : Union[pd.DataFrame, ProjectCatalog, DataCatalog]
-        Either a Project/DataCatalog or the pandas DataFrame.
+        Either a Project/DataCatalog or a pandas DataFrame.
 
     Returns
     -------
@@ -902,7 +937,7 @@ def unstack_id(
 
 def subset_file_coverage(
     df: pd.DataFrame,
-    periods: list,
+    periods: Union[list[str], list[list[str]]],
     *,
     coverage: float = 0.99,
     duplicates_ok: bool = False,
@@ -914,7 +949,7 @@ def subset_file_coverage(
     df : pd.DataFrame
       List of files to be evaluated, with at least a date_start and date_end column,
       which are expected to be `datetime64` objecs.
-    periods : list
+    periods : list of str or list of lists of str
       Either [start, end] or list of [start, end] for the periods to be evaluated.
       All periods must be covered, otherwise an empty subset is returned.
     coverage : float

@@ -12,7 +12,7 @@ from copy import deepcopy
 from fnmatch import fnmatch
 from functools import partial, reduce
 from multiprocessing import Pool
-from pathlib import Path, PosixPath
+from pathlib import Path
 from typing import Any, Optional, Union
 
 import cftime
@@ -51,7 +51,7 @@ Add your own types with the :py:func:`register_parse_type` decorator.
 """
 
 
-def register_parse_type(name, regex=r"([^\_\/\\]*)", group_count=1):
+def register_parse_type(name: str, regex: str = r"([^\_\/\\]*)", group_count: int = 1):
     r"""Register a new parse type to be available in :py:func:`parse_directory` patterns.
 
     Function decorated by this will be registered in :py:data:`EXTRA_PARSE_TYPES`.
@@ -94,7 +94,9 @@ def _parse_level(text: str) -> str:
 @register_parse_type(
     "datebounds", regex=r"(([\d]{4,15}(\-[\d]{4,15})?)|fx)", group_count=3
 )
-def _parse_datebounds(text: str) -> tuple[str, str]:
+def _parse_datebounds(
+    text: str,
+) -> Union[list[str], tuple[None, None], tuple[str, str]]:
     """Parse helper to translate date bounds, used in the special DATES field."""
     if "-" in text:
         return text.split("-")
@@ -104,13 +106,26 @@ def _parse_datebounds(text: str) -> tuple[str, str]:
 
 
 def _find_assets(
-    root: Union[str, Path],
+    root: Union[str, os.PathLike],
     exts: set[str],
     lengths: set[int],
     dirglob: Optional[str] = None,
 ):
-    """Walk recursively over files in a directory, filtering according to a glob pattern, path depth and extensions."""
-    root = str(root)  # to be sure
+    """Walk recursively over files in a directory, filtering according to a glob pattern, path depth and extensions.
+
+    Parameters
+    ----------
+    root: str or Pathlike
+        Path of the directory to walk through.
+    exts: set of strings
+        Set of file extensions to look for.
+    lengths: set of ints
+        Set of path depths to look for.
+    dirglob: str, optional
+        A glob pattern. If given, only parent folders matching this pattern are walked through.
+        This pattern can not include the asset's basename.
+    """
+    root = str(Path(root))  # to be sure
     for top, alldirs, files in os.walk(root):
         # Split zarr subdirectories from next iteration
         zarrs = []
@@ -162,20 +177,20 @@ def _compile_pattern(pattern: str) -> parse.Parser:
 
 
 def _name_parser(
-    path: os.PathLike,
-    root: os.PathLike,
+    path: Union[os.PathLike, str],
+    root: Union[os.PathLike, str],
     patterns: list[Union[str, parse.Parser]],
     read_from_file: Optional[Union[list[str], dict]] = None,
     attrs_map: Optional[dict] = None,
     xr_open_kwargs: Optional[dict] = None,
-):
+) -> Optional[dict]:
     """Extract metadata information from the file path.
 
     Parameters
     ----------
-    path : str
+    path : os.PathLike or str
         Full file path.
-    root : str
+    root : os.PathLike or str
         Root directory. Only the part of the path relative to this directory is checked against the patterns.
     patterns : list of str or parse.Parser
         List of patterns to try in `parse.parse`. See :py:func:`parse_directory` for the pattern specification.
@@ -200,7 +215,7 @@ def _name_parser(
     parse_from_ds
     """
     abs_path = Path(path)
-    path = abs_path.relative_to(root)
+    path = abs_path.relative_to(Path(root))
     xr_open_kwargs = xr_open_kwargs or {}
 
     d = {}
@@ -238,10 +253,10 @@ def _name_parser(
 
 
 def _parse_dir(
-    root: os.PathLike,
+    root: Union[os.PathLike, str],
     patterns: list[str],
     dirglob: Optional[str] = None,
-    checks: list[str] = None,
+    checks: Optional[list[str]] = None,
     read_from_file: Optional[Union[list[str], dict]] = None,
     attrs_map: Optional[dict] = None,
     xr_open_kwargs: Optional[dict] = None,
@@ -251,7 +266,7 @@ def _parse_dir(
 
     Parameters
     ----------
-    root: Pathlike
+    root: os.PathLike or str
         Path to walk through.
     patterns: list of strings or compiled parsers
         Patterns that the files will be checked against.
@@ -356,7 +371,7 @@ def _parse_dir(
 
     # Skip the checks if none are requested (save some overhead)
     q = q_found if checks else q_checked
-    for path in _find_assets(root, exts, lengths, dirglob):
+    for path in _find_assets(Path(root), exts, lengths, dirglob):
         q.put(path)
 
     q_found.join()
@@ -418,37 +433,37 @@ def _parse_first_ds(
 
 @parse_config
 def parse_directory(
-    directories: list,
-    patterns: list,
+    directories: list[Union[str, os.PathLike]],
+    patterns: list[str],
     *,
-    id_columns: list = None,
+    id_columns: Optional[list[str]] = None,
     read_from_file: Union[
         bool,
         Sequence[str],
         tuple[Sequence[str], Sequence[str]],
         Sequence[tuple[Sequence[str], Sequence[str]]],
     ] = False,
-    homogenous_info: dict = None,
-    cvs: Union[str, PosixPath, dict] = None,
+    homogenous_info: Optional[dict] = None,
+    cvs: Optional[Union[str, os.PathLike, dict]] = None,
     dirglob: Optional[str] = None,
-    xr_open_kwargs: Mapping[str, Any] = None,
+    xr_open_kwargs: Optional[Mapping[str, Any]] = None,
     only_official_columns: bool = True,
     progress: bool = False,
     parallel_dirs: Union[bool, int] = False,
-    file_checks: list[str] = None,
+    file_checks: Optional[list[str]] = None,
 ) -> pd.DataFrame:
     r"""Parse files in a directory and return them as a pd.DataFrame.
 
     Parameters
     ----------
-    directories : list
+    directories : list of os.PathLike or list of str
         List of directories to parse. The parse is recursive.
-    patterns : list
+    patterns : list of str
         List of possible patterns to be used by :py:func:`parse.parse` to decode the file names. See Notes below.
-    id_columns : list
+    id_columns : list of str, optional
         List of column names on which to base the dataset definition. Empty columns will be skipped.
         If None (default), it uses :py:data:`ID_COLUMNS`.
-    read_from_file : boolean or set of strings or tuple of 2 sets of strings.
+    read_from_file : boolean or set of strings or tuple of 2 sets of strings or list of tuples
         If True, if some fields were not parsed from their path, files are opened and
         missing fields are parsed from their metadata, if found.
         If a sequence of column names, only those fields are parsed from the file, if missing.
@@ -462,7 +477,7 @@ def parse_directory(
     homogenous_info : dict, optional
         Using the {column_name: description} format, information to apply to all files.
         These are applied before the `cvs`.
-    cvs: str or PosixPath or dict, optional
+    cvs: str or os.PathLike or dict, optional
         Dictionary with mapping from parsed term to preferred terms (Controlled VocabularieS) for each column.
         May have an additional "attributes" entry which maps from attribute names in the files to
         official column names. The attribute translation is done before the rest.
@@ -681,7 +696,7 @@ def parse_directory(
 
 
 def parse_from_ds(
-    obj: Union[os.PathLike, xr.Dataset],
+    obj: Union[str, os.PathLike, xr.Dataset],
     names: Sequence[str],
     attrs_map: Optional[Mapping[str, str]] = None,
     **xrkwargs,
@@ -697,6 +712,17 @@ def parse_from_ds(
 
     If the obj is the path to a Zarr dataset and none of "frequency", "xrfreq", "date_start" or "date_end"
     are requested, :py:func:`parse_from_zarr` is used instead of opening the file.
+
+    Parameters
+    ----------
+    obj: str or os.PathLike or xr.Dataset
+        Dataset to parse.
+    names: sequence of str
+        List of attributes to be parsed from the dataset.
+    attrs_map: dict, optional
+        In the case of non-standard names in the file, this can be used to match entries in the files to specific 'names' in the requested list.
+    xrkwargs:
+        Arguments to be passed to open_dataset().
     """
     get_time = bool(
         {"frequency", "xrfreq", "date_start", "date_end"}.intersection(names)
@@ -757,7 +783,9 @@ def parse_from_ds(
     return attrs
 
 
-def _parse_from_zarr(path: os.PathLike, get_vars=True, get_time=True):
+def _parse_from_zarr(
+    path: Union[os.PathLike, str], get_vars: bool = True, get_time: bool = True
+):
     """Obtain the list of variables, the time coordinate and the list of global attributes from a zarr dataset.
 
     Vars and attrs from reading the JSON files directly, time by reading the data with zarr.
@@ -766,6 +794,15 @@ def _parse_from_zarr(path: os.PathLike, get_vars=True, get_time=True):
     - where .zattrs/_ARRAY_DIMENSIONS is not empty
     - where .zattrs/_ARRAY_DIMENSIONS does not contain the variable name
     - who do not appear in any "coordinates" attribute.
+
+    Parameters
+    ----------
+    path: os.PathLike or str
+        Path to the zarr dataset.
+    get_vars: bool
+        If True, return the list of variables.
+    get_time: bool
+        If True, return the time coordinate.
     """
     path = Path(path)
 
@@ -809,9 +846,21 @@ def _parse_from_zarr(path: os.PathLike, get_vars=True, get_time=True):
     return ds_attrs, variables, time
 
 
-def _parse_from_nc(path: os.PathLike, get_vars=True, get_time=True):
-    """Obtain the list of variables, the time coordinate, and the list of global attributes from a netCDF dataset, using netCDF4."""
-    ds = netCDF4.Dataset(str(path))
+def _parse_from_nc(
+    path: Union[os.PathLike, str], get_vars: bool = True, get_time: bool = True
+):
+    """Obtain the list of variables, the time coordinate, and the list of global attributes from a netCDF dataset, using netCDF4.
+
+    Parameters
+    ----------
+    path: os.PathLike or str
+        Path to the netCDF dataset.
+    get_vars: bool
+        If True, return the list of variables.
+    get_time: bool
+        If True, return the time coordinate.
+    """
+    ds = netCDF4.Dataset(str(Path(path)))
     ds_attrs = {k: ds.getncattr(k) for k in ds.ncattrs()}
 
     variables = []
@@ -851,7 +900,7 @@ def _schema_option(option: dict, facets: dict):
     return answer
 
 
-def _schema_level(schema: Union[dict, str], facets: dict):
+def _schema_level(schema: Union[dict, list[str], str], facets: dict):
     if isinstance(schema, str):
         if schema.startswith("(") and schema.endswith(")"):
             optional = True
@@ -881,7 +930,7 @@ def _schema_level(schema: Union[dict, str], facets: dict):
     raise ValueError(f"Invalid schema : {schema}")
 
 
-def _schema_dates(facets, optional=False):
+def _schema_dates(facets: dict, optional: bool = False):
     if facets.get("xrfreq") == "fx":
         return "fx"
 
@@ -979,7 +1028,7 @@ def _read_schemas(schemas):
 def _build_path(
     data: Union[dict, xr.Dataset, xr.DataArray, pd.Series],
     schemas: dict,
-    root: Path,
+    root: Union[str, os.PathLike],
     get_type: bool = False,
     **extra_facets,
 ) -> Union[Path, tuple[Path, str]]:
@@ -1031,7 +1080,7 @@ def _build_path(
             out = Path(*_schema_folders(schema["folders"], facets))
             out = out / _schema_filename(schema["filename"], facets)
             if root is not None:
-                out = root / out
+                out = Path(root) / out
             if "format" in facets:  # Add extension
                 # Can't use `with_suffix` in case there are dots in the name
                 out = out.parent / f"{out.name}.{facets['format']}"
@@ -1045,20 +1094,20 @@ def _build_path(
 @parse_config
 def build_path(
     data: Union[dict, xr.Dataset, xr.DataArray, pd.Series, DataCatalog, pd.DataFrame],
-    schemas: Optional[Union[str, os.PathLike, list[dict], dict]] = None,
-    root: Union[str, os.PathLike] = None,
+    schemas: Optional[Union[str, os.PathLike, dict]] = None,
+    root: Optional[Union[str, os.PathLike]] = None,
     **extra_facets,
 ) -> Union[Path, DataCatalog, pd.DataFrame]:
     r"""Parse the schema from a configuration and construct path using a dictionary of facets.
 
     Parameters
     ----------
-    data : dict or catalog
+    data : dict or xr.Dataset or xr.DataArray or pd.Series or DataCatalog or pd.DataFrame
         Dict of facets. Or xarray object to read the facets from. In the latter case, variable and time-dependent
         facets are read with :py:func:`parse_from_ds` and supplemented with all the object's attribute,
         giving priority to the "official" xscen attributes (prefixed with `cat:`, see :py:func:`xscen.utils.get_cat_attrs`).
         Can also be a catalog or a DataFrame, in which a "new_path" column is generated for each item.
-    schemas : Path or dict or dict of dicts, optional
+    schemas : Path or dict, optional
         Path to YAML schematic of database schema. If None, will use a default schema.
         See the comments in the `xscen/data/file_schema.yml` file for more details on its construction.
         A dict of dict schemas can be given (same as reading the yaml).
