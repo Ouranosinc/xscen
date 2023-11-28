@@ -61,7 +61,7 @@ requirements = [
     "shapely>=2.0",
     "sparse",
     "toolz",
-    "xarray",
+    "xarray<2023.11.0",  # TODO: UNPIN BEFORE RELEASING
     "xclim>=0.43",
     "xesmf>=0.7.0",
     "zarr",
