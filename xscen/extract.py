@@ -917,11 +917,13 @@ def search_data_catalogs(
 
 @parse_config
 def get_warming_level(
-    realization: Union[xr.Dataset, xr.DataArray, dict, pd.Series, pd.DataFrame, str, list],
+    realization: Union[
+        xr.Dataset, xr.DataArray, dict, pd.Series, pd.DataFrame, str, list
+    ],
     wl: float,
     *,
     window: int = 20,
-    tas_baseline_period: Sequence[str] = ["1850", "1900"],
+    tas_baseline_period: Optional[Sequence[str]] = None,
     ignore_member: bool = False,
     tas_src: Optional[Union[str, os.PathLike]] = None,
     return_horizon: bool = True,
@@ -969,7 +971,9 @@ def get_warming_level(
         If `realization` is a sequence, the output will be a list or dictionary depending on `output`, with values following the format indicated by `return_horizon`.
     """
     tas_src = tas_src or Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
-    tas_baseline_period = standardize_periods(tas_baseline_period, multiple=False)
+    tas_baseline_period = standardize_periods(
+        tas_baseline_period or ["1850", "1900"], multiple=False
+    )
 
     if (window % 2) not in {0, 1}:
         raise ValueError(f"window should be an integer, received {type(window)}")
@@ -1230,7 +1234,7 @@ def subset_warming_level(
                     ds.sel(realization=[real]).isel(time=slice(0, fake_time.size))
                     * np.NaN
                 )
-                bnds_crd = [None, None]
+                bnds_crd = [np.NaN, np.NaN]
             reals.append(
                 data.expand_dims(warminglevel=wl_crd).assign_coords(
                     time=fake_time[: data.time.size],
@@ -1245,20 +1249,19 @@ def subset_warming_level(
         # Scalar subset, single level
         start_yr, end_yr = get_warming_level(ds, wl=wl, return_horizon=True, **kwargs)
         # cut the window selected above and expand dims with wl_crd
-        ds_wl = ds.sel(time=slice(start_yr, end_yr)).expand_dims(warminglevel=wl_crd)
+        ds_wl = ds.sel(time=slice(start_yr, end_yr))
         if fake_time is None:
             # WL not reached or completely outside ds time
             if start_yr is None or ds_wl.time.size == 0:
                 return None
+            ds_wl = ds_wl.expand_dims(warminglevel=wl_crd)
         else:
             # WL not reached or not completely inside ds time
             if start_yr is None or ds_wl.time.size == 0:
                 ds_wl = ds.isel(time=slice(0, fake_time.size)) * np.NaN
-
-            # We are in an iteration over multiple levels, put the fake time axis, but remember bounds
-            ds_wl = ds_wl.assign_coords(
-                time=fake_time[: ds_wl.time.size],
-                warminglevel_bounds=(
+                wlbnds = (("warminglevel", "bounds"), [[np.NaN, np.NaN]])
+            else:
+                wlbnds = (
                     ("warminglevel", "bounds"),
                     [
                         [
@@ -1267,7 +1270,11 @@ def subset_warming_level(
                             - datetime.timedelta(seconds=1),
                         ]
                     ],
-                ),
+                )
+            # We are in an iteration over multiple levels, put the fake time axis, but remember bounds
+            ds_wl = ds_wl.expand_dims(warminglevel=wl_crd).assign_coords(
+                time=fake_time[: ds_wl.time.size],
+                warminglevel_bounds=wlbnds,
             )
 
     if to_level is not None:

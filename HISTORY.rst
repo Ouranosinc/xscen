@@ -28,6 +28,7 @@ Breaking changes
 * New argument ``attribute_weights`` to ``generate_weights`` to allow for custom weights. (:pull:`252`).
 * ``experiment_weights`` argument in ``generate_weights`` was renamed to ``balance_experiments``. (:pull:`252`).
 * For a sequence of models, the output of ``xs.get_warming_level`` is now a list. Revert to a dictionary with ``output='selected'`` (:pull:`270`).
+* The global average temperature database is now a netCDF, custom databases must follow the same format (:pull:`270`).
 
 Bug fixes
 ^^^^^^^^^

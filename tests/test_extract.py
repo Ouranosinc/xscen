@@ -468,6 +468,7 @@ class TestSubsetWarmingLevel:
             realization=[
                 "CMIP6_CanESM5_ssp126_r1i1p1f1",
                 "CMIP6_CanESM5_ssp245_r1i1p1f1",
+                "fake_faux_falsch_falso",
             ]
         )
         ds_sub = xs.subset_warming_level(
@@ -475,21 +476,23 @@ class TestSubsetWarmingLevel:
             wl=1,
             to_level="tests",
         )
-        np.testing.assert_array_equal(ds_sub.time.dt.year, np.arange(1000, 1010))
+        np.testing.assert_array_equal(ds_sub.time.dt.year, np.arange(1000, 1020))
         np.testing.assert_array_equal(
-            ds_sub.warminglevel_bounds.dt.year, [[[1990, 2009]], [[1990, 2009]]]
+            ds_sub.warminglevel_bounds[:2].dt.year, [[[1990, 2009]], [[1990, 2009]]]
         )
+        assert ds_sub.warminglevel_bounds[2].isnull().all()
 
     def test_multilevels(self):
         ds_sub = xs.subset_warming_level(
             self.ds,
-            wl=[1, 2, 3],
+            wl=[1, 2, 3, 20],
             to_level="tests",
         )
         np.testing.assert_array_equal(
-            ds_sub.warminglevel, ["+1Cvs1850-1900", "+2Cvs1850-1900", "+3Cvs1850-1900"]
+            ds_sub.warminglevel,
+            ["+1Cvs1850-1900", "+2Cvs1850-1900", "+3Cvs1850-1900", "+20Cvs1850-1900"],
         )
-        np.testing.assert_array_equal(ds_sub.tas.isnull().sum("time"), [10, 0, 1])
+        np.testing.assert_array_equal(ds_sub.tas.isnull().sum("time"), [10, 0, 1, 20])
 
 
 class TestResample:
