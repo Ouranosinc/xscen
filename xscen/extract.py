@@ -917,7 +917,9 @@ def search_data_catalogs(
 
 @parse_config
 def get_warming_level(
-    realization: Union[xr.Dataset, xr.DataArray, dict, pd.Series, pd.DataFrame, str, list],
+    realization: Union[
+        xr.Dataset, xr.DataArray, dict, pd.Series, pd.DataFrame, str, list
+    ],
     wl: float,
     *,
     window: int = 20,
