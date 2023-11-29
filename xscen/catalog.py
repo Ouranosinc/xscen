@@ -425,6 +425,7 @@ class DataCatalog(intake_esm.esm_datastore):
           Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
         ensemble_name : list of strings, optional
           If `create_ensemble_on` is given, this can be a subset of those column names to use when constructing the realization coordinate.
+          If None, this will be the same as `create_ensemble_on`.
           The resulting coordinate must be unique.
         calendar : str, optional
           If `create_ensemble_on` is given, all datasets are converted to this calendar before concatenation.

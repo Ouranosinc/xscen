@@ -917,13 +917,13 @@ def search_data_catalogs(
 
 @parse_config
 def get_warming_level(
-    realization: Union[xr.Dataset, dict, pd.Series, pd.DataFrame, str, list],
+    realization: Union[xr.Dataset, xr.DataArray, dict, pd.Series, pd.DataFrame, str, list],
     wl: float,
     *,
     window: int = 20,
     tas_baseline_period: Sequence[str] = ["1850", "1900"],
     ignore_member: bool = False,
-    tas_src: Optional[Union[str, Path]] = None,
+    tas_src: Optional[Union[str, os.PathLike]] = None,
     return_horizon: bool = True,
     output: str = "requested",
 ) -> Union[dict, list[str], str]:
@@ -931,7 +931,7 @@ def get_warming_level(
 
     Parameters
     ----------
-    realization : xr.Dataset, dict, str, Series or sequence of those
+    realization : xr.Dataset, xr.DataArray, dict, str, Series or sequence of those
        Model to be evaluated. Needs the four fields mip_era, source, experiment and member,
        as a dict or in a Dataset's attributes. Strings should follow this formatting: {mip_era}_{source}_{experiment}_{member}.
        Lists of dicts, strings or Datasets are also accepted, in which case the output will be a dict.
@@ -953,7 +953,7 @@ def get_warming_level(
        and a "simulation" dimension with the following coordinates: "mip_era", "source", "experiment" and "member".
        If None, it will default to data/IPCC_annual_global_tas.nc which was built from
        the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
-       and extra data for missing CMIP6 models and pilot models of MRCC5 and ClimEx.
+       and extra data for missing CMIP6 models and pilot models of CRCM5 and ClimEx.
     return_horizon: bool
         If True, the output will be a list following the format ['start_yr', 'end_yr']
         If False, the output will be a string representing the middle of the period.
@@ -966,7 +966,7 @@ def get_warming_level(
     -------
     dict, list or str
         If `realization` is not a sequence, the output will follow the format indicated by `return_horizon`.
-        If `realization` is a sequence, the output will be a list or dictionary depending on `output`, which values following the format indicated by `return_horizon`.
+        If `realization` is a sequence, the output will be a list or dictionary depending on `output`, with values following the format indicated by `return_horizon`.
     """
     tas_src = tas_src or Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
     tas_baseline_period = standardize_periods(tas_baseline_period, multiple=False)
@@ -1110,7 +1110,7 @@ def subset_warming_level(
     to_level: str = "warminglevel-{wl}vs{period0}-{period1}",
     wl_dim: Union[str, bool] = "+{wl}Cvs{period0}-{period1}",
     **kwargs,
-):
+) -> Optional[xr.Dataset]:
     """Subsets the input dataset with only the window of time over which the requested level of global warming is first reached, using the IPCC Atlas method.
 
     Parameters
@@ -1143,9 +1143,9 @@ def subset_warming_level(
     Returns
     -------
     xr.Dataset or None
-        Warming level dataset or None if `ds` can't be subsetted for the requested warming level.
-        With a new dimension `warminglevel` with `wl_dim` as coordinates.
-        If `wl` was a list or if ds had a "realization" dim, the "time" axis is replaced by a fake time starting in 1000-01-01 and of length of `window` years.
+        Warming level dataset, or None if `ds` can't be subsetted for the requested warming level.
+        The dataset will have a new dimension `warminglevel` with `wl_dim` as coordinates.
+        If `wl` was a list or if ds had a "realization" dim, the "time" axis is replaced by a fake time starting in 1000-01-01 and with a length of `window` years.
         Start and end years of the subsets are bound in the new coordinate "warminglevel_bounds".
     """
     tas_baseline_period = standardize_periods(
@@ -1153,7 +1153,7 @@ def subset_warming_level(
     )
     window = kwargs.get("window", 20)
 
-    # If wl was originally a list, the generated fake_time was passed
+    # If wl was originally a list, this function is called a 2nd time with a generated fake_time
     fake_time = kwargs.pop("_fake_time", None)
     # Fake time generation is needed : real is a dim or multiple levels
     if (
@@ -1162,7 +1162,7 @@ def subset_warming_level(
         or "realization" in ds.dims
     ):
         freq = xr.infer_freq(ds.time)
-        # FIXME: This is because I couldn't think an elegant way to generate a fake_time otherwise.
+        # FIXME: This is because I couldn't think of an elegant way to generate a fake_time otherwise.
         if not compare_offsets(freq, "==", "YS"):
             raise NotImplementedError(
                 "Passing multiple warming levels or vectorizing subsetting along the 'realization' dim is currently not supported for non-annual data"
