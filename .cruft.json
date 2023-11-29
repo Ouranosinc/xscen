@@ -1,6 +1,6 @@
 {
   "template": "/home/tjs/git/cookiecutter-pypackage",
-  "commit": "e67ba8180e050ffd1c29e38cf2ad3929004fdd8f",
+  "commit": "6bdf69e3dddcfa96942023b4c7885f59cbe75039",
   "checkout": null,
   "context": {
     "cookiecutter": {

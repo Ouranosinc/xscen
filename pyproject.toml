@@ -73,6 +73,7 @@ dev = [
   "bump-my-version>=0.12.0",
   "coverage>=6.2.2,<7.0.0",
   "coveralls>=3.3.1",
+  "flake8-alphabetize>=0.0.21",
   "flake8-rst-docstrings>=0.3.0",
   "flake8>=6.1.0",
   "isort>=5.12.0",
@@ -287,8 +288,8 @@ include = ["xscen"]
 # ".yamllint.yaml",
 # "conda/xscen/*.yml",
 # "docs/_*",
-# "docs/modules.rst",
-# "docs/xscen*.rst",
+# "docs/apidoc/modules.rst",
+# "docs/apidoc/xscen*.rst",
 # "docs/notesbnooks/samples/tutorial/**/*.nc",
 # "templates"
 # ]
