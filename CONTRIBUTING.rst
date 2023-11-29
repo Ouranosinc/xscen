@@ -106,7 +106,7 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
 #. When you're done making changes, we **strongly** suggest running the tests in your environment or with the help of ``tox``::
 
      $ python -m pytest
-+    # Or, to run multiple build tests
+     # Or, to run multiple build tests
      $ tox
 
   Alternatively, you can run the tests using `make`::
