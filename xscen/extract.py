@@ -1012,6 +1012,8 @@ def get_warming_level(
             (set(FIELDS) - {"member"}) if ignore_member else FIELDS
         ):
             info = real
+            if info.get("driving_model") is not None:
+                info["source"] = info["driving_model"]
             if ignore_member:
                 info["member"] = ".*"
         else:

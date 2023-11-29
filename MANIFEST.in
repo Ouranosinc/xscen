@@ -18,6 +18,7 @@ recursive-exclude * *.py[co]
 recursive-exclude conda *.yml
 recursive-exclude templates *.csv *.json *.py *.yml
 recursive-exclude docs notebooks samples tutorial *.nc
+include xscen/data/IPCC_annual_global_tas.nc
 
 exclude .*
 exclude Makefile
