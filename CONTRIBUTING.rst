@@ -89,7 +89,7 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
 
     $ pre-commit install
 
-  On commit, ``pre-commit`` will check that ``black``, ``blackdoc``, ``isort``, ``flake8``, and ``ruff`` checks are passing, perform automatic fixes if possible, and warn of violations that require intervention. If your commit fails the checks initially, simply fix the errors and re-commit.
+  On commit, ``pre-commit`` will check that ``black``, ``blackdoc``, ``isort``, ``flake8``, and ``ruff`` checks are passing, perform automatic fixes if possible, and warn of violations that require intervention. If your commit fails the checks initially, simply fix the errors, re-add the files, and re-commit.
 
   You can also run the hooks manually with:
 
@@ -134,7 +134,7 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
 
     # To generate the html and open it in your browser
     $ make docs
-    # To uniquely generate the html
+    # To only generate the html
     $ make autodoc
     $ make -C docs html
     # To simply test that the docs pass build checks
@@ -148,7 +148,7 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
 
 #. Once your Pull Request has been accepted and merged to the ``main`` branch, several automated workflows will be triggered:
 
-    - The ``bump-version.yml`` workflow will automatically bump the patch version when pull requests are pushed to the ``main`` branch on GitHub. **It is not necessary to manually bump the version in your branch when merging (non-release) pull requests.**
+    - The ``bump-version.yml`` workflow will automatically bump the patch version when pull requests are pushed to the ``main`` branch on GitHub. **It is not recommended to manually bump the version in your branch when merging (non-release) pull requests (this will cause the version to be bumped twice).**
     - `ReadTheDocs` will automatically build the documentation and publish it to the `latest` branch of `xscen` documentation website.
     - If your branch is not a fork (ie: you are a maintainer), your branch will be automatically deleted.
 
@@ -198,7 +198,7 @@ Pull Request Guidelines
 
 Before you submit a pull request, check that it meets these guidelines:
 
-#. The pull request should include tests and should aim to provide `code coverage <https://en.wikipedia.org/wiki/Code_coverage>`_ all new lines of code. You can use the ``--cov-report html --cov xscen`` flags during the call to ``pytest`` to generate an HTML report and analyse the current test coverage.
+#. The pull request should include tests and should aim to provide `code coverage <https://en.wikipedia.org/wiki/Code_coverage>`_ for all new lines of code. You can use the ``--cov-report html --cov xscen`` flags during the call to ``pytest`` to generate an HTML report and analyse the current test coverage.
 
 #. If the pull request adds functionality, the docs should also be updated. Put your new functionality into a function with a docstring, and add the feature to the list in ``README.rst``.
 
@@ -221,7 +221,7 @@ To run specific code style checks::
     $ ruff xscen tests
     $ flake8 xscen tests
 
-To get ``black``, ``isort ``blackdoc``, ``ruff``, and ``flake8`` (with plugins ``flake8-alphabetize`` and ``flake8-rst-docstrings``) simply `$ pip install` them into your environment.
+To get ``black``, ``isort ``blackdoc``, ``ruff``, and ``flake8`` (with plugins ``flake8-alphabetize`` and ``flake8-rst-docstrings``) simply install them with `pip` (or `conda`) into your environment.
 
 Versioning/Tagging
 ------------------
