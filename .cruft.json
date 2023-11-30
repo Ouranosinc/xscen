@@ -1,6 +1,6 @@
 {
   "template": "/home/tjs/git/cookiecutter-pypackage",
-  "commit": "2fc25aaaf59ce346529c90c032c34baa30a45def",
+  "commit": "64eceda7d95aeb8937fa9961989d3d617a525c04",
   "checkout": null,
   "context": {
     "cookiecutter": {
@@ -14,6 +14,7 @@
       "version": "0.7.20-beta",
       "use_pytest": "y",
       "use_black": "y",
+      "use_conda": "y",
       "add_pyup_badge": "n",
       "make_docs": "y",
       "command_line_interface": "Click",

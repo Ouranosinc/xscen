@@ -30,9 +30,9 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "health_checks",
-    "properties_and_measures",
     "measures_heatmap",
     "measures_improvement",
+    "properties_and_measures",
 ]
 
 
@@ -42,7 +42,7 @@ def _(s):
 
 
 @parse_config
-def health_checks(
+def health_checks(  # noqa: C901
     ds: Union[xr.Dataset, xr.DataArray],
     *,
     structure: Optional[dict] = None,
@@ -78,24 +78,30 @@ def health_checks(
         Dictionary containing the expected variables and units.
     cfchecks: dict, optional
         Dictionary where the key is the variable to check and the values are the cfchecks.
-        The cfchecks themselves must be a dictionary with the keys being the cfcheck names and the values being the arguments to pass to the cfcheck.
+        The cfchecks themselves must be a dictionary with the keys being the cfcheck names
+        and the values being the arguments to pass to the cfcheck.
         See `xclim.core.cfchecks` for more details.
     freq: str, optional
         Expected frequency, written as the result of xr.infer_freq(ds.time).
     missing: dict or str or list of str, optional
-        String, list of strings, or dictionary where the key is the method to check for missing data and the values are the arguments to pass to the method.
-        The methods are: "missing_any", "at_least_n_valid", "missing_pct", "missing_wmo". See :py:func:`xclim.core.missing` for more details.
+        String, list of strings, or dictionary where the key is the method to check for missing data
+        and the values are the arguments to pass to the method.
+        The methods are: "missing_any", "at_least_n_valid", "missing_pct", "missing_wmo".
+        See :py:func:`xclim.core.missing` for more details.
     flags: dict, optional
         Dictionary where the key is the variable to check and the values are the flags.
-        The flags themselves must be a dictionary with the keys being the data_flags names and the values being the arguments to pass to the data_flags.
-        If `None` is passed instead of a dictionary, then xclim's default flags for the given variable are run. See :py:data:`xclim.core.utils.VARIABLES`.
-        See :py:func:`xclim.core.dataflags.data_flags` for the list of possible flags.
+        The flags themselves must be a dictionary with the keys being the data_flags names
+        and the values being the arguments to pass to the data_flags.
+        If `None` is passed instead of a dictionary, then xclim's default flags for the given variable are run.
+        See :py:data:`xclim.core.utils.VARIABLES`.
+        See also :py:func:`xclim.core.dataflags.data_flags` for the list of possible flags.
     flags_kwargs: dict, optional
         Additional keyword arguments to pass to the data_flags ("dims" and "freq").
     return_flags: bool
         Whether to return the Dataset created by data_flags.
     raise_on: list of str, optional
-        Whether to raise an error if a check fails, else there will only be a warning. The possible values are the names of the checks.
+        Whether to raise an error if a check fails, else there will only be a warning.
+        The possible values are the names of the checks.
         Use ["all"] to raise on all checks.
 
     Returns
@@ -290,7 +296,7 @@ def health_checks(
 
 # TODO: just measures?
 @parse_config
-def properties_and_measures(
+def properties_and_measures(  # noqa: C901
     ds: xr.Dataset,
     properties: Union[
         str,
@@ -333,7 +339,7 @@ def properties_and_measures(
         If not None, calls `xscen.utils.change_units` on ds before computing properties using
         this dictionary for the `variables_and_units` argument.
         It can be useful to convert units before computing the properties, because it is sometimes
-        easier to convert the units of the variables than the units of the properties (eg. variance).
+        easier to convert the units of the variables than the units of the properties (e.g. variance).
     to_level_prop : str
         processing_level to give the first output (prop)
     to_level_meas : str
@@ -446,8 +452,8 @@ def measures_heatmap(
         List or dictionary of datasets of measures of properties.
         If it is a dictionary, the keys will be used to name the rows.
         If it is a list, the rows will be given a number.
-    to_level: str
-        processing_level to assign to the output
+    to_level : str
+        The processing_level to assign to the output.
 
     Returns
     -------

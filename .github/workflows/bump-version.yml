@@ -7,26 +7,30 @@ on:
     paths-ignore:
       - .cruft.json
       - .editorconfig
+      - .flake8
       - .github/**.yml
       - .gitignore
       - .gitlab-ci.yml
       - .gitmodules
       - .pre-commit-config.yaml
+      - .secrets.baseline
       - .yamllint.yaml
       - AUTHORS.rst
+      - CHANGES.rst
       - CONTRIBUTING.rst
-      - docs/notebooks
+      - MANIFEST.in
+      - Makefile
+      - conda/xscen/*.yaml
       - docs/*.py
       - docs/*.rst
+      - docs/notebooks
       - environment-dev.yml
       - environment.yml
-      - HISTORY.rst
-      - Makefile
-      - MANIFEST.in
-      - requirements_upstream.txt
+      - pyproject.toml
       - setup.cfg
       - setup.py
-      - tests/**.py
+      - templates
+      - tests/*.py
       - tox.ini
       - xscen/__init__.py
 
@@ -48,9 +52,9 @@ jobs:
         run: echo "current_version=$(grep -E '__version__'  xscen/__init__.py | cut -d ' ' -f3)"
       - name: Bump Patch Version
         run: |
-          python -m pip install bump2version
+          python -m pip install bump-my-version
           echo "Bumping version"
-          python -m bump2version patch
+          python -m bump-my-version bump --tag patch
           echo "new_version=$(grep -E '__version__'  xscen/__init__.py | cut -d ' ' -f3)"
       - name: Push Changes
         uses: ad-m/github-push-action@master

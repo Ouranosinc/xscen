@@ -1,4 +1,4 @@
-"""Top-level package for xscen."""
+"""A climate change scenario-building analysis framework, built with xclim/xarray."""
 import warnings
 
 # Import the submodules
@@ -55,10 +55,10 @@ __email__ = "rondeau-genesse.gabriel@ouranos.ca"
 __version__ = "0.7.20-beta"
 
 
-# monkeypatch so that warnings.warn() doesn't mention itself
 def warning_on_one_line(
     message: str, category: Warning, filename: str, lineno: int, file=None, line=None
 ):  # noqa: D103
+    """Monkeypatch Reformat warning so that `warnings.warn` doesn't mention itself."""
     return f"{filename}:{lineno}: {category.__name__}: {message}\n"
 
 
