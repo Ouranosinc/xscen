@@ -24,7 +24,6 @@ New features and enhancements
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * ``experiment_weights`` argument in ``generate_weights`` was renamed to ``balance_experiments``. (:pull:`252`).
-* ``bump2version`` version-bumping utility was replaced by ``bump-my-version``. (:pull:`292`).
 
 Bug fixes
 ^^^^^^^^^
@@ -67,6 +66,7 @@ Internal changes
     * `xscen` now uses `Trusted Publishing` for TestPyPI and PyPI uploads.
 * Linting checks now examine the testing folder, function complexity, and alphabetical order of `__all__` lists. (:pull:`292`).
 * ``publish_release_notes`` now uses better logic for finding and reformatting the `CHANGES.rst` file. (:pull:`292`).
+* ``bump2version`` version-bumping utility was replaced by ``bump-my-version``. (:pull:`292`).
 
 v0.7.1 (2023-08-23)
 -------------------
