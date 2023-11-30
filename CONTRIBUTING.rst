@@ -79,9 +79,9 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
     $ conda activate xscen-dev
     $ python -m pip install --editable ".[dev]"
 
-  This installs ``xscen`` in an "editable" state, meaning that changes to the code are immediately seen by the environment.
+   This installs ``xscen`` in an "editable" state, meaning that changes to the code are immediately seen by the environment.
 
-#. As xscen was installed in editable mode, we also need to compile the translation catalogs manually:
+#. As xscen was installed in editable mode, we also need to compile the translation catalogs manually::
 
     $ make translate
 
@@ -89,19 +89,19 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
 
     $ pre-commit install
 
-  On commit, ``pre-commit`` will check that ``black``, ``blackdoc``, ``isort``, ``flake8``, and ``ruff`` checks are passing, perform automatic fixes if possible, and warn of violations that require intervention. If your commit fails the checks initially, simply fix the errors, re-add the files, and re-commit.
+   On commit, ``pre-commit`` will check that ``black``, ``blackdoc``, ``isort``, ``flake8``, and ``ruff`` checks are passing, perform automatic fixes if possible, and warn of violations that require intervention. If your commit fails the checks initially, simply fix the errors, re-add the files, and re-commit.
 
-  You can also run the hooks manually with:
+   You can also run the hooks manually with::
 
     $ pre-commit run -a
 
-  If you want to skip the ``pre-commit`` hooks temporarily, you can pass the ``--no-verify`` flag to `$ git commit`.
+   If you want to skip the ``pre-commit`` hooks temporarily, you can pass the ``--no-verify`` flag to `$ git commit`.
 
 #. Create a branch for local development::
 
     $ git checkout -b name-of-your-bugfix-or-feature
 
-  Now you can make your changes locally.
+   Now you can make your changes locally.
 
 #. When you're done making changes, we **strongly** suggest running the tests in your environment or with the help of ``tox``::
 
@@ -109,12 +109,12 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
      # Or, to run multiple build tests
      $ tox
 
-  Alternatively, you can run the tests using `make`::
+   Alternatively, you can run the tests using `make`::
 
     $ make lint
     $ make test
 
-  Running `make lint` and `make test` demands that your runtime/dev environment have all necessary development dependencies installed.
+   Running `make lint` and `make test` demands that your runtime/dev environment have all necessary development dependencies installed.
 
    .. warning::
 
@@ -126,7 +126,7 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
     $ git commit -m "Your detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 
-  If ``pre-commit`` hooks fail, try re-committing your changes (or, if need be, you can skip them with `$ git commit --no-verify`).
+   If ``pre-commit`` hooks fail, try re-committing your changes (or, if need be, you can skip them with `$ git commit --no-verify`).
 
 #. Submit a `Pull Request <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request>`_ through the GitHub website.
 
@@ -148,11 +148,11 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
 
 #. Once your Pull Request has been accepted and merged to the ``main`` branch, several automated workflows will be triggered:
 
-    - The ``bump-version.yml`` workflow will automatically bump the patch version when pull requests are pushed to the ``main`` branch on GitHub. **It is not recommended to manually bump the version in your branch when merging (non-release) pull requests (this will cause the version to be bumped twice).**
-    - `ReadTheDocs` will automatically build the documentation and publish it to the `latest` branch of `xscen` documentation website.
-    - If your branch is not a fork (ie: you are a maintainer), your branch will be automatically deleted.
+   - The ``bump-version.yml`` workflow will automatically bump the patch version when pull requests are pushed to the ``main`` branch on GitHub. **It is not recommended to manually bump the version in your branch when merging (non-release) pull requests (this will cause the version to be bumped twice).**
+   - `ReadTheDocs` will automatically build the documentation and publish it to the `latest` branch of `xscen` documentation website.
+   - If your branch is not a fork (ie: you are a maintainer), your branch will be automatically deleted.
 
-  You will have contributed your first changes to ``xscen``!
+You will have contributed your first changes to ``xscen``!
 
 .. _translating-xscen:
 
