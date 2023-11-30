@@ -145,7 +145,7 @@ filename = ".cruft.json"
 search = "\"version\": \"{current_version}\""
 replace = "\"version\": \"{new_version}\""
 
-[[tool.bumpversion.parts.release]]
+[tool.bumpversion.parts.release]
 optional_value = "gamma"
 values = [
   "beta",
