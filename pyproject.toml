@@ -113,7 +113,6 @@ docs = [
 
 [tool.black]
 target-version = [
-  "py38",
   "py39",
   "py310",
   "py311"
@@ -162,10 +161,10 @@ omit = ["docs/notebooks/*.ipynb", "tests/*.py"]
 append_only = true
 known_first_party = "xscen"
 profile = "black"
-py_version = 38
+py_version = 39
 
 [tool.mypy]
-python_version = 3.8
+python_version = 3.9
 show_error_codes = true
 warn_return_any = true
 warn_unused_configs = true
