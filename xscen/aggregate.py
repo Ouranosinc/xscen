@@ -196,7 +196,6 @@ def climatological_op(
     window = window or int(periods[0][1]) - int(periods[0][0]) + 1
 
     # there is one less occurrence when a period crosses years
-    # ToDo: Is this restrictive if the input has values beyond the first and last year?
     freq_across_year = [
         f"{f}-{mon}"
         for mon in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values()
