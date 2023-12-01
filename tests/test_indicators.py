@@ -151,7 +151,8 @@ class TestComputeIndicators:
             assert out.time[0].dt.strftime("%Y-%m-%d").item() == "2000-07-01"
             assert out.time[-1].dt.strftime("%Y-%m-%d").item() == "2003-07-01"
 
-    def test_select_inds_for_avail_vars(self):
+    @pytest.mark.parametrize("indicator_iter", ["list", "tuples", "module"])
+    def test_select_inds_for_avail_vars(self, indicator_iter):
         # Test that select_inds_for_avail_vars filters a list of indicators to only those
         # that can be computed with the variables available in a dataset.
         ds = xs.testing.datablock_3d(
@@ -180,29 +181,30 @@ class TestComputeIndicators:
                 module="tests",
             ),
         ]
+
         # indicators as different types
-        inds_for_avail_vars_from_list = xs.indicators.select_inds_for_avail_vars(
-            ds=ds, indicators=indicators
-        )
         module = xclim.core.indicator.build_indicator_module(
             "indicators", {i.base: i for i in indicators}, reload=True
         )
-        inds_for_avail_vars_from_module = xs.indicators.select_inds_for_avail_vars(
-            ds=ds, indicators=module
-        )
-        inds_for_avail_vars_from_list_of_tuples = (
-            xs.indicators.select_inds_for_avail_vars(
+        if indicator_iter == "list":
+            inds_for_avail_vars = xs.indicators.select_inds_for_avail_vars(
+                ds=ds, indicators=indicators
+            )
+        elif indicator_iter == "tuples":
+            inds_for_avail_vars = xs.indicators.select_inds_for_avail_vars(
                 ds=ds, indicators=[(n, i) for n, i in module.iter_indicators()]
             )
-        )
+        elif indicator_iter == "module":
+            inds_for_avail_vars = xs.indicators.select_inds_for_avail_vars(
+                ds=ds, indicators=module
+            )
 
-        for inds_for_avail_vars in [
-            inds_for_avail_vars_from_list,
-            inds_for_avail_vars_from_module,
-            inds_for_avail_vars_from_list_of_tuples,
-        ]:
-            assert len(list(inds_for_avail_vars.iter_indicators())) == 1
-            assert [n for n, _ in inds_for_avail_vars.iter_indicators()] == ["tg_min"]
-            assert [i for _, i in inds_for_avail_vars.iter_indicators()] == [
-                indicators[0]
-            ]
+        assert len(list(inds_for_avail_vars.iter_indicators())) == 1
+        assert [n for n, _ in inds_for_avail_vars.iter_indicators()] == ["tg_min"]
+        assert [i for _, i in inds_for_avail_vars.iter_indicators()] == [indicators[0]]
+        # no indicators found
+        inds_for_avail_vars = xs.indicators.select_inds_for_avail_vars(
+            ds=ds, indicators=indicators[1:]
+        )
+        assert len(list(inds_for_avail_vars.iter_indicators())) == 0
+        assert [(n, i) for n, i in inds_for_avail_vars.iter_indicators()] == []

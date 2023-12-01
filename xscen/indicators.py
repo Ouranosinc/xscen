@@ -297,7 +297,11 @@ def _derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
 def select_inds_for_avail_vars(
     ds: xr.Dataset,
     indicators: Union[
-        str, os.PathLike, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
+        str,
+        os.PathLike,
+        Sequence[Indicator],
+        Sequence[tuple[str, Indicator]],
+        ModuleType,
     ],
 ) -> ModuleType:
     """Filter the indicators for which the necessary variables are available.
@@ -314,7 +318,7 @@ def select_inds_for_avail_vars(
 
     Returns
     -------
-    ModuleType – An indicator module.
+    ModuleType – An indicator module of 'length' ∈ [0, n].
 
     See Also
     --------
@@ -342,5 +346,5 @@ def select_inds_for_avail_vars(
         if var in ind.parameters.keys()
     ]
     return xc.core.indicator.build_indicator_module(
-        "inds_for_avail_vars", available_inds
+        "inds_for_avail_vars", available_inds, reload=True
     )
