@@ -1,0 +1,1 @@
+"""xclim extension module."""

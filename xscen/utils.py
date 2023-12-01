@@ -43,8 +43,8 @@ __all__ = [
     "stack_drop_nans",
     "standardize_periods",
     "translate_time_chunk",
-    "unstack_fill_nan",
     "unstack_dates",
+    "unstack_fill_nan",
     "update_attr",
 ]
 
@@ -151,7 +151,7 @@ def add_attr(ds: Union[xr.Dataset, xr.DataArray], attr: str, new: str, **fmt):
         ds.attrs[f"{attr}_{loc}"] = TRANSLATOR[loc](new).format(**fmt)
 
 
-def date_parser(
+def date_parser(  # noqa: C901
     date: Union[str, cftime.datetime, pd.Timestamp, datetime, pd.Period],
     *,
     end_of_period: Union[bool, str] = False,
@@ -216,7 +216,7 @@ def date_parser(
         except (KeyError, ValueError):
             try:
                 date = pd.Timestamp(date)
-            except (pd._libs.tslibs.parsing.DateParseError, ValueError):
+            except (ValueError, pd._libs.tslibs.parsing.DateParseError):
                 date = pd.NaT
     elif isinstance(date, cftime.datetime):
         for n in range(3):
@@ -716,7 +716,7 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     return ds
 
 
-def clean_up(
+def clean_up(  # noqa: C901
     ds: xr.Dataset,
     *,
     variables_and_units: Optional[dict] = None,
@@ -935,16 +935,21 @@ def clean_up(
 
 
 def publish_release_notes(
-    style: str = "md", file: Optional[Union[os.PathLike, StringIO, TextIO]] = None
+    style: str = "md",
+    file: Optional[Union[os.PathLike, StringIO, TextIO]] = None,
+    changes: Union[str, os.PathLike] = None,
 ) -> Optional[str]:
     """Format release history in Markdown or ReStructuredText.
 
     Parameters
     ----------
-    style: {"rst", "md"}
-      Use ReStructuredText formatting or Markdown. Default: Markdown.
-    file: {os.PathLike, StringIO, TextIO}, optional
-      If provided, prints to the given file-like object. Otherwise, returns a string.
+    style : {"rst", "md"}
+        Use ReStructuredText (`rst`) or Markdown (`md`) formatting. Default: Markdown.
+    file : {os.PathLike, StringIO, TextIO, None}
+        If provided, prints to the given file-like object. Otherwise, returns a string.
+    changes : {str, os.PathLike}, optional
+        If provided, manually points to the file where the changelog can be found.
+        Assumes a relative path otherwise.
 
     Returns
     -------
@@ -955,13 +960,16 @@ def publish_release_notes(
     This function exists solely for development purposes.
     Adapted from xclim.testing.utils.publish_release_notes.
     """
-    history_file = Path(__file__).parent.parent.joinpath("HISTORY.rst")
+    if isinstance(changes, (str, Path)):
+        changes_file = Path(changes).absolute()
+    else:
+        changes_file = Path(__file__).absolute().parents[2].joinpath("CHANGES.rst")
 
-    if not history_file.exists():
-        raise FileNotFoundError("History file not found in xscen file tree.")
+    if not changes_file.exists():
+        raise FileNotFoundError("Changes file not found in xscen file tree.")
 
-    with open(history_file) as hf:
-        history = hf.read()
+    with open(changes_file) as f:
+        changes = f.read()
 
     if style == "rst":
         hyperlink_replacements = {
@@ -979,32 +987,34 @@ def publish_release_notes(
         raise NotImplementedError()
 
     for search, replacement in hyperlink_replacements.items():
-        history = re.sub(search, replacement, history)
+        changes = re.sub(search, replacement, changes)
 
     if style == "md":
-        history = history.replace("=======\nHistory\n=======", "# History")
+        changes = changes.replace("=========\nChangelog\n=========", "# Changelog")
 
         titles = {r"\n(.*?)\n([\-]{1,})": "-", r"\n(.*?)\n([\^]{1,})": "^"}
         for title_expression, level in titles.items():
-            found = re.findall(title_expression, history)
+            found = re.findall(title_expression, changes)
             for grouping in found:
                 fixed_grouping = (
                     str(grouping[0]).replace("(", r"\(").replace(")", r"\)")
                 )
                 search = rf"({fixed_grouping})\n([\{level}]{'{' + str(len(grouping[1])) + '}'})"
                 replacement = f"{'##' if level=='-' else '###'} {grouping[0]}"
-                history = re.sub(search, replacement, history)
+                changes = re.sub(search, replacement, changes)
 
         link_expressions = r"[\`]{1}([\w\s]+)\s<(.+)>`\_"
-        found = re.findall(link_expressions, history)
+        found = re.findall(link_expressions, changes)
         for grouping in found:
             search = rf"`{grouping[0]} <.+>`\_"
             replacement = f"[{str(grouping[0]).strip()}]({grouping[1]})"
-            history = re.sub(search, replacement, history)
+            changes = re.sub(search, replacement, changes)
 
     if not file:
-        return history
-    print(history, file=file)
+        return
+    if isinstance(file, (Path, os.PathLike)):
+        file = Path(file).open("w")
+    print(changes, file=file)
 
 
 def unstack_dates(
@@ -1325,7 +1335,7 @@ def season_sort_key(idx: pd.Index, name: Optional[str] = None):
         if (name or getattr(idx, "name", None)) == "month":
             m = list(xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values())
             return idx.map(m.index)
-    except (ValueError, TypeError):
+    except (TypeError, ValueError):
         # ValueError if string not in seasons, or value not in months
         # TypeError if season element was not a string.
         pass

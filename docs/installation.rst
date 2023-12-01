@@ -21,7 +21,7 @@ If for some reason you wish to install the `PyPI` version of `xscen` into an exi
 
 .. code-block:: console
 
-    $ pip install xscen
+    $ python -m pip install xscen
 
 Development Installation (Anaconda + pip)
 -----------------------------------------
@@ -45,7 +45,7 @@ Finally, perform an `--editable` install of xscen and compile the translation ca
 
 .. code-block:: console
 
-    $ pip install -e .
+    $ python -m pip install -e .
     $ make translate
 
 .. _Github repo: https://github.com/Ouranosinc/xscen

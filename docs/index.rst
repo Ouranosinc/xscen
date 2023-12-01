@@ -38,7 +38,7 @@ Features
     api
     contributing
     authors
-    history
+    changes
 
 .. toctree::
     :maxdepth: 2

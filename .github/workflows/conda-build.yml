@@ -27,15 +27,15 @@ jobs:
       matrix:
         python-version: ["3.9"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4.1.1
         if: ${{ github.event.inputs.tag == '' }}
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4.1.1
         if: ${{ github.event.inputs.tag != '' }}
         with:
           fetch-depth: 0
           ref: ${{ inputs.tag }}
       - name: Setup Conda (Micromamba) with Python${{ matrix.python-version }}
-        uses: mamba-org/provision-with-micromamba@main
+        uses: mamba-org/provision-with-micromamba@v16
         with:
           cache-downloads: true
           channels: conda-forge,defaults
@@ -44,7 +44,7 @@ jobs:
             anaconda-client
             conda-build
       - name: Conditionally set label
-        uses: haya14busa/action-cond@v1
+        uses: haya14busa/action-cond@v1.1.1
         id: label
         with:
           cond: ${{ github.event_name == 'workflow_dispatch' }}
