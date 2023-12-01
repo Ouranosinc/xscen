@@ -130,7 +130,7 @@ def climatological_op(
         ['max', 'mean', 'median', 'min', 'std', 'sum', 'var', 'linregress'].
         Operations beyond methods of xarray.core.rolling.DatasetRolling include:
 
-            - 'linregress' : Computes the linear regression over the periods or it's windows, using
+            - 'linregress' : Computes the linear regression over the periods or its windows, using
               scipy.stats.linregress employing years as regressors.
               Here the output has a new dimension 'linreg_param' with coordinates:
               ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr'].

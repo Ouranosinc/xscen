@@ -297,16 +297,16 @@ def _derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
 def select_inds_for_avail_vars(
     ds: xr.Dataset,
     indicators: Union[
-        str, Path, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
+        str, os.PathLike, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType
     ],
-) -> Sequence[Indicator]:
+) -> ModuleType:
     """Filter the indicators for which the necessary variables are available.
 
     Parameters
     ----------
     ds : xr.Dataset
         Dataset to use for the indicators.
-    indicators : Union[str, Path, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+    indicators : Union[str, os.PathLike, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
         Path to a YAML file that instructs on how to calculate missing variables.
         Can also be only the "stem", if translations and custom indices are implemented.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
@@ -320,11 +320,11 @@ def select_inds_for_avail_vars(
     --------
     xclim.indicators, xclim.core.indicator.build_indicator_module_from_yaml
     """
-    # transform indicator input into a list of tuples (name, indicator)
+    # Transform the 'indicators' input into a list of tuples (name, indicator)
     is_list_of_tuples = isinstance(indicators, list) and all(
         isinstance(i, tuple) for i in indicators
     )
-    if isinstance(indicators, (str, Path)):
+    if isinstance(indicators, (str, os.PathLike)):
         logger.debug("Loading indicator module.")
         indicators = load_xclim_module(indicators, reload=True)
     if hasattr(indicators, "iter_indicators"):
