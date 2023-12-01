@@ -26,14 +26,14 @@ from .utils import get_cat_attrs
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "TimeoutException",
+    "measure_time",
+    "move_and_delete",
+    "save_and_update",
     "send_mail",
     "send_mail_on_exit",
-    "measure_time",
-    "timeout",
-    "TimeoutException",
     "skippable",
-    "save_and_update",
-    "move_and_delete",
+    "timeout",
 ]
 
 

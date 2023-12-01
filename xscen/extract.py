@@ -31,9 +31,9 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "extract_dataset",
+    "get_warming_level",
     "resample",
     "search_data_catalogs",
-    "get_warming_level",
     "subset_warming_level",
 ]
 
@@ -79,7 +79,7 @@ def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
 
 
 @parse_config
-def extract_dataset(
+def extract_dataset(  # noqa: C901
     catalog: DataCatalog,
     *,
     variables_and_freqs: Optional[dict] = None,
@@ -93,7 +93,9 @@ def extract_dataset(
     resample_methods: Optional[dict] = None,
     mask: Union[bool, xr.Dataset, xr.DataArray] = False,
 ) -> dict:
-    """Take one element of the output of `search_data_catalogs` and returns a dataset, performing conversions and resampling as needed.
+    """
+    Take one element of the output of `search_data_catalogs` and returns a dataset,
+    performing conversions and resampling as needed.
 
     Nothing is written to disk within this function.
 
@@ -350,7 +352,8 @@ def extract_dataset(
             ds_mask = out_dict["fx"]["mask"].copy()
         else:
             raise ValueError(
-                "No mask found. Either pass a xr.Dataset/xr.DataArray to the `mask` argument or pass a `dc` that includes a dataset with a variable named `mask`."
+                "No mask found. Either pass a xr.Dataset/xr.DataArray to the `mask` argument "
+                "or pass a `dc` that includes a dataset with a variable named `mask`."
             )
 
         # iter over all xrfreq to apply the mask
@@ -362,7 +365,7 @@ def extract_dataset(
     return out_dict
 
 
-def resample(
+def resample(  # noqa: C901
     da: xr.DataArray,
     target_frequency: str,
     *,
@@ -389,9 +392,10 @@ def resample(
         using the mapping in CVs/resampling_methods.json. If the variable is not found there,
         "mean" is used by default.
     missing: {'mask', 'drop'} or dict, optional
-        If 'mask' or 'drop', target periods that would have been computed from fewer timesteps than expected are masked or dropped, using a threshold of 5% of missing data.
-        For example, the first season of a `target_frequency` of "QS-DEC" will be masked or dropped if data only starts in January.
-        If a dict, it points to a xclim check missing method which will mask periods according to their number of NaN values.
+        If 'mask' or 'drop', target periods that would have been computed from fewer timesteps than expected
+        are masked or dropped, using a threshold of 5% of missing data.
+        E.g. the first season of a `target_frequency` of "QS-DEC" will be masked or dropped if data starts in January.
+        If a dict, points to a xclim check missing method which will mask periods according to the number of NaN values.
         The dict must contain a "method" field corresponding to the xclim method name and may contain
         any other args to pass. Options are documented in :py:mod:`xclim.core.missing`.
 
@@ -450,7 +454,7 @@ def resample(
         days_per_period = (
             days_per_step.resample(time=target_frequency)
             .sum()  # Total number of days per period
-            .sel(time=days_per_step.time, method="ffill")  # Upsample to initial freq
+            .sel(time=days_per_step.time, method="ffill")  # Up-sample to initial freq
             .assign_coords(
                 time=days_per_step.time
             )  # Not sure why we need this, but time coord is from the resample even after sel
@@ -490,7 +494,7 @@ def resample(
             ds = ds.resample(time=target_frequency).mean(dim="time", keep_attrs=True)
 
         # Based on Vector Magnitude and Direction equations
-        # For example: https://www.khanacademy.org/math/precalculus/x9e81a4f98389efdf:vectors/x9e81a4f98389efdf:component-form/a/vector-magnitude-and-direction-review
+        # For example: https://www.khanacademy.org/math/precalculus/x9e81a4f98389efdf:vectors/x9e81a4f98389efdf:component-form/a/vector-magnitude-and-direction-review  # noqa: E501
 
         uas_attrs = ds["uas"].attrs
         vas_attrs = ds["vas"].attrs
@@ -583,7 +587,7 @@ def resample(
 
 
 @parse_config
-def search_data_catalogs(
+def search_data_catalogs(  # noqa: C901
     data_catalogs: Union[
         str, os.PathLike, DataCatalog, list[Union[str, os.PathLike, DataCatalog]]
     ],
@@ -607,17 +611,22 @@ def search_data_catalogs(
     Parameters
     ----------
     data_catalogs : str, os.PathLike, DataCatalog, or a list of those
-        DataCatalog (or multiple, in a list) or paths to JSON/CSV data catalogs. They must use the same columns and aggregation options.
+        DataCatalog (or multiple, in a list) or paths to JSON/CSV data catalogs.
+        They must use the same columns and aggregation options.
     variables_and_freqs : dict
-        Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format. A list of strings can also be provided.
+        Variables and freqs to search for, following a 'variable: xr-freq-compatible-str' format.
+        A list of strings can also be provided.
     other_search_criteria : dict, optional
         Other criteria to search for in the catalogs' columns, following a 'column_name: list(subset)' format.
-        You can also pass 'require_all_on: list(columns_name)' in order to only return results that correspond to all other criteria across the listed columns.
+        You can also pass 'require_all_on: list(columns_name)' in order to only return results that correspond to
+        all other criteria across the listed columns.
         More details available at https://intake-esm.readthedocs.io/en/stable/how-to/enforce-search-query-criteria-via-require-all-on.html .
     exclusions : dict, optional
-        Same as other_search_criteria, but for eliminating results. Any result that matches any of the exclusions will be removed.
+        Same as other_search_criteria, but for eliminating results.
+        Any result that matches any of the exclusions will be removed.
     match_hist_and_fut: bool
-        If True, historical and future simulations will be combined into the same line, and search results lacking one of them will be rejected.
+        If True, historical and future simulations will be combined into the same line,
+        and search results lacking one of them will be rejected.
     periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start, end] for the periods to be evaluated.
     coverage_kwargs : dict, optional
@@ -846,7 +855,8 @@ def search_data_catalogs(
                             same_frq | (lower_frq & allow_resampling)
                         ]
 
-                        # For each dataset (id - xrfreq - processing_level - domain - variable), make sure that file availability covers the requested time periods
+                        # For each dataset (id * xrfreq * processing_level * domain * variable),
+                        # make sure that file availability covers the requested time periods
                         if periods is not None and len(varcat) > 0:
                             valid_tp = []
                             for var, group in varcat.df.groupby(
@@ -861,7 +871,8 @@ def search_data_catalogs(
                             varcat.esmcat._df = pd.concat(valid_tp)
 
                         # We now select the coarsest timedelta for each variable
-                        # we need to re-iterate over variables in case we used the registry (and thus there are multiple variables in varcat)
+                        # We need to re-iterate over variables in case we used the registry
+                        # (and thus there are multiple variables in varcat)
                         rows = []
                         for var, group in varcat.df.groupby("variable"):
                             rows.append(group[group.timedelta == group.timedelta.max()])
@@ -915,7 +926,7 @@ def search_data_catalogs(
 
 
 @parse_config
-def get_warming_level(
+def get_warming_level(  # noqa: C901
     realization: Union[xr.Dataset, dict, str, list],
     wl: float,
     *,
@@ -925,17 +936,21 @@ def get_warming_level(
     tas_csv: Optional[str] = None,
     return_horizon: bool = True,
 ) -> Union[dict, list[str], str]:
-    """Use the IPCC Atlas method to return the window of time over which the requested level of global warming is first reached.
+    """
+    Use the IPCC Atlas method to return the window of time
+    over which the requested level of global warming is first reached.
 
     Parameters
     ----------
     realization : xr.Dataset, dict, str or list of those
        Model to be evaluated. Needs the four fields mip_era, source, experiment and member,
-       as a dict or in a Dataset's attributes. Strings should follow this formatting: {mip_era}_{source}_{experiment}_{member}.
+       as a dict or in a Dataset's attributes.
+       Strings should follow this formatting: {mip_era}_{source}_{experiment}_{member}.
        Lists of dicts, strings or Datasets are also accepted, in which case the output will be a dict.
        Regex wildcards (.*) are accepted, but may lead to unexpected results.
-       Datasets should include the catalogue attributes (starting by "cat:") required to create such a string: 'cat:mip_era', 'cat:experiment',
-       'cat:member', and either 'cat:source' for global models or 'cat:driving_model' for regional models.
+       Datasets should include the catalogue attributes (starting by "cat:") required to create such a string:
+       'cat:mip_era', 'cat:experiment', 'cat:member',
+       and either 'cat:source' for global models or 'cat:driving_model' for regional models.
        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
     wl : float
        Warming level.
@@ -958,8 +973,9 @@ def get_warming_level(
     Returns
     -------
     dict, list or str
-        If `realization` is a Dataset, a dict or a string, the output will follow the format indicated by `return_horizon`.
-        If `realization` is a list, the output will be a dictionary where the keys are the selected columns from the csv and the values follow the format indicated by `return_period`.
+        If `realization` is a Dataset, dict or string, the output will follow the format indicated by `return_horizon`.
+        If `realization` is a list, the output will be a dictionary where the keys are the selected columns from the csv
+        and the values follow the format indicated by `return_period`.
     """
     tas_baseline_period = standardize_periods(
         tas_baseline_period or ["1850", "1900"], multiple=False
@@ -1101,7 +1117,9 @@ def subset_warming_level(
     wl_dim: str = "+{wl}Cvs{period0}-{period1}",
     **kwargs,
 ):
-    """Subsets the input dataset with only the window of time over which the requested level of global warming is first reached, using the IPCC Atlas method.
+    """
+    Subsets the input dataset with only the window of time over which the requested level of global warming
+    is first reached, using the IPCC Atlas method.
 
     Parameters
     ----------
@@ -1112,7 +1130,7 @@ def subset_warming_level(
        'cat:source' for global models or 'cat:driving_institution' (optional) + 'cat:driving_model' for regional models.
     wl : float
        Warming level.
-       eg. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
+       e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
     to_level :
        The processing level to assign to the output.
        Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
@@ -1127,7 +1145,7 @@ def subset_warming_level(
         Instructions on how to search for warming levels.
         The keyword arguments are passed to `get_warming_level()`
 
-        Valid keyword aguments are:
+        Valid keyword arguments are:
             window : int
             tas_baseline_period : list
             ignore_member : bool
@@ -1240,8 +1258,10 @@ def _dispatch_historical_to_future(
         if pd.isna(sdf.activity).any():
             warnings.warn(
                 f"np.NaN was found in the activity column of {group}. The rows with np.NaN activity will be skipped."
-                "If you want them to be included in the historical and future matching, please put a valid activity (https://xscen.readthedocs.io/en/latest/columns.html)."
-                "For example, xscen expects experiment `historical` to have `CMIP` activity and experiments `sspXYZ` to have `ScenarioMIP` activity. "
+                "If you want them to be included in the historical and future matching, "
+                "please put a valid activity (https://xscen.readthedocs.io/en/latest/columns.html)."
+                "For example, xscen expects experiment `historical` to have `CMIP` activity "
+                "and experiments `sspXYZ` to have `ScenarioMIP` activity. "
             )
         for activity_id in set(sdf.activity) - {"HighResMip", np.NaN}:
             sub_sdf = sdf[sdf.activity == activity_id]

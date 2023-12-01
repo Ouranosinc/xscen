@@ -37,8 +37,8 @@ __all__ = [
     "rechunk",
     "rechunk_for_saving",
     "round_bits",
-    "save_to_table",
     "save_to_netcdf",
+    "save_to_table",
     "save_to_zarr",
     "subset_maxsize",
     "to_table",
@@ -69,7 +69,7 @@ def get_engine(file: Union[str, os.PathLike]) -> str:
     return engine
 
 
-def estimate_chunks(
+def estimate_chunks(  # noqa: C901
     ds: Union[str, os.PathLike, xr.Dataset],
     dims: list,
     target_mb: float = 50,
@@ -369,10 +369,12 @@ def save_to_netcdf(
         dimension names.
         Rechunking is only done on *data* variables sharing dimensions with this argument.
     bitround : bool or int or dict
-        If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa, allowing for a much better compression.
+        If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa,
+        allowing for a much better compression.
         If an int, this is the number of bits to keep for all float variables.
         If a dict, a mapping from variable name to the number of bits to keep.
-        If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12, which yields a relative error below 0.013%.
+        If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12,
+        which yields a relative error below 0.013%.
     compute : bool
         Whether to start the computation or return a delayed object.
     netcdf_kwargs : dict, optional
@@ -409,7 +411,7 @@ def save_to_netcdf(
 
 
 @parse_config
-def save_to_zarr(
+def save_to_zarr(  # noqa: C901
     ds: xr.Dataset,
     filename: Union[str, os.PathLike],
     *,
@@ -448,10 +450,12 @@ def save_to_zarr(
     encoding : dict, optional
       If given, skipped variables are popped in place.
     bitround : bool or int or dict
-      If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa, allowing for a much better compression.
+      If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa,
+      allowing for a much better compression.
       If an int, this is the number of bits to keep for all float variables.
       If a dict, a mapping from variable name to the number of bits to keep.
-      If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12, which yields a relative error of 0.012%.
+      If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12,
+      which yields a relative error of 0.012%.
     itervar : bool
       If True, (data) variables are written one at a time, appending to the zarr.
       If False, this function computes, no matter what was passed to kwargs.
@@ -652,7 +656,7 @@ def to_table(
     pd.DataFrame or dict
       DataFrame with a MultiIndex with levels `row` and MultiColumn with levels `column`.
       If `sheet` is given, the output is dictionary with keys for each unique "sheet" dimensions tuple, values are DataFrames.
-      The DataFrames are always sorted with level priority as given in `row` and in ascending order,.
+      The DataFrames are always sorted with level priority as given in `row` and in ascending order.
     """
     if isinstance(ds, xr.Dataset):
         da = ds.to_array(name="data")

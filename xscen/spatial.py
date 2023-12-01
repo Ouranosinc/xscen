@@ -17,8 +17,8 @@ from xclim.core.utils import uses_dask
 from .config import parse_config
 
 __all__ = [
-    "creep_weights",
     "creep_fill",
+    "creep_weights",
     "subset",
 ]
 
@@ -124,7 +124,7 @@ def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
     )
 
 
-def subset(
+def subset(  # noqa: C901
     ds: xr.Dataset,
     region: Optional[dict] = None,
     *,

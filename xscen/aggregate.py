@@ -34,8 +34,8 @@ __all__ = [
     "climatological_mean",
     "climatological_op",
     "compute_deltas",
-    "spatial_mean",
     "produce_horizon",
+    "spatial_mean",
 ]
 
 
@@ -71,7 +71,8 @@ def climatological_mean(
     interval : int
         Interval (in years) at which to provide an output.
     periods : list of str or list of lists of str, optional
-        Either [start, end] or list of [start, end] of continuous periods to be considered. This is needed when the time axis of ds contains some jumps in time.
+        Either [start, end] or list of [start, end] of continuous periods to be considered.
+        This is needed when the time axis of ds contains some jumps in time.
         If None, the dataset will be considered continuous.
     to_level : str, optional
         The processing level to assign to the output.
@@ -482,7 +483,7 @@ def climatological_op(
 
 
 @parse_config
-def compute_deltas(
+def compute_deltas(  # noqa: C901
     ds: xr.Dataset,
     reference_horizon: Union[str, xr.Dataset],
     *,
@@ -497,7 +498,8 @@ def compute_deltas(
     ds : xr.Dataset
         Dataset to use for the computation.
     reference_horizon : str or xr.Dataset
-        Either a YYYY-YYYY string corresponding to the 'horizon' coordinate of the reference period, or a xr.Dataset containing the climatological mean.
+        Either a YYYY-YYYY string corresponding to the 'horizon' coordinate of the reference period,
+        or a xr.Dataset containing the climatological mean.
     kind : str or dict
         ['+', '/', '%'] Whether to provide absolute, relative, or percentage deltas.
         Can also be a dictionary separated per variable name.
@@ -648,7 +650,7 @@ def compute_deltas(
 
 
 @parse_config
-def spatial_mean(
+def spatial_mean(  # noqa: C901
     ds: xr.Dataset,
     method: str,
     *,
@@ -668,9 +670,11 @@ def spatial_mean(
         Dataset to use for the computation.
     method : str
         'cos-lat' will weight the area covered by each pixel using an approximation based on latitude.
-        'interp_centroid' will find the region's centroid (if coordinates are not fed through kwargs), then perform a .interp() over the spatial dimensions of the Dataset.
+        'interp_centroid' will find the region's centroid (if coordinates are not fed through kwargs),
+        then perform a .interp() over the spatial dimensions of the Dataset.
         The coordinate can also be directly fed to .interp() through the 'kwargs' argument below.
-        'xesmf' will make use of xESMF's SpatialAverager. This will typically be more precise, especially for irregular regions, but can be much slower than other methods.
+        'xesmf' will make use of xESMF's SpatialAverager. This will typically be more precise,
+        especially for irregular regions, but can be much slower than other methods.
     spatial_subset : bool, optional
         If True, xscen.spatial.subset will be called prior to the other operations. This requires the 'region' argument.
         If None, this will automatically become True if 'region' is provided and the subsetting method is either 'cos-lat' or 'mean'.
@@ -678,7 +682,8 @@ def spatial_mean(
         Description of the region and the subsetting method (required fields listed in the Notes).
         If method=='interp_centroid', this is used to find the region's centroid.
         If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
-        Can also be "global", for global averages. This is simply a shortcut for `{'name': 'global', 'method': 'bbox', 'lon_bnds' [-180, 180], 'lat_bnds': [-90, 90]}`.
+        Can also be "global", for global averages.
+        This is simply a shortcut for `{'name': 'global', 'method': 'bbox', 'lon_bnds' [-180, 180], 'lat_bnds': [-90, 90]}`.
     kwargs : dict, optional
         Arguments to send to either mean(), interp() or SpatialAverager().
         For SpatialAverager, one can give `skipna` or  `out_chunks` here, to be passed to the averager call itself.
@@ -716,7 +721,8 @@ def spatial_mean(
     kwargs = kwargs or {}
     if method == "mean":
         warnings.warn(
-            "xs.spatial_mean with method=='mean' is deprecated and will be abandoned in a future release. Use method=='cos-lat' instead for a more robust but similar method.",
+            "xs.spatial_mean with method=='mean' is deprecated and will be abandoned in a future release. "
+            "Use method=='cos-lat' instead for a more robust but similar method.",
             category=FutureWarning,
         )
     elif method == "interp_coord":
@@ -973,7 +979,7 @@ def spatial_mean(
 
 
 @parse_config
-def produce_horizon(
+def produce_horizon(  # noqa: C901
     ds: xr.Dataset,
     indicators: Union[
         str,
@@ -988,7 +994,9 @@ def produce_horizon(
     to_level: Optional[str] = "horizons",
     period: Optional[list] = None,
 ) -> xr.Dataset:
-    """Compute indicators, then the climatological mean, and finally unstack dates in order to have a single dataset with all indicators of different frequencies.
+    """
+    Compute indicators, then the climatological mean, and finally unstack dates in order
+    to have a single dataset with all indicators of different frequencies.
 
     Once this is done, the function drops 'time' in favor of 'horizon'.
     This function computes the indicators and does an interannual mean.
@@ -996,21 +1004,21 @@ def produce_horizon(
 
     Parameters
     ----------
-    ds: xr.Dataset
+    ds : xr.Dataset
         Input dataset with a time dimension.
-    indicators:  Union[str, os.PathLike, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType]
+    indicators :  Union[str, os.PathLike, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType]
         Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
-    periods: list of str or list of lists of str, optional
+    periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start_year, end_year] for the period(s) to be evaluated.
         If both periods and warminglevels are None, the full time series will be used.
-    warminglevels: dict, optional
+    warminglevels : dict, optional
         Dictionary of arguments to pass to `py:func:xscen.subset_warming_level`.
         If 'wl' is a list, the function will be called for each value and produce multiple horizons.
         If both periods and warminglevels are None, the full time series will be used.
-    to_level: str, optional
+    to_level : str, optional
         The processing level to assign to the output.
-        If there is only one horizon, you can use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
-        that information in the processing level.
+        If there is only one horizon, you can use "{wl}", "{period0}" and "{period1}" in the string to dynamically
+        include that information in the processing level.
 
     Returns
     -------
@@ -1019,7 +1027,8 @@ def produce_horizon(
     """
     if "warminglevel" in ds and len(ds.warminglevel) != 1:
         raise ValueError(
-            "Input dataset should only have `warminglevel` dimension of length 1. If you want to use produce_horizon for multiple warming levels, "
+            "Input dataset should only have `warminglevel` dimension of length 1. "
+            "If you want to use produce_horizon for multiple warming levels, "
             "extract the full time series and use the `warminglevels` argument instead."
         )
     if period is not None:
@@ -1057,7 +1066,8 @@ def produce_horizon(
                 ds_sub = ds.sel(time=slice(period[0], period[1]))
             else:
                 warnings.warn(
-                    f"The requested period {period} is not fully covered by the input dataset. The requested period will be skipped."
+                    f"The requested period {period} is not fully covered by the input dataset. "
+                    "The requested period will be skipped."
                 )
                 ds_sub = None
         else:
@@ -1094,7 +1104,8 @@ def produce_horizon(
                         new_dim = "month"
                     else:
                         raise ValueError(
-                            f"Frequency {freq} is not supported or recognized. Please use annual (AS), seasonal (QS), monthly (MS), or fixed (fx) frequency."
+                            f"Frequency {freq} is not supported or recognized."
+                            "Please use annual (AS), seasonal (QS), monthly (MS), or fixed (fx) frequency."
                         )
                     ds_mean = unstack_dates(
                         ds_mean,
@@ -1147,8 +1158,9 @@ def produce_horizon(
                 ]
             ):
                 warnings.warn(
-                    f"The attributes for variable {v} are not the same for all horizons, probably because the periods were not of the same length. "
-                    f"Attributes will be kept from the first horizon, but this might not be the most appropriate."
+                    f"The attributes for variable {v} are not the same for all horizons, "
+                    "probably because the periods were not of the same length. "
+                    "Attributes will be kept from the first horizon, but this might not be the most appropriate."
                 )
 
         out = xr.concat(out, dim="horizon")
