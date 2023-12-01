@@ -562,7 +562,8 @@ class TestSpatialMean:
 
 
 class TestClimatologicalOp:
-    def _format(self, s):
+    @staticmethod
+    def _format(s):
         import xclim
 
         op_format = dict.fromkeys(("mean", "std", "var", "sum"), "adj") | dict.fromkeys(
