@@ -50,10 +50,10 @@ class TestClimatologicalMean:
         # Test metadata
         assert (
             out.tas.attrs["description"]
-            == f"Climatological 30-year average of {ds.tas.attrs['description']}"
+            == f"30-year climatological average of {ds.tas.attrs['description']}"
         )
         assert (
-            "Climatological 30-year average over window (non-centered) with a minimum of 30 years of data"
+            "30-year climatological average over window (non-centered), with a minimum of 30 years of data"
             in out.tas.attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "climatology"
@@ -84,10 +84,10 @@ class TestClimatologicalMean:
         # Test metadata
         assert (
             out.tas.attrs["description"]
-            == f"Climatological 15-year average of {ds.tas.attrs['description']}"
+            == f"15-year climatological average of {ds.tas.attrs['description']}"
         )
         assert (
-            "Climatological 15-year average over window (non-centered) with a minimum of 15 years of data"
+            "15-year climatological average over window (non-centered), with a minimum of 15 years of data"
             in out.tas.attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "for_testing"
@@ -365,14 +365,14 @@ class TestProduceHorizon:
         assert all(v in out for v in ["tg_min", "growing_degree_days"])
         assert (
             # f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of"
-            f"Climatological {30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year average of"
+            f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year climatological average of"
             in out.tg_min.attrs["description"]
         )
         assert (
             out.tg_min.attrs["description"].split(
                 # f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of "
-                f"Climatological {30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}"
-                f"-year average of "
+                f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}"
+                f"-year climatological average of "
             )[1]
             != self.ds.tas.attrs["description"]
         )
@@ -626,10 +626,10 @@ class TestClimatologicalOp:
         operation = self._format(op) if op not in ["median", "linregress"] else op
         assert (
             out[f"tas_clim_{op}"].attrs["description"]
-            == f"Climatological 30-year {operation} of {ds.tas.attrs['description']}"
+            == f"30-year climatological {operation} of {ds.tas.attrs['description']}"
         )
         assert (
-            f"Climatological 30-year {operation} over window (non-centered) with a minimum of 30 years of data"
+            f"30-year climatological {operation} over window (non-centered), with a minimum of 30 years of data"
             in out[f"tas_clim_{op}"].attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "climatology"
@@ -698,10 +698,10 @@ class TestClimatologicalOp:
         operation = self._format(op) if op not in ["median", "linregress"] else op
         assert (
             out[f"tas_clim_{op}"].attrs["description"]
-            == f"Climatological 15-year {operation} of {ds.tas.attrs['description']}"
+            == f"15-year climatological {operation} of {ds.tas.attrs['description']}"
         )
         assert (
-            f"Climatological 15-year {operation} over window (non-centered) with a minimum of 15 years of data"
+            f"15-year climatological {operation} over window (non-centered), with a minimum of 15 years of data"
             in out[f"tas_clim_{op}"].attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "for_testing"

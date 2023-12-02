@@ -31,6 +31,7 @@ from .utils import standardize_periods, unstack_dates, update_attr
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "climatological_mean",
     "climatological_op",
     "compute_deltas",
     "produce_horizon",
@@ -102,7 +103,7 @@ def climatological_mean(
 
 
 @parse_config
-def climatological_op(
+def climatological_op(  # noqa: C901
     ds: xr.Dataset,
     *,
     op: Union[str, dict] = "mean",
@@ -149,7 +150,8 @@ def climatological_op(
     stride : int
         Stride (in years) at which to provide an output from the rolling window operation.
     periods : list of str or list of lists of str, optional
-        Either [start, end] or list of [start, end] of continuous periods to be considered. This is needed when the time axis of ds contains some jumps in time.
+        Either [start, end] or list of [start, end] of continuous periods to be considered.
+        This is needed when the time axis of ds contains some jumps in time.
         If None, the dataset will be considered continuous.
     rename_variables : bool
         If True, '_clim_{op}' will be added to variable names.
@@ -178,19 +180,25 @@ def climatological_op(
         )
 
     # unstack 1D time in coords (day, month, and year) to make climatological mean faster
-    # ind = pd.MultiIndex.from_arrays(
-    #     [ds.time.dt.year.values, ds.time.dt.month.values, ds.time.dt.day.values],
-    #     names=["year", "month", "day"],
-    # )
-    # ds_unstack = ds.assign(time=ind).unstack("time")
-    mindex_coords = xr.Coordinates.from_pandas_multiindex(
-        pd.MultiIndex.from_arrays(
+    try:
+        mindex_coords = xr.Coordinates.from_pandas_multiindex(
+            pd.MultiIndex.from_arrays(
+                [
+                    ds.time.dt.year.values,
+                    ds.time.dt.month.values,
+                    ds.time.dt.day.values,
+                ],
+                names=["year", "month", "day"],
+            ),
+            dim="time",
+        )
+        ds_unstack = ds.assign_coords(coords=mindex_coords).unstack("time")
+    except AttributeError:  # Fixme when xscen is pinned to xarray >= 2023.11.0
+        ind = pd.MultiIndex.from_arrays(
             [ds.time.dt.year.values, ds.time.dt.month.values, ds.time.dt.day.values],
             names=["year", "month", "day"],
-        ),
-        dim="time",
-    )
-    ds_unstack = ds.assign_coords(coords=mindex_coords).unstack("time")
+        )
+        ds_unstack = ds.assign(time=ind).unstack("time")
 
     # Rolling will ignore gaps in time, so raise an exception beforehand
     if (not all(ds_unstack.year.diff(dim="year", n=1) == 1)) & (periods is None):
@@ -251,7 +259,8 @@ def climatological_op(
         for vv in ds_unstack.data_vars:
             if (
                 "std" in vv
-                or "standard deviation" in ds_unstack[vv].attrs.get("description", "").lower()
+                or "standard deviation"
+                in ds_unstack[vv].attrs.get("description", "").lower()
             ):
                 ds_unstack[vv] = np.square(ds_unstack[vv])
                 ds_has_std = True
@@ -413,7 +422,7 @@ def climatological_op(
                 operation = xc.core.formatting.default_formatter.format_field(
                     op, op_format[op]
                 )
-            except (ValueError, KeyError):
+            except (KeyError, ValueError):
                 operation = op
             update_attr(
                 ds_rolling[vv],
@@ -424,7 +433,7 @@ def climatological_op(
             )
 
         new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {window}-year climatological  {operation} "
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {window}-year climatological {operation} "
             f"over window (non-centered), with a minimum of {min_periods} years of data - xarray v{xr.__version__}"
         )
         history = (
@@ -446,25 +455,44 @@ def climatological_op(
             12: {"month": calendar.month_abbr[1:]},
         }
         new_dim_size = len(np.unique(ds_rolling.time.dt.month))
-        mindex_coords = xr.Coordinates.from_pandas_multiindex(
-            pd.MultiIndex.from_arrays(
+
+        try:
+            mindex_coords = xr.Coordinates.from_pandas_multiindex(
+                pd.MultiIndex.from_arrays(
+                    [ds_rolling.horizon.values, ds_rolling.time.dt.month.values],
+                    names=["period", "months"],
+                ),
+                dim="time",
+            )
+            out = (
+                ds_rolling.assign(
+                    tmp_time=xr.DataArray(ds_rolling.time.values.copy(), dims=["time"])
+                )
+                .assign_coords(mindex_coords)
+                .unstack("time")
+                .rename({"months": next(iter(new_coords[new_dim_size]))})
+                .assign_coords(new_coords[new_dim_size])
+                .drop_vars("horizon")
+                .set_coords("tmp_time")
+                .rename({"tmp_time": "time"})
+            )
+        except AttributeError:  # Fixme when xscen is pinned to xarray >= 2023.11.0
+            ind = pd.MultiIndex.from_arrays(
                 [ds_rolling.horizon.values, ds_rolling.time.dt.month.values],
                 names=["period", "months"],
-            ),
-            dim="time",
-        )
-        out = (
-            ds_rolling.assign(
-                tmp_time=xr.DataArray(ds_rolling.time.values.copy(), dims=["time"])
             )
-            .assign_coords(mindex_coords)
-            .unstack("time")
-            .rename({"months": next(iter(new_coords[new_dim_size]))})
-            .assign_coords(new_coords[new_dim_size])
-            .drop_vars("horizon")
-            .set_coords("tmp_time")
-            .rename({"tmp_time": "time"})
-        )
+            out = (
+                ds_rolling.assign(
+                    tmp_time=xr.DataArray(ds_rolling.time.values.copy(), dims=["time"])
+                )
+                .assign(time=ind)
+                .unstack("time")
+                .rename({"months": next(iter(new_coords[new_dim_size]))})
+                .assign_coords(new_coords[new_dim_size])
+                .drop_vars("horizon")
+                .set_coords("tmp_time")
+                .rename({"tmp_time": "time"})
+            )
         return out
     else:
         return ds_rolling
@@ -534,20 +562,44 @@ def compute_deltas(  # noqa: C901
             )
 
         # Remove references to 'year' in REF
-        ind = pd.MultiIndex.from_arrays(
-            [ref.time.dt.month.values, ref.time.dt.day.values], names=["month", "day"]
-        )
-        ref = ref.assign(time=ind).unstack("time")
+        try:
+            mindex_coords_1 = xr.Coordinates.from_pandas_multiindex(
+                pd.MultiIndex.from_arrays(
+                    [ref.time.dt.month.values, ref.time.dt.day.values],
+                    names=["month", "day"],
+                ),
+                dim="time",
+            )
+            ref = ref.assign_coords(coords=mindex_coords_1).unstack("time")
 
-        ind = pd.MultiIndex.from_arrays(
-            [
-                ds.time.dt.year.values,
-                ds.time.dt.month.values,
-                ds.time.dt.day.values,
-            ],
-            names=["year", "month", "day"],
-        )
-        other_hz = ds.assign(time=ind).unstack("time")
+            mindex_coords_2 = xr.Coordinates.from_pandas_multiindex(
+                pd.MultiIndex.from_arrays(
+                    [
+                        ds.time.dt.year.values,
+                        ds.time.dt.month.values,
+                        ds.time.dt.day.values,
+                    ],
+                    names=["year", "month", "day"],
+                ),
+                dim="time",
+            )
+            other_hz = ds.assign_coords(coords=mindex_coords_2).unstack("time")
+        except AttributeError:  # Fixme when xscen is pinned to xarray >= 2023.11.0
+            ind = pd.MultiIndex.from_arrays(
+                [ref.time.dt.month.values, ref.time.dt.day.values],
+                names=["month", "day"],
+            )
+            ref = ref.assign(time=ind).unstack("time")
+
+            ind = pd.MultiIndex.from_arrays(
+                [
+                    ds.time.dt.year.values,
+                    ds.time.dt.month.values,
+                    ds.time.dt.day.values,
+                ],
+                names=["year", "month", "day"],
+            )
+            other_hz = ds.assign(time=ind).unstack("time")
 
     else:
         other_hz = ds
