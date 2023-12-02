@@ -264,7 +264,7 @@ class TestComputeDeltas:
         ds["horizon"] = xr.DataArray(
             ["1981-2010", "2011-2040", "2041-2070", "2071-2100"], dims=["time"]
         )
-        ds = ds.swap_dims({"time": "horizon"}).drop("time")
+        ds = ds.swap_dims({"time": "horizon"}).drop_vars("time")
 
         out = xs.compute_deltas(
             ds, reference_horizon="1981-2010", rename_variables=False
