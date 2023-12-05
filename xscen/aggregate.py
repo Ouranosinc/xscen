@@ -161,7 +161,7 @@ def climatological_op(  # noqa: C901
     periods_as_dim : bool
         If True, the output will have 'periods' and the frequency as 'month', 'season' or 'year' as
         dimensions and coordinates. The 'horizon' dimension will be dropped and 'time' will be unstacked
-        to periods and frequency    .
+        to periods and frequency.
 
     Returns
     -------
