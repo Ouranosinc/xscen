@@ -476,7 +476,7 @@ aggregate:
   climatological_op: # automatically passed to the function
     op: mean
     window: 30
-    interval: 10
+    stride: 10
     periods: [['1951', '2100']]
     to_level: climatology
     #periods_as_dim: True

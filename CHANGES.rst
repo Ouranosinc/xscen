@@ -24,6 +24,7 @@ New features and enhancements
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
+* ``climatological_mean()`` has been replaced with ``climatological_op()``and will be abandoned in a future version. (:pull:`290`)
 * ``experiment_weights`` argument in ``generate_weights`` was renamed to ``balance_experiments``. (:pull:`252`).
 
 Bug fixes

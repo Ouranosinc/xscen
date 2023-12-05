@@ -159,8 +159,9 @@ def climatological_op(  # noqa: C901
         The processing level to assign to the output.
         If None, the processing level of the inputs is preserved.
     periods_as_dim : bool
-        If True, the output will have 'periods' and xrfreq ('month' or 'season' or 'year') as dimensions and coordinates.
-        The 'horizon' dimension will be dropped and 'time' will be unstacked to periods and xrfreq.
+        If True, the output will have 'periods' and the frequency as 'month', 'season' or 'year' as
+        dimensions and coordinates. The 'horizon' dimension will be dropped and 'time' will be unstacked
+        to periods and frequency    .
 
     Returns
     -------
@@ -1128,7 +1129,7 @@ def produce_horizon(  # noqa: C901
                 if freq != "fx":
                     ds_mean = climatological_op(
                         ds_ind,
-                        op="mean",
+                        op="mean",  # ToDo: make op an argument of produce_horizon
                         rename_variables=False,
                     )
                 else:
