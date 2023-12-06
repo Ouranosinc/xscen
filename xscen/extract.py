@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import xclim as xc
-from intake_esm import esm_datastore
 from intake_esm.derived import DerivedVariableRegistry
 from xclim.core.calendar import compare_offsets
 
@@ -927,7 +926,6 @@ def get_warming_level(
     ignore_member: bool = False,
     tas_src: Optional[Union[str, os.PathLike]] = None,
     return_horizon: bool = True,
-    output: str = "requested",
 ) -> Union[dict, list[str], str]:
     """Use the IPCC Atlas method to return the window of time over which the requested level of global warming is first reached.
 
@@ -959,10 +957,6 @@ def get_warming_level(
     return_horizon: bool
         If True, the output will be a list following the format ['start_yr', 'end_yr']
         If False, the output will be a string representing the middle of the period.
-    output: {'selected', 'requested'}
-        When `realization` is a sequence.
-        If "requested", the function returns a list of the same length as `realization`.
-        If "selected", the function returns a dict, keys are the models selected in the database.
 
     Returns
     -------
@@ -1027,7 +1021,7 @@ def get_warming_level(
         info_models.append(info)
 
     # open nc
-    tas = xr.open_dataset(tas_src).tas
+    tas = xr.open_dataset(tas_src, engine="h5netcdf").tas
 
     def _get_warming_level(model):
         # choose colum based in ds cat attrs, +'$' to ensure a full match (matches end-of-string)
@@ -1044,8 +1038,7 @@ def get_warming_level(
             warnings.warn(
                 f"No simulation fit the attributes of the input dataset ({model})."
             )
-            selected = "_".join([model[c] for c in FIELDS])
-            return selected, [None, None] if return_horizon else None
+            return [None, None] if return_horizon else None
 
         if candidates.sum() > 1:
             logger.info(
@@ -1075,25 +1068,18 @@ def get_warming_level(
                 f"Global warming level of +{wl}C is not reached by the last year "
                 f"({tas.time[-1].dt.year.item()}) of the provided 'tas_src' database for {selected}."
             )
-            return selected, [None, None] if return_horizon else None
+            return [None, None] if return_horizon else None
 
         yr = yrs.isel(time=0).time.dt.year.item()
         start_yr = int(yr - window / 2 + 1)
         end_yr = int(yr + window / 2)
-        return selected, (
+        return (
             standardize_periods([start_yr, end_yr], multiple=False)
             if return_horizon
             else str(yr)
         )
 
-    out = [] if output == "requested" or len(realization) == 1 else {}
-    for model in info_models:
-        selected, wlslice = _get_warming_level(model)
-        if isinstance(out, list):
-            out.append(wlslice)
-        else:
-            out[selected] = wlslice
-
+    out = list(map(_get_warming_level, info_models))
     if isinstance(realization, pd.DataFrame):
         return pd.Series(out, index=realization.index)
     if isinstance(realization, xr.DataArray):
@@ -1102,6 +1088,7 @@ def get_warming_level(
                 out, dims=(realization.dims[0], "bounds"), coords=realization.coords
             )
         return xr.DataArray(out, dims=(realization.dims[0],), coords=realization.coords)
+
     if len(out) == 1:
         return out[0]
     return out

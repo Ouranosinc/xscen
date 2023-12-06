@@ -70,14 +70,10 @@ class TestSearchDataCatalogs:
         assert len(out) == (13 if allow_resampling else 0)
 
     @pytest.mark.parametrize(
-        "restrict_warming_level",
-        [
-            True,
-            {"wl": 2, "ignore_member": True},
-            {"wl": 4},
-        ],
+        "restrict_warming_level,exp",
+        [(True, 5), ({"wl": 2, "ignore_member": True}, 5), ({"wl": 4}, 2)],
     )
-    def test_warminglevel(self, restrict_warming_level):
+    def test_warminglevel(self, restrict_warming_level, exp):
         cat = deepcopy(self.cat)
         new_line = deepcopy(cat.df.iloc[13])
         new_line["experiment"] = "ssp245"
@@ -89,12 +85,7 @@ class TestSearchDataCatalogs:
             variables_and_freqs={"tasmax": "D"},
             restrict_warming_level=restrict_warming_level,
         )
-        if isinstance(restrict_warming_level, bool):
-            assert len(out) == 5
-        elif restrict_warming_level == {"wl": 2, "ignore_member": True}:
-            assert len(out) == 5
-        elif restrict_warming_level == {"wl": 4}:
-            assert len(out) == 2
+        assert len(out) == exp
 
     @pytest.mark.parametrize("restrict_resolution", [None, "finest", "coarsest"])
     def test_restrict_resolution(self, restrict_resolution):
@@ -274,16 +265,6 @@ class TestSearchDataCatalogs:
 
 class TestGetWarmingLevel:
     def test_list(self):
-        out = xs.get_warming_level(
-            ["CMIP6_CanESM5_ssp126_r1i1p1f1", "CMIP6_CanESM5_ssp245_r1i1p1f1"],
-            wl=2,
-            window=20,
-            return_horizon=False,
-            output="selected",
-        )
-        assert isinstance(out, dict)
-        assert out["CMIP6_CanESM5_ssp126_r1i1p1f1"] == "2026"
-
         out = xs.get_warming_level(
             ["CMIP6_CanESM5_ssp126_r1i1p1f1", "CMIP6_CanESM5_ssp245_r1i1p1f1"],
             wl=2,
