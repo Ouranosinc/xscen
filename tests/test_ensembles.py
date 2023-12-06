@@ -223,6 +223,8 @@ class TestEnsembleStats:
 
     def test_errors(self):
         ens = self.make_ensemble(10)
+
+        # Warning if the statistic does not support weighting
         weights = xr.DataArray([0] * 5 + [1] * 5, dims="realization")
         with pytest.warns(UserWarning, match="Weighting is not supported"):
             with pytest.raises(
@@ -231,6 +233,8 @@ class TestEnsembleStats:
                 xs.ensemble_stats(
                     ens, statistics={"kkz_reduce_ensemble": None}, weights=weights
                 )
+
+        # Error if you try to use a relative delta with a reference dataset
         for e in ens:
             e["tg_mean"].attrs["delta_kind"] = "rel."
         ref = weights
@@ -245,6 +249,22 @@ class TestEnsembleStats:
                         "abs_thresh": 2.5,
                         "ref": ref,
                     }
+                },
+            )
+
+        # Error if you try to use a robustness_fractions with a reference dataset, but also specify other statistics
+        with pytest.raises(
+            ValueError, match="The input requirements for 'robustness_fractions'"
+        ):
+            xs.ensemble_stats(
+                ens,
+                statistics={
+                    "robustness_fractions": {
+                        "test": "threshold",
+                        "abs_thresh": 2.5,
+                        "ref": ref,
+                    },
+                    "ensemble_mean_std_max_min": None,
                 },
             )
 

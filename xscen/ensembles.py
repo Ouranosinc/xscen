@@ -150,6 +150,10 @@ def ensemble_stats(  # noqa: C901
             # FIXME: This can be removed once change_significance is removed.
             #  It's here because the 'ref' default was removed for change_significance in xclim 0.47.
             stats_kwargs.setdefault("ref", None)
+            if (stats_kwargs.get("ref") is not None) and len(statistics.keys()) > 1:
+                raise ValueError(
+                    f"The input requirements for '{stat}' when 'ref' is specified are not compatible with other statistics."
+                )
 
             # These statistics only work on DataArrays
             for v in ens.data_vars:
