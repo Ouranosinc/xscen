@@ -21,9 +21,13 @@ __all__ = ["ensemble_stats", "generate_weights"]
 
 
 @parse_config
-def ensemble_stats(
+def ensemble_stats(  # noqa: C901
     datasets: Union[
-        dict, list[Union[str, os.PathLike]], list[xr.Dataset], list[xr.DataArray]
+        dict,
+        list[Union[str, os.PathLike]],
+        list[xr.Dataset],
+        list[xr.DataArray],
+        xr.Dataset,
     ],
     statistics: dict,
     *,
@@ -36,14 +40,17 @@ def ensemble_stats(
 
     Parameters
     ----------
-    datasets : dict or list of str, Path, Dataset or DataArray
+    datasets : dict or list of [str, os.PathLike, Dataset or DataArray], or Dataset
         List of file paths or xarray Dataset/DataArray objects to include in the ensemble.
         A dictionary can be passed instead of a list, in which case the keys are used as coordinates along the new
         `realization` axis.
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
+        If a single Dataset is passed, it is assumed to already be an ensemble and will be used as is. The 'realization' dimension is required.
     statistics : dict
         xclim.ensembles statistics to be called. Dictionary in the format {function: arguments}.
-        If a function requires 'ref', the dictionary entry should be the inputs of a .loc[], e.g. {"ref": {"horizon": "1981-2010"}}
+        If a function requires 'weights', you can leave it out of this dictionary and
+        it will be applied automatically if the 'weights' argument is provided.
+        See the Notes section for more details on robustness statistics, which require additional arguments.
     create_kwargs : dict, optional
         Dictionary of arguments for xclim.ensembles.create_ensemble.
     weights : xr.DataArray, optional
@@ -59,62 +66,139 @@ def ensemble_stats(
     xr.Dataset
         Dataset with ensemble statistics
 
+    Notes
+    -----
+    * The positive fraction in 'change_significance' and 'robustness_fractions' is calculated by
+      xclim using 'v > 0', which is not appropriate for relative deltas.
+      This function will attempt to detect relative deltas by using the 'delta_kind' attribute ('rel.', 'relative', '*', or '/')
+      and will apply 'v - 1' before calling the function.
+    * The 'robustness_categories' statistic requires the outputs of 'robustness_fractions'.
+      Thus, there are two ways to build the 'statistics' dictionary:
+
+      1. Having 'robustness_fractions' and 'robustness_categories' as separate entries in the dictionary.
+         In this case, all outputs will be returned.
+      2. Having 'robustness_fractions' as a nested dictionary under 'robustness_categories'.
+         In this case, only the robustness categories will be returned.
+
     See Also
     --------
     xclim.ensembles._base.create_ensemble, xclim.ensembles._base.ensemble_percentiles,
-    xclim.ensembles._base.ensemble_mean_std_max_min, xclim.ensembles._robustness.change_significance,
+    xclim.ensembles._base.ensemble_mean_std_max_min,
+    xclim.ensembles._robustness.robustness_fractions, xclim.ensembles._robustness.robustness_categories,
     xclim.ensembles._robustness.robustness_coefficient,
     """
     create_kwargs = create_kwargs or {}
+    statistics = deepcopy(statistics)  # to avoid modifying the original dictionary
 
     # if input files are .zarr, change the engine automatically
-    if isinstance(datasets, list) and isinstance(datasets[0], (str, Path)):
+    if isinstance(datasets, list) and isinstance(datasets[0], (str, os.PathLike)):
         path = Path(datasets[0])
-        if path.suffix == ".zarr" and "engine" not in create_kwargs:
-            create_kwargs["engine"] = "zarr"
+        if path.suffix == ".zarr":
+            create_kwargs.setdefault("engine", "zarr")
 
-    ens = ensembles.create_ensemble(datasets, **create_kwargs)
+    if not isinstance(datasets, xr.Dataset):
+        ens = ensembles.create_ensemble(datasets, **create_kwargs)
+    else:
+        ens = datasets
 
     ens_stats = xr.Dataset(attrs=ens.attrs)
-    for stat, stats_kwargs in statistics.items():
-        stats_kwargs = deepcopy(stats_kwargs or {})
-        logger.info(
-            f"Creating ensemble with {len(datasets)} simulations and calculating {stat}."
-        )
-        if (
-            weights is not None
-            and "weights" in inspect.getfullargspec(getattr(ensembles, stat))[0]
-        ):
-            stats_kwargs["weights"] = weights.reindex_like(ens.realization)
-        if "ref" in stats_kwargs:
-            stats_kwargs["ref"] = ens.loc[stats_kwargs["ref"]]
 
-        if stat == "change_significance":
+    # "robustness_categories" requires "robustness_fractions", but we want to compute things only once if both are requested.
+    statistics_to_compute = list(statistics.keys())
+    if "robustness_categories" in statistics_to_compute:
+        if "robustness_fractions" in statistics_to_compute:
+            statistics_to_compute.remove("robustness_fractions")
+        elif "robustness_fractions" not in statistics["robustness_categories"]:
+            raise ValueError(
+                "'robustness_categories' requires 'robustness_fractions' to be computed. "
+                "Either add 'robustness_fractions' to the statistics dictionary or "
+                "add 'robustness_fractions' under the 'robustness_categories' dictionary."
+            )
+
+    for stat in statistics_to_compute:
+        stats_kwargs = deepcopy(statistics.get(stat) or {})
+        logger.info(
+            f"Calculating {stat} from an ensemble of {len(ens.realization)} simulations."
+        )
+
+        # Workaround for robustness_categories
+        real_stat = None
+        if stat == "robustness_categories":
+            real_stat = "robustness_categories"
+            stat = "robustness_fractions"
+            categories_kwargs = deepcopy(stats_kwargs)
+            categories_kwargs.pop("robustness_fractions", None)
+            stats_kwargs = deepcopy(
+                stats_kwargs.get("robustness_fractions", None)
+                or statistics.get("robustness_fractions", {})
+            )
+
+        if weights is not None:
+            if "weights" in inspect.getfullargspec(getattr(ensembles, stat))[0]:
+                stats_kwargs["weights"] = weights.reindex_like(ens.realization)
+            else:
+                warnings.warn(
+                    f"Weighting is not supported for '{stat}'. The results may be incorrect."
+                )
+
+        # FIXME: change_significance is deprecated and will be removed in xclim 0.49.
+        if stat in [
+            "change_significance",
+            "robustness_fractions",
+            "robustness_categories",
+        ]:
+            # FIXME: This can be removed once change_significance is removed.
+            #  It's here because the 'ref' default was removed for change_significance in xclim 0.47.
+            stats_kwargs.setdefault("ref", None)
+
+            # These statistics only work on DataArrays
             for v in ens.data_vars:
                 with xr.set_options(keep_attrs=True):
-                    deltak = ens[v].attrs.get("delta_kind", None)
-                    if stats_kwargs.get("ref") is not None and deltak is not None:
+                    # Support for relative deltas [0, inf], where positive fraction is 'v > 1' instead of 'v > 0'.
+                    delta_kind = ens[v].attrs.get("delta_kind")
+                    if stats_kwargs.get("ref") is not None and delta_kind is not None:
                         raise ValueError(
                             f"{v} is a delta, but 'ref' was still specified."
                         )
-                    if deltak in ["relative", "*", "/"]:
+                    if delta_kind in ["rel.", "relative", "*", "/"]:
                         logging.info(
                             f"Relative delta detected for {v}. Applying 'v - 1' before change_significance."
                         )
                         ens_v = ens[v] - 1
                     else:
                         ens_v = ens[v]
+
+                    # Call the function
                     tmp = getattr(ensembles, stat)(ens_v, **stats_kwargs)
-                    if len(tmp) == 2:
+
+                    # Manage the multiple outputs of change_significance
+                    # FIXME: change_significance is deprecated and will be removed in xclim 0.49.
+                    if (
+                        stat == "change_significance"
+                        and stats_kwargs.get("p_vals", False) is False
+                    ):
                         ens_stats[f"{v}_change_frac"], ens_stats[f"{v}_pos_frac"] = tmp
-                    elif len(tmp) == 3:
+                    elif stat == "change_significance" and stats_kwargs.get(
+                        "p_vals", False
+                    ):
                         (
                             ens_stats[f"{v}_change_frac"],
                             ens_stats[f"{v}_pos_frac"],
                             ens_stats[f"{v}_p_vals"],
                         ) = tmp
-                    else:
-                        raise ValueError(f"Unexpected number of outputs from {stat}.")
+
+                    # Robustness categories
+                    if real_stat == "robustness_categories":
+                        categories = ensembles.robustness_categories(
+                            tmp, **categories_kwargs
+                        )
+                        ens_stats[f"{v}_robustness_categories"] = categories
+
+                    # Only return the robustness fractions if they were requested.
+                    if "robustness_fractions" in statistics.keys():
+                        tmp = tmp.rename({s: f"{v}_{s}" for s in tmp.data_vars})
+                        ens_stats = ens_stats.merge(tmp)
+
         else:
             ens_stats = ens_stats.merge(getattr(ensembles, stat)(ens, **stats_kwargs))
 
@@ -123,7 +207,7 @@ def ensemble_stats(
         ens_stats = ens_stats.drop_vars("realization")
 
     # delete attrs that are not common to all dataset
-    if common_attrs_only:
+    if common_attrs_only and not isinstance(datasets, xr.Dataset):
         # if they exist remove attrs specific to create_ensemble
         create_kwargs.pop("mf_flag", None)
         create_kwargs.pop("resample_freq", None)

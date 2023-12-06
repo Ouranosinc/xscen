@@ -1,3 +1,4 @@
+import logging
 from copy import deepcopy
 
 import numpy as np
@@ -6,6 +7,8 @@ import xarray as xr
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
+
+LOGGER = logging.getLogger(__name__)
 
 
 class TestEnsembleStats:
@@ -33,6 +36,27 @@ class TestEnsembleStats:
             ens.append(tmp)
 
         return ens
+
+    def test_input_type(self, tmpdir):
+        ens_dict = self.make_ensemble(10)
+        out_dict = xs.ensemble_stats(
+            ens_dict, statistics={"ensemble_mean_std_max_min": None}
+        )
+        ens_ds = xr.concat(ens_dict, dim="realization")
+        out_ds = xs.ensemble_stats(
+            ens_ds, statistics={"ensemble_mean_std_max_min": None}
+        )
+        paths = []
+        for i, ds in enumerate(ens_dict):
+            paths.append(tmpdir / f"ens{i}.zarr")
+            ds.to_zarr(paths[-1])
+        out_zarr = xs.ensemble_stats(
+            paths, statistics={"ensemble_mean_std_max_min": None}
+        ).compute()
+
+        assert out_dict.equals(out_ds)
+        # The zarr introduced some rounding errors
+        assert np.round(out_zarr, 10).equals(np.round(out_dict, 10))
 
     @pytest.mark.parametrize(
         "weights, to_level", [(None, None), (np.arange(1, 11), "for_tests")]
@@ -88,9 +112,99 @@ class TestEnsembleStats:
             decimal=2,
         )
 
-    def test_change_significance(self):
-        # TODO: Possible nearby changes to xclim.ensembles.change_significance would break this test.
-        pass
+    # FIXME: This function is deprecated, so this test should be removed eventually.
+    @pytest.mark.parametrize("p_vals", [True, False])
+    def test_change_significance(self, p_vals):
+        ens = self.make_ensemble(10)
+        with pytest.warns(
+            FutureWarning,
+            match="Function change_significance is deprecated as of xclim 0.47",
+        ):
+            out = xs.ensemble_stats(
+                ens,
+                statistics={"change_significance": {"test": None, "p_vals": p_vals}},
+            )
+
+        assert len(out.data_vars) == 3 if p_vals else 2
+
+    @pytest.mark.parametrize("fractions", ["only", "both", "nested", "missing"])
+    def test_robustness_input(self, fractions):
+        ens = self.make_ensemble(10)
+
+        weights = None
+        if fractions == "only":
+            statistics = {
+                "robustness_fractions": {"test": "threshold", "abs_thresh": 2.5}
+            }
+        elif fractions == "both":
+            statistics = {
+                "robustness_fractions": {"test": "threshold", "abs_thresh": 2.5},
+                "robustness_categories": {
+                    "categories": ["robust", "non-robust"],
+                    "thresholds": [(0.5, 0.5), (0.5, 0.5)],
+                    "ops": [(">=", ">="), ("<", "<")],
+                },
+            }
+        elif fractions == "nested":
+            weights = xr.DataArray(
+                [0] * 5 + [1] * 5, dims="realization"
+            )  # Mostly to check that this is put in the nested dict
+            statistics = {
+                "robustness_categories": {
+                    "robustness_fractions": {"test": "threshold", "abs_thresh": 2.5},
+                    "categories": ["robust", "non-robust"],
+                    "thresholds": [(0.5, 0.5), (0.5, 0.5)],
+                    "ops": [(">=", ">="), ("<", "<")],
+                }
+            }
+        elif fractions == "missing":
+            statistics = {
+                "robustness_categories": {
+                    "categories": ["robust", "non-robust"],
+                    "thresholds": [(0.5, 0.5), (0.5, 0.5)],
+                    "ops": [(">=", ">="), ("<", "<")],
+                }
+            }
+            with pytest.raises(
+                ValueError,
+                match="'robustness_categories' requires 'robustness_fractions'",
+            ):
+                xs.ensemble_stats(ens, statistics=statistics)
+            return
+
+        out = xs.ensemble_stats(ens, statistics=statistics, weights=weights)
+
+        assert len(out.data_vars) == {"only": 5, "both": 6, "nested": 1}[fractions]
+        if fractions in ["only", "both"]:
+            np.testing.assert_array_equal(out.tg_mean_changed, [0, 0.4, 1, 1])
+            np.testing.assert_array_equal(out.tg_mean_agree, [1, 1, 1, 1])
+        if fractions in ["both", "nested"]:
+            np.testing.assert_array_equal(
+                out.tg_mean_robustness_categories,
+                {"both": [99, 99, 1, 1], "nested": [99, 1, 1, 1]}[fractions],
+            )
+            np.testing.assert_array_equal(
+                out.tg_mean_robustness_categories.attrs["flag_descriptions"],
+                ["robust", "non-robust"],
+            )
+
+    @pytest.mark.parametrize("symbol", ["rel.", "relative", "*", "/", "pct.", "abs."])
+    def test_robustness_reldelta(self, caplog, symbol):
+        ens = self.make_ensemble(10)
+        for e in ens:
+            e["tg_mean"].attrs["delta_kind"] = symbol
+
+        with caplog.at_level(logging.INFO):
+            xs.ensemble_stats(
+                ens,
+                statistics={
+                    "robustness_fractions": {"test": "threshold", "abs_thresh": 2.5}
+                },
+            )
+        if symbol in ["rel.", "relative", "*", "/"]:
+            assert "Relative delta detected" in caplog.text
+        else:
+            assert "Relative delta detected" not in caplog.text
 
     @pytest.mark.parametrize("common_attrs_only", [True, False])
     def test_common_attrs_only(self, common_attrs_only):
@@ -106,6 +220,33 @@ class TestEnsembleStats:
         )
         assert out.attrs.get("foo", None) == "bar"
         assert ("bar0" not in out.attrs) == common_attrs_only
+
+    def test_errors(self):
+        ens = self.make_ensemble(10)
+        weights = xr.DataArray([0] * 5 + [1] * 5, dims="realization")
+        with pytest.warns(UserWarning, match="Weighting is not supported"):
+            with pytest.raises(
+                TypeError
+            ):  # kkz is not actually supported here, but it's one of the few that will not support weighting
+                xs.ensemble_stats(
+                    ens, statistics={"kkz_reduce_ensemble": None}, weights=weights
+                )
+        for e in ens:
+            e["tg_mean"].attrs["delta_kind"] = "rel."
+        ref = weights
+        with pytest.raises(
+            ValueError, match="is a delta, but 'ref' was still specified."
+        ):
+            xs.ensemble_stats(
+                ens,
+                statistics={
+                    "robustness_fractions": {
+                        "test": "threshold",
+                        "abs_thresh": 2.5,
+                        "ref": ref,
+                    }
+                },
+            )
 
 
 class TestGenerateWeights:
