@@ -50,7 +50,7 @@ def ensemble_stats(  # noqa: C901
         xclim.ensembles statistics to be called. Dictionary in the format {function: arguments}.
         If a function requires 'weights', you can leave it out of this dictionary and
         it will be applied automatically if the 'weights' argument is provided.
-        See the Notes section for more details on robustness statistics, which require additional arguments.
+        See the Notes section for more details on robustness statistics, which are more complex in their usage.
     create_kwargs : dict, optional
         Dictionary of arguments for xclim.ensembles.create_ensemble.
     weights : xr.DataArray, optional
@@ -79,6 +79,13 @@ def ensemble_stats(  # noqa: C901
          In this case, all outputs will be returned.
       2. Having 'robustness_fractions' as a nested dictionary under 'robustness_categories'.
          In this case, only the robustness categories will be returned.
+
+    * A 'ref' DataArray can be passed to 'change_significance' and 'robustness_fractions', which will be used by xclim to compute deltas
+      and perform some significance tests. However, this supposes that both 'datasets' and 'ref' are still timeseries (e.g. annual means),
+      not climatologies where the 'time' dimension represents the period over which the climatology was computed. Thus,
+      using 'ref' is only accepted if 'robustness_fractions' (or 'robustness_categories') is the only statistic being computed.
+    * If you want to use compute a robustness statistic on a climatology, you should first compute the climatologies and deltas yourself,
+      then leave 'ref' as None and pass the deltas as the 'datasets' argument. This will be compatible with other statistics.
 
     See Also
     --------
@@ -150,7 +157,7 @@ def ensemble_stats(  # noqa: C901
             # FIXME: This can be removed once change_significance is removed.
             #  It's here because the 'ref' default was removed for change_significance in xclim 0.47.
             stats_kwargs.setdefault("ref", None)
-            if (stats_kwargs.get("ref") is not None) and len(statistics.keys()) > 1:
+            if (stats_kwargs.get("ref") is not None) and len(statistics_to_compute) > 1:
                 raise ValueError(
                     f"The input requirements for '{stat}' when 'ref' is specified are not compatible with other statistics."
                 )
