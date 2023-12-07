@@ -17,7 +17,6 @@ import fsspec as fs
 import intake_esm
 import pandas as pd
 import tlz
-import xarray
 import xarray as xr
 from intake_esm.cat import ESMCatalogModel
 
@@ -747,7 +746,7 @@ class ProjectCatalog(DataCatalog):
 
     def update_from_ds(
         self,
-        ds: xarray.Dataset,
+        ds: xr.Dataset,
         path: Union[os.PathLike, str],
         info_dict: Optional[dict] = None,
         **info_kwargs,

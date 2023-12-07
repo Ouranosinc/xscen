@@ -2,26 +2,36 @@ include AUTHORS.rst
 include CONTRIBUTING.rst
 include HISTORY.rst
 include LICENSE
+include Makefile
 include README.rst
+include .zenodo.json
 
 recursive-include xscen *.py *.yml
-recursive-include xscen CVs *.json
-recursive-include xscen data fr *.yml *.csv
-recursive-include xscen data fr LC_MESSAGES *.mo *.po
+recursive-include xscen/CVs *.json
+recursive-include xscen/data/fr *.yml *.csv
+recursive-include xscen/data *.nc
+recursive-include xscen/data/fr/LC_MESSAGES *.mo *.po
 recursive-include tests *.py
 recursive-include docs conf.py Makefile make.bat *.png *.rst *.yml
-recursive-include docs notebooks *.ipynb
-recursive-include docs notebooks samples *.csv *.json *.yml
+recursive-include docs/notebooks *.ipynb
+recursive-include docs/notebooks/samples *.csv *.json *.yml
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
-recursive-exclude conda *.yml
-recursive-exclude templates *.csv *.json *.py *.yml
+recursive-exclude .github *.md *.yml
+recursive-exclude conda *.yaml *.yml
 recursive-exclude docs notebooks samples tutorial *.nc
-include xscen/data/IPCC_annual_global_tas.nc
+recursive-exclude templates *.csv *.json *.py *.rst *.yml
 
-exclude .*
-exclude Makefile
+exclude .coveralls.yml
+exclude .cruft.json
+exclude .editorconfig
+exclude .flake8
+exclude .gitignore
+exclude .pre-commit-config.yaml
+exclude .readthedocs.yml
+exclude .secrets.baseline
+exclude .yamllint.yaml
 exclude environment.yml
 exclude environment-dev.yml
 exclude tox.ini

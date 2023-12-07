@@ -53,16 +53,19 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
+lint/flake8: ## check style with flake8
+	ruff xscen tests
+	flake8 --config=.flake8 xscen tests
+
 lint/black: ## check style with black
 	black --check xscen tests
-
-lint/flake8: ## check style with flake8
-	flake8 --config=setup.cfg xscen tests
+	blackdoc --check xscen docs
+	isort --check xscen tests
 
 lint: lint/black lint/flake8 ## check style
 
 test: ## run tests quickly with the default Python
-	pytest
+	python -m pytest
 
 test-all: ## run tests on every Python version with tox
 	tox
@@ -88,7 +91,10 @@ dist: clean ## builds source and wheel package
 	ls -l dist
 
 install: clean ## install the package to the active Python's site-packages
-	python setup.py install
+	python -m pip install .
+
+dev: clean ## install the package in editable mode with all development dependencies
+	python -m pip install --editable ".[dev]"
 
 findfrench:  ## Extract phrases and update the French translation catalog (this doesn't translate)
 	python setup.py extract_messages

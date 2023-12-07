@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 import xarray as xr
-import xclim as xc
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs

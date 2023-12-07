@@ -220,10 +220,10 @@ def adjust(
       The project to assign to the output.
     moving_yearly_window: dict, optional
       Arguments to pass to `xclim.sdba.construct_moving_yearly_window`.
-      If not None, `construct_moving_yearly_window` will be called on dsim (and scen in
-      xclim_adjust_args if it exists) before adjusting and `unpack_moving_yearly_window`
-      will be called on the output after the adjustment.
-      `construct_moving_yearly_window` stacks windows of the dataArray in a new 'movingwin' dimension and `unpack_moving_yearly_window` unpack it to a normal time series.
+      If not None, `construct_moving_yearly_window` will be called on dsim (and scen in xclim_adjust_args if it exists)
+      before adjusting and `unpack_moving_yearly_window` will be called on the output after the adjustment.
+      `construct_moving_yearly_window` stacks windows of the dataArray in a new 'movingwin' dimension.
+      `unpack_moving_yearly_window` unpacks it to a normal time series.
     align_on: str, optional
       `align_on` argument for the fonction `xclim.core.calendar.convert_calendar`.
 
