@@ -26,7 +26,7 @@ from .config import parse_config
 from .extract import subset_warming_level
 from .indicators import compute_indicators
 from .spatial import subset
-from .utils import standardize_periods, unstack_dates, update_attr
+from .utils import standardize_periods, update_attr
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ def climatological_mean(
         periods=periods,
         rename_variables=False,
         to_level=to_level,
-        periods_as_dim=False,
+        horizons_as_dim=False,
     )
 
 
@@ -113,7 +113,7 @@ def climatological_op(  # noqa: C901
     periods: Optional[Union[list[str], list[list[str]]]] = None,
     rename_variables: bool = True,
     to_level: str = "climatology",
-    periods_as_dim: bool = False,
+    horizons_as_dim: bool = False,
 ) -> xr.Dataset:
     """Perform an operation 'op' over time, for given time periods, respecting the temporal resolution of ds.
 
@@ -158,10 +158,9 @@ def climatological_op(  # noqa: C901
     to_level : str, optional
         The processing level to assign to the output.
         If None, the processing level of the inputs is preserved.
-    periods_as_dim : bool
-        If True, the output will have 'periods' and the frequency as 'month', 'season' or 'year' as
-        dimensions and coordinates. The 'horizon' dimension will be dropped and 'time' will be unstacked
-        to periods and frequency.
+    horizons_as_dim : bool
+        If True, the output will have 'horizon' and the frequency as 'month', 'season' or 'year' as
+        dimensions and coordinates. The 'time' coordinate will be unstacked to horizon and frequency dimensions.
 
     Returns
     -------
@@ -448,7 +447,7 @@ def climatological_op(  # noqa: C901
     if to_level is not None:
         ds_rolling.attrs["cat:processing_level"] = to_level
 
-    if periods_as_dim:
+    if horizons_as_dim:
         # restructure output to have periods as a dimension instead of stacked horizons per year/season/month
         new_coords = {
             1: {"year": ["YS"]},
@@ -461,7 +460,7 @@ def climatological_op(  # noqa: C901
             mindex_coords = xr.Coordinates.from_pandas_multiindex(
                 pd.MultiIndex.from_arrays(
                     [ds_rolling.horizon.values, ds_rolling.time.dt.month.values],
-                    names=["period", "months"],
+                    names=["horizon", "my_freq"],
                 ),
                 dim="time",
             )
@@ -471,16 +470,15 @@ def climatological_op(  # noqa: C901
                 )
                 .assign_coords(mindex_coords)
                 .unstack("time")
-                .rename({"months": next(iter(new_coords[new_dim_size]))})
+                .rename({"my_freq": next(iter(new_coords[new_dim_size]))})
                 .assign_coords(new_coords[new_dim_size])
-                .drop_vars("horizon")
                 .set_coords("tmp_time")
                 .rename({"tmp_time": "time"})
             )
         except AttributeError:  # Fixme when xscen is pinned to xarray >= 2023.11.0
             ind = pd.MultiIndex.from_arrays(
                 [ds_rolling.horizon.values, ds_rolling.time.dt.month.values],
-                names=["period", "months"],
+                names=["horizon", "my_freq"],
             )
             out = (
                 ds_rolling.assign(
@@ -488,12 +486,13 @@ def climatological_op(  # noqa: C901
                 )
                 .assign(time=ind)
                 .unstack("time")
-                .rename({"months": next(iter(new_coords[new_dim_size]))})
+                .rename({"my_freq": next(iter(new_coords[new_dim_size]))})
                 .assign_coords(new_coords[new_dim_size])
-                .drop_vars("horizon")
                 .set_coords("tmp_time")
                 .rename({"tmp_time": "time"})
             )
+        if "year" in out.dims:
+            out = out.squeeze(dim="year", drop=True)
         return out
     else:
         return ds_rolling
@@ -1131,37 +1130,10 @@ def produce_horizon(  # noqa: C901
                         ds_ind,
                         op="mean",  # ToDo: make op an argument of produce_horizon
                         rename_variables=False,
+                        horizons_as_dim=True,
                     )
                 else:
-                    ds_mean = ds_ind
-
-                if "AS" in freq:
-                    ds_mean = ds_mean.swap_dims({"time": "horizon"}).drop_vars("time")
-                elif freq != "fx":  # if not annual or fixed, need to stack dates
-                    # name new_dim
-                    if "QS" in freq:
-                        new_dim = "season"
-                    elif "MS" in freq:
-                        new_dim = "month"
-                    else:
-                        raise ValueError(
-                            f"Frequency {freq} is not supported or recognized."
-                            "Please use annual (AS), seasonal (QS), monthly (MS), or fixed (fx) frequency."
-                        )
-                    ds_mean = unstack_dates(
-                        ds_mean,
-                        new_dim=new_dim,
-                    )
-                    horizon = ds_mean.horizon.values[0, 0]
-                    ds_mean = (
-                        ds_mean.drop_vars("horizon")
-                        .assign_coords(horizon=("time", [horizon]))
-                        .swap_dims({"time": "horizon"})
-                        .drop_vars("time")
-                    )
-
-                else:
-                    ds_mean = ds_mean.expand_dims(
+                    ds_mean = ds_ind.expand_dims(
                         dim={
                             "horizon": [
                                 f"{ds.time.dt.year[0].item()}-{ds.time.dt.year[-1].item()}"

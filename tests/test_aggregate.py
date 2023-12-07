@@ -288,18 +288,18 @@ class TestProduceHorizon:
         np.testing.assert_array_equal(
             out["month"],
             [
-                "JAN",
-                "FEB",
-                "MAR",
-                "APR",
-                "MAY",
-                "JUN",
-                "JUL",
-                "AUG",
-                "SEP",
-                "OCT",
-                "NOV",
-                "DEC",
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "May",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Oct",
+                "Nov",
+                "Dec",
             ],
         )
         np.testing.assert_array_almost_equal(
@@ -655,13 +655,13 @@ class TestClimatologicalOp:
             as_dataset=True,
         )
         out = xs.climatological_op(
-            ds, op="mean", window=10, stride=5, periods_as_dim=True
+            ds, op="mean", window=10, stride=5, horizons_as_dim=True
         )
         assert (out.tas_clim_mean.values == np.tile(np.arange(1, 13), (5, 1))).all()
-        assert out.dims == {"period": 5, "month": 12}
-        assert out.time.dims == ("period", "month")
+        assert out.dims == {"horizon": 5, "month": 12}
+        assert out.time.dims == ("horizon", "month")
         assert (
-            out.period.values
+            out.horizon.values
             == ["2001-2010", "2006-2015", "2011-2020", "2016-2025", "2021-2030"]
         ).all()
         assert (
