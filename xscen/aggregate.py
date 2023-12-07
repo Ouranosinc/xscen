@@ -98,7 +98,7 @@ def climatological_mean(
         periods=periods,
         rename_variables=False,
         to_level=to_level,
-        horizons_as_dim=False,
+        horizon_as_dim=False,
     )
 
 
@@ -113,7 +113,7 @@ def climatological_op(  # noqa: C901
     periods: Optional[Union[list[str], list[list[str]]]] = None,
     rename_variables: bool = True,
     to_level: str = "climatology",
-    horizons_as_dim: bool = False,
+    horizon_as_dim: bool = False,
 ) -> xr.Dataset:
     """Perform an operation 'op' over time, for given time periods, respecting the temporal resolution of ds.
 
@@ -158,7 +158,7 @@ def climatological_op(  # noqa: C901
     to_level : str, optional
         The processing level to assign to the output.
         If None, the processing level of the inputs is preserved.
-    horizons_as_dim : bool
+    horizon_as_dim : bool
         If True, the output will have 'horizon' and the frequency as 'month', 'season' or 'year' as
         dimensions and coordinates. The 'time' coordinate will be unstacked to horizon and frequency dimensions.
 
@@ -447,7 +447,7 @@ def climatological_op(  # noqa: C901
     if to_level is not None:
         ds_rolling.attrs["cat:processing_level"] = to_level
 
-    if horizons_as_dim:
+    if horizon_as_dim:
         # restructure output to have periods as a dimension instead of stacked horizons per year/season/month
         new_coords = {
             1: {"year": ["YS"]},
@@ -1130,7 +1130,7 @@ def produce_horizon(  # noqa: C901
                         ds_ind,
                         op="mean",  # ToDo: make op an argument of produce_horizon
                         rename_variables=False,
-                        horizons_as_dim=True,
+                        horizon_as_dim=True,
                     )
                 else:
                     ds_mean = ds_ind.expand_dims(
