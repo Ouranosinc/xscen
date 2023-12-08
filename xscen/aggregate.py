@@ -1131,7 +1131,7 @@ def produce_horizon(  # noqa: C901
                         op="mean",  # ToDo: make op an argument of produce_horizon
                         rename_variables=False,
                         horizon_as_dim=True,
-                    )
+                    ).drop_vars("time")
                 else:
                     ds_mean = ds_ind.expand_dims(
                         dim={
@@ -1196,7 +1196,7 @@ def produce_horizon(  # noqa: C901
                     )
             out.attrs["cat:processing_level"] = to_level
 
-        return out.drop_vars("time")
+        return out
 
     else:
         raise ValueError("No horizon could be computed. Check your inputs.")
