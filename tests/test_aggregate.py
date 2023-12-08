@@ -646,7 +646,7 @@ class TestClimatologicalOp:
         out = xs.climatological_op(ds.convert_calendar(cal, align_on="date"), op="mean")
         assert out.time.dt.calendar == cal
 
-    def test_periods_as_dim(self):
+    def test_horizon_as_dim(self):
         ds = timeseries(
             np.tile(np.arange(1, 13), 30),
             variable="tas",
@@ -655,7 +655,7 @@ class TestClimatologicalOp:
             as_dataset=True,
         )
         out = xs.climatological_op(
-            ds, op="mean", window=10, stride=5, horizons_as_dim=True
+            ds, op="mean", window=10, stride=5, horizon_as_dim=True
         )
         assert (out.tas_clim_mean.values == np.tile(np.arange(1, 13), (5, 1))).all()
         assert out.dims == {"horizon": 5, "month": 12}
