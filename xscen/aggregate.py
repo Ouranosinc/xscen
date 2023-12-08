@@ -1196,7 +1196,7 @@ def produce_horizon(  # noqa: C901
                     )
             out.attrs["cat:processing_level"] = to_level
 
-        return out
+        return out.drop_vars("time")
 
     else:
         raise ValueError("No horizon could be computed. Check your inputs.")
