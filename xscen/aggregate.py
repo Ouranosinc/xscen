@@ -1137,7 +1137,7 @@ def produce_horizon(  # noqa: C901
                         op="mean",  # ToDo: make op an argument of produce_horizon
                         rename_variables=False,
                         horizons_as_dim=True,
-                    )
+                    ).drop_vars("time")
                 else:
                     ds_mean = ds_ind.expand_dims(
                         dim={
