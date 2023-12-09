@@ -1,6 +1,5 @@
 """Functions to aggregate data over time and space."""
 
-import calendar
 import datetime
 import logging
 import os
@@ -452,42 +451,16 @@ def climatological_op(  # noqa: C901
         ds_rolling.attrs["cat:processing_level"] = to_level
 
     if horizons_as_dim:
-        # restructure output to have periods as a dimension instead of stacked horizons per year/season/month
-        new_coords = {
-            1: {"year": ["YS"]},
-            4: {"season": ["MAM", "JJA", "SON", "DJF"]},
-            12: {"month": calendar.month_abbr[1:]},
-        }
-        new_dim_size = len(np.unique(ds_rolling.time.dt.month))
+        # restructure output to have horizons as a dimension instead of stacked horizons per year/season/month
+        new_coords = {1: "year", 4: "season", 12: "month"}
+        new_coord_len = len(np.unique(ds_rolling.time.dt.month))
 
-        if new_dim_size != 1:
-            all_horizons = [
-                unstack_dates(
-                    ds_rolling.sel(time=ds_rolling.horizon == horizon).assign(
-                        tmp_time=xr.DataArray(
-                            ds_rolling.time.sel(
-                                time=ds_rolling.horizon == horizon
-                            ).values.copy(),
-                            dims=["time"],
-                        )
-                    ),
-                    new_dim=next(iter(new_coords[new_dim_size])),
-                )
-                .drop_vars("horizon")
-                .assign_coords(horizon=("time", [horizon]))
-                .swap_dims({"time": "horizon"})
-                .drop_vars("time")
-                .set_coords("tmp_time")
-                .rename({"tmp_time": "time"})
-                for horizon in np.unique(ds_rolling.horizon.values)
-            ]
-
-        else:
+        if new_coord_len == 1:
             all_horizons = [
                 ds_rolling.sel(time=ds_rolling.horizon == horizon)
                 .swap_dims({"time": "horizon"})
                 .assign(
-                    tmp_time=xr.DataArray(
+                    time_2D=xr.DataArray(
                         ds_rolling.time.sel(
                             time=ds_rolling.horizon == horizon
                         ).values.copy(),
@@ -495,53 +468,35 @@ def climatological_op(  # noqa: C901
                     )
                 )
                 .drop_vars("time")
-                .set_coords("tmp_time")
-                .rename({"tmp_time": "time"})
+                .set_coords("time_2D")
+                .rename({"time_2D": "time"})
+                .squeeze(dim="time")
                 for horizon in np.unique(ds_rolling.horizon.values)
             ]
-        ready = xr.concat(all_horizons, dim="horizon")
+        else:
+            all_horizons = [
+                unstack_dates(
+                    ds_rolling.sel(time=ds_rolling.horizon == horizon).assign(
+                        time_2D=xr.DataArray(
+                            ds_rolling.time.sel(
+                                time=ds_rolling.horizon == horizon
+                            ).values.copy(),
+                            dims=["time"],
+                        )
+                    ),
+                    new_dim=new_coords[new_coord_len],
+                )
+                .drop_vars("horizon")
+                .assign_coords(horizon=("time", [horizon]))
+                .swap_dims({"time": "horizon"})
+                .drop_vars("time")
+                .set_coords("time_2D")
+                .rename({"time_2D": "time"})
+                for horizon in np.unique(ds_rolling.horizon.values)
+            ]
 
-        try:
-            mindex_coords = xr.Coordinates.from_pandas_multiindex(
-                pd.MultiIndex.from_arrays(
-                    [ds_rolling.horizon.values, ds_rolling.time.dt.month.values],
-                    names=["horizon", "my_freq"],
-                ),
-                dim="time",
-            )
-            out = (
-                ds_rolling.assign(
-                    tmp_time=xr.DataArray(ds_rolling.time.values.copy(), dims=["time"])
-                )
-                .assign_coords(mindex_coords)
-                .unstack("time")
-                .rename({"my_freq": next(iter(new_coords[new_dim_size]))})
-                .assign_coords(new_coords[new_dim_size])
-                .set_coords("tmp_time")
-                .rename({"tmp_time": "time"})
-            )
-        except (
-            AttributeError,
-            ValueError,
-        ):  # Fixme when xscen is pinned to xarray >= 2023.11.0
-            ind = pd.MultiIndex.from_arrays(
-                [ds_rolling.horizon.values, ds_rolling.time.dt.month.values],
-                names=["horizon", "my_freq"],
-            )
-            out = (
-                ds_rolling.assign(
-                    tmp_time=xr.DataArray(ds_rolling.time.values.copy(), dims=["time"])
-                )
-                .assign(time=ind)
-                .unstack("time")
-                .rename({"my_freq": next(iter(new_coords[new_dim_size]))})
-                .assign_coords(new_coords[new_dim_size])
-                .set_coords("tmp_time")
-                .rename({"tmp_time": "time"})
-            )
-        if "year" in out.dims:
-            out = out.squeeze(dim="year", drop=True)
-        return ready
+        return xr.concat(all_horizons, dim="horizon")
+
     else:
         return ds_rolling
 
