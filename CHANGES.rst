@@ -22,6 +22,8 @@ New features and enhancements
 * Better ``xs.extract.resample`` : support for weighted resampling operations when starting with frequencies coarser than daily and missing timesteps/values handling. (:issue:`80`, :issue:`93`, :pull:`265`).
 * New argument ``attribute_weights`` to ``generate_weights`` to allow for custom weights. (:pull:`252`).
 * ``xs.io.round_bits`` to round floating point variable up to a number of bits, allowing for a better compression. This can be combined with the saving step through argument ``"bitround"`` of ``save_to_netcdf`` and ``save_to_zarr``. (:pull:`266`).
+* Added the ability to directly provide an ensemble dataset to ``xs.ensemble_stats``. (:pull:`299`).
+* Added support in ``xs.ensemble_stats`` for the new robustness-related functions available in `xclim`. (:pull:`299`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
