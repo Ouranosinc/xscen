@@ -26,7 +26,7 @@ from .config import parse_config
 from .extract import subset_warming_level
 from .indicators import compute_indicators
 from .spatial import subset
-from .utils import standardize_periods, update_attr
+from .utils import standardize_periods, unstack_dates, update_attr
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ def climatological_mean(
         periods=periods,
         rename_variables=False,
         to_level=to_level,
-        horizon_as_dim=False,
+        horizons_as_dim=False,
     )
 
 
@@ -113,7 +113,7 @@ def climatological_op(  # noqa: C901
     periods: Optional[Union[list[str], list[list[str]]]] = None,
     rename_variables: bool = True,
     to_level: str = "climatology",
-    horizon_as_dim: bool = False,
+    horizons_as_dim: bool = False,
 ) -> xr.Dataset:
     """Perform an operation 'op' over time, for given time periods, respecting the temporal resolution of ds.
 
@@ -158,9 +158,10 @@ def climatological_op(  # noqa: C901
     to_level : str, optional
         The processing level to assign to the output.
         If None, the processing level of the inputs is preserved.
-    horizon_as_dim : bool
+    horizons_as_dim : bool
         If True, the output will have 'horizon' and the frequency as 'month', 'season' or 'year' as
         dimensions and coordinates. The 'time' coordinate will be unstacked to horizon and frequency dimensions.
+        Horizons originate from periods and/or windows and their stride in the rolling operation.
 
     Returns
     -------
@@ -193,7 +194,10 @@ def climatological_op(  # noqa: C901
             dim="time",
         )
         ds_unstack = ds.assign_coords(coords=mindex_coords).unstack("time")
-    except AttributeError:  # Fixme when xscen is pinned to xarray >= 2023.11.0
+    except (
+        AttributeError,
+        ValueError,
+    ):  # Fixme when xscen is pinned to xarray >= 2023.11.0
         ind = pd.MultiIndex.from_arrays(
             [ds.time.dt.year.values, ds.time.dt.month.values, ds.time.dt.day.values],
             names=["year", "month", "day"],
@@ -447,7 +451,7 @@ def climatological_op(  # noqa: C901
     if to_level is not None:
         ds_rolling.attrs["cat:processing_level"] = to_level
 
-    if horizon_as_dim:
+    if horizons_as_dim:
         # restructure output to have periods as a dimension instead of stacked horizons per year/season/month
         new_coords = {
             1: {"year": ["YS"]},
@@ -455,6 +459,47 @@ def climatological_op(  # noqa: C901
             12: {"month": calendar.month_abbr[1:]},
         }
         new_dim_size = len(np.unique(ds_rolling.time.dt.month))
+
+        if new_dim_size != 1:
+            all_horizons = [
+                unstack_dates(
+                    ds_rolling.sel(time=ds_rolling.horizon == horizon).assign(
+                        tmp_time=xr.DataArray(
+                            ds_rolling.time.sel(
+                                time=ds_rolling.horizon == horizon
+                            ).values.copy(),
+                            dims=["time"],
+                        )
+                    ),
+                    new_dim=next(iter(new_coords[new_dim_size])),
+                )
+                .drop_vars("horizon")
+                .assign_coords(horizon=("time", [horizon]))
+                .swap_dims({"time": "horizon"})
+                .drop_vars("time")
+                .set_coords("tmp_time")
+                .rename({"tmp_time": "time"})
+                for horizon in np.unique(ds_rolling.horizon.values)
+            ]
+
+        else:
+            all_horizons = [
+                ds_rolling.sel(time=ds_rolling.horizon == horizon)
+                .swap_dims({"time": "horizon"})
+                .assign(
+                    tmp_time=xr.DataArray(
+                        ds_rolling.time.sel(
+                            time=ds_rolling.horizon == horizon
+                        ).values.copy(),
+                        dims=["time"],
+                    )
+                )
+                .drop_vars("time")
+                .set_coords("tmp_time")
+                .rename({"tmp_time": "time"})
+                for horizon in np.unique(ds_rolling.horizon.values)
+            ]
+        ready = xr.concat(all_horizons, dim="horizon")
 
         try:
             mindex_coords = xr.Coordinates.from_pandas_multiindex(
@@ -475,7 +520,10 @@ def climatological_op(  # noqa: C901
                 .set_coords("tmp_time")
                 .rename({"tmp_time": "time"})
             )
-        except AttributeError:  # Fixme when xscen is pinned to xarray >= 2023.11.0
+        except (
+            AttributeError,
+            ValueError,
+        ):  # Fixme when xscen is pinned to xarray >= 2023.11.0
             ind = pd.MultiIndex.from_arrays(
                 [ds_rolling.horizon.values, ds_rolling.time.dt.month.values],
                 names=["horizon", "my_freq"],
@@ -493,7 +541,7 @@ def climatological_op(  # noqa: C901
             )
         if "year" in out.dims:
             out = out.squeeze(dim="year", drop=True)
-        return out
+        return ready
     else:
         return ds_rolling
 
@@ -584,7 +632,10 @@ def compute_deltas(  # noqa: C901
                 dim="time",
             )
             other_hz = ds.assign_coords(coords=mindex_coords_2).unstack("time")
-        except AttributeError:  # Fixme when xscen is pinned to xarray >= 2023.11.0
+        except (
+            AttributeError,
+            ValueError,
+        ):  # Fixme when xscen is pinned to xarray >= 2023.11.0
             ind = pd.MultiIndex.from_arrays(
                 [ref.time.dt.month.values, ref.time.dt.day.values],
                 names=["month", "day"],
@@ -1130,8 +1181,8 @@ def produce_horizon(  # noqa: C901
                         ds_ind,
                         op="mean",  # ToDo: make op an argument of produce_horizon
                         rename_variables=False,
-                        horizon_as_dim=True,
-                    ).drop_vars("time")
+                        horizons_as_dim=True,
+                    )
                 else:
                     ds_mean = ds_ind.expand_dims(
                         dim={

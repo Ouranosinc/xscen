@@ -288,18 +288,18 @@ class TestProduceHorizon:
         np.testing.assert_array_equal(
             out["month"],
             [
-                "Jan",
-                "Feb",
-                "Mar",
-                "Apr",
-                "May",
-                "Jun",
-                "Jul",
-                "Aug",
-                "Sep",
-                "Oct",
-                "Nov",
-                "Dec",
+                "JAN",
+                "FEB",
+                "MAR",
+                "APR",
+                "MAY",
+                "JUN",
+                "JUL",
+                "AUG",
+                "SEP",
+                "OCT",
+                "NOV",
+                "DEC",
             ],
         )
         np.testing.assert_array_almost_equal(
@@ -646,38 +646,50 @@ class TestClimatologicalOp:
         out = xs.climatological_op(ds.convert_calendar(cal, align_on="date"), op="mean")
         assert out.time.dt.calendar == cal
 
-    def test_horizon_as_dim(self):
+    @pytest.mark.parametrize("xrfreq", ["MS", "QS-DEC", "AS-JAN"])
+    def test_horizons_as_dim(self, xrfreq):
+        o = 12 if xrfreq == "MS" else 4 if xrfreq == "QS-DEC" else 1
+        freq = {
+            "MS": {"month": o},
+            "QS-DEC": {"season": o},
+            "AS-JAN": {"time": 1},
+        }
         ds = timeseries(
-            np.tile(np.arange(1, 13), 30),
+            np.tile(np.arange(1, o + 1), 30),
             variable="tas",
             start="2001-01-01",
-            freq="MS",
+            freq=xrfreq,
             as_dataset=True,
         )
         out = xs.climatological_op(
-            ds, op="mean", window=10, stride=5, horizon_as_dim=True
+            ds, op="mean", window=10, stride=5, horizons_as_dim=True
         )
-        assert (out.tas_clim_mean.values == np.tile(np.arange(1, 13), (5, 1))).all()
-        assert out.dims == {"horizon": 5, "month": 12}
-        assert out.time.dims == ("horizon", "month")
+        assert (out.tas_clim_mean.values == np.tile(np.arange(1, o + 1), (5, 1))).all()
+        assert out.dims == {"horizon": 5} | freq[xrfreq]
+        assert out.time.dims == ("horizon", next(iter(freq[xrfreq])))
         assert (
             out.horizon.values
             == ["2001-2010", "2006-2015", "2011-2020", "2016-2025", "2021-2030"]
         ).all()
+        freq_coords = {
+            "month": [
+                "JAN",
+                "FEB",
+                "MAR",
+                "APR",
+                "MAY",
+                "JUN",
+                "JUL",
+                "AUG",
+                "SEP",
+                "OCT",
+                "NOV",
+                "DEC",
+            ],
+            "season": ["MAM", "JJA", "SON", "DJF"],
+            "time": np.array([[t] for t in ds.time.isel(time=range(0, 25, 5)).values]),
+        }
         assert (
-            out.month.values
-            == [
-                "Jan",
-                "Feb",
-                "Mar",
-                "Apr",
-                "May",
-                "Jun",
-                "Jul",
-                "Aug",
-                "Sep",
-                "Oct",
-                "Nov",
-                "Dec",
-            ]
+            out[next(iter(freq.get(xrfreq)))].values
+            == freq_coords[next(iter(freq.get(xrfreq)))]
         ).all()
