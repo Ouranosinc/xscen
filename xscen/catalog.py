@@ -397,6 +397,7 @@ class DataCatalog(intake_esm.esm_datastore):
         self,
         concat_on: Optional[Union[list[str], str]] = None,
         create_ensemble_on: Optional[Union[list[str], str]] = None,
+        ensemble_name: Optional[Union[list[str]]] = None,
         calendar: Optional[str] = "standard",
         **kwargs,
     ) -> xr.Dataset:
@@ -421,6 +422,10 @@ class DataCatalog(intake_esm.esm_datastore):
           The given column values will be merged into a new id-like "realization" column, which will be concatenated over.
           The given columns are removed from the dataset id, to remove them from the groupby_attrs logic.
           Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
+        ensemble_name : list of strings, optional
+          If `create_ensemble_on` is given, this can be a subset of those column names to use when constructing the realization coordinate.
+          If None, this will be the same as `create_ensemble_on`.
+          The resulting coordinate must be unique.
         calendar : str, optional
           If `create_ensemble_on` is given, all datasets are converted to this calendar before concatenation.
           Ignored otherwise (default). If None, no conversion is done.
@@ -447,6 +452,12 @@ class DataCatalog(intake_esm.esm_datastore):
             concat_on = [concat_on]
         if isinstance(create_ensemble_on, str):
             create_ensemble_on = [create_ensemble_on]
+        if ensemble_name is None:
+            ensemble_name = create_ensemble_on
+        elif not set(ensemble_name).issubset(create_ensemble_on):
+            raise ValueError(
+                "`ensemble_name` must be a subset of `create_ensemble_on`."
+            )
         rm_from_id = (concat_on or []) + (create_ensemble_on or []) + ["realization"]
 
         aggs = {
@@ -477,7 +488,7 @@ class DataCatalog(intake_esm.esm_datastore):
                 warnings.warn(
                     "Using `create_ensemble_on` will override the given `preprocess` function."
                 )
-            cat.df["realization"] = generate_id(cat.df, create_ensemble_on)
+            cat.df["realization"] = generate_id(cat.df, ensemble_name)
             cat.esmcat.aggregation_control.aggregations.append(
                 intake_esm.cat.Aggregation(
                     type=intake_esm.cat.AggregationType.join_new,
