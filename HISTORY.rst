@@ -20,6 +20,7 @@ New features and enhancements
 * Better ``xs.extract.resample`` : support for weighted resampling operations when starting with frequencies coarser than daily and missing timesteps/values handling. (:issue:`80`, :issue:`93`, :pull:`265`).
 * New argument ``attribute_weights`` to ``generate_weights`` to allow for custom weights. (:pull:`252`).
 * ``xs.io.round_bits`` to round floating point variable up to a number of bits, allowing for a better compression. This can be combined with the saving step through argument ``"bitround"`` of ``save_to_netcdf`` and ``save_to_zarr``. (:pull:`266`).
+* New function ``xs.ensembles.get_partition_input`` (:pull:`289`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -33,6 +34,7 @@ Bug fixes
 * `search_data_catalogs` now eliminates anything that matches any entry in `exclusions`. (:issue:`275`, :pull:`280`).
 * Fixed a bug in ``xs.scripting.save_and_update`` where ``build_path_kwargs`` was ignored when trying to guess the file format. (:pull:`282`).
 * Add a warning to ``xs.extract._dispatch_historical_to_future``. (:issue:`286`, :pull:`287`).
+* Modify use_cftime for the calendar conversion in ``to_dataset``. (:issue:`303`, :pull:`289`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^

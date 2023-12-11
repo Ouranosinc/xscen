@@ -569,10 +569,10 @@ def get_partition_input(
     cat: DataCatalog,
     search_kw: dict = None,
     partition_dim: list[str] = ["source", "experiment", "bias_adjust_project"],
-    # TODO: figure out if input should be xscen vocab or partition vocab? (or change xclim to xscen vocab)
     to_dataset_kw: dict = None,
     subset_kw: dict = None,
     regrid_kw: dict = None,
+    rename_dict: dict = None,
 ):
     """Get the input for the xclim partition functions.
 
@@ -597,6 +597,9 @@ def get_partition_input(
         Arguments to pass to `xs.spatial.subset()`.
     regrid_kw:
         Arguments to pass to `xs.regrid_dataset()`.
+    rename_dict:
+        Dictionary to rename the dimensions from xscen names to xclim names.
+        The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
 
     Returns
     -------
@@ -617,7 +620,7 @@ def get_partition_input(
     # special case to handle source (create one dimension with institution_source_member)
     ensemble_on_list = None
     if "source" in partition_dim:
-        partition_dim.pop("source")
+        partition_dim.remove("source")
         ensemble_on_list = ["institution", "source", "member"]
 
     # subset catalog to only the data we need
@@ -655,7 +658,10 @@ def get_partition_input(
     if "realization" in ens:
         ens = ens.rename({"realization": "source"})
 
-    # TODO: maybe translate to partition vocab. (or change xclim to xscen vocab)
-    #  if translate add a new kwarg to pass the translation dict
+    rename_dict = rename_dict or {}
+    rename_dict.setdefault("source", "model")
+    rename_dict.setdefault("experiment", "scenario")
+    rename_dict.setdefault("bias_adjust_project", "downscaling")
+    ens = ens.rename(rename_dict)
 
     return ens
