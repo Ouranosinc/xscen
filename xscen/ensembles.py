@@ -638,13 +638,20 @@ def get_partition_input(
         )
 
     # create a dataset for each bias_adjust_project, modify grid and concat them
+
+    dim_with_different_grid = (
+        "bias_adjust_project" if "bias_adjust_project" in partition_dim else "source"
+    )
     list_ds = []
-    for bias_adjust_project in subcat.df.bias_adjust_project.unique():
-        ds = subcat.search(bias_adjust_project=bias_adjust_project).to_dataset(
+    for d in subcat.df[dim_with_different_grid].unique():
+        ds = subcat.search(**{dim_with_different_grid: d}).to_dataset(
             concat_on=partition_dim,
             create_ensemble_on=ensemble_on_list,
             **to_dataset_kw,
         )
+
+        if "realization" in ds:
+            ds = ds.rename({"realization": "source"})
 
         if subset_kw:
             ds = subset(ds, **subset_kw)
@@ -653,15 +660,13 @@ def get_partition_input(
             ds = regrid_dataset(ds, **regrid_kw)
         list_ds.append(ds)
 
-    ens = xr.concat(list_ds, dim="bias_adjust_project")
-
-    if "realization" in ens:
-        ens = ens.rename({"realization": "source"})
+    ens = xr.concat(list_ds, dim=dim_with_different_grid)
 
     rename_dict = rename_dict or {}
     rename_dict.setdefault("source", "model")
     rename_dict.setdefault("experiment", "scenario")
     rename_dict.setdefault("bias_adjust_project", "downscaling")
+    rename_dict = {k: v for k, v in rename_dict.items() if k in ens.dims}
     ens = ens.rename(rename_dict)
 
     return ens
