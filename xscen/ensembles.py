@@ -579,7 +579,7 @@ def get_partition_input(
     Search for the input data in the catalog and create a single dataset with
     `partition_dim` dimensions (and time) to pass to one of the xclim partition functions
     (https://xclim.readthedocs.io/en/stable/api.html#uncertainty-partitioning).
-    If the inputs have different grids (likely for different bias_adjust_project),
+    If the inputs have different grids,
     they have to be subsetted and regridded to a common grid/point.
 
 
@@ -591,6 +591,8 @@ def get_partition_input(
         Arguments to pass to `cat.search()`.
     partition_dim: list[str]
         Components of the partition. They will become the dimension of the output.
+        The default is ['source', 'experiment', 'bias_adjust_project'].
+        For source, the dimension will actually be institution_source_member.
     to_dataset_kw: dict
         Arguments to pass to `to_dataset()`.
     subset_kw: dict
@@ -613,7 +615,6 @@ def get_partition_input(
     """
     # initialize dict
     search_kw = search_kw or {}
-    # TODO: figure out if I want to put 'xarray_open_kwargs': {'decode_timedelta': False} as default
     to_dataset_kw = to_dataset_kw or {}
     subset_kw = subset_kw or {}
 
