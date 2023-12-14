@@ -1063,7 +1063,7 @@ class TestGenerateWeights:
 
 
 class TestEnsemblePartition:
-    def test_get_partition_input(samplecat, tmp_path):
+    def test_get_partition_input(self, samplecat, tmp_path):
         # test subset
         ds = xs.ensembles.get_partition_input(
             cat=samplecat,
