@@ -629,7 +629,8 @@ def get_partition_input(
 
     # We assume different bias_adjust_projects will have different grids (and domain).
     if (
-        len(subcat.df.bias_adjust_project.unique()) > 1
+        "bias_adjust_project" in subcat.df
+        and len(subcat.df.bias_adjust_project.unique()) > 1
         and subset_kw is None
         and regrid_kw is None
     ):

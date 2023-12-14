@@ -3,6 +3,7 @@ from copy import deepcopy
 import numpy as np
 import pytest
 import xarray as xr
+import xesmf
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
@@ -898,3 +899,37 @@ class TestGenerateWeights:
                     self.ens_rcm,
                     attribute_weights={"experiment": {"rcp45": 2, "rcp85": 1}},
                 )
+
+
+class TestEnsemblePartition:
+    def test_get_partition_input(samplecat, tmp_path):
+        ds = xs.ensembles.get_partition_input(
+            cat=samplecat,
+            partition_dim=["source", "experiment"],
+            search_kw=dict(variable="tas"),
+            subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
+            rename_dict={"source": "new-name"},
+        )
+
+        assert ds.dims == {"time": 730, "scenario": 4, "new-name": 2}
+        assert ds.lat.values == 45.0
+        assert ds.lon.values == -74
+        assert [i for i in ds.data_vars] == ["tas"]
+
+        ds_grid = xesmf.util.cf_grid_2d(-75, -74, 0.25, 45, 48, 0.55)
+
+        ds = xs.ensembles.get_partition_input(
+            cat=samplecat,
+            search_kw=dict(variable="tas", member="r1i1p1f1"),
+            regrid_kw=dict(ds_grid=ds_grid, weights_location=tmp_path),
+        )
+
+        assert ds.dims == {
+            "scenario": 4,
+            "downscaling": 1,
+            "model": 1,
+            "time": 730,
+            "lat": 5,
+            "lon": 4,
+        }
+        assert [i for i in ds.data_vars] == ["tas"]
