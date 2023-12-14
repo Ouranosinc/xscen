@@ -1064,6 +1064,7 @@ class TestGenerateWeights:
 
 class TestEnsemblePartition:
     def test_get_partition_input(samplecat, tmp_path):
+        # test subset
         ds = xs.ensembles.get_partition_input(
             cat=samplecat,
             partition_dim=["source", "experiment"],
@@ -1079,6 +1080,7 @@ class TestEnsemblePartition:
 
         ds_grid = xesmf.util.cf_grid_2d(-75, -74, 0.25, 45, 48, 0.55)
 
+        # test regrid
         ds = xs.ensembles.get_partition_input(
             cat=samplecat,
             search_kw=dict(variable="tas", member="r1i1p1f1"),
