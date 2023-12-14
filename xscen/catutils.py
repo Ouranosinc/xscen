@@ -252,7 +252,7 @@ def _name_parser(
     }
 
 
-def _parse_dir(
+def _parse_dir(  # noqa: C901
     root: Union[os.PathLike, str],
     patterns: list[str],
     dirglob: Optional[str] = None,
@@ -432,7 +432,7 @@ def _parse_first_ds(
 
 
 @parse_config
-def parse_directory(
+def parse_directory(  # noqa:C901
     directories: list[Union[str, os.PathLike]],
     patterns: list[str],
     *,
@@ -695,7 +695,7 @@ def parse_directory(
     return df
 
 
-def parse_from_ds(
+def parse_from_ds(  # noqa: C901
     obj: Union[str, os.PathLike, xr.Dataset],
     names: Sequence[str],
     attrs_map: Optional[Mapping[str, str]] = None,

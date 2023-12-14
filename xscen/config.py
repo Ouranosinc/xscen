@@ -93,7 +93,7 @@ class ConfigDict(dict):
         for key, valstr in pairs:
             try:
                 val = ast.literal_eval(valstr)
-            except (ValueError, SyntaxError):
+            except (SyntaxError, ValueError):
                 val = valstr
             self.set(key, val)
 

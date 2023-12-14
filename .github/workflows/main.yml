@@ -5,38 +5,41 @@ on:
     branches:
       - main
     paths-ignore:
-      - HISTORY.rst
+      - CHANGES.rst
+      - README.rst
+      - pyproject.toml
       - setup.cfg
       - setup.py
       - xscen/__init__.py
   pull_request:
 
 jobs:
-  black:
-    name: Code Style Compliance
+  lint:
+    name: Lint (Python${{ matrix.python-version }})
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
+    strategy:
+      matrix:
+        python-version:
+          - "3.x"
     steps:
       - name: Cancel previous runs
-        uses: styfle/cancel-workflow-action@0.11.0
+        uses: styfle/cancel-workflow-action@0.12.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4.1.1
+      - uses: actions/setup-python@v4.7.1
         with:
-          python-version: "3.9"
+          python-version: "3.x"
       - name: Install tox
         run: |
           python -m pip install tox
       - name: Run linting suite
         run: |
-          python -m tox -e black
+          python -m tox -e lint
 
-  testing-tox:
+  test-pypi:
     name: Test with Python${{ matrix.python-version }} (PyPI/tox)
-    needs: black
+    needs: lint
     runs-on: ubuntu-latest
     env:
       COVERALLS_PARALLEL: true
@@ -55,9 +58,9 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v1.6.0
         with:
           cache-downloads: true
           environment-name: xscen-pypi
@@ -100,9 +103,9 @@ jobs:
 #          COVERALLS_PARALLEL: true
 #          COVERALLS_SERVICE_NAME: github
 
-  testing-conda:
+  test-conda:
     name: Test with Python${{ matrix.python-version }} (Anaconda)
-    needs: black
+    needs: lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -111,9 +114,9 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.1
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v1.6.0
         with:
           cache-downloads: true
           environment-file: environment-dev.yml
@@ -127,14 +130,14 @@ jobs:
       - name: Compile catalogs and install xscen
         run: |
           make translate
-          python -m pip install --no-deps --editable .
+          python -m pip install --no-deps .
       - name: Check versions
         run: |
           conda list
           python -m pip check || true
       - name: Test with pytest
         run: |
-          python -m pytest tests
+          python -m pytest --cov xscen
       - name: Report coverage
         run: |
           python -m coveralls
@@ -146,15 +149,15 @@ jobs:
 
   finish:
     needs:
-      - testing-tox
-      - testing-conda
+      - test-pypi
+      - test-conda
     runs-on: ubuntu-latest
     container: python:3-slim
     steps:
       - name: Coveralls Finished
         run: |
-          pip install --upgrade coveralls
-          coveralls --finish
+          python -m pip install --upgrade coveralls
+          python -m coveralls --finish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_SERVICE_NAME: github

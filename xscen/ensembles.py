@@ -24,9 +24,13 @@ __all__ = ["ensemble_stats", "generate_weights"]
 
 
 @parse_config
-def ensemble_stats(
+def ensemble_stats(  # noqa: C901
     datasets: Union[
-        dict, list[Union[str, os.PathLike]], list[xr.Dataset], list[xr.DataArray]
+        dict,
+        list[Union[str, os.PathLike]],
+        list[xr.Dataset],
+        list[xr.DataArray],
+        xr.Dataset,
     ],
     statistics: dict,
     *,
@@ -39,14 +43,17 @@ def ensemble_stats(
 
     Parameters
     ----------
-    datasets : dict or list of str, Path, Dataset or DataArray
+    datasets : dict or list of [str, os.PathLike, Dataset or DataArray], or Dataset
         List of file paths or xarray Dataset/DataArray objects to include in the ensemble.
         A dictionary can be passed instead of a list, in which case the keys are used as coordinates along the new
         `realization` axis.
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
+        If a single Dataset is passed, it is assumed to already be an ensemble and will be used as is. The 'realization' dimension is required.
     statistics : dict
         xclim.ensembles statistics to be called. Dictionary in the format {function: arguments}.
-        If a function requires 'ref', the dictionary entry should be the inputs of a .loc[], e.g. {"ref": {"horizon": "1981-2010"}}
+        If a function requires 'weights', you can leave it out of this dictionary and
+        it will be applied automatically if the 'weights' argument is provided.
+        See the Notes section for more details on robustness statistics, which are more complex in their usage.
     create_kwargs : dict, optional
         Dictionary of arguments for xclim.ensembles.create_ensemble.
     weights : xr.DataArray, optional
@@ -62,61 +69,150 @@ def ensemble_stats(
     xr.Dataset
         Dataset with ensemble statistics
 
+    Notes
+    -----
+    * The positive fraction in 'change_significance' and 'robustness_fractions' is calculated by
+      xclim using 'v > 0', which is not appropriate for relative deltas.
+      This function will attempt to detect relative deltas by using the 'delta_kind' attribute ('rel.', 'relative', '*', or '/')
+      and will apply 'v - 1' before calling the function.
+    * The 'robustness_categories' statistic requires the outputs of 'robustness_fractions'.
+      Thus, there are two ways to build the 'statistics' dictionary:
+
+      1. Having 'robustness_fractions' and 'robustness_categories' as separate entries in the dictionary.
+         In this case, all outputs will be returned.
+      2. Having 'robustness_fractions' as a nested dictionary under 'robustness_categories'.
+         In this case, only the robustness categories will be returned.
+
+    * A 'ref' DataArray can be passed to 'change_significance' and 'robustness_fractions', which will be used by xclim to compute deltas
+      and perform some significance tests. However, this supposes that both 'datasets' and 'ref' are still timeseries (e.g. annual means),
+      not climatologies where the 'time' dimension represents the period over which the climatology was computed. Thus,
+      using 'ref' is only accepted if 'robustness_fractions' (or 'robustness_categories') is the only statistic being computed.
+    * If you want to use compute a robustness statistic on a climatology, you should first compute the climatologies and deltas yourself,
+      then leave 'ref' as None and pass the deltas as the 'datasets' argument. This will be compatible with other statistics.
+
     See Also
     --------
-    xclim.ensembles._base.create_ensemble, xclim.ensembles._base.ensemble_percentiles, xclim.ensembles._base.ensemble_mean_std_max_min, xclim.ensembles._robustness.change_significance, xclim.ensembles._robustness.robustness_coefficient,
-
+    xclim.ensembles._base.create_ensemble, xclim.ensembles._base.ensemble_percentiles,
+    xclim.ensembles._base.ensemble_mean_std_max_min,
+    xclim.ensembles._robustness.robustness_fractions, xclim.ensembles._robustness.robustness_categories,
+    xclim.ensembles._robustness.robustness_coefficient,
     """
     create_kwargs = create_kwargs or {}
+    statistics = deepcopy(statistics)  # to avoid modifying the original dictionary
 
     # if input files are .zarr, change the engine automatically
-    if isinstance(datasets, list) and isinstance(datasets[0], (str, Path)):
+    if isinstance(datasets, list) and isinstance(datasets[0], (str, os.PathLike)):
         path = Path(datasets[0])
-        if path.suffix == ".zarr" and "engine" not in create_kwargs:
-            create_kwargs["engine"] = "zarr"
+        if path.suffix == ".zarr":
+            create_kwargs.setdefault("engine", "zarr")
 
-    ens = ensembles.create_ensemble(datasets, **create_kwargs)
+    if not isinstance(datasets, xr.Dataset):
+        ens = ensembles.create_ensemble(datasets, **create_kwargs)
+    else:
+        ens = datasets
 
     ens_stats = xr.Dataset(attrs=ens.attrs)
-    for stat, stats_kwargs in statistics.items():
-        stats_kwargs = deepcopy(stats_kwargs or {})
-        logger.info(
-            f"Creating ensemble with {len(datasets)} simulations and calculating {stat}."
-        )
-        if (
-            weights is not None
-            and "weights" in inspect.getfullargspec(getattr(ensembles, stat))[0]
-        ):
-            stats_kwargs["weights"] = weights.reindex_like(ens.realization)
-        if "ref" in stats_kwargs:
-            stats_kwargs["ref"] = ens.loc[stats_kwargs["ref"]]
 
-        if stat == "change_significance":
+    # "robustness_categories" requires "robustness_fractions", but we want to compute things only once if both are requested.
+    statistics_to_compute = list(statistics.keys())
+    if "robustness_categories" in statistics_to_compute:
+        if "robustness_fractions" in statistics_to_compute:
+            statistics_to_compute.remove("robustness_fractions")
+        elif "robustness_fractions" not in statistics["robustness_categories"]:
+            raise ValueError(
+                "'robustness_categories' requires 'robustness_fractions' to be computed. "
+                "Either add 'robustness_fractions' to the statistics dictionary or "
+                "add 'robustness_fractions' under the 'robustness_categories' dictionary."
+            )
+
+    for stat in statistics_to_compute:
+        stats_kwargs = deepcopy(statistics.get(stat) or {})
+        logger.info(
+            f"Calculating {stat} from an ensemble of {len(ens.realization)} simulations."
+        )
+
+        # Workaround for robustness_categories
+        real_stat = None
+        if stat == "robustness_categories":
+            real_stat = "robustness_categories"
+            stat = "robustness_fractions"
+            categories_kwargs = deepcopy(stats_kwargs)
+            categories_kwargs.pop("robustness_fractions", None)
+            stats_kwargs = deepcopy(
+                stats_kwargs.get("robustness_fractions", None)
+                or statistics.get("robustness_fractions", {})
+            )
+
+        if weights is not None:
+            if "weights" in inspect.getfullargspec(getattr(ensembles, stat))[0]:
+                stats_kwargs["weights"] = weights.reindex_like(ens.realization)
+            else:
+                warnings.warn(
+                    f"Weighting is not supported for '{stat}'. The results may be incorrect."
+                )
+
+        # FIXME: change_significance is deprecated and will be removed in xclim 0.49.
+        if stat in [
+            "change_significance",
+            "robustness_fractions",
+            "robustness_categories",
+        ]:
+            # FIXME: This can be removed once change_significance is removed.
+            #  It's here because the 'ref' default was removed for change_significance in xclim 0.47.
+            stats_kwargs.setdefault("ref", None)
+            if (stats_kwargs.get("ref") is not None) and len(statistics_to_compute) > 1:
+                raise ValueError(
+                    f"The input requirements for '{stat}' when 'ref' is specified are not compatible with other statistics."
+                )
+
+            # These statistics only work on DataArrays
             for v in ens.data_vars:
                 with xr.set_options(keep_attrs=True):
-                    deltak = ens[v].attrs.get("delta_kind", None)
-                    if stats_kwargs.get("ref") is not None and deltak is not None:
+                    # Support for relative deltas [0, inf], where positive fraction is 'v > 1' instead of 'v > 0'.
+                    delta_kind = ens[v].attrs.get("delta_kind")
+                    if stats_kwargs.get("ref") is not None and delta_kind is not None:
                         raise ValueError(
                             f"{v} is a delta, but 'ref' was still specified."
                         )
-                    if deltak in ["relative", "*", "/"]:
+                    if delta_kind in ["rel.", "relative", "*", "/"]:
                         logging.info(
                             f"Relative delta detected for {v}. Applying 'v - 1' before change_significance."
                         )
                         ens_v = ens[v] - 1
                     else:
                         ens_v = ens[v]
+
+                    # Call the function
                     tmp = getattr(ensembles, stat)(ens_v, **stats_kwargs)
-                    if len(tmp) == 2:
+
+                    # Manage the multiple outputs of change_significance
+                    # FIXME: change_significance is deprecated and will be removed in xclim 0.49.
+                    if (
+                        stat == "change_significance"
+                        and stats_kwargs.get("p_vals", False) is False
+                    ):
                         ens_stats[f"{v}_change_frac"], ens_stats[f"{v}_pos_frac"] = tmp
-                    elif len(tmp) == 3:
+                    elif stat == "change_significance" and stats_kwargs.get(
+                        "p_vals", False
+                    ):
                         (
                             ens_stats[f"{v}_change_frac"],
                             ens_stats[f"{v}_pos_frac"],
                             ens_stats[f"{v}_p_vals"],
                         ) = tmp
-                    else:
-                        raise ValueError(f"Unexpected number of outputs from {stat}.")
+
+                    # Robustness categories
+                    if real_stat == "robustness_categories":
+                        categories = ensembles.robustness_categories(
+                            tmp, **categories_kwargs
+                        )
+                        ens_stats[f"{v}_robustness_categories"] = categories
+
+                    # Only return the robustness fractions if they were requested.
+                    if "robustness_fractions" in statistics.keys():
+                        tmp = tmp.rename({s: f"{v}_{s}" for s in tmp.data_vars})
+                        ens_stats = ens_stats.merge(tmp)
+
         else:
             ens_stats = ens_stats.merge(getattr(ensembles, stat)(ens, **stats_kwargs))
 
@@ -125,7 +221,7 @@ def ensemble_stats(
         ens_stats = ens_stats.drop_vars("realization")
 
     # delete attrs that are not common to all dataset
-    if common_attrs_only:
+    if common_attrs_only and not isinstance(datasets, xr.Dataset):
         # if they exist remove attrs specific to create_ensemble
         create_kwargs.pop("mf_flag", None)
         create_kwargs.pop("resample_freq", None)
@@ -144,7 +240,7 @@ def ensemble_stats(
     return ens_stats
 
 
-def generate_weights(
+def generate_weights(  # noqa: C901
     datasets: Union[dict, list],
     *,
     independence_level: str = "model",
@@ -165,22 +261,27 @@ def generate_weights(
         A dictionary can be passed instead of a list, in which case the keys are used for the 'realization' coordinate.
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
     independence_level : str
-        'model': Weights using the method '1 model - 1 Vote', where every unique combination of 'source' and 'driving_model' is considered a model.
+        'model': Weights using the method '1 model - 1 Vote',
+        where every unique combination of 'source' and 'driving_model' is considered a model.
         'GCM': Weights using the method '1 GCM - 1 Vote'
         'institution': Weights using the method '1 institution - 1 Vote'
     balance_experiments : bool
-        If True, each experiment will be given a total weight of 1 (prior to subsequent weighting made through `attribute_weights`).
+        If True, each experiment will be given a total weight of 1
+        (prior to subsequent weighting made through `attribute_weights`).
         This option requires the 'cat:experiment' attribute to be present in all datasets.
     attribute_weights : dict, optional
-        Nested dictionaries of weights to apply to each dataset. These weights are applied after the independence weighting.
+        Nested dictionaries of weights to apply to each dataset.
+        These weights are applied after the independence weighting.
         The first level of keys are the attributes for which weights are being given.
         The second level of keys are unique entries for the attribute, with the value being either an individual weight
-        or a xr.DataArray. If a DataArray is used, its dimensions must be the same non-stationary coordinate as the datasets (ex: time, horizon) and the attribute being weighted (ex: experiment).
-        A `others` key can be used to give the same weight to all entries not specifically named in the dictionnary.
+        or a xr.DataArray. If a DataArray is used, its dimensions must be the same non-stationary coordinate
+        as the datasets (ex: time, horizon) and the attribute being weighted (ex: experiment).
+        A `others` key can be used to give the same weight to all entries not specifically named in the dictionary.
         Example #1: {'source': {'MPI-ESM-1-2-HAM': 0.25, 'MPI-ESM1-2-HR': 0.5}},
         Example #2: {'experiment': {'ssp585': xr.DataArray, 'ssp126': xr.DataArray}, 'institution': {'CCCma': 0.5, 'others': 1}}
     skipna : bool
-        If True, weights will be computed from attributes only. If False, weights will be computed from the number of non-missing values.
+        If True, weights will be computed from attributes only.
+        If False, weights will be computed from the number of non-missing values.
         skipna=False requires either a 'time' or 'horizon' dimension in the datasets.
     v_for_skipna : str, optional
         Variable to use for skipna=False. If None, the first variable in the first dataset is used.
@@ -244,7 +345,8 @@ def generate_weights(
         for k in other_dims:
             if len(other_dims[k]) > 0:
                 warnings.warn(
-                    f"Dataset {k} has dimensions that are not 'time' or 'horizon': {other_dims[k]}. The first indexes of these dimensions will be used to compute the weights."
+                    f"Dataset {k} has dimensions that are not 'time' or 'horizon': {other_dims[k]}. "
+                    "The first indexes of these dimensions will be used to compute the weights."
                 )
                 datasets[k] = datasets[k].isel({d: 0 for d in other_dims[k]})
 
@@ -267,7 +369,8 @@ def generate_weights(
         > 1
     ):
         raise NotImplementedError(
-            "Weighting `source` and/or `driving_model` through `attribute_weights` is not yet implemented when given a mix of GCMs and RCMs."
+            "Weighting `source` and/or `driving_model` through `attribute_weights` "
+            "is not yet implemented when given a mix of GCMs and RCMs."
         )
 
     # More easily manage GCMs and RCMs
@@ -344,7 +447,8 @@ def generate_weights(
             extra_dim[0].name
         )
 
-        # Check that the extra dimension is the same for all datasets. If not, modify the datasets to make them the same.
+        # Check that the extra dimension is the same for all datasets.
+        # If not, modify the datasets to make them the same.
         if not all(extra_dimension.equals(extra_dim[d]) for d in range(len(extra_dim))):
             warnings.warn(
                 f"Extra dimension {extra_dimension.name} is not the same for all datasets. Reindexing."

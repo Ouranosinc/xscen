@@ -1,6 +1,6 @@
-=======
-History
-=======
+=========
+Changelog
+=========
 
 v0.8.0 (unreleased)
 -------------------
@@ -8,7 +8,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal
 
 Announcements
 ^^^^^^^^^^^^^
-* N/A
+* `xscen` now adheres to PEPs 517/518/621 using the `setuptools` and `setuptools-scm` backend for building and packaging. (:pull:`292`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20,6 +20,8 @@ New features and enhancements
 * Better ``xs.extract.resample`` : support for weighted resampling operations when starting with frequencies coarser than daily and missing timesteps/values handling. (:issue:`80`, :issue:`93`, :pull:`265`).
 * New argument ``attribute_weights`` to ``generate_weights`` to allow for custom weights. (:pull:`252`).
 * ``xs.io.round_bits`` to round floating point variable up to a number of bits, allowing for a better compression. This can be combined with the saving step through argument ``"bitround"`` of ``save_to_netcdf`` and ``save_to_zarr``. (:pull:`266`).
+* Added the ability to directly provide an ensemble dataset to ``xs.ensemble_stats``. (:pull:`299`).
+* Added support in ``xs.ensemble_stats`` for the new robustness-related functions available in `xclim`. (:pull:`299`).
 * New function ``xs.ensembles.get_partition_input`` (:pull:`289`).
 
 Breaking changes
@@ -57,6 +59,18 @@ Internal changes
     * Re-adds a dev recipe to the `setup.py`.
 * Multiple improvements to the docstrings and type annotations. (:pull:`282`).
 * `pip check` in conda builds in GitHub workflows have been temporarily set to always pass. (:pull:`288`).
+* The `cookiecutter` template has been updated to the latest commit via `cruft`. (:pull:`292`):
+    * `setup.py` has been mostly hollowed-out, save for the `babel`-related translation function.
+    * `pyproject.toml` has been added, with most package configurations migrated into it.
+    * `HISTORY.rst` has been renamed to `CHANGES.rst`.
+    * `actions-version-updater.yml` has been added to automate the versioning of the package.
+    * `pre-commit` hooks have been updated to the latest versions; `check-toml` and `toml-sort` have been added to cleanup the `pyproject.toml` file, and `check-json-schema` has been added to ensure GitHub and ReadTheDocs workflow files are valid.
+    * `ruff` has been added to the linting tools to replace most `flake8` and `pydocstyle` verifications.
+    * `tox` builds are more pure Python environment/PyPI-friendly.
+    * `xscen` now uses `Trusted Publishing` for TestPyPI and PyPI uploads.
+* Linting checks now examine the testing folder, function complexity, and alphabetical order of `__all__` lists. (:pull:`292`).
+* ``publish_release_notes`` now uses better logic for finding and reformatting the `CHANGES.rst` file. (:pull:`292`).
+* ``bump2version`` version-bumping utility was replaced by ``bump-my-version``. (:pull:`292`).
 
 v0.7.1 (2023-08-23)
 -------------------
