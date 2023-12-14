@@ -9,7 +9,7 @@ dependencies:
   - cartopy
   - cftime
   - cf_xarray >=0.7.6
-  - clisops >=0.10,<0.12.1
+  - clisops >=0.10
   - dask
   - flox
   - fsspec < 2023.10.0
