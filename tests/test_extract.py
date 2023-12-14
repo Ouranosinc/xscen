@@ -70,14 +70,10 @@ class TestSearchDataCatalogs:
         assert len(out) == (13 if allow_resampling else 0)
 
     @pytest.mark.parametrize(
-        "restrict_warming_level",
-        [
-            True,
-            {"wl": 2, "ignore_member": True},
-            {"wl": 4},
-        ],
+        "restrict_warming_level,exp",
+        [(True, 5), ({"wl": 2, "ignore_member": True}, 5), ({"wl": 4}, 2)],
     )
-    def test_warminglevel(self, restrict_warming_level):
+    def test_warminglevel(self, restrict_warming_level, exp):
         cat = deepcopy(self.cat)
         new_line = deepcopy(cat.df.iloc[13])
         new_line["experiment"] = "ssp245"
@@ -89,12 +85,7 @@ class TestSearchDataCatalogs:
             variables_and_freqs={"tasmax": "D"},
             restrict_warming_level=restrict_warming_level,
         )
-        if isinstance(restrict_warming_level, bool):
-            assert len(out) == 5
-        elif restrict_warming_level == {"wl": 2, "ignore_member": True}:
-            assert len(out) == 5
-        elif restrict_warming_level == {"wl": 4}:
-            assert len(out) == 2
+        assert len(out) == exp
 
     @pytest.mark.parametrize("restrict_resolution", [None, "finest", "coarsest"])
     def test_restrict_resolution(self, restrict_resolution):
@@ -280,8 +271,8 @@ class TestGetWarmingLevel:
             window=20,
             return_horizon=False,
         )
-        assert isinstance(out, dict)
-        assert out["CMIP6_CanESM5_ssp126_r1i1p1f1"] == "2026"
+        assert isinstance(out, list)
+        assert out[0] == "2026"
 
     def test_string_with_horizon(self):
         out = xs.get_warming_level(
@@ -371,6 +362,41 @@ class TestGetWarmingLevel:
                 "CMIP6_CanESM5_ssp585_r1i1p1f1", wl=2, window=3.85, return_horizon=True
             )
 
+    def test_DataArray(self):
+        reals = xr.DataArray(
+            ["CMIP6_CanESM5_ssp126_r1i1p1f1"], dims=("x",), coords={"x": [1]}
+        )
+        out = xs.get_warming_level(reals, wl=2, return_horizon=False)
+        xr.testing.assert_identical(out, reals.copy(data=["2026"]))
+
+    def test_DataFrame(self):
+        reals = pd.DataFrame.from_records(
+            [
+                {
+                    "mip_era": "CMIP6",
+                    "source": "CanESM5",
+                    "experiment": "ssp126",
+                    "member": "r1i1p1f1",
+                },
+                {
+                    "mip_era": "CMIP6",
+                    "source": "CanESM5",
+                    "experiment": "ssp245",
+                    "member": "r1i1p1f1",
+                },
+            ],
+            index=["a", "b"],
+        )
+        out = xs.get_warming_level(
+            reals,
+            wl=2,
+            window=20,
+            return_horizon=False,
+        )
+        pd.testing.assert_series_equal(
+            out, pd.Series(["2026", "2024"], index=["a", "b"])
+        )
+
 
 class TestSubsetWarmingLevel:
     ds = timeseries(
@@ -379,16 +405,17 @@ class TestSubsetWarmingLevel:
         start="2000-01-01",
         freq="AS-JAN",
         as_dataset=True,
+    ).assign_attrs(
+        {
+            "cat:mip_era": "CMIP6",
+            "cat:source": "CanESM5",
+            "cat:experiment": "ssp585",
+            "cat:member": "r1i1p1f1",
+        }
     )
-    ds.attrs = {
-        "cat:mip_era": "CMIP6",
-        "cat:source": "CanESM5",
-        "cat:experiment": "ssp585",
-        "cat:member": "r1i1p1f1",
-    }
 
     def test_default(self):
-        ds_sub = xs.subset_warming_level(TestSubsetWarmingLevel.ds, wl=2)
+        ds_sub = xs.subset_warming_level(self.ds, wl=2)
 
         np.testing.assert_array_equal(ds_sub.time.dt.year[0], 2013)
         np.testing.assert_array_equal(ds_sub.time.dt.year[-1], 2032)
@@ -398,7 +425,7 @@ class TestSubsetWarmingLevel:
 
     def test_kwargs(self):
         ds_sub = xs.subset_warming_level(
-            TestSubsetWarmingLevel.ds,
+            self.ds,
             wl=1,
             window=25,
             tas_baseline_period=["1981", "2010"],
@@ -412,10 +439,41 @@ class TestSubsetWarmingLevel:
         assert ds_sub.attrs["cat:processing_level"] == "tests"
 
     def test_outofrange(self):
-        assert xs.subset_warming_level(TestSubsetWarmingLevel.ds, wl=5) is None
+        assert xs.subset_warming_level(self.ds, wl=5) is None
 
     def test_none(self):
-        assert xs.subset_warming_level(TestSubsetWarmingLevel.ds, wl=20) is None
+        assert xs.subset_warming_level(self.ds, wl=20) is None
+
+    def test_multireals(self):
+        ds = self.ds.expand_dims(
+            realization=[
+                "CMIP6_CanESM5_ssp126_r1i1p1f1",
+                "CMIP6_CanESM5_ssp245_r1i1p1f1",
+                "fake_faux_falsch_falso",
+            ]
+        )
+        ds_sub = xs.subset_warming_level(
+            ds,
+            wl=1,
+            to_level="tests",
+        )
+        np.testing.assert_array_equal(ds_sub.time.dt.year, np.arange(1000, 1020))
+        np.testing.assert_array_equal(
+            ds_sub.warminglevel_bounds[:2].dt.year, [[[1990, 2009]], [[1990, 2009]]]
+        )
+        assert ds_sub.warminglevel_bounds[2].isnull().all()
+
+    def test_multilevels(self):
+        ds_sub = xs.subset_warming_level(
+            self.ds,
+            wl=[1, 2, 3, 20],
+            to_level="tests",
+        )
+        np.testing.assert_array_equal(
+            ds_sub.warminglevel,
+            ["+1Cvs1850-1900", "+2Cvs1850-1900", "+3Cvs1850-1900", "+20Cvs1850-1900"],
+        )
+        np.testing.assert_array_equal(ds_sub.tas.isnull().sum("time"), [10, 0, 1, 20])
 
 
 class TestResample:
