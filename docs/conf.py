@@ -132,6 +132,8 @@ extlinks = {
 
 linkcheck_ignore = [
     r"https://github.com/Ouranosinc/xscen/(pull|issue).*",  # too labourious to fully check
+    r"https://rmets.onlinelibrary.wiley.com/doi.*",  # Error 403: Forbidden
+    r"https://library.wmo.int/idurl/4/56300",  # HTTPconnectionPool error
 ]
 
 # Add any paths that contain templates here, relative to this directory.
