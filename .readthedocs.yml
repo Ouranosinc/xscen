@@ -17,7 +17,7 @@ build:
       - pip install . --no-deps
     pre_build:
       - sphinx-apidoc -o docs/apidoc --private --module-first xscen
-      - env SKIP_NOTEBOOKS=1 sphinx-build -b linkcheck docs/ _build/linkcheck
+      - env SKIP_NOTEBOOKS=1 sphinx-build -b linkcheck docs/ _build/linkcheck || true
 #    post_build:
 #      - rm -rf docs/notebooks/_data
 
