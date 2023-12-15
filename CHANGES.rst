@@ -76,6 +76,7 @@ Internal changes
 * Linting checks now examine the testing folder, function complexity, and alphabetical order of `__all__` lists. (:pull:`292`).
 * ``publish_release_notes`` now uses better logic for finding and reformatting the `CHANGES.rst` file. (:pull:`292`).
 * ``bump2version`` version-bumping utility was replaced by ``bump-my-version``. (:pull:`292`).
+* Documentation build checks no longer fail due to broken external links; Notebooks are now nested and numbered. (:pull:`304`).
 
 v0.7.1 (2023-08-23)
 -------------------

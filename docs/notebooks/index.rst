@@ -3,6 +3,7 @@ Examples
 
 .. toctree::
     :maxdepth: 1
+    :numbered:
 
     1_catalog
     2_getting_started
