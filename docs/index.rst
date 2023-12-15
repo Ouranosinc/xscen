@@ -27,12 +27,7 @@ Features
     readme
     installation
     goodtoknow
-    notebooks/1_catalog
-    notebooks/2_getting_started
-    notebooks/3_diagnostics
-    notebooks/4_ensembles
-    notebooks/5_warminglevels
-    notebooks/6_config
+    notebooks/index
     columns
     templates
     api
