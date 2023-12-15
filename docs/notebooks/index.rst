@@ -10,4 +10,3 @@ Examples
     4_ensemble_reduction
     5_warminglevels
     6_config
-    7_global_tas_average_obs
