@@ -2,7 +2,7 @@ Examples
 ========
 
 .. toctree::
-   :maxdepth: 1
+    :maxdepth: 1
 
     1_catalog
     2_getting_started
