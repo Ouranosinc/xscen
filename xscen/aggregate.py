@@ -468,8 +468,8 @@ def climatological_op(  # noqa: C901
                     )
                 )
                 .drop_vars("time")
-                .set_coords("time_2D")
                 .rename({"time_2D": "time"})
+                .set_coords("time")
                 .squeeze(dim="time")
                 for horizon in np.unique(ds_rolling.horizon.values)
             ]
@@ -490,8 +490,8 @@ def climatological_op(  # noqa: C901
                 .assign_coords(horizon=("time", [horizon]))
                 .swap_dims({"time": "horizon"})
                 .drop_vars("time")
-                .set_coords("time_2D")
                 .rename({"time_2D": "time"})
+                .set_coords("time")
                 for horizon in np.unique(ds_rolling.horizon.values)
             ]
 

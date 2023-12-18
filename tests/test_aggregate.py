@@ -235,13 +235,11 @@ class TestProduceHorizon:
         assert out.attrs["cat:xrfreq"] == "fx"
         assert all(v in out for v in ["tg_min", "growing_degree_days"])
         assert (
-            # f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of"
             f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year climatological average of"
             in out.tg_min.attrs["description"]
         )
         assert (
             out.tg_min.attrs["description"].split(
-                # f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of "
                 f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}"
                 f"-year climatological average of "
             )[1]
