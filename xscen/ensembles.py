@@ -764,6 +764,7 @@ def get_partition_input(
 
         if regrid_kw:
             ds = regrid_dataset(ds, **regrid_kw)
+
         list_ds.append(ds)
 
     ens = xr.concat(list_ds, dim=dim_with_different_grid)
