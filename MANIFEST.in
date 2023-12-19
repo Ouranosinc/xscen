@@ -9,6 +9,7 @@ include .zenodo.json
 recursive-include xscen *.py *.yml
 recursive-include xscen/CVs *.json
 recursive-include xscen/data/fr *.yml *.csv
+recursive-include xscen/data *.nc
 recursive-include xscen/data/fr/LC_MESSAGES *.mo *.po
 recursive-include tests *.py
 recursive-include docs conf.py Makefile make.bat *.png *.rst *.yml
@@ -18,7 +19,8 @@ recursive-include docs/notebooks/samples *.csv *.json *.yml
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 recursive-exclude .github *.md *.yml
-recursive-exclude conda *.yaml
+recursive-exclude conda *.yaml *.yml
+recursive-exclude docs notebooks samples tutorial *.nc
 recursive-exclude templates *.csv *.json *.py *.rst *.yml
 
 exclude .coveralls.yml

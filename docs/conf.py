@@ -132,6 +132,8 @@ extlinks = {
 
 linkcheck_ignore = [
     r"https://github.com/Ouranosinc/xscen/(pull|issue).*",  # too labourious to fully check
+    r"https://rmets.onlinelibrary.wiley.com/doi/10.1002/qj.3803",  # Error 403: Forbidden
+    r"https://library.wmo.int/idurl/4/56300",  # HTTPconnectionPool error
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -174,6 +176,7 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
+    "notebooks/global_tas_average_obs.ipynb"
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.

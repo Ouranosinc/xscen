@@ -22,13 +22,16 @@ New features and enhancements
 * Better ``xs.extract.resample`` : support for weighted resampling operations when starting with frequencies coarser than daily and missing timesteps/values handling. (:issue:`80`, :issue:`93`, :pull:`265`).
 * New argument ``attribute_weights`` to ``generate_weights`` to allow for custom weights. (:pull:`252`).
 * ``xs.io.round_bits`` to round floating point variable up to a number of bits, allowing for a better compression. This can be combined with the saving step through argument ``"bitround"`` of ``save_to_netcdf`` and ``save_to_zarr``. (:pull:`266`).
-* Added the ability to directly provide an ensemble dataset to ``xs.ensemble_stats``. (:pull:`299`).
-* Added support in ``xs.ensemble_stats`` for the new robustness-related functions available in `xclim`. (:pull:`299`).
+* Added annual global tas timeseries for CMIP6's models CMCC-ESM2 (ssp245, ssp370, ssp585), EC-Earth3-CC (ssp245, ssp585), KACE-1-0-G (ssp245, ssp370, ssp585) and TaiESM1 (ssp245, ssp370). Moved global tas database to a netCDF file. (:issue:`268`, :pull:`270`).
+* Implemented support for multiple levels and models in ``xs.subset_warming_level``. Better support for `DataArray` and `DataFrame` in ``xs.get_warming_level``. (:pull:`270`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * ``climatological_mean()`` has been replaced with ``climatological_op()`` and will be abandoned in a future version. (:pull:`290`)
 * ``experiment_weights`` argument in ``generate_weights`` was renamed to ``balance_experiments``. (:pull:`252`).
+* New argument ``attribute_weights`` to ``generate_weights`` to allow for custom weights. (:pull:`252`).
+* For a sequence of models, the output of ``xs.get_warming_level`` is now a list. Revert to a dictionary with ``output='selected'`` (:pull:`270`).
+* The global average temperature database is now a netCDF, custom databases must follow the same format (:pull:`270`).
 
 Bug fixes
 ^^^^^^^^^
@@ -72,6 +75,7 @@ Internal changes
 * Linting checks now examine the testing folder, function complexity, and alphabetical order of `__all__` lists. (:pull:`292`).
 * ``publish_release_notes`` now uses better logic for finding and reformatting the `CHANGES.rst` file. (:pull:`292`).
 * ``bump2version`` version-bumping utility was replaced by ``bump-my-version``. (:pull:`292`).
+* Documentation build checks no longer fail due to broken external links; Notebooks are now nested and numbered. (:pull:`304`).
 
 v0.7.1 (2023-08-23)
 -------------------

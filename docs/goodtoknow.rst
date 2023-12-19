@@ -82,3 +82,21 @@ As seen above, it can be useful to use the "special" sections of the config file
     warning:
         # warning_category : filter_action
         all: ignore
+
+
+Global warming dataset
+----------------------
+The :py:func:`xscen.extract.get_warming_level` and :py:func:`xscen.extract.subset_warming_level` functions use a custom made database of global temperature averages to find the global warming levels of known climate simulations. The database is stored as a netCDF file `inside the package itself <https://github.com/Ouranosinc/xscen/blob/main/xscen/data/IPCC_annual_global_tas.nc>`_. It stores the global temperature average (land and ocean) from 1850 to 2100 for multiple simulations (not all simulations cover the entire temporal range). Simulations are defined through 4 fields:
+
+- ``mip_era`` : "CMIP6", "CMIP5" or "obs" (see below)
+- ``source`` : The model name for GCM (same as the `source` column) and the driving model name for RCM (`driving_model` column)
+- ``experiment`` : The CMIP experiment name of the run. The "historical" and "pre-industrial" experiments have been merged into each future experiment (similar to what ``match_hist_and_fut`` does in :py:func:`search_data_catalogs`)
+- ``member`` : The realization variant label of the run (same as the `member` column)
+
+An extra ``data_source`` field is also available and describes how the data has been obtained:
+
+- "IPCC Atlas" : The timeseries was copied directly from the public data of the `IPCC Atlas <https://github.com/IPCC-WG1/Atlas/tree/main/datasets-aggregated-regionally/data>`_'
+- "From Amon" : The monthly temperature average was resampled annually and averaged over the globe using a cos-lat weighting
+- "From Amon with xscen" : Same, xscen was used to perform the computation.
+
+In addition to the climate simulations, a few "observational" datasets are made available in the database. The choice of datasets and the methodology was adapted from the WMO's `State of the Global Climate 2021 <https://library.wmo.int/idurl/4/56300>`_. However, to have some consistency between these and the simulated series, an estimated 1850-1900 mean temperature was added to the WMO-compliant anomalies to get absolute values. Keep in mind that this is only an estimation, the timeseries should only be used to compute anomalies. The observational series have a short dataset name in the ``source`` field, "obs" in ``mip_era`` and ``experiment``,  and an empty ``member`` (`""`). The ``data_source`` is noted : "Computed following WMO guidelines".
