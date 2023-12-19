@@ -1100,7 +1100,7 @@ class TestEnsemblePartition:
     def test_build_partition_data(self, samplecat, tmp_path):
         # test subset
         datasets = samplecat.search(variable="tas").to_dataset_dict()
-        ds = xs.ensembles.get_partition_input(
+        ds = xs.ensembles.build_partition_data(
             datasets=datasets,
             partition_dim=["source", "experiment"],
             subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
@@ -1116,7 +1116,7 @@ class TestEnsemblePartition:
 
         # test regrid
         datasets = samplecat.search(variable="tas", member="r1i1p1f1").to_dataset_dict()
-        ds = xs.ensembles.get_partition_input(
+        ds = xs.ensembles.build_partition_data(
             datasets=datasets,
             regrid_kw=dict(ds_grid=ds_grid, weights_location=tmp_path),
         )
