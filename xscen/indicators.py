@@ -20,7 +20,6 @@ from .utils import CV, standardize_periods
 
 logger = logging.getLogger(__name__)
 
-
 __all__ = ["compute_indicators", "load_xclim_module"]
 
 
@@ -293,3 +292,59 @@ def _derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
 
     func.__name__ = ind.identifier
     return partial(func, ind=ind, nout=nout)
+
+
+def select_inds_for_avail_vars(
+    ds: xr.Dataset,
+    indicators: Union[
+        str,
+        os.PathLike,
+        Sequence[Indicator],
+        Sequence[tuple[str, Indicator]],
+        ModuleType,
+    ],
+) -> ModuleType:
+    """Filter the indicators for which the necessary variables are available.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset to use for the indicators.
+    indicators : Union[str, os.PathLike, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+        Path to a YAML file that instructs on how to calculate indicators.
+        Can also be only the "stem", if translations and custom indices are implemented.
+        Can be the indicator module directly, or a sequence of indicators or a sequence of
+        tuples (indicator name, indicator) as returned by `iter_indicators()`.
+
+    Returns
+    -------
+    ModuleType – An indicator module of 'length' ∈ [0, n].
+
+    See Also
+    --------
+    xclim.indicators, xclim.core.indicator.build_indicator_module_from_yaml
+    """
+    # Transform the 'indicators' input into a list of tuples (name, indicator)
+    is_list_of_tuples = isinstance(indicators, list) and all(
+        isinstance(i, tuple) for i in indicators
+    )
+    if isinstance(indicators, (str, os.PathLike)):
+        logger.debug("Loading indicator module.")
+        indicators = load_xclim_module(indicators, reload=True)
+    if hasattr(indicators, "iter_indicators"):
+        indicators = [(name, ind) for name, ind in indicators.iter_indicators()]
+    elif isinstance(indicators, (list, tuple)) and not is_list_of_tuples:
+        indicators = [(ind.base, ind) for ind in indicators]
+
+    available_vars = {
+        var for var in ds.data_vars if var in xc.core.utils.VARIABLES.keys()
+    }
+    available_inds = [
+        (name, ind)
+        for var in available_vars
+        for name, ind in indicators
+        if var in ind.parameters.keys()
+    ]
+    return xc.core.indicator.build_indicator_module(
+        "inds_for_avail_vars", available_inds, reload=True
+    )

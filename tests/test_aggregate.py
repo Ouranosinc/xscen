@@ -10,137 +10,16 @@ from xscen.testing import datablock_3d
 
 
 class TestClimatologicalMean:
-    def test_daily(self):
+    def test_future_warning(self):
         ds = timeseries(
             np.tile(np.arange(1, 13), 3),
             variable="tas",
             start="2001-01-01",
-            freq="D",
+            freq="MS",
             as_dataset=True,
         )
-        with pytest.raises(NotImplementedError):
+        with pytest.warns(FutureWarning):
             xs.climatological_mean(ds)
-
-    @pytest.mark.parametrize("xrfreq", ["MS", "AS-JAN"])
-    def test_all_default(self, xrfreq):
-        o = 12 if xrfreq == "MS" else 1
-
-        ds = timeseries(
-            np.tile(np.arange(1, o + 1), 30),
-            variable="tas",
-            start="2001-01-01",
-            freq=xrfreq,
-            as_dataset=True,
-        )
-        out = xs.climatological_mean(ds)
-
-        # Test output values
-        np.testing.assert_array_equal(out.tas, np.arange(1, o + 1))
-        assert len(out.time) == (o * len(np.unique(out.horizon.values)))
-        np.testing.assert_array_equal(out.time[0], ds.time[0])
-        assert (out.horizon == "2001-2030").all()
-        # Test metadata
-        assert (
-            out.tas.attrs["description"]
-            == f"30-year mean of {ds.tas.attrs['description']}"
-        )
-        assert (
-            "30-year rolling average (non-centered) with a minimum of 30 years of data"
-            in out.tas.attrs["history"]
-        )
-        assert out.attrs["cat:processing_level"] == "climatology"
-
-    @pytest.mark.parametrize("xrfreq", ["MS", "AS-JAN"])
-    def test_options(self, xrfreq):
-        o = 12 if xrfreq == "MS" else 1
-
-        ds = timeseries(
-            np.tile(np.arange(1, o + 1), 30),
-            variable="tas",
-            start="2001-01-01",
-            freq=xrfreq,
-            as_dataset=True,
-        )
-        out = xs.climatological_mean(ds, window=15, interval=5, to_level="for_testing")
-
-        # Test output values
-        np.testing.assert_array_equal(
-            out.tas,
-            np.tile(np.arange(1, o + 1), len(np.unique(out.horizon.values))),
-        )
-        assert len(out.time) == (o * len(np.unique(out.horizon.values)))
-        np.testing.assert_array_equal(out.time[0], ds.time[0])
-        assert {"2001-2015", "2006-2020", "2011-2025", "2016-2030"}.issubset(
-            out.horizon.values
-        )
-        # Test metadata
-        assert (
-            out.tas.attrs["description"]
-            == f"15-year mean of {ds.tas.attrs['description']}"
-        )
-        assert (
-            "15-year rolling average (non-centered) with a minimum of 15 years of data"
-            in out.tas.attrs["history"]
-        )
-        assert out.attrs["cat:processing_level"] == "for_testing"
-
-    def test_minperiods(self):
-        ds = timeseries(
-            np.tile(np.arange(1, 5), 30),
-            variable="tas",
-            start="2001-03-01",
-            freq="QS-DEC",
-            as_dataset=True,
-        )
-        ds = ds.where(ds["time"].dt.strftime("%Y-%m-%d") != "2030-12-01")
-
-        out = xs.climatological_mean(ds, window=30)
-        assert all(np.isreal(out.tas))
-        assert len(out.time) == 4
-        np.testing.assert_array_equal(out.tas, np.arange(1, 5))
-
-        out = xs.climatological_mean(ds, window=30, min_periods=30)
-        assert np.sum(np.isnan(out.tas)) == 1
-
-        with pytest.raises(ValueError):
-            xs.climatological_mean(ds, window=5, min_periods=6)
-
-    def test_periods(self):
-        ds1 = timeseries(
-            np.tile(np.arange(1, 2), 10),
-            variable="tas",
-            start="2001-01-01",
-            freq="AS-JAN",
-            as_dataset=True,
-        )
-        ds2 = timeseries(
-            np.tile(np.arange(1, 2), 10),
-            variable="tas",
-            start="2021-01-01",
-            freq="AS-JAN",
-            as_dataset=True,
-        )
-
-        ds = xr.concat([ds1, ds2], dim="time")
-        with pytest.raises(ValueError):
-            xs.climatological_mean(ds)
-
-        out = xs.climatological_mean(ds, periods=[["2001", "2010"], ["2021", "2030"]])
-        assert len(out.time) == 2
-        assert {"2001-2010", "2021-2030"}.issubset(out.horizon.values)
-
-    @pytest.mark.parametrize("cal", ["proleptic_gregorian", "noleap", "360_day"])
-    def test_calendars(self, cal):
-        ds = timeseries(
-            np.tile(np.arange(1, 2), 30),
-            variable="tas",
-            start="2001-01-01",
-            freq="AS-JAN",
-            as_dataset=True,
-        )
-
-        out = xs.climatological_mean(ds.convert_calendar(cal, align_on="date"))
-        assert out.time.dt.calendar == cal
 
 
 class TestComputeDeltas:
@@ -256,7 +135,7 @@ class TestComputeDeltas:
         ds["horizon"] = xr.DataArray(
             ["1981-2010", "2011-2040", "2041-2070", "2071-2100"], dims=["time"]
         )
-        ds = ds.swap_dims({"time": "horizon"}).drop("time")
+        ds = ds.swap_dims({"time": "horizon"}).drop_vars("time")
 
         out = xs.compute_deltas(
             ds, reference_horizon="1981-2010", rename_variables=False
@@ -356,12 +235,13 @@ class TestProduceHorizon:
         assert out.attrs["cat:xrfreq"] == "fx"
         assert all(v in out for v in ["tg_min", "growing_degree_days"])
         assert (
-            f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of"
+            f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year climatological average of"
             in out.tg_min.attrs["description"]
         )
         assert (
             out.tg_min.attrs["description"].split(
-                f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}-year mean of "
+                f"{30 if periods is None else int(periods[0][1]) - int(periods[0][0]) + 1}"
+                f"-year climatological average of "
             )[1]
             != self.ds.tas.attrs["description"]
         )
@@ -548,3 +428,282 @@ class TestSpatialMean:
 
         avg = xs.aggregate.spatial_mean(ds, method=method, region="global")
         np.testing.assert_allclose(avg.tas, exp)
+
+
+class TestClimatologicalOp:
+    @staticmethod
+    def _format(s):
+        import xclim
+
+        op_format = dict.fromkeys(("mean", "std", "var", "sum"), "adj") | dict.fromkeys(
+            ("max", "min"), "noun"
+        )
+        return xclim.core.formatting.default_formatter.format_field(s, op_format[s])
+
+    def test_daily(self):
+        ds = timeseries(
+            np.tile(np.arange(1, 13), 3),
+            variable="tas",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+        )
+        with pytest.raises(NotImplementedError):
+            xs.climatological_op(ds, op="mean")
+
+    @pytest.mark.parametrize("xrfreq", ["MS", "AS-JAN"])
+    @pytest.mark.parametrize(
+        "op", ["max", "mean", "median", "min", "std", "sum", "var", "linregress"]
+    )
+    def test_all_default(self, xrfreq, op):
+        o = 12 if xrfreq == "MS" else 1
+
+        ds = timeseries(
+            np.tile(np.arange(1, o + 1), 30),
+            variable="tas",
+            start="2001-01-01",
+            freq=xrfreq,
+            as_dataset=True,
+        )
+        out = xs.climatological_op(ds, op=op)
+        expected = (
+            dict.fromkeys(("max", "mean", "median", "min"), np.arange(1, o + 1))
+            | dict.fromkeys(("std", "var"), np.zeros(o))
+            | dict({"sum": np.arange(1, o + 1) * 30})
+            | dict(
+                {
+                    "linregress": np.array(
+                        [
+                            np.zeros(o),
+                            np.arange(1, o + 1),
+                            np.zeros(o),
+                            np.ones(o),
+                            np.zeros(o),
+                            np.zeros(o),
+                        ]
+                    ).T
+                }
+            )
+        )
+        # Test output variable name, values, length, horizon
+        assert list(out.data_vars.keys()) == [f"tas_clim_{op}"]
+        np.testing.assert_array_equal(out[f"tas_clim_{op}"], expected[op])
+        assert len(out.time) == (o * len(np.unique(out.horizon.values)))
+        np.testing.assert_array_equal(out.time[0], ds.time[0])
+        assert (out.horizon == "2001-2030").all()
+        # Test metadata
+        operation = self._format(op) if op not in ["median", "linregress"] else op
+        assert (
+            out[f"tas_clim_{op}"].attrs["description"]
+            == f"30-year climatological {operation} of {ds.tas.attrs['description']}"
+        )
+        assert (
+            f"30-year climatological {operation} over window (non-centered), with a minimum of 30 years of data"
+            in out[f"tas_clim_{op}"].attrs["history"]
+        )
+        assert out.attrs["cat:processing_level"] == "climatology"
+
+    @pytest.mark.parametrize("xrfreq", ["MS", "AS-JAN"])
+    @pytest.mark.parametrize(
+        "op", ["max", "mean", "median", "min", "std", "sum", "var", "linregress"]
+    )
+    def test_options(self, xrfreq, op):
+        o = 12 if xrfreq == "MS" else 1
+
+        ds = timeseries(
+            np.tile(np.arange(1, o + 1), 30),
+            variable="tas",
+            start="2001-01-01",
+            freq=xrfreq,
+            as_dataset=True,
+        )
+        out = xs.climatological_op(
+            ds, op=op, window=15, stride=5, to_level="for_testing"
+        )
+        expected = (
+            dict.fromkeys(
+                ("max", "mean", "median", "min"),
+                np.tile(np.arange(1, o + 1), len(np.unique(out.horizon.values))),
+            )
+            | dict.fromkeys(
+                ("std", "var"), np.tile(np.zeros(o), len(np.unique(out.horizon.values)))
+            )
+            | dict(
+                {
+                    "sum": np.tile(
+                        np.arange(1, o + 1) * 15, len(np.unique(out.horizon.values))
+                    )
+                }
+            )
+            | dict(
+                {
+                    "linregress": np.tile(
+                        np.array(
+                            [
+                                np.zeros(o),
+                                np.arange(1, o + 1),
+                                np.zeros(o),
+                                np.ones(o),
+                                np.zeros(o),
+                                np.zeros(o),
+                            ]
+                        ),
+                        len(np.unique(out.horizon.values)),
+                    ).T
+                }
+            )
+        )
+        # Test output values
+        np.testing.assert_array_equal(
+            out[f"tas_clim_{op}"],
+            expected[op],
+        )
+        assert len(out.time) == (o * len(np.unique(out.horizon.values)))
+        np.testing.assert_array_equal(out.time[0], ds.time[0])
+        assert {"2001-2015", "2006-2020", "2011-2025", "2016-2030"}.issubset(
+            out.horizon.values
+        )
+        # Test metadata
+        operation = self._format(op) if op not in ["median", "linregress"] else op
+        assert (
+            out[f"tas_clim_{op}"].attrs["description"]
+            == f"15-year climatological {operation} of {ds.tas.attrs['description']}"
+        )
+        assert (
+            f"15-year climatological {operation} over window (non-centered), with a minimum of 15 years of data"
+            in out[f"tas_clim_{op}"].attrs["history"]
+        )
+        assert out.attrs["cat:processing_level"] == "for_testing"
+
+    @pytest.mark.parametrize("op", ["mean", "linregress"])
+    def test_minperiods(self, op):
+        ds = timeseries(
+            np.tile(np.arange(1, 5), 30),
+            variable="tas",
+            start="2001-03-01",
+            freq="QS-DEC",
+            as_dataset=True,
+        )
+        ds = ds.where(ds["time"].dt.strftime("%Y-%m-%d") != "2030-12-01")
+
+        op = "mean"
+        out = xs.climatological_op(ds, op=op, window=30)
+        assert all(np.isreal(out[f"tas_clim_{op}"]))
+        assert len(out.time) == 4
+        np.testing.assert_array_equal(out[f"tas_clim_{op}"], np.arange(1, 5))
+
+        # min_periods as int
+        out = xs.climatological_op(ds, op=op, window=30, min_periods=30)
+        assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == 1
+
+        # min_periods as float
+        out = xs.climatological_op(ds, op=op, window=30, min_periods=0.5)
+        assert "minimum of 15 years of data" in out[f"tas_clim_{op}"].attrs["history"]
+        assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == 0
+
+        with pytest.raises(ValueError):
+            xs.climatological_op(ds, op=op, window=5, min_periods=6)
+
+    @pytest.mark.parametrize("op", ["mean", "linregress"])
+    def test_periods(self, op):
+        ds1 = timeseries(
+            np.tile(np.arange(1, 2), 10),
+            variable="tas",
+            start="2001-01-01",
+            freq="AS-JAN",
+            as_dataset=True,
+        )
+        ds2 = timeseries(
+            np.tile(np.arange(1, 2), 10),
+            variable="tas",
+            start="2021-01-01",
+            freq="AS-JAN",
+            as_dataset=True,
+        )
+
+        ds = xr.concat([ds1, ds2], dim="time")
+        with pytest.raises(ValueError):
+            xs.climatological_op(ds, op=op)
+
+        out = xs.climatological_op(
+            ds, op="mean", periods=[["2001", "2010"], ["2021", "2030"]]
+        )
+        assert len(out.time) == 2
+        assert {"2001-2010", "2021-2030"}.issubset(out.horizon.values)
+
+    @pytest.mark.parametrize("cal", ["proleptic_gregorian", "noleap", "360_day"])
+    def test_calendars(self, cal):
+        ds = timeseries(
+            np.tile(np.arange(1, 2), 30),
+            variable="tas",
+            start="2001-01-01",
+            freq="AS-JAN",
+            as_dataset=True,
+        )
+
+        out = xs.climatological_op(ds.convert_calendar(cal, align_on="date"), op="mean")
+        assert out.time.dt.calendar == cal
+
+    @pytest.mark.parametrize("xrfreq", ["MS", "QS-DEC", "AS-JAN"])
+    def test_horizons_as_dim(self, xrfreq):
+        o = 12 if xrfreq == "MS" else 4 if xrfreq == "QS-DEC" else 1
+        freq = {
+            "MS": {"month": o},
+            "QS-DEC": {"season": o},
+            "AS-JAN": {},
+        }
+        ds = timeseries(
+            np.tile(np.arange(1, o + 1), 30),
+            variable="tas",
+            start="2001-01-01",
+            freq=xrfreq,
+            as_dataset=True,
+        )
+
+        out = xs.climatological_op(
+            ds, op="mean", window=10, stride=5, horizons_as_dim=True
+        )
+
+        assert (out.tas_clim_mean.values == np.tile(np.arange(1, o + 1), (5, 1))).all()
+        assert out.dims == {"horizon": 5} | freq[xrfreq]
+        assert out.time.dims == ("horizon",) + (
+            (next(iter(freq[xrfreq])),) if freq[xrfreq] else ()
+        )
+        assert (
+            out.horizon.values
+            == ["2001-2010", "2006-2015", "2011-2020", "2016-2025", "2021-2030"]
+        ).all()
+        assert (
+            out.time.values
+            == np.array(
+                [
+                    ds.time.isel(time=slice(i, i + o)).values
+                    for i in range(0, ds.time.size - 5 * o, 5 * o)
+                ]
+            ).squeeze()
+        ).all()
+        if xrfreq in ["MS", "QS-DEC"]:
+            freq_coords = {
+                "month": [
+                    "JAN",
+                    "FEB",
+                    "MAR",
+                    "APR",
+                    "MAY",
+                    "JUN",
+                    "JUL",
+                    "AUG",
+                    "SEP",
+                    "OCT",
+                    "NOV",
+                    "DEC",
+                ],
+                "season": ["MAM", "JJA", "SON", "DJF"],
+                "time": np.array(
+                    [[t] for t in ds.time.isel(time=range(0, 25, 5)).values]
+                ),
+            }
+            assert (
+                out[next(iter(freq.get(xrfreq)))].values
+                == freq_coords[next(iter(freq.get(xrfreq)))]
+            ).all()

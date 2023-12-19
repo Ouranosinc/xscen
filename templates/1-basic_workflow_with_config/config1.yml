@@ -473,11 +473,13 @@ aggregate:
       processing_level: indicators
     delta:
       processing_level: climatology
-  climatological_mean: # automatically passed to the function
+  climatological_op: # automatically passed to the function
+    op: mean
     window: 30
-    interval: 10
+    stride: 10
     periods: [['1951', '2100']]
     to_level: climatology
+    #periods_as_dim: True
     #min_periods:
   compute_deltas: # automatically passed to the function
     kind: "+"
