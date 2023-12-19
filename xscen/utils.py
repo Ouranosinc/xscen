@@ -106,7 +106,7 @@ def update_attr(
 
     Will update the "long_name" of `ds` with `long_name="Mean of Variability"`.
     The use of `_(...)` allows the detection of this string by the translation manager. The function
-    will be able to add a translatable version of the string for each activated languages, for example adding
+    will be able to add a translatable version of the string for each activated language, for example adding
     a `long_name_fr="Moyenne de Variabilité"` (assuming a `long_name_fr` was present on the initial `ds`).
 
     If the new attribute is an aggregation from multiple sources, these can be passed in `others`.
