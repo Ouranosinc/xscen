@@ -673,6 +673,7 @@ def generate_weights(  # noqa: C901
     return weights
 
 
+# TODO: probaly get rid if this function
 def get_partition_input(
     cat: DataCatalog,
     search_kw: dict = None,
