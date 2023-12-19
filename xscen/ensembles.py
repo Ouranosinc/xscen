@@ -843,7 +843,8 @@ def build_partition_data(
             ds = regrid_dataset(ds, **regrid_kw)
 
         for dim in partition_dim:
-            ds = ds.expand_dims(**{dim: [ds.attrs[f"cat:{dim}"]]})
+            if f"cat:{dim}" in ds.attrs:
+                ds = ds.expand_dims(**{dim: [ds.attrs[f"cat:{dim}"]]})
 
         if "source" in partition_dim:
             new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
