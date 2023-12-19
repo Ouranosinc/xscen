@@ -777,3 +777,80 @@ def get_partition_input(
     ens = ens.rename(rename_dict)
 
     return ens
+
+
+def build_partition_data(
+    datasets: Union[dict, list[xr.Dataset]],
+    partition_dim: list[str] = ["source", "experiment", "bias_adjust_project"],
+    subset_kw: dict = None,
+    regrid_kw: dict = None,
+    rename_dict: dict = None,
+):
+    """Get the input for the xclim partition functions.
+
+    From a list or dictionary of datasets, create a single dataset with
+    `partition_dim` dimensions (and time) to pass to one of the xclim partition functions
+    (https://xclim.readthedocs.io/en/stable/api.html#uncertainty-partitioning).
+    If the inputs have different grids,
+    they have to be subsetted and regridded to a common grid/point.
+
+
+    Parameters
+    ----------
+    datasets : dict
+        List or dictionnary of Dataset objects that will be included in the ensemble.
+        The datasets should include the necessary ("cat:") attributes to understand their metadata.
+        Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
+    partition_dim: list[str]
+        Components of the partition. They will become the dimension of the output.
+        The default is ['source', 'experiment', 'bias_adjust_project'].
+        For source, the dimension will actually be institution_source_member.
+    subset_kw: dict
+        Arguments to pass to `xs.spatial.subset()`.
+    regrid_kw:
+        Arguments to pass to `xs.regrid_dataset()`.
+    rename_dict:
+        Dictionary to rename the dimensions from xscen names to xclim names.
+        The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
+
+    Returns
+    -------
+    xr.Dataset
+        The input data for the partition functions.
+
+    See Also
+    --------
+    xclim.ensembles
+
+    """
+    if isinstance(datasets, dict):
+        datasets = list(datasets.values())
+    # initialize dict
+    subset_kw = subset_kw or {}
+    regrid_kw = regrid_kw or {}
+
+    list_ds = []
+    for ds in datasets:
+        if subset_kw:
+            ds = subset(ds, **subset_kw)
+
+        if regrid_kw:
+            ds = regrid_dataset(ds, **regrid_kw)
+
+        for dim in partition_dim:
+            ds = ds.expand_dims(**{dim: [ds.attrs[f"cat:{dim}"]]})
+
+        if "source" in partition_dim:
+            new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
+            ds = ds.assign_coords(source=[new_source])
+        list_ds.append(ds)
+    ens = xr.merge(list_ds)
+
+    rename_dict = rename_dict or {}
+    rename_dict.setdefault("source", "model")
+    rename_dict.setdefault("experiment", "scenario")
+    rename_dict.setdefault("bias_adjust_project", "downscaling")
+    rename_dict = {k: v for k, v in rename_dict.items() if k in ens.dims}
+    ens = ens.rename(rename_dict)
+
+    return ens
