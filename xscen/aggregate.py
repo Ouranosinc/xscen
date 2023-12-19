@@ -251,9 +251,7 @@ def climatological_op(  # noqa: C901
         op, op_kwargs = list(op.items())[0]
         op_kwargs.setdefault("keep_attrs", True)
     else:
-        op_kwargs = {
-            "keep_attrs": True
-        }  # ToDo: Is there a global setting in xscen so we don't need this?
+        op_kwargs = {"keep_attrs": True}
 
     # special case for averaging standard deviations: need to convert to variance before averaging
     ds_has_std = False
