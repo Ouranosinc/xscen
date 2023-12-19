@@ -20,7 +20,11 @@ from .utils import clean_up, get_cat_attrs
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["ensemble_stats", "generate_weights"]
+__all__ = [
+    "build_partition_data",
+    "ensemble_stats",
+    "generate_weights",
+]
 
 
 @parse_config
