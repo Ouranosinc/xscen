@@ -12,7 +12,6 @@ import numpy as np
 import xarray as xr
 from xclim import ensembles
 
-from .catalog import DataCatalog
 from .config import parse_config
 from .regrid import regrid_dataset
 from .spatial import subset
@@ -671,117 +670,6 @@ def generate_weights(  # noqa: C901
         weights = weights / weights.sum(dim="realization")
 
     return weights
-
-
-# TODO: probaly get rid if this function
-def get_partition_input(
-    cat: DataCatalog,
-    search_kw: dict = None,
-    partition_dim: list[str] = ["source", "experiment", "bias_adjust_project"],
-    to_dataset_kw: dict = None,
-    subset_kw: dict = None,
-    regrid_kw: dict = None,
-    rename_dict: dict = None,
-):
-    """Get the input for the xclim partition functions.
-
-    Search for the input data in the catalog and create a single dataset with
-    `partition_dim` dimensions (and time) to pass to one of the xclim partition functions
-    (https://xclim.readthedocs.io/en/stable/api.html#uncertainty-partitioning).
-    If the inputs have different grids,
-    they have to be subsetted and regridded to a common grid/point.
-
-
-    Parameters
-    ----------
-    cat: DataCatalog
-        The catalog to use to get the input data.
-    search_kw: dict
-        Arguments to pass to `cat.search()`.
-    partition_dim: list[str]
-        Components of the partition. They will become the dimension of the output.
-        The default is ['source', 'experiment', 'bias_adjust_project'].
-        For source, the dimension will actually be institution_source_member.
-    to_dataset_kw: dict
-        Arguments to pass to `to_dataset()`.
-    subset_kw: dict
-        Arguments to pass to `xs.spatial.subset()`.
-    regrid_kw:
-        Arguments to pass to `xs.regrid_dataset()`.
-    rename_dict:
-        Dictionary to rename the dimensions from xscen names to xclim names.
-        The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
-
-    Returns
-    -------
-    xr.Dataset
-        The input data for the partition functions.
-
-    See Also
-    --------
-    xclim.ensembles
-
-    """
-    # initialize dict
-    search_kw = search_kw or {}
-    to_dataset_kw = to_dataset_kw or {}
-    subset_kw = subset_kw or {}
-
-    # special case to handle source (create one dimension with institution_source_member)
-    ensemble_on_list = None
-    if "source" in partition_dim:
-        partition_dim.remove("source")
-        ensemble_on_list = ["institution", "source", "member"]
-
-    # subset catalog to only the data we need
-    subcat = cat.search(**search_kw)
-
-    # We assume different bias_adjust_projects will have different grids (and domain).
-    if (
-        "bias_adjust_project" in subcat.df
-        and len(subcat.df.bias_adjust_project.unique()) > 1
-        and subset_kw is None
-        and regrid_kw is None
-    ):
-        warnings.warn(
-            "The catalog contains multiple bias_adjust_project, but no subset_kw or regrid_kw where given."
-            "This might results in issues when creating a single the dataset if the grids are not identical."
-        )
-
-    # create a dataset for each bias_adjust_project, modify grid and concat them
-
-    dim_with_different_grid = (
-        "bias_adjust_project" if "bias_adjust_project" in partition_dim else "source"
-    )
-    list_ds = []
-    for d in subcat.df[dim_with_different_grid].unique():
-        ds = subcat.search(**{dim_with_different_grid: d}).to_dataset(
-            concat_on=partition_dim,
-            create_ensemble_on=ensemble_on_list,
-            **to_dataset_kw,
-        )
-
-        if "realization" in ds:
-            ds = ds.rename({"realization": "source"})
-
-        if subset_kw:
-            ds = subset(ds, **subset_kw)
-
-        if regrid_kw:
-            ds = regrid_dataset(ds, **regrid_kw)
-
-        list_ds.append(ds)
-
-    ens = xr.concat(list_ds, dim=dim_with_different_grid)
-
-    rename_dict = rename_dict or {}
-    rename_dict.setdefault("source", "model")
-    rename_dict.setdefault("experiment", "scenario")
-    rename_dict.setdefault("bias_adjust_project", "downscaling")
-    rename_dict = {k: v for k, v in rename_dict.items() if k in ens.dims}
-    ens = ens.rename(rename_dict)
-
-    return ens
 
 
 def build_partition_data(
