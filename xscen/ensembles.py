@@ -724,6 +724,8 @@ def build_partition_data(
 
     list_ds = []
     for ds in datasets:
+        warnings.warn(ds.attrs["cat:id"])
+        warnings.warn(ds.dims)
         if subset_kw:
             ds = subset(ds, **subset_kw)
 
