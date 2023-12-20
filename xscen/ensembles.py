@@ -724,9 +724,6 @@ def build_partition_data(
 
     list_ds = []
     for ds in datasets:
-        warnings.warn(ds.attrs["cat:id"])
-        warnings.warn(str(ds.dims))
-        warnings.warn(ds.attrs["cat:path"])
         ds1 = xr.open_dataset(ds.attrs["cat:path"])
         warnings.warn(str(ds1.dims))
         if subset_kw:
