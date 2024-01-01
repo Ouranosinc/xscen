@@ -152,7 +152,6 @@ values = [
   "gamma"
 ]
 
-
 [tool.coverage.run]
 relative_files = true
 include = ["xscen/*"]
