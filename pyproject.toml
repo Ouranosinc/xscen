@@ -56,7 +56,7 @@ dependencies = [
   "pyyaml",
   "rechunker",
   "shapely>=2.0",
-  "sparse",
+  "sparse<=0.14",
   "toolz",
   # FIXME: Unpin xarray before releasing!
   "xarray<2023.11.0",
