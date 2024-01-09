@@ -25,7 +25,7 @@ dependencies:
   - pyyaml
   - rechunker
   - shapely >=2.0
-  - sparse <= 0.14
+  - sparse <=0.14
   - toolz
   - xarray <2023.11.0
   - xclim >=0.46.0
