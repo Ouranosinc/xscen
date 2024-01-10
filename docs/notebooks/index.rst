@@ -8,6 +8,6 @@ Examples
     1_catalog
     2_getting_started
     3_diagnostics
-    4_ensemble_reduction
+    4_ensembles
     5_warminglevels
     6_config
