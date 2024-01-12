@@ -24,6 +24,9 @@ New features and enhancements
 * ``xs.io.round_bits`` to round floating point variable up to a number of bits, allowing for a better compression. This can be combined with the saving step through argument ``"bitround"`` of ``save_to_netcdf`` and ``save_to_zarr``. (:pull:`266`).
 * Added annual global tas timeseries for CMIP6's models CMCC-ESM2 (ssp245, ssp370, ssp585), EC-Earth3-CC (ssp245, ssp585), KACE-1-0-G (ssp245, ssp370, ssp585) and TaiESM1 (ssp245, ssp370). Moved global tas database to a netCDF file. (:issue:`268`, :pull:`270`).
 * Implemented support for multiple levels and models in ``xs.subset_warming_level``. Better support for `DataArray` and `DataFrame` in ``xs.get_warming_level``. (:pull:`270`).
+* Added the ability to directly provide an ensemble dataset to ``xs.ensemble_stats``. (:pull:`299`).
+* Added support in ``xs.ensemble_stats`` for the new robustness-related functions available in `xclim`. (:pull:`299`).
+* New function ``xs.ensembles.get_partition_input`` (:pull:`289`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -41,6 +44,7 @@ Bug fixes
 * `search_data_catalogs` now eliminates anything that matches any entry in `exclusions`. (:issue:`275`, :pull:`280`).
 * Fixed a bug in ``xs.scripting.save_and_update`` where ``build_path_kwargs`` was ignored when trying to guess the file format. (:pull:`282`).
 * Add a warning to ``xs.extract._dispatch_historical_to_future``. (:issue:`286`, :pull:`287`).
+* Modify use_cftime for the calendar conversion in ``to_dataset``. (:issue:`303`, :pull:`289`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^

@@ -40,7 +40,7 @@ requirements:
     - pyyaml
     - rechunker
     - shapely >= 2
-    - sparse
+    - sparse <=0.14
     - toolz
     - xarray
     - xclim >=0.43.0

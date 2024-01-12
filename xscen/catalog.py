@@ -501,7 +501,7 @@ class DataCatalog(intake_esm.esm_datastore):
                 ds = ensure_correct_time(ds, xrfreq)
                 if calendar is not None:
                     ds = ds.convert_calendar(
-                        calendar, use_cftime=(calendar == "default"), align_on="date"
+                        calendar, use_cftime=(calendar != "default"), align_on="date"
                     )
                 return ds
 
