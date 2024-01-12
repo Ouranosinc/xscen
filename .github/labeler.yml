@@ -5,28 +5,35 @@
 #   we refer here to CI as the 'meta' configuration files for managing the code and integrations with the repository,
 #   not configurations related to the deployment process itself.
 
-CI:
-  - .cruft.json
-  - .editorconfig
-  - .flake8
-  - .gitignore
-  - .pre-commit-config.yaml
-  - .readthedocs.yml
-  - .secrets.baseline
-  - .yamllint.yaml
-  - .github/workflows/*
-  - docs/Makefile
-  - tox.ini
-  - Makefile
+'CI':
+  - changed_files:
+    - any-glob-to-any-file:
+      - '.cruft.json'
+      - '.editorconfig'
+      - '.flake8'
+      - '.github/labeler.yml'
+      - '.github/workflows/*.yml'
+      - '.gitignore'
+      - '.pre-commit-config.yaml'
+      - '.readthedocs.yml'
+      - '.secrets.baseline'
+      - '.yamllint.yaml'
+      - 'Makefile'
+      - 'docs/Makefile'
+      - 'tox.ini'
 
-docs:
-  - .readthedocs.yml
-  - docs/**/*
-  - CONTRIBUTING.rst
-  - ISSUE_TEMPLATE/**/*
-  - ISSUE_TEMPLATE.md
-  - PULL_REQUEST_TEMPLATE.md
-  - README.rst
+'docs':
+  - changed_files:
+    - any-glob-to-any-file:
+      - '.github/ISSUE_TEMPLATE.md'
+      - '.github/ISSUE_TEMPLATE/**/*'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.readthedocs.yml'
+      - 'CONTRIBUTING.rst'
+      - 'README.rst'
+      - 'docs/**/*'
 
-xclim:
-  - xscen/xclim_modules/**/*
+'xclim':
+  - changed_files:
+    - any-glob-to-any-file:
+      - 'scen/xclim_modules/**/*'
