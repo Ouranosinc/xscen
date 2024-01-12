@@ -27,7 +27,7 @@ jobs:
         with:
           access_token: ${{ github.token }}
       - uses: actions/checkout@v4.1.1
-      - uses: actions/setup-python@v4.7.1
+      - uses: actions/setup-python@v5.0.0
         with:
           python-version: "3.x"
       - name: Install tox
@@ -60,7 +60,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4.1.1
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
-        uses: mamba-org/setup-micromamba@v1.6.0
+        uses: mamba-org/setup-micromamba@v1.7.3
         with:
           cache-downloads: true
           environment-name: xscen-pypi
@@ -116,7 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4.1.1
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
-        uses: mamba-org/setup-micromamba@v1.6.0
+        uses: mamba-org/setup-micromamba@v1.7.3
         with:
           cache-downloads: true
           environment-file: environment-dev.yml
