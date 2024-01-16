@@ -1065,7 +1065,9 @@ class TestGenerateWeights:
 class TestEnsemblePartition:
     def test_build_partition_data(self, samplecat, tmp_path):
         # test subset
-        datasets = samplecat.search(variable="tas").to_dataset_dict()
+        datasets = samplecat.search(variable="tas").to_dataset_dict(
+            xarray_open_kwargs={"engine": "h5netcdf"}
+        )
         ds = xs.ensembles.build_partition_data(
             datasets=datasets,
             partition_dim=["source", "experiment"],
@@ -1080,7 +1082,9 @@ class TestEnsemblePartition:
 
         # test regrid
         ds_grid = xesmf.util.cf_grid_2d(-75, -74, 0.25, 45, 48, 0.55)
-        datasets = samplecat.search(variable="tas", member="r1i1p1f1").to_dataset_dict()
+        datasets = samplecat.search(variable="tas", member="r1i1p1f1").to_dataset_dict(
+            xarray_open_kwargs={"engine": "h5netcdf"}
+        )
         ds = xs.ensembles.build_partition_data(
             datasets=datasets,
             regrid_kw=dict(ds_grid=ds_grid, weights_location=tmp_path),
