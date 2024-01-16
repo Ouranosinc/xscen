@@ -58,8 +58,7 @@ dependencies = [
   "shapely>=2.0",
   "sparse<=0.14",
   "toolz",
-  # FIXME: Unpin xarray before releasing!
-  "xarray<2023.11.0",
+  "xarray",
   "xclim>=0.46.0",
   "xesmf>=0.7",
   "zarr"
