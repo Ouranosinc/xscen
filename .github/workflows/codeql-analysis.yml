@@ -7,6 +7,9 @@ on:
   schedule:
     - cron: '30 23 * * 5'
 
+permissions:
+  contents: read
+
 jobs:
   analyze:
     name: Analyze
@@ -21,6 +24,18 @@ jobs:
         language:
           - 'python'
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            files.pythonhosted.org:443
+            github.com:443
+            objects.githubusercontent.com:443
+            pypi.org:443
+            uploads.github.com:443
       - name: Checkout repository
         uses: actions/checkout@v4.1.1
       # Initializes the CodeQL tools for scanning.

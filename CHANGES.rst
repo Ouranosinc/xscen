@@ -2,6 +2,14 @@
 Changelog
 =========
 
+v0.9.0 (unreleased)
+-------------------
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`)
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Granular permissions and dependency scanning actions have been added to all GitHub CI Workflows. (:pull:`313`).
+
 v0.8.0 (2024-01-16)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah-Claude Bourdeau-Goulet (:user:`sarahclaude`), Trevor James Smith (:user:`Zeitsperre`), Marco Braun (:user:`vindelico`).
