@@ -12,7 +12,7 @@ dependencies:
   - clisops >=0.10
   - dask
   - flox
-  - fsspec < 2023.10.0
+  - fsspec <2023.10.0
   - geopandas
   - h5netcdf
   - h5py
@@ -27,7 +27,7 @@ dependencies:
   - shapely >=2.0
   - sparse <=0.14 # 0.15 breaks xe.SpatialAverager (https://github.com/Ouranosinc/xscen/actions/runs/7463533566/job/20308477398)
   - toolz
-  - xarray <2023.11.0
+  - xarray <2023.11.0  # FIXME: Remove when pandas 2.2 is released and xclim is fixed.
   - xclim >=0.46.0
   - xesmf >=0.7
   - zarr
