@@ -2,7 +2,7 @@
 Changelog
 =========
 
-v0.8.1 (unreleased)
+v0.9.0 (unreleased)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`)
 
