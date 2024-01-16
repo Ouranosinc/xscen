@@ -19,11 +19,13 @@ dependencies:
   - intake-esm >=2023.07.07
   - matplotlib
   - netCDF4
+  - numcodecs
   - numpy
   - pandas >=2.0
   - parse
   - pyyaml
   - rechunker
+  - scipy
   - shapely >=2.0
   - sparse <=0.14
   - toolz

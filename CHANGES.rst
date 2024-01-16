@@ -9,6 +9,7 @@ Contributors to this version: Trevor James Smith (:user:`Zeitsperre`)
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Granular permissions and dependency scanning actions have been added to all GitHub CI Workflows. (:pull:`313`).
+* Updated the list of dependencies to add missing requirements. (:pull:`314`).
 
 v0.8.0 (2024-01-16)
 -------------------
