@@ -740,7 +740,7 @@ def build_partition_data(
             dict_ind = compute_indicators(ds, **indicators_kw)
             if len(dict_ind) > 1:
                 raise ValueError(
-                    "The indicators computation should return only indicators of the same frequency.Returned frequencies: {dict_ind.keys()}"
+                    f"The indicators computation should return only indicators of the same frequency.Returned frequencies: {dict_ind.keys()}"
                 )
             else:
                 ds = list(dict_ind.values())[0]

@@ -1073,7 +1073,7 @@ class TestEnsemblePartition:
             datasets=datasets,
             partition_dim=["source", "experiment"],
             subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
-            indicators_kw=dict(indicators=xc.atmos.tg_mean),
+            indicators_kw=dict(indicators=("tg_mean", xc.atmos.tg_mean)),
             rename_dict={"source": "new-name"},
         )
 
@@ -1100,3 +1100,16 @@ class TestEnsemblePartition:
             "lon": 4,
         }
         assert [i for i in ds.data_vars] == ["tas"]
+
+        # test error
+        with pytest.raises(
+            ValueError,
+            match="ValueError: The indicators computation should return only"
+            // "indicators of the same frequency.Returned frequencies:"
+            // "dict_keys(['AS-JAN', 'MS'])",
+        ):
+            ds = xs.ensembles.build_partition_data(
+                datasets=datasets,
+                subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
+                indicators_kw=dict(indicators=[xc.atmos.tg_mean, xc.indicators.cf.tg]),
+            )
