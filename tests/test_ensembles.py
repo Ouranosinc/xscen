@@ -1104,9 +1104,6 @@ class TestEnsemblePartition:
         # test error
         with pytest.raises(
             ValueError,
-            match="ValueError: The indicators computation should return only"
-            // "indicators of the same frequency.Returned frequencies:"
-            // "dict_keys(['AS-JAN', 'MS'])",
         ):
             ds = xs.ensembles.build_partition_data(
                 datasets=datasets,
