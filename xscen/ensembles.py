@@ -13,6 +13,7 @@ import xarray as xr
 from xclim import ensembles
 
 from .config import parse_config
+from .indicators import compute_indicators
 from .regrid import regrid_dataset
 from .spatial import subset
 from .utils import clean_up, get_cat_attrs
@@ -677,6 +678,7 @@ def build_partition_data(
     partition_dim: list[str] = ["source", "experiment", "bias_adjust_project"],
     subset_kw: dict = None,
     regrid_kw: dict = None,
+    indicators_kw: dict = None,
     rename_dict: dict = None,
 ):
     """Get the input for the xclim partition functions.
@@ -686,6 +688,7 @@ def build_partition_data(
     (https://xclim.readthedocs.io/en/stable/api.html#uncertainty-partitioning).
     If the inputs have different grids,
     they have to be subsetted and regridded to a common grid/point.
+    Indicators can also be computed before combining the datasets.
 
 
     Parameters
@@ -702,6 +705,9 @@ def build_partition_data(
         Arguments to pass to `xs.spatial.subset()`.
     regrid_kw:
         Arguments to pass to `xs.regrid_dataset()`.
+    indicators_kw:
+        Arguments to pass to `xs.indicators.compute_indicators()`.
+        All indicators have to be for the same frequency, in order to be put on a single time axis.
     rename_dict:
         Dictionary to rename the dimensions from xscen names to xclim names.
         The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
@@ -729,6 +735,15 @@ def build_partition_data(
 
         if regrid_kw:
             ds = regrid_dataset(ds, **regrid_kw)
+
+        if indicators_kw:
+            dict_ind = compute_indicators(ds, **indicators_kw)
+            if len(dict_ind) > 1:
+                raise ValueError(
+                    f"The indicators computation should return only indicators of the same frequency.Returned frequencies: {dict_ind.keys()}"
+                )
+            else:
+                ds = list(dict_ind.values())[0]
 
         for dim in partition_dim:
             if f"cat:{dim}" in ds.attrs:
