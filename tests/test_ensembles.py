@@ -1073,7 +1073,7 @@ class TestEnsemblePartition:
             datasets=datasets,
             partition_dim=["source", "experiment"],
             subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
-            indicators_kw=dict(indicators=("tg_mean", xc.atmos.tg_mean)),
+            indicators_kw=dict(indicators=[xc.atmos.tg_mean]),
             rename_dict={"source": "new-name"},
         )
 
