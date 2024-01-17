@@ -11,6 +11,10 @@ Internal changes
 * Granular permissions and dependency scanning actions have been added to all GitHub CI Workflows. (:pull:`313`).
 * Updated the list of dependencies to add missing requirements. (:pull:`314`).
 
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Added a new argument ``indicators_kw`` to ``xs.ensembles.build_partition_data``. (:pull:`315`).
+
 v0.8.0 (2024-01-16)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah-Claude Bourdeau-Goulet (:user:`sarahclaude`), Trevor James Smith (:user:`Zeitsperre`), Marco Braun (:user:`vindelico`).

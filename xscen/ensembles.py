@@ -13,6 +13,7 @@ import xarray as xr
 from xclim import ensembles
 
 from .config import parse_config
+from .indicators import compute_indicators
 from .regrid import regrid_dataset
 from .spatial import subset
 from .utils import clean_up, get_cat_attrs
@@ -677,6 +678,7 @@ def build_partition_data(
     partition_dim: list[str] = ["source", "experiment", "bias_adjust_project"],
     subset_kw: dict = None,
     regrid_kw: dict = None,
+    indicators_kw: dict = None,
     rename_dict: dict = None,
 ):
     """Get the input for the xclim partition functions.
@@ -729,6 +731,15 @@ def build_partition_data(
 
         if regrid_kw:
             ds = regrid_dataset(ds, **regrid_kw)
+
+        if indicators_kw:
+            dict_ind = compute_indicators(ds, **indicators_kw)
+            if len(dict_ind) > 1:
+                raise ValueError(
+                    "The indicators computation should return only indicators of the same frequency.Returned frequencies: {dict_ind.keys()}"
+                )
+            else:
+                ds = list(dict_ind.values())[0]
 
         for dim in partition_dim:
             if f"cat:{dim}" in ds.attrs:

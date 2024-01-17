@@ -4,6 +4,7 @@ from copy import deepcopy
 import numpy as np
 import pytest
 import xarray as xr
+import xclim as xc
 import xesmf
 from xclim.testing.helpers import test_timeseries as timeseries
 
@@ -1072,13 +1073,14 @@ class TestEnsemblePartition:
             datasets=datasets,
             partition_dim=["source", "experiment"],
             subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
+            indicators_kw=dict(indicators=xc.atmos.tg_mean),
             rename_dict={"source": "new-name"},
         )
 
-        assert ds.dims == {"time": 730, "scenario": 4, "new-name": 2}
+        assert ds.dims == {"time": 2, "scenario": 4, "new-name": 2}
         assert ds.lat.values == 45.0
         assert ds.lon.values == -74
-        assert [i for i in ds.data_vars] == ["tas"]
+        assert [i for i in ds.data_vars] == ["tg_mean"]
 
         # test regrid
         ds_grid = xesmf.util.cf_grid_2d(-75, -74, 0.25, 45, 48, 0.55)
