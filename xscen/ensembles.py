@@ -688,6 +688,7 @@ def build_partition_data(
     (https://xclim.readthedocs.io/en/stable/api.html#uncertainty-partitioning).
     If the inputs have different grids,
     they have to be subsetted and regridded to a common grid/point.
+    Indicators can also be computed before combining the datasets.
 
 
     Parameters
@@ -704,6 +705,9 @@ def build_partition_data(
         Arguments to pass to `xs.spatial.subset()`.
     regrid_kw:
         Arguments to pass to `xs.regrid_dataset()`.
+    indicators_kw:
+        Arguments to pass to `xs.indicators.compute_indicators()`.
+        All indicators have to be for the same frequency, in order to be put on a single time axis.
     rename_dict:
         Dictionary to rename the dimensions from xscen names to xclim names.
         The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
