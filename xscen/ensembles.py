@@ -10,6 +10,7 @@ from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
+import xclim as xc
 from xclim import ensembles
 
 from .config import parse_config
@@ -679,6 +680,7 @@ def build_partition_data(
     subset_kw: dict = None,
     regrid_kw: dict = None,
     indicators_kw: dict = None,
+    calendar_kw: dict = None,
     rename_dict: dict = None,
 ):
     """Get the input for the xclim partition functions.
@@ -688,7 +690,7 @@ def build_partition_data(
     (https://xclim.readthedocs.io/en/stable/api.html#uncertainty-partitioning).
     If the inputs have different grids,
     they have to be subsetted and regridded to a common grid/point.
-    Indicators can also be computed before combining the datasets.
+    Indicators can also be computed and calendar converted before combining the datasets.
 
 
     Parameters
@@ -708,6 +710,14 @@ def build_partition_data(
     indicators_kw:
         Arguments to pass to `xs.indicators.compute_indicators()`.
         All indicators have to be for the same frequency, in order to be put on a single time axis.
+    calendar_kw : dict, optional
+        Arguments to pass to `xclim.core.calendar.convert_calendar`.
+        If None, the smallest common calendar is chosen.
+        For example, a mixed input of “noleap” and “360_day” will default to “noleap”.
+        ‘default’ is the standard calendar using np.datetime64 objects (xarray’s “standard” with use_cftime=False).
+        This is the same behavior as `calendar` in xclim.create_ensemble.
+        For conversions involving '360_day', the align_on='date' option is used by default.
+        If False, no conversion is done.
     rename_dict:
         Dictionary to rename the dimensions from xscen names to xclim names.
         The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
@@ -727,11 +737,17 @@ def build_partition_data(
     # initialize dict
     subset_kw = subset_kw or {}
     regrid_kw = regrid_kw or {}
+    calendar_kw = calendar_kw or {}
 
     list_ds = []
+    calendars = []
     for ds in datasets:
         if subset_kw:
             ds = subset(ds, **subset_kw)
+            # clean coords that might not match exactly
+            for c in ["rlat", "rlon", "lat", "lon", "rotated_pole"]:
+                if c in ds.coords:
+                    ds = ds.drop_vars(c)
 
         if regrid_kw:
             ds = regrid_dataset(ds, **regrid_kw)
@@ -745,6 +761,13 @@ def build_partition_data(
             else:
                 ds = list(dict_ind.values())[0]
 
+        # get calendar of each dataset
+        if calendar_kw is None:
+            if "time" in ds.coords:
+                time = xr.decode_cf(ds).time
+                ds["time"] = time
+                calendars.append(xc.core.calendar.get_calendar(time))
+
         for dim in partition_dim:
             if f"cat:{dim}" in ds.attrs:
                 ds = ds.expand_dims(**{dim: [ds.attrs[f"cat:{dim}"]]})
@@ -752,7 +775,17 @@ def build_partition_data(
         if "source" in partition_dim:
             new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
             ds = ds.assign_coords(source=[new_source])
+
         list_ds.append(ds)
+
+    # convert calendars
+    if calendar_kw:
+        common_cal = xc.core.calendar.common_calendar(calendars, join="outer")
+        calendar_kw.setdefault("target", common_cal)
+        calendar_kw.setdefault("align_on", "date")
+        list_ds = [
+            xc.core.calendar.convert_calendar(ds, **calendar_kw) for ds in list_ds
+        ]
     ens = xr.merge(list_ds)
 
     rename_dict = rename_dict or {}
