@@ -1,6 +1,7 @@
 """Testing utilities for xscen."""
 from typing import Optional, Union
 
+import cartopy.crs as ccrs
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -116,18 +117,31 @@ def datablock_3d(
 
     # Support for rotated pole and oblique mercator grids
     if x != "lon" and y != "lat":
-        lat, lon = np.meshgrid(
-            np.arange(45, 45 + values.shape[1] * y_step, y_step),
-            np.arange(-75, -75 + values.shape[2] * x_step, x_step),
-        )
-        da["lat"] = xr.DataArray(np.flipud(lat.T), dims=[y, x], attrs=attrs["lat"])
-        da["lon"] = xr.DataArray(lon.T, dims=[y, x], attrs=attrs["lon"])
-        da.attrs["grid_mapping"] = "rotated_pole" if x == "rlon" else "oblique_mercator"
+        PC = ccrs.PlateCarree()
+        if x == "rlon":  # rotated pole
+            GM = ccrs.RotatedPole(
+                pole_longitude=42.5, pole_latitude=83.0, central_rotated_longitude=0.0
+            )
+            da.attrs["grid_mapping"] = "rotated_pole"
+        else:
+            GM = ccrs.ObliqueMercator(
+                azimuth=90,
+                central_latitude=46,
+                central_longitude=-63,
+                scale_factor=1,
+                false_easting=0,
+                false_northing=0,
+            )
+            da.attrs["grid_mapping"] = "oblique_mercator"
+
+        YY, XX = xr.broadcast(da[y], da[x])
+        pts = PC.transform_points(GM, XX.values, YY.values)
+        da["lon"] = XX.copy(data=pts[..., 0]).rename("lon")
+        da["lat"] = YY.copy(data=pts[..., 1]).rename("lat")
 
     if as_dataset:
         if "grid_mapping" in da.attrs:
             da = da.to_dataset()
-            # These grid_mapping attributes are simply placeholders and won't match the data
             if da[variable].attrs["grid_mapping"] == "rotated_pole":
                 da = da.assign_coords(
                     {
@@ -137,6 +151,7 @@ def datablock_3d(
                                 "grid_mapping_name": "rotated_latitude_longitude",
                                 "grid_north_pole_latitude": 42.5,
                                 "grid_north_pole_longitude": 83.0,
+                                "north_pole_grid_longitude": 0.0,
                             },
                         )
                     }

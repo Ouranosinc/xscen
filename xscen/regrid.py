@@ -113,8 +113,6 @@ def regrid_dataset(  # noqa: C901
                 f"{'_'.join(kwargs[k] for k in kwargs if isinstance(kwargs[k], str))}.nc",
             )
 
-            # TODO: Support for conservative regridding (use xESMF to add corner information), Locstreams, etc.
-
             # Re-use existing weight file if possible
             if os.path.isfile(weights_filename) and not (
                 ("reuse_weights" in kwargs) and (kwargs["reuse_weights"] is False)
