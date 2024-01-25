@@ -775,11 +775,12 @@ def build_partition_data(
         if "source" in partition_dim:
             new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
             ds = ds.assign_coords(source=[new_source])
-
+        ds = ds.chunk({"time": 5, "lat": 50, "lon": 50})
+        print(ds.chunks)
         list_ds.append(ds)
 
     # convert calendars
-    if calendar_kw:
+    if isinstance(calendar_kw, dict):
         common_cal = xc.core.calendar.common_calendar(calendars, join="outer")
         calendar_kw.setdefault("target", common_cal)
         calendar_kw.setdefault("align_on", "date")
