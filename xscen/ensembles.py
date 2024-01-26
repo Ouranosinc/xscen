@@ -775,8 +775,6 @@ def build_partition_data(
         if "source" in partition_dim:
             new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
             ds = ds.assign_coords(source=[new_source])
-        ds = ds.chunk({"time": 5, "lat": 50, "lon": 50})
-        print(ds.chunks)
         list_ds.append(ds)
 
     # convert calendars
