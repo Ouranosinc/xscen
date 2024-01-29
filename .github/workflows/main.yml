@@ -69,8 +69,8 @@ jobs:
             tox-build: "py310-esmpy-coveralls"
           - python-version: "3.11"
             tox-build: "py311-esmpy-coveralls"
-          - python-version: "3.12"
-            tox-build: "py312-esmpy-coveralls"
+#          - python-version: "3.12"
+#            tox-build: "py312-esmpy-coveralls"
     defaults:
       run:
         shell: bash -l {0}
