@@ -1,4 +1,5 @@
 """Catalog objects and related tools."""
+
 import ast
 import itertools
 import json
@@ -700,22 +701,22 @@ class ProjectCatalog(DataCatalog):
             df_fix_date = self.df.copy()
             df_fix_date["date_start"] = pd.Series(
                 [
-                    x
-                    if isinstance(x, str)
-                    else ""
-                    if pd.isnull(x)
-                    else x.strftime("%4Y-%m-%d %H:00")
+                    (
+                        x
+                        if isinstance(x, str)
+                        else "" if pd.isnull(x) else x.strftime("%4Y-%m-%d %H:00")
+                    )
                     for x in self.df.date_start
                 ]
             )
 
             df_fix_date["date_end"] = pd.Series(
                 [
-                    x
-                    if isinstance(x, str)
-                    else ""
-                    if pd.isnull(x)
-                    else x.strftime("%4Y-%m-%d %H:00")
+                    (
+                        x
+                        if isinstance(x, str)
+                        else "" if pd.isnull(x) else x.strftime("%4Y-%m-%d %H:00")
+                    )
                     for x in self.df.date_end
                 ]
             )

@@ -1,4 +1,5 @@
 """Functions to find and extract data from a catalog."""
+
 import datetime
 import logging
 import os

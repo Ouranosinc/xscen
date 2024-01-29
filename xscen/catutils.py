@@ -1,4 +1,5 @@
 """Catalog creation and path building tools."""
+
 import json
 import logging
 import operator as op
