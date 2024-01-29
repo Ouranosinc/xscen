@@ -9,9 +9,9 @@ class TestSmokeTest:
     def test_version(self):
         import xscen
 
-        with pathlib.Path(__file__).parent.parent.joinpath(
-            "setup.cfg"
-        ).open() as reader:
+        with (
+            pathlib.Path(__file__).parent.parent.joinpath("setup.cfg").open() as reader
+        ):
             for line in reader.readlines():
                 if line.startswith("current_version"):
                     assert xscen.__version__ == line.split()[-1]
@@ -28,4 +28,4 @@ class TestSmokeTest:
         contents = f.read()
         assert """Gabriel Rondeau-Genesse""" in contents
         assert '__email__ = "rondeau-genesse.gabriel@ouranos.ca"' in contents
-        assert '__version__ = "0.8.1-beta"' in contents
+        assert '__version__ = "0.8.2-beta"' in contents

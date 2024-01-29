@@ -1,4 +1,5 @@
 """Input/Output functions for xscen."""
+
 import datetime
 import logging
 import os
@@ -103,9 +104,7 @@ def estimate_chunks(  # noqa: C901
             rounding = (
                 1
                 if ds[rechunk_dims[0]].shape[0] <= 15
-                else 5
-                if ds[rechunk_dims[0]].shape[0] <= 250
-                else 10
+                else 5 if ds[rechunk_dims[0]].shape[0] <= 250 else 10
             )
             chunks_per_dim[rechunk_dims[0]] = np.max(
                 [

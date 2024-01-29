@@ -1,4 +1,5 @@
 """Spatial tools."""
+
 import datetime
 import itertools
 import warnings
