@@ -9,9 +9,9 @@ class TestSmokeTest:
     def test_version(self):
         import xscen
 
-        with pathlib.Path(__file__).parent.parent.joinpath(
-            "setup.cfg"
-        ).open() as reader:
+        with (
+            pathlib.Path(__file__).parent.parent.joinpath("setup.cfg").open() as reader
+        ):
             for line in reader.readlines():
                 if line.startswith("current_version"):
                     assert xscen.__version__ == line.split()[-1]

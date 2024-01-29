@@ -25,12 +25,14 @@ class TestSearchDataCatalogs:
         out = xs.search_data_catalogs(
             data_catalogs=self.cat,
             variables_and_freqs=variables_and_freqs,
-            other_search_criteria={"experiment": ["ssp585"]}
-            if other_arg == "other"
-            else None,
-            exclusions={"member": "r2.*", "domain": ["gr2"]}
-            if other_arg == "exclusion"
-            else None,
+            other_search_criteria=(
+                {"experiment": ["ssp585"]} if other_arg == "other" else None
+            ),
+            exclusions=(
+                {"member": "r2.*", "domain": ["gr2"]}
+                if other_arg == "exclusion"
+                else None
+            ),
         )
         assert len(out) == 13 if other_arg is None else 2 if other_arg == "other" else 4
 

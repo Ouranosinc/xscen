@@ -1,4 +1,5 @@
 """Functions to regrid datasets."""
+
 import datetime
 import operator
 import os
@@ -276,9 +277,9 @@ def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.Data
 
     # Attributes
     if "where_operator" in mask_args:
-        mask.attrs[
-            "where_threshold"
-        ] = f"{mask_args['variable']} {mask_args['where_operator']} {mask_args['where_threshold']}"
+        mask.attrs["where_threshold"] = (
+            f"{mask_args['variable']} {mask_args['where_operator']} {mask_args['where_threshold']}"
+        )
     mask.attrs["mask_nans"] = f"{mask_args['mask_nans']}"
 
     return mask

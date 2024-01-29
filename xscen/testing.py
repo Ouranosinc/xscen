@@ -1,4 +1,5 @@
 """Testing utilities for xscen."""
+
 from typing import Optional, Union
 
 import cartopy.crs as ccrs

@@ -1,4 +1,5 @@
 """A collection of various convenience objects and functions to use in scripts."""
+
 import logging
 import mimetypes
 import os

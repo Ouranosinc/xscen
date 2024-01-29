@@ -1,4 +1,5 @@
 """Functions to compute xclim indicators."""
+
 import logging
 import os
 from collections.abc import Sequence
@@ -132,9 +133,11 @@ def compute_indicators(  # noqa: C901
         return (
             ind.injected_parameters["freq"]
             if "freq" in ind.injected_parameters
-            else ind.parameters["freq"]["default"]
-            if "freq" in ind.parameters
-            else ind.src_freq
+            else (
+                ind.parameters["freq"]["default"]
+                if "freq" in ind.parameters
+                else ind.src_freq
+            )
         )
 
     periods = standardize_periods(periods)
