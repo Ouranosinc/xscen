@@ -730,7 +730,7 @@ def spatial_mean(  # noqa: C901
         This is simply a shortcut for `{'name': 'global', 'method': 'bbox', 'lon_bnds' [-180, 180], 'lat_bnds': [-90, 90]}`.
     kwargs : dict, optional
         Arguments to send to either mean(), interp() or SpatialAverager().
-        For SpatialAverager, one can give `skipna` or  `out_chunks` here, to be passed to the averager call itself.
+        For SpatialAverager, one can give `skipna` or  `output_chunks` here, to be passed to the averager call itself.
     simplify_tolerance : float, optional
         Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
         The simpler the polygons, the faster the averaging, but it will lose some precision.
@@ -973,8 +973,8 @@ def spatial_mean(  # noqa: C901
 
         kwargs_copy = deepcopy(kwargs)
         call_kwargs = {"skipna": kwargs_copy.pop("skipna", False)}
-        if "out_chunks" in kwargs:
-            call_kwargs["out_chunks"] = kwargs_copy.pop("out_chunks")
+        if "output_chunks" in kwargs:
+            call_kwargs["output_chunks"] = kwargs_copy.pop("output_chunks")
 
         # Pre-emptive segmentization. Same threshold as xESMF, but there's not strong analysis behind this choice
         geoms = shapely.segmentize(polygon.geometry, 1)

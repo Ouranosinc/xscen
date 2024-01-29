@@ -51,7 +51,7 @@ dependencies = [
   "netCDF4",
   "numcodecs",
   "numpy",
-  "pandas>=2.0",
+  "pandas>=2.0,<2.2",
   "parse",
   # Used when opening catalogs.
   "pyarrow",
