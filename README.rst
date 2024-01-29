@@ -84,8 +84,8 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
         :target: https://pypi.python.org/pypi/xscen
         :alt: Python Package Index
 
-.. |ruff| image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2json
-        :target: https://github.com/astral-sh/ruff+
+.. |ruff| image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json
+        :target: https://github.com/astral-sh/ruff
         :alt: Ruff
 
 .. |status| image:: https://www.repostatus.org/badges/latest/active.svg
