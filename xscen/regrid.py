@@ -48,7 +48,7 @@ def regrid_dataset(  # noqa: C901
         Destination grid. The Dataset needs to have lat/lon coordinates.
         Supports a 'mask' variable compatible with ESMF standards.
     regridder_kwargs : dict, optional
-        Arguments to send xe.Regridder(). If it contains `skipna` or `out_chunks`, those
+        Arguments to send xe.Regridder(). If it contains `skipna` or `output_chunks`, those
         are passed to the regridder call directly.
     intermediate_grids : dict, optional
         This argument is used to do a regridding in many steps, regridding to regular
@@ -114,8 +114,6 @@ def regrid_dataset(  # noqa: C901
                 f"{'_'.join(kwargs[k] for k in kwargs if isinstance(kwargs[k], str))}.nc",
             )
 
-            # TODO: Support for conservative regridding (use xESMF to add corner information), Locstreams, etc.
-
             # Re-use existing weight file if possible
             if os.path.isfile(weights_filename) and not (
                 ("reuse_weights" in kwargs) and (kwargs["reuse_weights"] is False)
@@ -124,10 +122,10 @@ def regrid_dataset(  # noqa: C901
                 kwargs["reuse_weights"] = True
 
             # Extract args that are to be given at call time.
-            # out_chunks is only valid for xesmf >= 0.8, so don't add it be default to the call_kwargs
+            # output_chunks is only valid for xesmf >= 0.8, so don't add it be default to the call_kwargs
             call_kwargs = {"skipna": regridder_kwargs.pop("skipna", False)}
-            if "out_chunks" in regridder_kwargs:
-                call_kwargs["out_chunks"] = regridder_kwargs.pop("out_chunks")
+            if "output_chunks" in regridder_kwargs:
+                call_kwargs["output_chunks"] = regridder_kwargs.pop("output_chunks")
 
             regridder = _regridder(
                 ds_in=ds, ds_grid=ds_grid, filename=weights_filename, **regridder_kwargs
