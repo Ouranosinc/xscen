@@ -136,8 +136,8 @@ def datablock_3d(
 
         YY, XX = xr.broadcast(da[y], da[x])
         pts = PC.transform_points(GM, XX.values, YY.values)
-        da["lon"] = XX.copy(data=pts[..., 0]).rename("lon")
-        da["lat"] = YY.copy(data=pts[..., 1]).rename("lat")
+        da["lon"] = xr.DataArray(pts[..., 0], dims=XX.dims, attrs=attrs["lon"])
+        da["lat"] = xr.DataArray(pts[..., 1], dims=YY.dims, attrs=attrs["lat"])
 
     if as_dataset:
         if "grid_mapping" in da.attrs:
