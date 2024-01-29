@@ -120,7 +120,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.8.1-beta"
+current_version = "0.8.2-beta-beta"
 commit = true
 tag = false
 tag_name = "{new_version}"
