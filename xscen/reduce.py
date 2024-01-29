@@ -1,4 +1,5 @@
 """Functions to reduce an ensemble of simulations."""
+
 import logging
 from typing import Optional, Union
 

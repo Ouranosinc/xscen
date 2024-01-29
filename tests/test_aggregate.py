@@ -61,9 +61,7 @@ class TestComputeDeltas:
         results = (
             [0, 1, 2, 3]
             if kind == "+"
-            else [1, 2, 3, 4]
-            if kind == "/"
-            else [0, 100, 200, 300]
+            else [1, 2, 3, 4] if kind == "/" else [0, 100, 200, 300]
         )
         units = "K" if kind == "+" else "" if kind == "/" else "%"
 
@@ -316,9 +314,11 @@ class TestProduceHorizon:
         assert len(out.horizon) == 1 if isinstance(wl, float) else len(wl)
         np.testing.assert_array_equal(
             out.horizon,
-            ["+0.8Cvs1850-1900"]
-            if isinstance(wl, float)
-            else ["+0.8Cvs1850-1900", "+0.85Cvs1850-1900"],
+            (
+                ["+0.8Cvs1850-1900"]
+                if isinstance(wl, float)
+                else ["+0.8Cvs1850-1900", "+0.85Cvs1850-1900"]
+            ),
         )
 
     def test_combine(self):

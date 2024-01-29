@@ -1,4 +1,5 @@
 """Climate indices calculator with a minimal cli interface."""
+
 import atexit
 import logging
 from argparse import ArgumentParser

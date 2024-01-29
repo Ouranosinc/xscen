@@ -1,4 +1,5 @@
 """Functions to perform diagnostics on datasets."""
+
 import logging
 import os
 import warnings
@@ -485,9 +486,11 @@ def measures_heatmap(
     # normalize to 0-1 -> best-worst
     hmap = np.array(
         [
-            (c - np.min(c)) / (np.max(c) - np.min(c))
-            if np.max(c) != np.min(c)
-            else [0.5] * len(c)
+            (
+                (c - np.min(c)) / (np.max(c) - np.min(c))
+                if np.max(c) != np.min(c)
+                else [0.5] * len(c)
+            )
             for c in hmap.T
         ]
     ).T

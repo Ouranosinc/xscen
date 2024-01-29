@@ -1,4 +1,5 @@
 """Common utilities to be used in many places."""
+
 import fnmatch
 import gettext
 import json
