@@ -33,9 +33,7 @@ class TestRechunkForSaving:
             dim = (
                 dim
                 if (xy is False or dim == "time")
-                else "X"
-                if dim == dims[0]
-                else "Y"
+                else "X" if dim == dims[0] else "Y"
             )
             assert chunks[0] == new_chunks[dim]
 

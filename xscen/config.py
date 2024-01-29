@@ -41,6 +41,7 @@ extra actions when finding the following special sections:
   warning categories (types) and the values as an action to add to the filter. The key "all"
   applies the filter to any warnings. Only built-in warnings are supported.
 """
+
 import ast
 import builtins
 import collections.abc

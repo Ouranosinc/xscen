@@ -1120,9 +1120,11 @@ def produce_horizon(  # noqa: C901
         if ds_sub is not None:
             # compute indicators
             ind_dict = compute_indicators(
-                ds=ds_sub.squeeze(dim="warminglevel")
-                if "warminglevel" in ds_sub.dims
-                else ds_sub,
+                ds=(
+                    ds_sub.squeeze(dim="warminglevel")
+                    if "warminglevel" in ds_sub.dims
+                    else ds_sub
+                ),
                 indicators=indicators,
             )
 
@@ -1190,9 +1192,11 @@ def produce_horizon(  # noqa: C901
                     "warminglevel" in ds.dims and warminglevels is None
                 ):
                     to_level = to_level.format(
-                        wl=ds_sub.warminglevel.values[0]
-                        if isinstance(all_periods[0], dict)
-                        else ds.warminglevel.values[0]
+                        wl=(
+                            ds_sub.warminglevel.values[0]
+                            if isinstance(all_periods[0], dict)
+                            else ds.warminglevel.values[0]
+                        )
                     )
                 else:
                     to_level = to_level.format(

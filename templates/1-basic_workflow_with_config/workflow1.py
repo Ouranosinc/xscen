@@ -1,4 +1,5 @@
 """Template of a typical workflow."""
+
 import atexit
 import logging
 
