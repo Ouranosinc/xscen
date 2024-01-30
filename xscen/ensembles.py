@@ -745,10 +745,9 @@ def build_partition_data(
     for ds in datasets:
         if subset_kw:
             ds = subset(ds, **subset_kw)
-            # clean coords that might not match exactly
-            for c in ["rlat", "rlon", "lat", "lon", "rotated_pole"]:
-                if c in ds.coords:
-                    ds = ds.drop_vars(c)
+            ds = ds.drop_vars(
+                ["lat", "lon", "rlat", "rlon", "rotated_pole"], errors="ignore"
+            )
 
         if regrid_kw:
             ds = regrid_dataset(ds, **regrid_kw)
