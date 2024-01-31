@@ -11,7 +11,6 @@ on:
       - pyproject.toml
       - setup.cfg
       - setup.py
-      - tests/test_xscen.py
       - xscen/__init__.py
   pull_request:
 
