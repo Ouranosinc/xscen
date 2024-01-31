@@ -123,7 +123,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.8.2-beta-beta"
+current_version = "0.8.2"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -137,11 +137,6 @@ serialize = [
 
 [[tool.bumpversion.files]]
 filename = "xscen/__init__.py"
-search = "__version__ = \"{current_version}\""
-replace = "__version__ = \"{new_version}\""
-
-[[tool.bumpversion.files]]
-filename = "tests/test_xscen.py"
 search = "__version__ = \"{current_version}\""
 replace = "__version__ = \"{new_version}\""
 
