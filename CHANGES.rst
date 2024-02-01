@@ -6,14 +6,20 @@ v0.9.0 (unreleased)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`)
 
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Added a new argument ``indicators_kw`` to ``xs.ensembles.build_partition_data``. (:pull:`315`).
+* `xscen` is `Semantic Versioning 2.0.0 <https://semver.org/spec/v2.0.0.html>`_ compliant. (:pull:`319`).
+
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Granular permissions and dependency scanning actions have been added to all GitHub CI Workflows. (:pull:`313`).
 * Updated the list of dependencies to add missing requirements. (:pull:`314`).
-
-New features and enhancements
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* Added a new argument ``indicators_kw`` to ``xs.ensembles.build_partition_data``. (:pull:`315`).
+* The `cookiecutter` template has been updated to the latest commit via `cruft`. (:pull:`319`):
+    * `actions-versions-updater.yml` has been replaced with `Dependabot <https://docs.github.com/en/code-security/dependabot/working-with-dependabot>`_ (it's just better).
+    * The OpenSSF `scorecard.yml` workflow has been added to the GitHub workflows to evaluate package security.
+    * Code formatting tools (`black`, `blackdoc`, `isort`) are now hard-pinned. These need to be kept in sync with changes from `pre-commit`. (Dependabot should perform this task automatically.)
+    * The versioning system has been updated to follow the Semantic Versioning 2.0.0 standard.
 
 v0.8.0 (2024-01-16)
 -------------------

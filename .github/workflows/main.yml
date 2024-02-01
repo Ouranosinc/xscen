@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths-ignore:
+      - .cruft.json
       - CHANGES.rst
       - README.rst
       - pyproject.toml
@@ -20,7 +21,6 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: read
 
 jobs:
   lint:
@@ -68,6 +68,8 @@ jobs:
             tox-build: "py310-esmpy-coveralls"
           - python-version: "3.11"
             tox-build: "py311-esmpy-coveralls"
+#          - python-version: "3.12"
+#            tox-build: "py312-esmpy-coveralls"
     defaults:
       run:
         shell: bash -l {0}
@@ -176,6 +178,10 @@ jobs:
     runs-on: ubuntu-latest
     container: python:3-slim
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
+        with:
+          gress-policy: audit
       - name: Coveralls Finished
         run: |
           python -m pip install --upgrade coveralls

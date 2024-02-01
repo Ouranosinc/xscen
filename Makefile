@@ -22,6 +22,7 @@ endef
 export PRINT_HELP_PYSCRIPT
 
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
+LOCALES := docs/locales
 
 help:
 	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
@@ -40,6 +41,7 @@ clean-docs: ## remove documentation artifacts
 	rm -fr docs/notebooks/.ipynb_checkpoints/
 	rm -f docs/apidoc/xscen*.rst
 	rm -f docs/apidoc/modules.rst
+	rm -f docs/locales/fr/LC_MESSAGES/*.mo
 	$(MAKE) -C docs clean
 
 clean-pyc: ## remove Python file artifacts
@@ -70,6 +72,10 @@ test: ## run tests quickly with the default Python
 test-all: ## run tests on every Python version with tox
 	tox
 
+initialize-translations: clean-docs ## initialize translations, ignoring autodoc-generated files
+	${MAKE} -C docs gettext
+	sphinx-intl update -p docs/_build/gettext -d docs/locales -l fr
+
 autodoc: clean-docs ## create sphinx-apidoc files
 	sphinx-apidoc -o docs/apidoc --module-first xscen
 
@@ -78,8 +84,14 @@ linkcheck: autodoc ## run checks over all external links found throughout the do
 
 docs: autodoc ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs html
+	$(MAKE) -C docs html BUILDDIR="_build/html/en"
+ifneq ("$(wildcard $(LOCALES))","")
+	${MAKE} -C docs gettext
+	$(MAKE) -C docs html BUILDDIR="_build/html/fr" SPHINXOPTS="-D language='fr'"
+endif
 ifndef READTHEDOCS
 	$(BROWSER) docs/_build/html/index.html
+	$(BROWSER) docs/_build/html/en/html/index.html
 endif
 
 servedocs: docs ## compile the docs watching for changes

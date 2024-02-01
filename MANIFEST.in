@@ -13,6 +13,7 @@ recursive-include xscen/data *.nc
 recursive-include xscen/data/fr/LC_MESSAGES *.mo *.po
 recursive-include tests *.py
 recursive-include docs conf.py Makefile make.bat *.png *.rst *.yml
+recursive-include docs/locales *.mo *.po
 recursive-include docs/notebooks *.ipynb
 recursive-include docs/notebooks/samples *.csv *.json *.yml
 
