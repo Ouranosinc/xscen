@@ -59,7 +59,7 @@ dependencies = [
   "rechunker",
   "scipy",
   "shapely>=2.0",
-  "sparse<=0.15.1",
+  "sparse",
   "toolz",
   "xarray<2023.11.0", # FIXME: Remove when pandas 2.2 is released and xclim is fixed.
   "xclim>=0.46.0",
