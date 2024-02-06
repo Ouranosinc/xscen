@@ -52,24 +52,23 @@ jobs:
           python -m tox -e lint
 
   test-pypi:
-    name: Test with Python${{ matrix.python-version }} (PyPI/tox)
+    name: Test with Python${{ matrix.python-version }} (PyPI/tox, no ESMF)
     needs: lint
     runs-on: ubuntu-latest
     env:
       COVERALLS_PARALLEL: true
       COVERALLS_SERVICE_NAME: github
-      esmf-version: 8.4.2
     strategy:
       matrix:
         include:
           - python-version: "3.9"
-            tox-build: "py39-esmpy-coveralls"
+            tox-build: "py39-coveralls"
           - python-version: "3.10"
-            tox-build: "py310-esmpy-coveralls"
+            tox-build: "py310-coveralls"
           - python-version: "3.11"
-            tox-build: "py311-esmpy-coveralls"
+            tox-build: "py311-coveralls"
 #          - python-version: "3.12"
-#            tox-build: "py312-esmpy-coveralls"
+#            tox-build: "py312-coveralls"
     defaults:
       run:
         shell: bash -l {0}
@@ -79,21 +78,10 @@ jobs:
         with:
           egress-policy: audit
       - uses: actions/checkout@v4.1.1
-      - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
-        uses: mamba-org/setup-micromamba@v1.8.0
-        with:
-          cache-downloads: true
-          environment-name: xscen-pypi
-          create-args: >-
-            esmf=${{ env.esmf-version }}
-            mamba
-            python=${{ matrix.python-version }}
-            tox
       - name: Test with tox
         run: |
           python -m tox -e ${{ matrix.tox-build }}
         env:
-          ESMF_VERSION: ${{ env.esmf-version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
 

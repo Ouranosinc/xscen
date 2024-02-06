@@ -11,7 +11,13 @@ import cartopy.crs as ccrs
 import cf_xarray as cfxr
 import numpy as np
 import xarray as xr
-import xesmf as xe
+
+try:
+    import xesmf as xe
+    from xesmf.frontend import Regridder
+except ImportError:
+    xe = None
+    Regridder = "xesmf.Regridder"
 
 from .config import parse_config
 
@@ -75,6 +81,11 @@ def regrid_dataset(  # noqa: C901
     --------
     xesmf.regridder, xesmf.util.cf_grid_2d
     """
+    if xe is None:
+        raise ImportError(
+            "xscen's regridding functionality requires xESMF to work, please install that package."
+        )
+
     regridder_kwargs = regridder_kwargs or {}
 
     ds_grids = []  # list of target grids
@@ -293,7 +304,7 @@ def _regridder(
     method: str = "bilinear",
     unmapped_to_nan: Optional[bool] = True,
     **kwargs,
-) -> xe.frontend.Regridder:
+) -> Regridder:
     """Call to xesmf Regridder with a few default arguments.
 
     Parameters

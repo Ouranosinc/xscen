@@ -63,7 +63,6 @@ dependencies = [
   "toolz",
   "xarray<2023.11.0", # FIXME: Remove when pandas 2.2 is released and xclim is fixed.
   "xclim>=0.46.0",
-  "xesmf>=0.7",
   "zarr"
 ]
 
@@ -103,6 +102,9 @@ docs = [
   "sphinx-intl",
   "sphinx-rtd-theme>=1.0",
   "sphinxcontrib-napoleon"
+]
+extra = [
+  "xesmf>=0.7"
 ]
 
 [project.urls]

@@ -5,7 +5,11 @@ import numpy as np
 import pytest
 import xarray as xr
 import xclim as xc
-import xesmf
+
+try:
+    import xesmf as xe
+except ImportError:
+    xe = None
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
@@ -1064,6 +1068,7 @@ class TestGenerateWeights:
 
 
 class TestEnsemblePartition:
+    @pytest.mark.skipif(xe is None, reason="xesmf needed for testing regrdding")
     def test_build_partition_data(self, samplecat, tmp_path):
         # test subset
         datasets = samplecat.search(variable="tas").to_dataset_dict(
@@ -1083,7 +1088,7 @@ class TestEnsemblePartition:
         assert [i for i in ds.data_vars] == ["tg_mean"]
 
         # test regrid
-        ds_grid = xesmf.util.cf_grid_2d(-75, -74, 0.25, 45, 48, 0.55)
+        ds_grid = xe.util.cf_grid_2d(-75, -74, 0.25, 45, 48, 0.55)
         datasets = samplecat.search(variable="tas", member="r1i1p1f1").to_dataset_dict(
             xarray_open_kwargs={"engine": "h5netcdf"}
         )
