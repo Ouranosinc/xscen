@@ -16,7 +16,7 @@ dependencies:
   - geopandas
   - h5netcdf
   - h5py
-  - intake-esm >=2023.07.07,<2024.2.6
+  - intake-esm >=2023.07.07
   - matplotlib
   - netCDF4
   - numcodecs
