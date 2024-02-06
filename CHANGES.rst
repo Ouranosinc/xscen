@@ -10,6 +10,7 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Added a new argument ``indicators_kw`` to ``xs.ensembles.build_partition_data``. (:pull:`315`).
 * `xscen` is `Semantic Versioning 2.0.0 <https://semver.org/spec/v2.0.0.html>`_ compliant. (:pull:`319`).
+* `xesmf` made an optional dependency, making `xscen` easier to install with `pip`. (:pull:`337`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
