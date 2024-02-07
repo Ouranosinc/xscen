@@ -8,6 +8,11 @@ from xclim.testing.helpers import test_timeseries as timeseries
 import xscen as xs
 from xscen.testing import datablock_3d
 
+try:
+    import xesmf as xe
+except ImportError:
+    xe = None
+
 
 class TestClimatologicalMean:
     def test_future_warning(self):
@@ -414,6 +419,8 @@ class TestSpatialMean:
     )
     @pytest.mark.parametrize("lonstart", [-70, -30, 0])
     def test_global(self, lonstart, method, exp):
+        if method == "xesmf" and xe is None:
+            pytest.skip("xesmf needed for testing averaging with method xesmf")
         ds = datablock_3d(
             np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 3, "float"),
             "tas",
