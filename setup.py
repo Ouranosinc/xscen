@@ -11,7 +11,7 @@ class InstallWithCompile(install):
 
     def run(self):
         """Install the package, but compile the i18n catalogs first."""
-        with open("/home/pbourg/Projects/xscen/wtf.log", "w") as f:
+        with open("/home/pbourg/Projets/xscen/wtf.log", "w") as f:
             f.write(str(self.distribution))
         compiler = compile_catalog(self.distribution)
         option_dict = self.distribution.get_option_dict("compile_catalog")
