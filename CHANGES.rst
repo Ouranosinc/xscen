@@ -2,9 +2,9 @@
 Changelog
 =========
 
-v0.9.0 (unreleased)
+v0.8.2 (2024-02-12)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`)
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`)
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
