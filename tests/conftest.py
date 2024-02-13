@@ -26,10 +26,13 @@ def cleanup_notebook_data_folder(request):
     request.addfinalizer(remove_data_folder)
 
 
-@pytest.mark.requires_netcdf
 @pytest.fixture(scope="session")
-def samplecat():
+def samplecat(request):
     """Generate a sample catalog with the tutorial netCDFs."""
+    mark_skip = request.config.getoption("-m")
+    if "not requires_netcdf" == mark_skip:
+        pytest.skip("Skipping tests that require netCDF files")
+
     df = xs.parse_directory(
         directories=[SAMPLES_DIR],
         patterns=[
