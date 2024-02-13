@@ -21,6 +21,7 @@ Internal changes
     * The OpenSSF `scorecard.yml` workflow has been added to the GitHub workflows to evaluate package security.
     * Code formatting tools (`black`, `blackdoc`, `isort`) are now hard-pinned. These need to be kept in sync with changes from `pre-commit`. (Dependabot should perform this task automatically.)
     * The versioning system has been updated to follow the Semantic Versioning 2.0.0 standard.
+* Fixed an issue with `pytest -m "not requires_netcdf"` not working as expected. (:pull:`345`).
 
 v0.8.0 (2024-01-16)
 -------------------
