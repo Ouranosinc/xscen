@@ -30,8 +30,10 @@ def cleanup_notebook_data_folder(request):
 def samplecat(request):
     """Generate a sample catalog with the tutorial netCDFs."""
     mark_skip = request.config.getoption("-m")
-    if "not requires_netcdf" == mark_skip:
+    if "not requires_netcdf" == mark_skip or not SAMPLES_DIR.exists():
         pytest.skip("Skipping tests that require netCDF files")
+    elif list(SAMPLES_DIR.rglob("*.nc")) is []:
+        pytest.skip("No netCDF files found in the tutorial samples folder")
 
     df = xs.parse_directory(
         directories=[SAMPLES_DIR],
