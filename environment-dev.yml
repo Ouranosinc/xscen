@@ -72,5 +72,6 @@ dependencies:
   # packaging
   - build
   - wheel
-  - pip: # temporary fix until xclim 0.49 release
+   # temporary fix until xclim 0.49 release
+  - pip:
      - "git+https://github.com/Ouranosinc/xclim.git@fix-yamale-measure"
