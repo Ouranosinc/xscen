@@ -241,7 +241,7 @@ def health_checks(  # noqa: C901
             _error(
                 "The timesteps are irregular or cannot be inferred by xarray.", "freq"
             )
-        elif freq.replace("YS", "AS-JAN") != inferred_freq:
+        elif freq.replace("YS", "YS-JAN") != inferred_freq:
             _error(
                 f"The frequency is not '{freq}'. Received '{inferred_freq}'.", "freq"
             )
