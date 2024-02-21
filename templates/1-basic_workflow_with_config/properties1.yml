@@ -31,4 +31,5 @@ indicators:
       long_name: Mean precipitation
     input:
       da: pr
-    measure: xclim.sdba.measures.RATIO  # This will instruct xclim to perform a ratio between the given input and the reference data.
+    #FIXME: Remove until xclim releases 0.49.
+    #measure: xclim.sdba.measures.RATIO  # This will instruct xclim to perform a ratio between the given input and the reference data.
