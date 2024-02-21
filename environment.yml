@@ -2,7 +2,7 @@ name: xscen
 channels:
   - conda-forge
 dependencies:
-  - python >=3.9
+  - python >=3.9,<3.13
   # Don't forget to sync changes between environment.yml, environment-dev.yml, and setup.py!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
@@ -21,7 +21,7 @@ dependencies:
   - netCDF4
   - numcodecs
   - numpy
-  - pandas >=2.0,<2.2
+  - pandas >=2.2
   - parse
   - pyyaml
   - rechunker
@@ -29,7 +29,7 @@ dependencies:
   - shapely >=2.0
   - sparse
   - toolz
-  - xarray <2023.11.0  # FIXME: Remove when pandas 2.2 is released and xclim is fixed.
+  - xarray
   - xclim >=0.46.0
   - xesmf >=0.7
   - zarr
