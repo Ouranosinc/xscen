@@ -1045,7 +1045,7 @@ def unstack_dates(
     Returns
     -------
     xr.Dataset or DataArray
-      Same as ds but the time axis is now yearly (AS-JAN) and the seasons are along the new dimension.
+      Same as ds but the time axis is now yearly (YS-JAN) and the seasons are along the new dimension.
 
     Notes
     -----
@@ -1054,9 +1054,9 @@ def unstack_dates(
     - For MS, the coordinates are the month abbreviations in english (JAN, FEB, etc.)
     - For ?QS-? and other ?MS frequencies, the coordinates are the initials of the months in each season.
       Ex: QS-DEC (with winter_starts_year=True) : DJF, MAM, JJA, SON.
-    - For YS or AS-JAN, the new coordinate has a single value of "annual".
-    - For ?AS-? frequencies, the new coordinate has a single value of "annual-{anchor}", were "anchor"
-      is the abbreviation of the first month of the year. Ex: AS-JUL -> "annual-JUL".
+    - For YS or YS-JAN, the new coordinate has a single value of "annual".
+    - For ?YS-? frequencies, the new coordinate has a single value of "annual-{anchor}", were "anchor"
+      is the abbreviation of the first month of the year. Ex: YS-JUL -> "annual-JUL".
     """
     # Get some info about the time axis
     freq = xr.infer_freq(ds.time)
