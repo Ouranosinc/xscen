@@ -777,7 +777,7 @@ def build_partition_data(
 
             if "source" in partition_dim:
                 new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
-                ds = ds.assign_coords(source=[new_source])
+                ds = ds.assign_coords(realization=[new_source])
             list_ds.append(ds)
             if not merged:
                 merged = ds
@@ -832,7 +832,7 @@ def build_partition_data(
     # ens = xr.merge(list_ds)
 
     rename_dict = rename_dict or {}
-    rename_dict.setdefault("source", "model")
+    rename_dict.setdefault("realization", "model")
     rename_dict.setdefault("experiment", "scenario")
     rename_dict.setdefault("bias_adjust_project", "downscaling")
     rename_dict = {k: v for k, v in rename_dict.items() if k in ens.dims}
