@@ -29,7 +29,7 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
-  # "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: CPython",
   "Topic :: Scientific/Engineering :: Atmospheric Science"
 ]
@@ -52,7 +52,7 @@ dependencies = [
   "netCDF4",
   "numcodecs",
   "numpy",
-  "pandas>=2.0,<2.2",
+  "pandas>=2.2",
   "parse",
   # Used when opening catalogs.
   "pyarrow",
@@ -62,7 +62,7 @@ dependencies = [
   "shapely>=2.0",
   "sparse",
   "toolz",
-  "xarray<2023.11.0", # FIXME: Remove when pandas 2.2 is released and xclim is fixed.
+  "xarray",
   "xclim>=0.46.0",
   "zarr"
 ]

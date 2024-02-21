@@ -125,7 +125,7 @@ class TestHealthChecks:
             xs.diagnostics.health_checks(ds, variables_and_units={"tas": "degC"})
         with pytest.warns(
             UserWarning,
-            match="Data units kelvin are not compatible with requested mm.",
+            match="are not compatible with requested mm.",
         ):
             xs.diagnostics.health_checks(ds, variables_and_units={"tas": "mm"})
 
@@ -162,7 +162,7 @@ class TestHealthChecks:
             xs.diagnostics.health_checks(ds, cfchecks=bad_cfcheck)
 
     @pytest.mark.parametrize(
-        "freq, gap", [("D", False), ("MS", False), ("3H", False), ("D", True)]
+        "freq, gap", [("D", False), ("MS", False), ("3h", False), ("D", True)]
     )
     def test_freq(self, freq, gap):
         ds = timeseries(
