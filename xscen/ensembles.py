@@ -683,6 +683,7 @@ def build_partition_data(
     indicators_kw: dict = None,
     calendar_kw: dict = None,
     rename_dict: dict = None,
+    to_dataset_kw: dict = None,
 ):
     """Get the input for the xclim partition functions.
 
@@ -740,52 +741,95 @@ def build_partition_data(
     regrid_kw = regrid_kw or {}
     calendar_kw = calendar_kw or {}
 
-    list_ds = []
-    calendars = []
-    for ds in datasets:
-        if subset_kw:
-            ds = subset(ds, **subset_kw)
-            ds = ds.drop_vars(
-                ["lat", "lon", "rlat", "rlon", "rotated_pole"], errors="ignore"
-            )
-
-        if regrid_kw:
-            ds = regrid_dataset(ds, **regrid_kw)
-
-        if indicators_kw:
-            dict_ind = compute_indicators(ds, **indicators_kw)
-            if len(dict_ind) > 1:
-                raise ValueError(
-                    f"The indicators computation should return only indicators of the same frequency.Returned frequencies: {dict_ind.keys()}"
+    if isinstance(datasets, list):
+        list_ds = []
+        calendars = []
+        merged = False
+        for ds in datasets:
+            if subset_kw:
+                ds = subset(ds, **subset_kw)
+                ds = ds.drop_vars(
+                    ["lat", "lon", "rlat", "rlon", "rotated_pole"], errors="ignore"
                 )
+
+            if regrid_kw:
+                ds = regrid_dataset(ds, **regrid_kw)
+
+            if indicators_kw:
+                dict_ind = compute_indicators(ds, **indicators_kw)
+                if len(dict_ind) > 1:
+                    raise ValueError(
+                        f"The indicators computation should return only indicators of the same frequency.Returned frequencies: {dict_ind.keys()}"
+                    )
+                else:
+                    ds = list(dict_ind.values())[0]
+
+            # get calendar of each dataset
+            if calendar_kw is None:
+                if "time" in ds.coords:
+                    time = xr.decode_cf(ds).time
+                    ds["time"] = time
+                    calendars.append(xc.core.calendar.get_calendar(time))
+
+            for dim in partition_dim:
+                if f"cat:{dim}" in ds.attrs:
+                    ds = ds.expand_dims(**{dim: [ds.attrs[f"cat:{dim}"]]})
+
+            if "source" in partition_dim:
+                new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
+                ds = ds.assign_coords(source=[new_source])
+            list_ds.append(ds)
+            if not merged:
+                merged = ds
             else:
-                ds = list(dict_ind.values())[0]
+                merged = xr.merge([merged, ds])
+        ens = merged
 
-        # get calendar of each dataset
-        if calendar_kw is None:
-            if "time" in ds.coords:
-                time = xr.decode_cf(ds).time
-                ds["time"] = time
-                calendars.append(xc.core.calendar.get_calendar(time))
+    # elif isinstance(datasets, xscen.DataCatalog):
+    #     # special case to handle source (create one dimension with institution_source_member)
+    #     ensemble_on_list = None
+    #     if "source" in partition_dim:
+    #         partition_dim.remove("source")
+    #         ensemble_on_list = ["institution", "source", "member"]
+    #
+    #     subcat = datasets
+    #
+    #     # create a dataset for each bias_adjust_project, modify grid and concat them
+    #     dim_with_different_grid = (
+    #         "bias_adjust_project"
+    #         if "bias_adjust_project" in partition_dim
+    #         else "source"
+    #     )
+    #     list_ds = []
+    #     for d in subcat.df[dim_with_different_grid].unique():
+    #         ds = subcat.search(**{dim_with_different_grid: d}).to_dataset(
+    #             concat_on=partition_dim,
+    #             create_ensemble_on=ensemble_on_list,
+    #             **to_dataset_kw,
+    #         )
+    #         if "realization" in ds:
+    #             ds = ds.rename({"realization": "source"})
+    #         if subset_kw:
+    #             ds = subset(ds, **subset_kw)
+    #         if regrid_kw:
+    #             ds = regrid_dataset(ds, **regrid_kw)
+    #         list_ds.append(ds)
+    #     ens = xr.concat(list_ds, dim=dim_with_different_grid)
 
-        for dim in partition_dim:
-            if f"cat:{dim}" in ds.attrs:
-                ds = ds.expand_dims(**{dim: [ds.attrs[f"cat:{dim}"]]})
+    else:
+        raise ValueError(
+            "datasets should be a list or a dictionary of xarray datasets or a xscen.DataCatalog"
+        )
 
-        if "source" in partition_dim:
-            new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
-            ds = ds.assign_coords(source=[new_source])
-        list_ds.append(ds)
-
-    # convert calendars
-    if isinstance(calendar_kw, dict):
-        common_cal = xc.core.calendar.common_calendar(calendars, join="outer")
-        calendar_kw.setdefault("target", common_cal)
-        calendar_kw.setdefault("align_on", "date")
-        list_ds = [
-            xc.core.calendar.convert_calendar(ds, **calendar_kw) for ds in list_ds
-        ]
-    ens = xr.merge(list_ds)
+    # # convert calendars
+    # if isinstance(calendar_kw, dict):
+    #     common_cal = xc.core.calendar.common_calendar(calendars, join="outer")
+    #     calendar_kw.setdefault("target", common_cal)
+    #     calendar_kw.setdefault("align_on", "date")
+    #     list_ds = [
+    #         xc.core.calendar.convert_calendar(ds, **calendar_kw) for ds in list_ds
+    #     ]
+    # ens = xr.merge(list_ds)
 
     rename_dict = rename_dict or {}
     rename_dict.setdefault("source", "model")
