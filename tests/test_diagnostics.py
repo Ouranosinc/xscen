@@ -1,9 +1,11 @@
 import numpy as np
 import pytest
 import xarray as xr
+from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
+from xscen.testing import datablock_3d
 
 
 class TestHealthChecks:
@@ -269,3 +271,208 @@ class TestHealthChecks:
                         ]
                     ]
                 )
+
+
+class TestPropertiesMeasures:
+    yaml_file = notebooks / "samples" / "properties.yml"
+    ds = timeseries(
+        np.ones(365 * 3), variable="tas", start="2001-01-01", freq="D", as_dataset=True
+    )
+
+    @pytest.mark.parametrize("input", ["module", "iter"])
+    def test_input_types(self, input):
+        module = xs.indicators.load_xclim_module(self.yaml_file)
+        p1, m1 = xs.properties_and_measures(
+            self.ds,
+            properties=module if input == "module" else module.iter_indicators(),
+        )
+        p2, m2 = xs.properties_and_measures(self.ds, properties=self.yaml_file)
+        assert p1.equals(p2)
+        assert m1.equals(m2)
+
+    @pytest.mark.parametrize("to_level", [None, "test"])
+    def test_level(self, to_level):
+        if to_level is None:
+            p, m = xs.properties_and_measures(self.ds, properties=self.yaml_file)
+            assert "diag-properties" == p.attrs["cat:processing_level"]
+            assert "diag-measures" == m.attrs["cat:processing_level"]
+
+        else:
+            p, m = xs.properties_and_measures(
+                self.ds,
+                properties=self.yaml_file,
+                to_level_prop=to_level,
+                to_level_meas=to_level,
+            )
+            assert to_level == p.attrs["cat:processing_level"]
+            assert to_level == m.attrs["cat:processing_level"]
+
+    @pytest.mark.parametrize("period", [None, ["2001", "2001"]])
+    def test_output(self, period):
+        values = np.ones(365 * 2)
+        values[:365] = 2
+        ds = timeseries(
+            values, variable="tas", start="2001-01-01", freq="D", as_dataset=True
+        )
+        ds["da"] = ds.tas
+
+        p, m = xs.properties_and_measures(
+            ds,
+            properties=self.yaml_file,
+            period=period,
+        )
+
+        if period is None:
+            np.testing.assert_allclose(p["quantile_98_tas"].values, 2)
+            np.testing.assert_allclose(p["mean-tas"].values, 1.5)
+        else:
+            np.testing.assert_allclose(p["quantile_98_tas"].values, 2)
+            np.testing.assert_allclose(p["mean-tas"].values, 2)
+
+    def test_unstack(self):
+        ds = datablock_3d(
+            np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 3, "float"),
+            "tas",
+            "lon",
+            -70,
+            "lat",
+            15,
+            30,
+            30,
+            as_dataset=True,
+        )
+
+        ds_stack = xs.utils.stack_drop_nans(
+            ds,
+            mask=xr.where(ds.tas.isel(time=0).isnull(), False, True).drop_vars("time"),
+        )
+
+        p, m = xs.properties_and_measures(
+            ds_stack,
+            properties=self.yaml_file,
+            unstack=True,
+        )
+
+        assert "lat" in p.dims
+        assert "lon" in p.dims
+        assert "loc" not in p.dims
+
+    def test_rechunk(self):
+        ds = datablock_3d(
+            np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 3, "float"),
+            "tas",
+            "lon",
+            -70,
+            "lat",
+            15,
+            30,
+            30,
+            as_dataset=True,
+        )
+        p, m = xs.properties_and_measures(
+            ds,
+            properties=self.yaml_file,
+            rechunk={"lat": 1, "lon": 1},
+        )
+
+        assert p.chunks["lat"] == (1, 1, 1)
+        assert p.chunks["lon"] == (1, 1, 1)
+
+    def test_units(self):
+        p, m = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+            change_units_arg={"tas": "degC"},
+        )
+
+        assert p["mean-tas"].attrs["units"] == "°C"
+
+    def test_dref_for_measure(self):
+        p1, m1 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+        )
+
+        p2, m2 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+            dref_for_measure=p1,
+        )
+        print(m2)
+        print(m2["maximum_length_of_warm_spell"].values)
+        assert m1.dims == {}
+        np.testing.assert_allclose(m2["maximum_length_of_warm_spell"].values, 0)
+
+    def test_measures_heatmap(self):
+
+        p1, m1 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+        )
+
+        p2, m2 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+            dref_for_measure=p1,
+        )
+
+        out = xs.diagnostics.measures_heatmap({"m2": m2}, to_level="test")
+
+        assert out.attrs["cat:processing_level"] == "test"
+        assert "m2" in out.realization.values
+        assert "mean-tas" in out.properties.values
+        np.testing.assert_allclose(out["heatmap"].values, 0.5)
+
+    def test_measures_improvement(self):
+
+        p1, m1 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+        )
+
+        p2, m2 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+            dref_for_measure=p1,
+        )
+
+        out = xs.diagnostics.measures_improvement([m2, m2], to_level="test")
+
+        assert out.attrs["cat:processing_level"] == "test"
+        assert "mean-tas" in out.properties.values
+        np.testing.assert_allclose(out["improved_grid_points"].values, 1)
+
+    def test_measures_improvement_2d(self):
+
+        p1, m1 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+        )
+
+        p2, m2 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+            dref_for_measure=p1,
+        )
+
+        imp = xs.diagnostics.measures_improvement([m2, m2], to_level="test")
+
+        out = xs.diagnostics.measures_improvement_2d(
+            {"i1": imp, "i2": imp}, to_level="test"
+        )
+
+        assert out.attrs["cat:processing_level"] == "test"
+        assert "mean-tas" in out.properties.values
+        assert "i1" in out.realization.values
+        assert "i2" in out.realization.values
+        np.testing.assert_allclose(out["improved_grid_points"].values, 1)
+
+        out2 = xs.diagnostics.measures_improvement_2d(
+            {
+                "i1": [m2, m2],
+                "i2": [m2, m2],
+            },
+            to_level="test",
+        )
+
+        assert out.equals(out2)
