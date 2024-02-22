@@ -6,6 +6,10 @@ v0.8.2 (2024-02-12)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`)
 
+Announcements
+^^^^^^^^^^^^^
+* `xscen` is now has a `security disclosure policy <https://github.com/Ouranosinc/xscen/tree/main?tab=security-ov-file#security-ov-file>`_. (:pull:`353`).
+
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Added a new argument ``indicators_kw`` to ``xs.ensembles.build_partition_data``. (:pull:`315`).
