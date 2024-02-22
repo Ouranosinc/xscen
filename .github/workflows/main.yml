@@ -68,8 +68,8 @@ jobs:
             tox-build: "py310-coveralls"
           - python-version: "3.11"
             tox-build: "py311-coveralls"
-#          - python-version: "3.12"
-#            tox-build: "py312-esmpy-coveralls"
+          - python-version: "3.12"
+            tox-build: "py312-esmpy-coveralls"
     defaults:
       run:
         shell: bash -l {0}
@@ -129,7 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
     defaults:
       run:
         shell: bash -l {0}
