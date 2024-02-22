@@ -63,6 +63,7 @@ dependencies:
   - sphinxcontrib-napoleon
   - sphinx-codeautolink
   - sphinx-copybutton
+  - sphinx-mdinclude
   - watchdog >=3.0.0
   - xdoctest
   - pip

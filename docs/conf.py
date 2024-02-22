@@ -55,6 +55,7 @@ extensions = [
     "nbsphinx",
     "sphinx_codeautolink",
     "sphinx_copybutton",
+    "sphinx_mdinclude",
 ]
 
 # To ensure that underlined fields (e.g. `_field`) are shown in the docs.
