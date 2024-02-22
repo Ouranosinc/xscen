@@ -428,15 +428,21 @@ class TestPropertiesMeasures:
         p1, m1 = xs.properties_and_measures(
             self.ds,
             properties=self.yaml_file,
+            period=["2001", "2001"],
         )
 
         p2, m2 = xs.properties_and_measures(
             self.ds,
             properties=self.yaml_file,
             dref_for_measure=p1,
+            period=["2001", "2001"],
         )
-
-        out = xs.diagnostics.measures_improvement([m2, m2], to_level="test")
+        with pytest.warns(
+            UserWarning,
+            match="meas_datasets has more than 2 datasets."
+            + " Only the first 2 will be compared.",
+        ):
+            out = xs.diagnostics.measures_improvement([m2, m2, m2], to_level="test")
 
         assert out.attrs["cat:processing_level"] == "test"
         assert "mean-tas" in out.properties.values
@@ -470,7 +476,7 @@ class TestPropertiesMeasures:
         out2 = xs.diagnostics.measures_improvement_2d(
             {
                 "i1": [m2, m2],
-                "i2": [m2, m2],
+                "i2": {"a": m2, "b": m2},
             },
             to_level="test",
         )
