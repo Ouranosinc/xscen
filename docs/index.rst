@@ -34,6 +34,7 @@ Features
     contributing
     authors
     changes
+    security
 
 .. toctree::
     :maxdepth: 2
