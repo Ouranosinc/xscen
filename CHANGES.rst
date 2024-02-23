@@ -2,7 +2,7 @@
 Changelog
 =========
 
-v0.9.0 (unreleased)
+v0.8.3 (unreleased)
 -------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`)
 
