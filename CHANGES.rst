@@ -4,7 +4,11 @@ Changelog
 
 v0.8.3 (unreleased)
 -------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`)
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`).
+
+Announcements
+^^^^^^^^^^^^^
+* `xscen` is now has a `security disclosure policy <https://github.com/Ouranosinc/xscen/tree/main?tab=security-ov-file#security-ov-file>`_. (:pull:`353`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -13,10 +17,6 @@ Internal changes
 v0.8.2 (2024-02-12)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`)
-
-Announcements
-^^^^^^^^^^^^^
-* `xscen` is now has a `security disclosure policy <https://github.com/Ouranosinc/xscen/tree/main?tab=security-ov-file#security-ov-file>`_. (:pull:`353`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
