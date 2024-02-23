@@ -22,7 +22,13 @@ import xarray as xr
 from intake_esm.cat import ESMCatalogModel
 
 from .config import CONFIG, args_as_str, recursive_update
-from .utils import CV, date_parser, ensure_correct_time, standardize_periods  # noqa
+from .utils import (  # noqa
+    CV,
+    date_parser,
+    ensure_correct_time,
+    ensure_new_xrfreq,
+    standardize_periods,
+)
 
 logger = logging.getLogger(__name__)
 # Monkey patch for attribute names in the output of to_dataset_dict
@@ -126,10 +132,11 @@ csv_kwargs = {
     "dtype": {
         key: "category" if not key == "path" else "string[pyarrow]"
         for key in COLUMNS
-        if key not in ["variable", "date_start", "date_end"]
+        if key not in ["xrfreq", "variable", "date_start", "date_end"]
     },
     "converters": {
         "variable": _parse_list_of_strings,
+        "xrfreq": ensure_new_xrfreq,
     },
 }
 """Kwargs to pass to `pd.read_csv` when opening an official Ouranos catalog."""

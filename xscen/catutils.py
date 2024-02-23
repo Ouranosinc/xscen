@@ -34,6 +34,7 @@ from .utils import (  # noqa
     CV,
     date_parser,
     ensure_correct_time,
+    ensure_new_xrfreq,
     get_cat_attrs,
     standardize_periods,
 )
@@ -634,6 +635,10 @@ def parse_directory(  # noqa:C901
     if cvs:
         df = df.apply(_replace_in_row, axis=1, replacements=cvs)
 
+    # Fix potential legacy xrfreq
+    if "xrfreq" in df.columns:
+        df["xrfreq"] = df["xrfreq"].apply(ensure_new_xrfreq)
+
     # translate xrfreq into frequencies and vice-versa
     if {"xrfreq", "frequency"}.issubset(df.columns):
         df["xrfreq"].fillna(
@@ -643,6 +648,7 @@ def parse_directory(  # noqa:C901
             df["xrfreq"].apply(CV.xrfreq_to_frequency, default=pd.NA), inplace=True
         )
 
+    # Esu
     # Parse dates
     # If we don't do the to_numpy(na_value=np.datetime64('')).astype('<M8[ms]') trick,
     # the dtype will be "object" if any of the dates are out-of-bounds.

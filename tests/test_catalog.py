@@ -1,4 +1,5 @@
 import pandas as pd
+from conftest import SAMPLES_DIR
 
 from xscen import catalog
 
@@ -29,3 +30,8 @@ def test_subset_file_coverage():
         catalog.subset_file_coverage(df, [1951, 1976], coverage=0.8),
         pd.DataFrame(columns=df.columns),
     )
+
+
+def test_xrfreq_fix():
+    cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json")
+    assert set(cat.df.xrfreq) == {"3h", "D", "fx"}
