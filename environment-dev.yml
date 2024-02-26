@@ -73,8 +73,6 @@ dependencies:
   - wheel
   - pip
   - pip:
-     # temporary fix until xclim 0.49 release
-     - "git+https://github.com/Ouranosinc/xclim.git@fix-yamale-measure"
      # coverage is not available in conda-forge for Python3.12
      - coverage>=6.2.2,<7.0.0
      - coveralls>=3.3.1
