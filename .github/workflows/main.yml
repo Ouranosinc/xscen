@@ -160,7 +160,7 @@ jobs:
       - name: Install xclim main branch
         if: matrix.xclim-upstream
         run: |
-          python -m pip install git+https://github.com/Ouranosinc/xclim.git@main
+          python -m pip install git+https://github.com/Ouranosinc/xclim.git@master
       - name: Conda and Mamba versions
         run: |
           mamba --version
