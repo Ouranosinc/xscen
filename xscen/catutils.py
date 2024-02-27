@@ -648,7 +648,6 @@ def parse_directory(  # noqa:C901
             df["xrfreq"].apply(CV.xrfreq_to_frequency, default=pd.NA), inplace=True
         )
 
-    # Esu
     # Parse dates
     # If we don't do the to_numpy(na_value=np.datetime64('')).astype('<M8[ms]') trick,
     # the dtype will be "object" if any of the dates are out-of-bounds.
