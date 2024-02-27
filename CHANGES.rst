@@ -8,16 +8,18 @@ Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor J
 
 Announcements
 ^^^^^^^^^^^^^
-* `xscen` is now has a `security disclosure policy <https://github.com/Ouranosinc/xscen/tree/main?tab=security-ov-file#security-ov-file>`_. (:pull:`353`).
+* `xscen` now has a `security disclosure policy <https://github.com/Ouranosinc/xscen/tree/main?tab=security-ov-file#security-ov-file>`_. (:pull:`353`).
 * Various frequency-related changes to match the new `pandas` naming conventions. (:pull:`351`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Added tests for diagnostics. (:pull:`352`).
+* Added a `SECURITY.md` file to the repository and the documentation. (:pull:`353`).
+* Added `tox` modifier for testing builds against the `main` development branch of `xclim`. (:pull:`351`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* `xscen` now requires `pandas` >= 2.2 (:pull:`351`).
+* `xscen` now requires `pandas` >= 2.2 and `xclim` >= 0.48.2. (:pull:`351`).
 * Functions that output a dict with keys as xrfreq (such as ``extract_dataset``, ``compute_indicators``) will now return the new nomenclature (e.g. "YS-JAN" instead of "AS-JAN"). (:pull:`351`).
 * Going from `xrfreq` to frequencies or timedeltas will still work, but the opposite (frequency --> xrfreq/timedelta) will now only result in the new pandas nomenclature. (:pull:`351`).
 
