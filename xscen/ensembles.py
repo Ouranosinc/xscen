@@ -11,11 +11,10 @@ from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
-import xclim as xc
 from xclim import ensembles
 
+from .catalog import DataCatalog
 from .config import parse_config
-from .indicators import compute_indicators
 from .regrid import regrid_dataset
 from .spatial import subset
 from .utils import clean_up, get_cat_attrs
@@ -698,9 +697,14 @@ def build_partition_data(
     Parameters
     ----------
     datasets : dict
-        List or dictionnary of Dataset objects that will be included in the ensemble.
+        List, dictionnary or DataCatalog of Datasets that will be included in the ensemble.
         The datasets should include the necessary ("cat:") attributes to understand their metadata.
-        Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
+        Tip: A dictionnary can be created with `datasets = pcat.search(**search_dict).to_dataset_dict()`.
+
+        The use of a DataCatalog is recommended for large ensembles.
+        In that case, the ensembles will be loaded separately for each `bias_adjust_project`,
+        the subsetting or regridding can be applied before combining the datasets through concatenation.
+        If `bias_adjust_project` is not in `partition_dim`, `source` will be used instead.
     partition_dim: list[str]
         Components of the partition. They will become the dimension of the output.
         The default is ['source', 'experiment', 'bias_adjust_project'].
@@ -743,8 +747,7 @@ def build_partition_data(
 
     if isinstance(datasets, list):
         list_ds = []
-        calendars = []
-        merged = False
+        # calendars = []
         for ds in datasets:
             if subset_kw:
                 ds = subset(ds, **subset_kw)
@@ -755,21 +758,21 @@ def build_partition_data(
             if regrid_kw:
                 ds = regrid_dataset(ds, **regrid_kw)
 
-            if indicators_kw:
-                dict_ind = compute_indicators(ds, **indicators_kw)
-                if len(dict_ind) > 1:
-                    raise ValueError(
-                        f"The indicators computation should return only indicators of the same frequency.Returned frequencies: {dict_ind.keys()}"
-                    )
-                else:
-                    ds = list(dict_ind.values())[0]
+            # if indicators_kw:
+            #     dict_ind = compute_indicators(ds, **indicators_kw)
+            #     if len(dict_ind) > 1:
+            #         raise ValueError(
+            #             f"The indicators computation should return only indicators of the same frequency.Returned frequencies: {dict_ind.keys()}"
+            #         )
+            #     else:
+            #         ds = list(dict_ind.values())[0]
 
-            # get calendar of each dataset
-            if calendar_kw is None:
-                if "time" in ds.coords:
-                    time = xr.decode_cf(ds).time
-                    ds["time"] = time
-                    calendars.append(xc.core.calendar.get_calendar(time))
+            # # get calendar of each dataset
+            # if calendar_kw is None:
+            #     if "time" in ds.coords:
+            #         time = xr.decode_cf(ds).time
+            #         ds["time"] = time
+            #         calendars.append(xc.core.calendar.get_calendar(time))
 
             for dim in partition_dim:
                 if f"cat:{dim}" in ds.attrs:
@@ -779,42 +782,39 @@ def build_partition_data(
                 new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
                 ds = ds.assign_coords(realization=[new_source])
             list_ds.append(ds)
-            if not merged:
-                merged = ds
-            else:
-                merged = xr.merge([merged, ds])
-        ens = merged
+        ens = xr.merge(list_ds)
 
-    # elif isinstance(datasets, xscen.DataCatalog):
-    #     # special case to handle source (create one dimension with institution_source_member)
-    #     ensemble_on_list = None
-    #     if "source" in partition_dim:
-    #         partition_dim.remove("source")
-    #         ensemble_on_list = ["institution", "source", "member"]
-    #
-    #     subcat = datasets
-    #
-    #     # create a dataset for each bias_adjust_project, modify grid and concat them
-    #     dim_with_different_grid = (
-    #         "bias_adjust_project"
-    #         if "bias_adjust_project" in partition_dim
-    #         else "source"
-    #     )
-    #     list_ds = []
-    #     for d in subcat.df[dim_with_different_grid].unique():
-    #         ds = subcat.search(**{dim_with_different_grid: d}).to_dataset(
-    #             concat_on=partition_dim,
-    #             create_ensemble_on=ensemble_on_list,
-    #             **to_dataset_kw,
-    #         )
-    #         if "realization" in ds:
-    #             ds = ds.rename({"realization": "source"})
-    #         if subset_kw:
-    #             ds = subset(ds, **subset_kw)
-    #         if regrid_kw:
-    #             ds = regrid_dataset(ds, **regrid_kw)
-    #         list_ds.append(ds)
-    #     ens = xr.concat(list_ds, dim=dim_with_different_grid)
+    elif isinstance(datasets, DataCatalog):
+        # special case to handle source (create one dimension with institution_source_member)
+        ensemble_on_list = None
+        if "source" in partition_dim:
+            partition_dim.remove("source")
+            ensemble_on_list = ["institution", "source", "member"]
+
+        subcat = datasets
+
+        # create a dataset for each bias_adjust_project, modify grid and concat them
+        # if no bias_adjust_project, use source
+        dim_with_different_grid = (
+            "bias_adjust_project"
+            if "bias_adjust_project" in partition_dim
+            else "source"
+        )
+        list_ds = []
+        for d in subcat.df[dim_with_different_grid].unique():
+            ds = subcat.search(**{dim_with_different_grid: d}).to_dataset(
+                concat_on=partition_dim,
+                create_ensemble_on=ensemble_on_list,
+                **to_dataset_kw,
+            )
+            if "realization" in ds:
+                ds = ds.rename({"realization": "source"})
+            if subset_kw:
+                ds = subset(ds, **subset_kw)
+            if regrid_kw:
+                ds = regrid_dataset(ds, **regrid_kw)
+            list_ds.append(ds)
+        ens = xr.concat(list_ds, dim=dim_with_different_grid)
 
     else:
         raise ValueError(
