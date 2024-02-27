@@ -34,6 +34,7 @@ from .utils import (  # noqa
     CV,
     date_parser,
     ensure_correct_time,
+    ensure_new_xrfreq,
     get_cat_attrs,
     standardize_periods,
 )
@@ -633,6 +634,10 @@ def parse_directory(  # noqa:C901
     # Replace entries by definitions found in CV
     if cvs:
         df = df.apply(_replace_in_row, axis=1, replacements=cvs)
+
+    # Fix potential legacy xrfreq
+    if "xrfreq" in df.columns:
+        df["xrfreq"] = df["xrfreq"].apply(ensure_new_xrfreq)
 
     # translate xrfreq into frequencies and vice-versa
     if {"xrfreq", "frequency"}.issubset(df.columns):

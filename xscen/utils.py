@@ -20,6 +20,7 @@ import flox.xarray
 import numpy as np
 import pandas as pd
 import xarray as xr
+from xarray.coding import cftime_offsets as cfoff
 from xclim.core import units
 from xclim.core.calendar import convert_calendar, get_calendar, parse_offset
 from xclim.core.options import METADATA_LOCALES
@@ -1045,7 +1046,7 @@ def unstack_dates(
     Returns
     -------
     xr.Dataset or DataArray
-      Same as ds but the time axis is now yearly (AS-JAN) and the seasons are along the new dimension.
+      Same as ds but the time axis is now yearly (YS-JAN) and the seasons are along the new dimension.
 
     Notes
     -----
@@ -1054,9 +1055,9 @@ def unstack_dates(
     - For MS, the coordinates are the month abbreviations in english (JAN, FEB, etc.)
     - For ?QS-? and other ?MS frequencies, the coordinates are the initials of the months in each season.
       Ex: QS-DEC (with winter_starts_year=True) : DJF, MAM, JJA, SON.
-    - For YS or AS-JAN, the new coordinate has a single value of "annual".
-    - For ?AS-? frequencies, the new coordinate has a single value of "annual-{anchor}", were "anchor"
-      is the abbreviation of the first month of the year. Ex: AS-JUL -> "annual-JUL".
+    - For YS or YS-JAN, the new coordinate has a single value of "annual".
+    - For ?YS-? frequencies, the new coordinate has a single value of "annual-{anchor}", were "anchor"
+      is the abbreviation of the first month of the year. Ex: YS-JUL -> "annual-JUL".
     """
     # Get some info about the time axis
     freq = xr.infer_freq(ds.time)
@@ -1347,3 +1348,50 @@ def xrfreq_to_timedelta(freq: str):
     """Approximate the length of a period based on its frequency offset."""
     N, B, _, _ = parse_offset(freq)
     return N * pd.Timedelta(CV.xrfreq_to_timedelta(B, "NaT"))
+
+
+def ensure_new_xrfreq(freq: str) -> str:  # noqa: C901
+    """Convert the frequency string to the newer syntax (pandas >= 2.2) if needed."""
+    # Copied from xarray xr.coding.cftime_offsets._legacy_to_new_freq
+    # https://github.com/pydata/xarray/pull/8627/files
+    if not isinstance(freq, str):
+        # For when freq is NaN or None in a catalog
+        return freq
+    try:
+        freq_as_offset = cfoff.to_offset(freq, warn=False)
+    except ValueError:
+        # freq may be valid in pandas but not in xarray
+        return freq
+
+    if isinstance(freq_as_offset, cfoff.MonthEnd) and "ME" not in freq:
+        freq = freq.replace("M", "ME")
+    elif isinstance(freq_as_offset, cfoff.QuarterEnd) and "QE" not in freq:
+        freq = freq.replace("Q", "QE")
+    elif isinstance(freq_as_offset, cfoff.YearBegin) and "YS" not in freq:
+        freq = freq.replace("AS", "YS")
+    elif isinstance(freq_as_offset, cfoff.YearEnd):
+        if "A-" in freq:
+            # Check for and replace "A-" instead of just "A" to prevent
+            # corrupting anchored offsets that contain "Y" in the month
+            # abbreviation, e.g. "A-MAY" -> "YE-MAY".
+            freq = freq.replace("A-", "YE-")
+        elif "Y-" in freq:
+            freq = freq.replace("Y-", "YE-")
+        elif freq.endswith("A"):
+            # the "A-MAY" case is already handled above
+            freq = freq.replace("A", "YE")
+        elif "YE" not in freq and freq.endswith("Y"):
+            # the "Y-MAY" case is already handled above
+            freq = freq.replace("Y", "YE")
+    elif isinstance(freq_as_offset, cfoff.Hour):
+        freq = freq.replace("H", "h")
+    elif isinstance(freq_as_offset, cfoff.Minute):
+        freq = freq.replace("T", "min")
+    elif isinstance(freq_as_offset, cfoff.Second):
+        freq = freq.replace("S", "s")
+    elif isinstance(freq_as_offset, cfoff.Millisecond):
+        freq = freq.replace("L", "ms")
+    elif isinstance(freq_as_offset, cfoff.Microsecond):
+        freq = freq.replace("U", "us")
+
+    return freq

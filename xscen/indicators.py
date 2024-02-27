@@ -170,7 +170,7 @@ def compute_indicators(  # noqa: C901
             else:
                 freq = "fx"
             if freq == "YS":
-                freq = "AS-JAN"  # To fix an inconsistency in xclim default 'freq'
+                freq = "YS-JAN"
 
         else:
             # Multiple time periods to concatenate
@@ -197,7 +197,7 @@ def compute_indicators(  # noqa: C901
                     freq = "fx"
 
                 if freq == "YS":
-                    freq = "AS-JAN"  # To fix an inconsistency in xclim default 'freq'
+                    freq = "YS-JAN"
                 # In order to concatenate time periods, the indicator still needs a time dimension
                 if freq == "fx":
                     tmp = tmp.assign_coords({"time": ds_subset.time[0]})

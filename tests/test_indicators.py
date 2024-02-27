@@ -48,12 +48,12 @@ class TestComputeIndicators:
     def test_level(self, to_level):
         if to_level is None:
             ind_dict = xs.compute_indicators(self.ds, indicators=self.yaml_file)
-            assert "indicators" in ind_dict["AS-JAN"].attrs["cat:processing_level"]
+            assert "indicators" in ind_dict["YS-JAN"].attrs["cat:processing_level"]
         else:
             ind_dict = xs.compute_indicators(
                 self.ds, indicators=self.yaml_file, to_level=to_level
             )
-            assert to_level in ind_dict["AS-JAN"].attrs["cat:processing_level"]
+            assert to_level in ind_dict["YS-JAN"].attrs["cat:processing_level"]
 
     # Periods needed to cover both branches of the if/else in compute_indicators, so no need to test separately.
     @pytest.mark.parametrize(
@@ -76,13 +76,13 @@ class TestComputeIndicators:
         assert all(
             xrfreq in ind_dict[xrfreq].attrs["cat:xrfreq"] for xrfreq in ind_dict.keys()
         )
-        assert all(v in ind_dict["AS-JAN"] for v in ["tg_min", "growing_degree_days"])
+        assert all(v in ind_dict["YS-JAN"] for v in ["tg_min", "growing_degree_days"])
         if periods is None:
             assert "time" not in ind_dict["fx"].dims
-            assert len(ind_dict["AS-JAN"].time) == 2
+            assert len(ind_dict["YS-JAN"].time) == 2
         else:
             assert len(ind_dict["fx"].time) == len(periods)
-            assert len(ind_dict["AS-JAN"].time) == 8
+            assert len(ind_dict["YS-JAN"].time) == 8
 
     def test_qs_dec(self):
         indicator = xclim.core.indicator.Indicator.from_dict(
@@ -118,7 +118,7 @@ class TestComputeIndicators:
         )
 
         assert all(
-            v in ind_dict["AS-JAN"]
+            v in ind_dict["YS-JAN"]
             for v in [
                 "prcpavg",
                 "rain_season_start",
@@ -130,7 +130,7 @@ class TestComputeIndicators:
     @pytest.mark.parametrize("restrict_years", [True, False])
     def test_as_jul(self, restrict_years):
         indicator = xclim.core.indicator.Indicator.from_dict(
-            data={"base": "freezing_degree_days", "parameters": {"freq": "AS-JUL"}},
+            data={"base": "freezing_degree_days", "parameters": {"freq": "YS-JUL"}},
             identifier="degree_days_below_0_annual_start_july",
             module="tests",
         )
@@ -140,8 +140,8 @@ class TestComputeIndicators:
             restrict_years=restrict_years,
         )
 
-        assert "AS-JUL" in ind_dict["AS-JUL"].attrs["cat:xrfreq"]
-        out = ind_dict["AS-JUL"]
+        assert "YS-JUL" in ind_dict["YS-JUL"].attrs["cat:xrfreq"]
+        out = ind_dict["YS-JUL"]
         if restrict_years:
             assert len(out.time) == 3  # same length as input ds
             assert out.time[0].dt.strftime("%Y-%m-%d").item() == "2001-07-01"

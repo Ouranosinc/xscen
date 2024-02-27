@@ -1,7 +1,7 @@
 [build-system]
 requires = [
-  "setuptools>=60",
-  "setuptools-scm>=8.0",
+  "setuptools >=60",
+  "setuptools-scm >=8.0",
   "babel",
   "wheel"
 ]
@@ -29,7 +29,7 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
-  # "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: CPython",
   "Topic :: Scientific/Engineering :: Atmospheric Science"
 ]
@@ -38,8 +38,8 @@ dependencies = [
   "babel",
   "cartopy",
   "cftime",
-  "cf_xarray>=0.7.6",
-  "clisops>=0.10",
+  "cf_xarray >=0.7.6",
+  "clisops >=0.10",
   "dask",
   "flox",
   "fsspec",
@@ -52,41 +52,41 @@ dependencies = [
   "netCDF4",
   "numcodecs",
   "numpy",
-  "pandas>=2.0,<2.2",
+  "pandas >=2.2",
   "parse",
   # Used when opening catalogs.
   "pyarrow",
   "pyyaml",
   "rechunker",
   "scipy",
-  "shapely>=2.0",
+  "shapely >=2.0",
   "sparse",
   "toolz",
-  "xarray<2023.11.0", # FIXME: Remove when pandas 2.2 is released and xclim is fixed.
-  "xclim>=0.46.0",
+  "xarray >=2023.11.0",
+  "xclim >=0.48.2",
   "zarr"
 ]
 
 [project.optional-dependencies]
 dev = [
   # Dev tools and testing
-  "pip>=23.3.0",
-  "black==24.2.0",
-  "blackdoc==0.3.9",
-  "bump-my-version>=0.17.1",
-  "coverage>=6.2.2,<8.0.0",
-  "coveralls>=3.3.1",
-  "flake8-alphabetize>=0.0.21",
-  "flake8-rst-docstrings>=0.3.0",
-  "flake8>=6.1.0",
-  "isort==5.13.2",
+  "pip >=23.3.0",
+  "black ==24.2.0",
+  "blackdoc ==0.3.9",
+  "bump-my-version >=0.17.1",
+  "coverage >=6.2.2,<8.0.0",
+  "coveralls >=3.3.1",
+  "flake8-alphabetize >=0.0.21",
+  "flake8-rst-docstrings >=0.3.0",
+  "flake8 >=6.1.0",
+  "isort ==5.13.2",
   "pooch",
-  "pre-commit>=3.3.2",
-  "pytest-cov>=4.0.0",
-  "pytest>=7.3.1",
-  "ruff>=0.1.0",
-  "tox>=4.5.1",
-  "watchdog>=3.0.0",
+  "pre-commit >=3.3.2",
+  "pytest-cov >=4.0.0",
+  "pytest >=7.3.1",
+  "ruff >=0.1.0",
+  "tox >=4.5.1",
+  "watchdog >=3.0.0",
   "xdoctest"
 ]
 docs = [
@@ -102,7 +102,7 @@ docs = [
   "sphinx-copybutton",
   "sphinx-intl",
   "sphinx-mdinclude",
-  "sphinx-rtd-theme>=1.0",
+  "sphinx-rtd-theme >=1.0",
   "sphinxcontrib-napoleon"
 ]
 extra = [

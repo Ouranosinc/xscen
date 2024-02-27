@@ -230,7 +230,7 @@ def test_build_path(samplecat):
 
 def test_build_path_ds():
     ds = xr.tutorial.open_dataset("air_temperature")
-    ds = ds.assign(time=xr.cftime_range("0001-01-01", freq="6H", periods=ds.time.size))
+    ds = ds.assign(time=xr.cftime_range("0001-01-01", freq="6h", periods=ds.time.size))
     ds.attrs.update(source="source", institution="institution")
     new_path = cu.build_path(
         ds,
@@ -240,7 +240,7 @@ def test_build_path_ds():
         },
     )
     assert new_path == Path(
-        "source/institution/air_6H/source_institution_air_6hr_0001-0002"
+        "source/institution/air_6h/source_institution_air_6hr_0001-0002"
     )
 
 
