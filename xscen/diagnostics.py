@@ -295,7 +295,6 @@ def health_checks(  # noqa: C901
         return out
 
 
-# TODO: just measures?
 @parse_config
 def properties_and_measures(  # noqa: C901
     ds: xr.Dataset,
@@ -593,7 +592,7 @@ def measures_improvement_2d(
     ----------
     dict_input: dict
       If dict of datasets, the datasets should be the output of `measures_improvement`.
-      If dict of dict/list, the dict/list should be the input to `measures_improvement`.
+      If dict of dict/list, the dict/list should be the input `meas_datasets` to `measures_improvement`.
       The keys will be the values of the dimension `realization`.
     to_level: str
       Processing_level to assign to the output dataset.
