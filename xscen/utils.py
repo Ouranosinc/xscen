@@ -1350,10 +1350,13 @@ def xrfreq_to_timedelta(freq: str):
     return N * pd.Timedelta(CV.xrfreq_to_timedelta(B, "NaT"))
 
 
-def ensure_new_xrfreq(freq: str) -> str:
+def ensure_new_xrfreq(freq: str) -> str:  # noqa: C901
     """Convert the frequency string to the newer syntax (pandas >= 2.2) if needed."""
     # Copied from xarray xr.coding.cftime_offsets._legacy_to_new_freq
     # https://github.com/pydata/xarray/pull/8627/files
+    if not isinstance(freq, str):
+        # For when freq is NaN or None in a catalog
+        return freq
     try:
         freq_as_offset = cfoff.to_offset(freq, warn=False)
     except ValueError:
