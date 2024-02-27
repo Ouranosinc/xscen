@@ -124,7 +124,7 @@ jobs:
 #          COVERALLS_SERVICE_NAME: github
 
   test-conda:
-    name: Python${{ matrix.python-version }} (conda, upstream=${{ matrix.xclim-upstream }})
+    name: Python${{ matrix.python-version }} (conda)
     needs: lint
     runs-on: ubuntu-latest
     strategy:
@@ -162,7 +162,7 @@ jobs:
       - name: Compile catalogs and install xscen
         run: |
           make translate
-          python -m pip install --no-deps .
+          python -m pip install --no-user --no-deps .
       - name: Check versions
         run: |
           conda list
