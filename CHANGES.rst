@@ -15,13 +15,15 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * Added tests for diagnostics. (:pull:`352`).
 * Added a `SECURITY.md` file to the repository and the documentation. (:pull:`353`).
-* Added `tox` modifier for testing builds against the `main` development branch of `xclim`. (:pull:`351`).
+* Added `tox` modifier for testing builds against the `main` development branch of `xclim`. (:pull:`351`, :pull:`355`).
+* Added a `requirements_upstream.txt` file to the repository to track the development branches of relevant dependencies. (:pull:`355`).
+* Added a dedicated GitHub Workflow to evaluate compatibility with upstream dependencies. (:pull:`355`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now requires `pandas` >= 2.2 and `xclim` >= 0.48.2. (:pull:`351`).
-* Functions that output a dict with keys as xrfreq (such as ``extract_dataset``, ``compute_indicators``) will now return the new nomenclature (e.g. "YS-JAN" instead of "AS-JAN"). (:pull:`351`).
-* Going from `xrfreq` to frequencies or timedeltas will still work, but the opposite (frequency --> xrfreq/timedelta) will now only result in the new pandas nomenclature. (:pull:`351`).
+* Functions that output a dict with keys as xrfreq (such as ``extract_dataset``, ``compute_indicators``) will now return the new nomenclature (e.g. ``"YS-JAN"`` instead of ``"AS-JAN"``). (:pull:`351`).
+* Going from `xrfreq` to frequencies or timedeltas will still work, but the opposite (frequency --> xrfreq/timedelta) will now only result in the new `pandas` nomenclature. (:pull:`351`).
 
 v0.8.2 (2024-02-12)
 -------------------
