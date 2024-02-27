@@ -1,5 +1,10 @@
 import numpy as np
+import pytest
 
+try:
+    import xesmf as xe
+except ImportError:
+    xe = None
 from xscen.regrid import create_bounds_rotated_pole, regrid_dataset
 from xscen.testing import datablock_3d
 
@@ -22,6 +27,7 @@ def test_create_bounds_rotated_pole():
     np.testing.assert_allclose(bnds.lat_bounds[-1, -1, 1], 42.5)
 
 
+@pytest.mark.skipif(xe is None, reason="xesmf needed for testing regrdding")
 class TestRegridDataset:
     def test_simple(self, tmp_path):
         dsout = datablock_3d(

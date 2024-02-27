@@ -18,7 +18,11 @@ import shapely
 import xarray as xr
 import xclim as xc
 import xclim.core.calendar
-import xesmf as xe
+
+try:
+    import xesmf as xe
+except ImportError:
+    xe = None
 from xclim.core.indicator import Indicator
 
 from .config import parse_config
@@ -930,6 +934,11 @@ def spatial_mean(  # noqa: C901
 
     # Uses xesmf.SpatialAverager
     elif method == "xesmf":
+        if xe is None:
+            raise ImportError(
+                "Method xesmf requires xESMF to work, please install that package."
+            )
+
         # If the region is a bounding box, call shapely and geopandas to transform it into an input compatible with xesmf
         if region["method"] == "bbox":
             polygon_geom = shapely.box(

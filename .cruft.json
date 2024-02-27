@@ -1,6 +1,6 @@
 {
   "template": "/home/tjs/git/cookiecutter-pypackage",
-  "commit": "64eceda7d95aeb8937fa9961989d3d617a525c04",
+  "commit": "55001f0fb2b470d1be2e992bfb8e006b4bc3807c",
   "checkout": null,
   "context": {
     "cookiecutter": {
@@ -11,12 +11,13 @@
       "project_slug": "xscen",
       "project_short_description": "A climate change scenario-building analysis framework, built with xclim/xarray.",
       "pypi_username": "RondeauG",
-      "version": "0.8.2-beta",
+      "version": "0.8.2",
       "use_pytest": "y",
       "use_black": "y",
       "use_conda": "y",
       "add_pyup_badge": "n",
       "make_docs": "y",
+      "add_translations": "y",
       "command_line_interface": "Click",
       "create_author_file": "y",
       "open_source_license": "Not open source",

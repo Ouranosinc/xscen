@@ -2,18 +2,47 @@
 Changelog
 =========
 
-v0.9.0 (unreleased)
+v0.8.3 (unreleased)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`)
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
+
+Announcements
+^^^^^^^^^^^^^
+* `xscen` now has a `security disclosure policy <https://github.com/Ouranosinc/xscen/tree/main?tab=security-ov-file#security-ov-file>`_. (:pull:`353`).
+* Various frequency-related changes to match the new `pandas` naming conventions. (:pull:`351`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Added tests for diagnostics. (:pull:`352`).
+* Added a `SECURITY.md` file to the repository and the documentation. (:pull:`353`).
+* Added `tox` modifier for testing builds against the `main` development branch of `xclim`. (:pull:`351`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* `xscen` now requires `pandas` >= 2.2 and `xclim` >= 0.48.2. (:pull:`351`).
+* Functions that output a dict with keys as xrfreq (such as ``extract_dataset``, ``compute_indicators``) will now return the new nomenclature (e.g. "YS-JAN" instead of "AS-JAN"). (:pull:`351`).
+* Going from `xrfreq` to frequencies or timedeltas will still work, but the opposite (frequency --> xrfreq/timedelta) will now only result in the new pandas nomenclature. (:pull:`351`).
+
+v0.8.2 (2024-02-12)
+-------------------
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`)
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Added a new argument ``indicators_kw`` to ``xs.ensembles.build_partition_data``. (:pull:`315`).
+* `xscen` is `Semantic Versioning 2.0.0 <https://semver.org/spec/v2.0.0.html>`_ compliant. (:pull:`319`).
+* `xesmf` made an optional dependency, making `xscen` easier to install with `pip`. (:pull:`337`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Granular permissions and dependency scanning actions have been added to all GitHub CI Workflows. (:pull:`313`).
 * Updated the list of dependencies to add missing requirements. (:pull:`314`).
-
-New features and enhancements
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* Added a new argument ``indicators_kw`` to ``xs.ensembles.build_partition_data``. (:pull:`315`).
+* The `cookiecutter` template has been updated to the latest commit via `cruft`. (:pull:`319`):
+    * `actions-versions-updater.yml` has been replaced with `Dependabot <https://docs.github.com/en/code-security/dependabot/working-with-dependabot>`_ (it's just better).
+    * The OpenSSF `scorecard.yml` workflow has been added to the GitHub workflows to evaluate package security.
+    * Code formatting tools (`black`, `blackdoc`, `isort`) are now hard-pinned. These need to be kept in sync with changes from `pre-commit`. (Dependabot should perform this task automatically.)
+    * The versioning system has been updated to follow the Semantic Versioning 2.0.0 standard.
+* Fixed an issue with `pytest -m "not requires_netcdf"` not working as expected. (:pull:`345`).
 
 v0.8.0 (2024-01-16)
 -------------------

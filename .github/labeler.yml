@@ -36,4 +36,4 @@
 'xclim':
   - changed_files:
     - any-glob-to-any-file:
-      - 'scen/xclim_modules/**/*'
+      - 'xscen/xclim_modules/**/*'

@@ -1,7 +1,7 @@
 [build-system]
 requires = [
-  "setuptools>=60",
-  "setuptools-scm>=8.0",
+  "setuptools >=60",
+  "setuptools-scm >=8.0",
   "babel",
   "wheel"
 ]
@@ -29,6 +29,7 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: CPython",
   "Topic :: Scientific/Engineering :: Atmospheric Science"
 ]
@@ -37,55 +38,55 @@ dependencies = [
   "babel",
   "cartopy",
   "cftime",
-  "cf_xarray>=0.7.6",
-  "clisops>=0.10",
+  "cf_xarray >=0.7.6",
+  "clisops >=0.10",
   "dask",
   "flox",
-  "fsspec<2023.10.0",
+  "fsspec",
   "geopandas",
   "h5netcdf",
   "h5py",
-  "intake-esm>=2023.07.07",
+  "intake-esm >=2023.07.07,<v2024.2.6; python_version == '3.9'",
+  "intake-esm >=2023.07.07; python_version >= '3.10'",
   "matplotlib",
   "netCDF4",
   "numcodecs",
   "numpy",
-  "pandas>=2.0,<2.2",
+  "pandas >=2.2",
   "parse",
   # Used when opening catalogs.
   "pyarrow",
   "pyyaml",
   "rechunker",
   "scipy",
-  "shapely>=2.0",
-  "sparse<=0.14",
+  "shapely >=2.0",
+  "sparse",
   "toolz",
-  "xarray<2023.11.0", # FIXME: Remove when pandas 2.2 is released and xclim is fixed.
-  "xclim>=0.46.0",
-  "xesmf>=0.7",
+  "xarray >=2023.11.0",
+  "xclim >=0.48.2",
   "zarr"
 ]
 
 [project.optional-dependencies]
 dev = [
   # Dev tools and testing
-  "pip>=23.1.2",
-  "black>=23.11.0",
-  "blackdoc>=0.3.9",
-  "bump-my-version>=0.12.0",
-  "coverage>=6.2.2,<7.0.0",
-  "coveralls>=3.3.1",
-  "flake8-alphabetize>=0.0.21",
-  "flake8-rst-docstrings>=0.3.0",
-  "flake8>=6.1.0",
-  "isort>=5.12.0",
+  "pip >=23.3.0",
+  "black ==24.2.0",
+  "blackdoc ==0.3.9",
+  "bump-my-version >=0.17.1",
+  "coverage >=6.2.2,<8.0.0",
+  "coveralls >=3.3.1",
+  "flake8-alphabetize >=0.0.21",
+  "flake8-rst-docstrings >=0.3.0",
+  "flake8 >=6.1.0",
+  "isort ==5.13.2",
   "pooch",
-  "pre-commit>=3.3.2",
-  "pytest-cov>=4.0.0",
-  "pytest>=7.3.1",
-  "ruff>=0.1.0",
-  "tox>=4.5.1",
-  "watchdog>=3.0.0",
+  "pre-commit >=3.3.2",
+  "pytest-cov >=4.0.0",
+  "pytest >=7.3.1",
+  "ruff >=0.1.0",
+  "tox >=4.5.1",
+  "watchdog >=3.0.0",
   "xdoctest"
 ]
 docs = [
@@ -99,8 +100,13 @@ docs = [
   "sphinx-autoapi",
   "sphinx-codeautolink",
   "sphinx-copybutton",
-  "sphinx-rtd-theme>=1.0",
+  "sphinx-intl",
+  "sphinx-mdinclude",
+  "sphinx-rtd-theme >=1.0",
   "sphinxcontrib-napoleon"
+]
+extra = [
+  "xesmf>=0.7"
 ]
 
 [project.urls]
@@ -116,18 +122,20 @@ docs = [
 target-version = [
   "py39",
   "py310",
-  "py311"
+  "py311",
+  "py312"
 ]
 
 [tool.bumpversion]
-current_version = "0.8.2-beta-beta"
+current_version = "0.8.2"
 commit = true
+commit_args = "--no-verify"
 tag = false
-tag_name = "{new_version}"
+tag_name = "v{new_version}"
 allow_dirty = false
-parse = "(?P<major>\\d+)\\.(?P<minor>\\d+).(?P<patch>\\d+)(\\-(?P<release>\\d+))?"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(\\-(?P<release>[a-z]+)(\\.(?P<build>\\d+)))?"
 serialize = [
-  "{major}.{minor}.{patch}-{release}",
+  "{major}.{minor}.{patch}-{release}.{build}",
   "{major}.{minor}.{patch}"
 ]
 
@@ -137,20 +145,18 @@ search = "__version__ = \"{current_version}\""
 replace = "__version__ = \"{new_version}\""
 
 [[tool.bumpversion.files]]
-filename = "tests/test_xscen.py"
-search = "__version__ = \"{current_version}\""
-replace = "__version__ = \"{new_version}\""
-
-[[tool.bumpversion.files]]
 filename = ".cruft.json"
 search = "\"version\": \"{current_version}\""
 replace = "\"version\": \"{new_version}\""
 
+[tool.bumpversion.parts.build]
+independent = false
+
 [tool.bumpversion.parts.release]
-optional_value = "gamma"
+optional_value = "release"
 values = [
-  "beta",
-  "gamma"
+  "dev",
+  "release"
 ]
 
 [tool.coverage.run]
@@ -291,6 +297,7 @@ include = ["xscen"]
 # "docs/_*",
 # "docs/apidoc/modules.rst",
 # "docs/apidoc/xscen*.rst",
+# "docs/locales",
 # "docs/notesbnooks/samples/tutorial/**/*.nc",
 # "templates"
 # ]

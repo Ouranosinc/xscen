@@ -4,9 +4,6 @@ sphinx:
   configuration: docs/conf.py
   fail_on_warning: true
 
-formats:
-  - pdf
-
 build:
   os: ubuntu-22.04
   tools:
@@ -18,6 +15,7 @@ build:
     pre_build:
       - sphinx-apidoc -o docs/apidoc --private --module-first xscen
       - env SKIP_NOTEBOOKS=1 sphinx-build -b linkcheck docs/ _build/linkcheck || true
+      - env SKIP_NOTEBOOKS=1 sphinx-build -M gettext docs docs/_build
 #    post_build:
 #      - rm -rf docs/notebooks/_data
 

@@ -55,6 +55,7 @@ extensions = [
     "nbsphinx",
     "sphinx_codeautolink",
     "sphinx_copybutton",
+    "sphinx_mdinclude",
 ]
 
 # To ensure that underlined fields (e.g. `_field`) are shown in the docs.
@@ -168,6 +169,10 @@ release = xscen.__version__
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
 language = "en"
+
+# Sphinx-intl configuration
+locale_dirs = ['locales/']
+gettext_compact = False  # optional
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
