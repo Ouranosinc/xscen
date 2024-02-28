@@ -30,14 +30,7 @@ from pandas import isna
 from .catalog import COLUMNS, DataCatalog, generate_id
 from .config import parse_config
 from .io import get_engine
-from .utils import (  # noqa
-    CV,
-    date_parser,
-    ensure_correct_time,
-    ensure_new_xrfreq,
-    get_cat_attrs,
-    standardize_periods,
-)
+from .utils import CV, date_parser, ensure_new_xrfreq, get_cat_attrs
 
 logger = logging.getLogger(__name__)
 
@@ -434,7 +427,7 @@ def _parse_first_ds(
 
 
 @parse_config
-def parse_directory(  # noqa:C901
+def parse_directory(  # noqa: C901
     directories: list[Union[str, os.PathLike]],
     patterns: list[str],
     *,

@@ -22,8 +22,7 @@ import xarray as xr
 from intake_esm.cat import ESMCatalogModel
 
 from .config import CONFIG, args_as_str, recursive_update
-from .utils import (  # noqa
-    CV,
+from .utils import (
     date_parser,
     ensure_correct_time,
     ensure_new_xrfreq,
@@ -42,6 +41,7 @@ __all__ = [
     "ProjectCatalog",
     "concat_data_catalogs",
     "generate_id",
+    "subset_file_coverage",
     "unstack_id",
 ]
 

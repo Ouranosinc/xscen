@@ -47,7 +47,7 @@ If you are proposing a feature:
 * Explain in detail how it would work.
 * Keep the scope as narrow as possible, to make it easier to implement.
 * Remember that this is a volunteer-driven project, and that contributions
-  are welcome :)
+  are welcome. :)
 
 Get Started!
 ------------
@@ -204,7 +204,7 @@ Before you submit a pull request, check that it meets these guidelines:
 
 #. The pull request should not break the templates.
 
-#. The pull request should work for Python 3.9, 3.10, and 3.11. Check that the tests pass for all supported Python versions.
+#. The pull request should work for Python 3.9, 3.10, 3.11, and 3.12. Check that the tests pass for all supported Python versions.
 
 Tips
 ----

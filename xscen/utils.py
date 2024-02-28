@@ -33,10 +33,13 @@ from .config import parse_config
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "CV",
     "add_attr",
     "change_units",
     "clean_up",
     "date_parser",
+    "ensure_correct_time",
+    "ensure_new_xrfreq",
     "get_cat_attrs",
     "maybe_unstack",
     "minimum_calendar",
@@ -48,6 +51,7 @@ __all__ = [
     "unstack_dates",
     "unstack_fill_nan",
     "update_attr",
+    "xrfreq_to_timedelta",
 ]
 
 TRANSLATOR = defaultdict(lambda: lambda s: s)
