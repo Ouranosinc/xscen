@@ -2,7 +2,7 @@
 Changelog
 =========
 
-v0.8.3 (unreleased)
+v0.8.3 (2024-02-28)
 -------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
 
