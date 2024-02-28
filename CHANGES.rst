@@ -2,6 +2,17 @@
 Changelog
 =========
 
+v0.9.0 (unreleased)
+-------------------
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Updated the `cookiecutter` template to the latest version. (:pull:`358`):
+    * Addresses a handful of misconfigurations in the GitHub Workflows.
+    * Added a few free `grep`-based hooks for finding unwanted artifacts in the code base.
+    * Updated `ruff` to v0.2.0 and `black` to v24.2.0.
+
 v0.8.3 (2024-02-28)
 -------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
