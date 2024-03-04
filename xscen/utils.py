@@ -1082,7 +1082,7 @@ def unstack_dates(
         )
 
     # Fast track for annual
-    if base == "A":
+    if base in "YA":
         if seasons:
             seaname = seasons[first.month]
         elif anchor == "JAN":

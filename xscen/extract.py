@@ -1107,7 +1107,7 @@ def get_warming_level(  # noqa: C901
     if isinstance(realization, xr.DataArray):
         if return_horizon:
             return xr.DataArray(
-                out, dims=(realization.dims[0], "bounds"), coords=realization.coords
+                out, dims=(realization.dims[0], "wl_bounds"), coords=realization.coords
             )
         return xr.DataArray(out, dims=(realization.dims[0],), coords=realization.coords)
 
@@ -1251,7 +1251,7 @@ def subset_warming_level(
                 data.expand_dims(warminglevel=wl_crd).assign_coords(
                     time=fake_time[: data.time.size],
                     warminglevel_bounds=(
-                        ("realization", "warminglevel", "bounds"),
+                        ("realization", "warminglevel", "wl_bounds"),
                         [[bnds_crd]],
                     ),
                 )
@@ -1271,10 +1271,10 @@ def subset_warming_level(
             # WL not reached or not completely inside ds time
             if start_yr is None or ds_wl.time.size == 0:
                 ds_wl = ds.isel(time=slice(0, fake_time.size)) * np.NaN
-                wlbnds = (("warminglevel", "bounds"), [[np.NaN, np.NaN]])
+                wlbnds = (("warminglevel", "wl_bounds"), [[np.NaN, np.NaN]])
             else:
                 wlbnds = (
-                    ("warminglevel", "bounds"),
+                    ("warminglevel", "wl_bounds"),
                     [
                         [
                             date_cls(int(start_yr), 1, 1),
