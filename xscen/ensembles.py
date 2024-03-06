@@ -676,7 +676,7 @@ def generate_weights(  # noqa: C901
 
 def build_partition_data(
     datasets: Union[dict, list[xr.Dataset]],
-    partition_dim: list[str] = ["source", "experiment", "bias_adjust_project"],
+    partition_dim: list[str] = ["realization", "experiment", "bias_adjust_project"],
     subset_kw: dict = None,
     regrid_kw: dict = None,
     indicators_kw: dict = None,
@@ -738,11 +738,13 @@ def build_partition_data(
     xclim.ensembles
 
     """
+    # TODO: add warning if both realization and source in partition_dim
     if isinstance(datasets, dict):
         datasets = list(datasets.values())
     # initialize dict
     subset_kw = subset_kw or {}
     regrid_kw = regrid_kw or {}
+    to_dataset_kw = to_dataset_kw or {}
     calendar_kw = calendar_kw or {}
 
     if isinstance(datasets, list):
@@ -778,9 +780,9 @@ def build_partition_data(
                 if f"cat:{dim}" in ds.attrs:
                     ds = ds.expand_dims(**{dim: [ds.attrs[f"cat:{dim}"]]})
 
-            if "source" in partition_dim:
+            if "realization" in partition_dim:
                 new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
-                ds = ds.assign_coords(realization=[new_source])
+                ds = ds.expand_dims(realization=[new_source])
             list_ds.append(ds)
         ens = xr.merge(list_ds)
 
@@ -807,12 +809,11 @@ def build_partition_data(
                 create_ensemble_on=ensemble_on_list,
                 **to_dataset_kw,
             )
-            if "realization" in ds:
-                ds = ds.rename({"realization": "source"})
             if subset_kw:
                 ds = subset(ds, **subset_kw)
             if regrid_kw:
                 ds = regrid_dataset(ds, **regrid_kw)
+
             list_ds.append(ds)
         ens = xr.concat(list_ds, dim=dim_with_different_grid)
 
@@ -833,6 +834,7 @@ def build_partition_data(
 
     rename_dict = rename_dict or {}
     rename_dict.setdefault("realization", "model")
+    rename_dict.setdefault("source", "model")
     rename_dict.setdefault("experiment", "scenario")
     rename_dict.setdefault("bias_adjust_project", "downscaling")
     rename_dict = {k: v for k, v in rename_dict.items() if k in ens.dims}
