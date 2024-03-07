@@ -405,7 +405,7 @@ class TestSubsetWarmingLevel:
         np.tile(np.arange(1, 2), 50),
         variable="tas",
         start="2000-01-01",
-        freq="AS-JAN",
+        freq="YS-JAN",
         as_dataset=True,
     ).assign_attrs(
         {
@@ -440,11 +440,18 @@ class TestSubsetWarmingLevel:
         assert ds_sub.warminglevel.attrs["baseline"] == "1981-2010"
         assert ds_sub.attrs["cat:processing_level"] == "tests"
 
-    def test_outofrange(self):
-        assert xs.subset_warming_level(self.ds, wl=5) is None
-
-    def test_none(self):
-        assert xs.subset_warming_level(self.ds, wl=20) is None
+    @pytest.mark.parametrize("wl", [3.5, 5, 20, [2, 3.5, 5, 20], [3.5, 5, 20]])
+    def test_outofrange(self, wl):
+        # 3.5 is only partially covered by ds, 5 is out of range but within the csv, 20 is fully out of range
+        if not isinstance(wl, list):
+            assert xs.subset_warming_level(self.ds, wl=wl) is None
+        else:
+            ds = xs.subset_warming_level(self.ds, wl=wl)
+            assert ds.warminglevel.size == len(wl)
+            if len(wl) == 3:
+                np.testing.assert_array_equal(ds.tas.isnull().all(), [True])
+            else:
+                np.testing.assert_array_equal(ds.tas.isnull().all(dim="time"), [False, True, True, True])
 
     def test_multireals(self):
         ds = self.ds.expand_dims(
