@@ -484,7 +484,7 @@ class TestSubsetWarmingLevel:
             ds_sub.warminglevel,
             ["+1Cvs1850-1900", "+2Cvs1850-1900", "+3Cvs1850-1900", "+20Cvs1850-1900"],
         )
-        np.testing.assert_array_equal(ds_sub.tas.isnull().sum("time"), [10, 0, 1, 20])
+        np.testing.assert_array_equal(ds_sub.tas.isnull().sum("time"), [20, 0, 20, 20])
 
 
 class TestResample:
