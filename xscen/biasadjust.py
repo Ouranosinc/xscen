@@ -15,6 +15,7 @@ from .config import parse_config
 from .utils import minimum_calendar, standardize_periods
 
 logger = logging.getLogger(__name__)
+xc.set_options(sdba_encode_cf=True, sdba_extra_output=False)
 
 
 __all__ = [
@@ -287,9 +288,8 @@ def adjust(
             kwargs.setdefault("kind", ADJ.kind)
             xclim_adjust_args["detrend"] = getattr(sdba.detrending, name)(**kwargs)
 
-        with xc.set_options(sdba_encode_cf=True, sdba_extra_output=False):
-            out = ADJ.adjust(sim_sel, **xclim_adjust_args)
-            slices.extend([out])
+        out = ADJ.adjust(sim_sel, **xclim_adjust_args)
+        slices.extend([out])
     # put all the adjusted period back together
     dscen = xr.concat(slices, dim="time")
 
