@@ -1127,6 +1127,7 @@ def subset_warming_level(
     r"""
     Subsets the input dataset with only the window of time over which the requested level of global warming
     is first reached, using the IPCC Atlas method.
+    A warming level is considered reached only if the full `window` years are available in the dataset.
 
     Parameters
     ----------
