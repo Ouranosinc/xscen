@@ -465,12 +465,12 @@ class TestSubsetWarmingLevel:
         )
         ds_sub = xs.subset_warming_level(
             ds,
-            wl=1,
+            wl=1.5,
             to_level="tests",
         )
         np.testing.assert_array_equal(ds_sub.time.dt.year, np.arange(1000, 1020))
         np.testing.assert_array_equal(
-            ds_sub.warminglevel_bounds[:2].dt.year, [[[1990, 2009]], [[1990, 2009]]]
+            ds_sub.warminglevel_bounds[:2].dt.year, [[[2004, 2023]], [[2004, 2023]]]
         )
         assert ds_sub.warminglevel_bounds[2].isnull().all()
 

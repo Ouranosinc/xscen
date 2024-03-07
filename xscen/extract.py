@@ -1252,9 +1252,9 @@ def subset_warming_level(
                 # We create it again with the proper length
                 data = (
                     ds.sel(realization=[real]).isel(time=slice(0, fake_time.size))
-                    * np.NaN
+                    * np.nan
                 )
-                bnds_crd = [np.NaN, np.NaN]
+                bnds_crd = [np.nan, np.nan]
             reals.append(
                 data.expand_dims(warminglevel=wl_crd).assign_coords(
                     time=fake_time[: data.time.size],
