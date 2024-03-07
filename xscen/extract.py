@@ -1263,12 +1263,12 @@ def subset_warming_level(
         # cut the window selected above and expand dims with wl_crd
         ds_wl = ds.sel(time=slice(start_yr, end_yr))
         if fake_time is None:
-            # WL not reached or not fully contained in ds.time
+            # WL not reached, not in ds, or not fully contained in ds.time
             if (start_yr is None) or (ds_wl.time.size == 0) or ((ds_wl.time.dt.year[-1] - ds_wl.time.dt.year[0] + 1) != window):
                 return None
             ds_wl = ds_wl.expand_dims(warminglevel=wl_crd)
         else:
-            # WL not reached or not fully contained in ds.time
+            # WL not reached, not in ds, or not fully contained in ds.time
             if (start_yr is None) or (ds_wl.time.size == 0) or ((ds_wl.time.dt.year[-1] - ds_wl.time.dt.year[0] + 1) != window):
                 ds_wl = ds.isel(time=slice(0, fake_time.size)) * np.NaN
                 wlbnds = (("warminglevel", "wl_bounds"), [[np.NaN, np.NaN]])
