@@ -451,8 +451,9 @@ class TestSubsetWarmingLevel:
             if len(wl) == 3:
                 np.testing.assert_array_equal(ds.tas.isnull().all(), [True])
             else:
-                np.testing.assert_array_equal(ds.tas.isnull().all(dim="time"), [False, True, True, True])
-
+                np.testing.assert_array_equal(
+                    ds.tas.isnull().all(dim="time"), [False, True, True, True]
+                )
 
     def test_multireals(self):
         ds = self.ds.expand_dims(
