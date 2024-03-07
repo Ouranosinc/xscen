@@ -4,7 +4,7 @@ Changelog
 
 v0.9.0 (unreleased)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -12,6 +12,11 @@ Internal changes
     * Addresses a handful of misconfigurations in the GitHub Workflows.
     * Added a few free `grep`-based hooks for finding unwanted artifacts in the code base.
     * Updated `ruff` to v0.2.0 and `black` to v24.2.0.
+
+Bug fixes
+^^^^^^^^^
+* Fix ``unstack_dates`` for the new frequency syntax introduced by pandas v2.2. (:pull:`359`).
+* ``subset_warming_level`` will not return partial subsets if the warming level is reached at the end of the timeseries. (:issue:`360`, :pull:`359`).
 
 v0.8.3 (2024-02-28)
 -------------------
