@@ -52,6 +52,7 @@ def _add_preprocessing_attr(scen, train_kwargs):
         scen.attrs[
             "bias_adjustment"
         ] += ", ref and hist were prepared with " + " and ".join(preproc)
+    return scen
 
 
 @parse_config
@@ -123,7 +124,10 @@ def train(
         ref = dref[var[0]]
         hist = dhist[var[0]]
 
-    group = group or {"group": "time.dayofyear", "window": 31}
+    # we want to put default if group is None, but not if group is False
+    if group is None:
+        group = {"group": "time.dayofyear", "window": 31}
+
     xclim_train_args = xclim_train_args or {}
     if method == "DetrendedQuantileMapping":
         xclim_train_args.setdefault("nquantiles", 15)
@@ -197,7 +201,7 @@ def adjust(
     to_level: str = "biasadjusted",
     bias_adjust_institution: Optional[str] = None,
     bias_adjust_project: Optional[str] = None,
-    moving_yearly_window: Optional[dict] = None,
+    moving_yearly_window: Optional[dict] = None,  # TODO: maybe remove this
     align_on: Optional[str] = "year",
 ) -> xr.Dataset:
     """
@@ -239,8 +243,6 @@ def adjust(
     xclim.sdba.adjustment.DetrendedQuantileMapping, xclim.sdba.adjustment.ExtremeValues
 
     """
-    # TODO: To be adequately fixed later
-
     xclim_adjust_args = deepcopy(xclim_adjust_args)
     xclim_adjust_args = xclim_adjust_args or {}
 
@@ -270,30 +272,31 @@ def adjust(
     if simcal != mincal:
         sim = convert_calendar(sim, mincal, align_on=align_on)
 
+    # moved up because detrend failed if many periods if inside for loop
+    # adjust
+    ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)
+
+    if ("detrend" in xclim_adjust_args) and (
+        isinstance(xclim_adjust_args["detrend"], dict)
+    ):
+        name, kwargs = list(xclim_adjust_args["detrend"].items())[0]
+        kwargs = kwargs or {}
+        kwargs.setdefault("group", ADJ.group)
+        kwargs.setdefault("kind", ADJ.kind)
+        xclim_adjust_args["detrend"] = getattr(sdba.detrending, name)(**kwargs)
+
     # do the adjustment for all the simulation_period lists
     periods = standardize_periods(periods)
     slices = []
     for period in periods:
         sim_sel = sim.sel(time=slice(period[0], period[1]))
 
-        # adjust
-        ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)
-
-        if ("detrend" in xclim_adjust_args) and (
-            isinstance(xclim_adjust_args["detrend"], dict)
-        ):
-            name, kwargs = list(xclim_adjust_args["detrend"].items())[0]
-            kwargs = kwargs or {}
-            kwargs.setdefault("group", ADJ.group)
-            kwargs.setdefault("kind", ADJ.kind)
-            xclim_adjust_args["detrend"] = getattr(sdba.detrending, name)(**kwargs)
-
         out = ADJ.adjust(sim_sel, **xclim_adjust_args)
         slices.extend([out])
     # put all the adjusted period back together
     dscen = xr.concat(slices, dim="time")
 
-    _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
+    dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
     dscen = xr.Dataset(data_vars={var: dscen}, attrs=dsim.attrs)
     # TODO: History, attrs, etc. (TODO kept from previous version of `biasadjust`)
     # TODO: Check for variables to add (grid_mapping, etc.) (TODO kept from previous version of `biasadjust`)
