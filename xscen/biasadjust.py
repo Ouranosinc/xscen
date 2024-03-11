@@ -298,8 +298,6 @@ def adjust(
 
     dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
     dscen = xr.Dataset(data_vars={var: dscen}, attrs=dsim.attrs)
-    # TODO: History, attrs, etc. (TODO kept from previous version of `biasadjust`)
-    # TODO: Check for variables to add (grid_mapping, etc.) (TODO kept from previous version of `biasadjust`)
     dscen.attrs["cat:processing_level"] = to_level
     dscen.attrs["cat:variable"] = parse_from_ds(dscen, ["variable"])["variable"]
     if bias_adjust_institution is not None:

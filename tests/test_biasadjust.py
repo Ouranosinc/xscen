@@ -1,4 +1,3 @@
-import dask
 import numpy as np
 import pytest
 import xarray as xr
@@ -108,9 +107,7 @@ class TestTrain:
 
 class TestAdjust:
     dref = timeseries(
-        dask.array.from_array(
-            np.ones(365 * 3)
-        ),  # dask array b/c xclim bug with sdba_encode_cf
+        np.ones((365 * 3) + 1),  # leap year
         variable="tas",
         start="2001-01-01",
         freq="D",
@@ -118,7 +115,7 @@ class TestAdjust:
     )
 
     dsim = timeseries(
-        np.concatenate([np.ones(365 * 3) * 2, np.ones(365 * 3) * 4]),
+        np.concatenate([np.ones(365 * 3) * 2, np.ones((365 * 3) + 1) * 4]),
         variable="tas",
         start="2001-01-01",
         freq="D",
@@ -150,15 +147,18 @@ class TestAdjust:
             self.dsim,
             periods=periods,
             to_level=to_level,
-            # xclim_adjust_args={'detrend': {
-            #     'LoessDetrend': {'f': 0.2, 'niter': 1, 'd': 0,
-            #                      'weights': 'tricube'}}},
             bias_adjust_institution=bias_adjust_institution,
             bias_adjust_project=bias_adjust_project,
-            # moving_yearly_window={'window': 2, 'step': 1},
         )
         assert out.attrs["cat:processing_level"] == to_level or "biasadjusted"
         assert out.attrs["cat:variable"] == ("tas",)
+        assert out.attrs["cat:id"] == "fake_id"
+        assert (
+            out["tas"].attrs["bias_adjustment"]
+            == "DetrendedQuantileMapping(group=Grouper("
+            "name='time.dayofyear', window=31), kind='+'"
+            ").adjust(sim, )"
+        )
         assert xc.core.calendar.get_calendar(out) == "noleap"
 
         if bias_adjust_institution is not None:
@@ -172,7 +172,9 @@ class TestAdjust:
         if periods == ["2001", "2006"]:
             np.testing.assert_array_equal(
                 out["tas"].values,
-                np.concatenate([np.ones(365 * 3) * 1, np.ones(365 * 3) * 3]),
+                np.concatenate(
+                    [np.ones(365 * 3) * 1, np.ones(365 * 3) * 3]
+                ),  # -1 for leap year
             )
         else:  # periods==[['2001','2001'], ['2006','2006']]
             np.testing.assert_array_equal(
@@ -244,9 +246,7 @@ class TestAdjust:
     ):  # should give the same results  using xscen and xclim
         dref = (
             timeseries(
-                dask.array.from_array(
-                    np.random.randint(0, high=10, size=(365 * 3) + 1)
-                ),
+                np.random.randint(0, high=10, size=(365 * 3) + 1),
                 variable="pr",
                 start="2001-01-01",
                 freq="D",
@@ -276,7 +276,6 @@ class TestAdjust:
             var="pr",
             period=["2001", "2003"],
             adapt_freq={"thresh": "1 mm d-1"},
-            # jitter_under={"thresh": "0.01 mm d-1"},
             xclim_train_args={"kind": "*", "nquantiles": 50},
         )
 
@@ -306,13 +305,6 @@ class TestAdjust:
             dsimx = xc.core.calendar.convert_calendar(
                 dsim.sel(time=slice("2001", "2006")), "noleap"
             )
-
-            # drefx["pr"] = xc.sdba.processing.jitter_under_thresh(
-            #     drefx["pr"], thresh="0.01 mm d-1"
-            # )
-            # dhistx["pr"] = xc.sdba.processing.jitter_under_thresh(
-            #     dhistx["pr"], thresh="0.01 mm d-1"
-            # )
 
             dhist_ad, pth, dP0 = xc.sdba.processing.adapt_freq(
                 drefx["pr"], dhistx["pr"], group=group, thresh="1 mm d-1"
