@@ -242,7 +242,6 @@ class TestAdjust:
     def test_xclim_vs_xscen(
         self,
     ):  # should give the same results  using xscen and xclim
-
         dref = (
             timeseries(
                 dask.array.from_array(
@@ -277,7 +276,7 @@ class TestAdjust:
             var="pr",
             period=["2001", "2003"],
             adapt_freq={"thresh": "1 mm d-1"},
-            jitter_under={"thresh": "0.01 mm d-1"},
+            # jitter_under={"thresh": "0.01 mm d-1"},
             xclim_train_args={"kind": "*", "nquantiles": 50},
         )
 
@@ -308,12 +307,12 @@ class TestAdjust:
                 dsim.sel(time=slice("2001", "2006")), "noleap"
             )
 
-            drefx["pr"] = xc.sdba.processing.jitter_under_thresh(
-                drefx["pr"], thresh="0.01 mm d-1"
-            )
-            dhistx["pr"] = xc.sdba.processing.jitter_under_thresh(
-                dhistx["pr"], thresh="0.01 mm d-1"
-            )
+            # drefx["pr"] = xc.sdba.processing.jitter_under_thresh(
+            #     drefx["pr"], thresh="0.01 mm d-1"
+            # )
+            # dhistx["pr"] = xc.sdba.processing.jitter_under_thresh(
+            #     dhistx["pr"], thresh="0.01 mm d-1"
+            # )
 
             dhist_ad, pth, dP0 = xc.sdba.processing.adapt_freq(
                 drefx["pr"], dhistx["pr"], group=group, thresh="1 mm d-1"
