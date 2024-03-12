@@ -272,7 +272,6 @@ def adjust(
     if simcal != mincal:
         sim = convert_calendar(sim, mincal, align_on=align_on)
 
-    # moved up because detrend failed if many periods if inside for loop
     # adjust
     ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)
 

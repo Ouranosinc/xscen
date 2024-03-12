@@ -11,11 +11,6 @@ xc.set_options(
     sdba_encode_cf=False
 )  # FIXME: A temporary bug fix waiting for xclim 0.49
 
-try:
-    import xesmf as xe
-except ImportError:
-    xe = None
-
 
 class TestTrain:
     dref = timeseries(
