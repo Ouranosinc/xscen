@@ -6,17 +6,25 @@ v0.9.0 (unreleased)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
+Breaking changes
+^^^^^^^^^^^^^^^^
+* Removed support for the old instances of the `region` argument in ``spatial_mean``, ``extract_dataset``, and ``subset``. (:pull:`367`).
+* Removed ``xscen.extract.clisops_subset``. (:pull:`367`).
+
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Updated the `cookiecutter` template to the latest version. (:pull:`358`):
     * Addresses a handful of misconfigurations in the GitHub Workflows.
     * Added a few free `grep`-based hooks for finding unwanted artifacts in the code base.
     * Updated `ruff` to v0.2.0 and `black` to v24.2.0.
+* Refactored ``xs.spatial.subset`` into smaller functions. (:pull:`367`).
+* Added more tests. (:pull:`367).
 
 Bug fixes
 ^^^^^^^^^
 * Fix ``unstack_dates`` for the new frequency syntax introduced by pandas v2.2. (:pull:`359`).
 * ``subset_warming_level`` will not return partial subsets if the warming level is reached at the end of the timeseries. (:issue:`360`, :pull:`359`).
+* `creep_weights` now correctly handles the case where the grid is small, `n` is large, and `mode=wrap`. (:issue:`367`).
 
 v0.8.3 (2024-02-28)
 -------------------
