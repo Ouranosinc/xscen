@@ -18,7 +18,7 @@ Internal changes
     * Added a few free `grep`-based hooks for finding unwanted artifacts in the code base.
     * Updated `ruff` to v0.2.0 and `black` to v24.2.0.
 * Refactored ``xs.spatial.subset`` into smaller functions. (:pull:`367`).
-* Added more tests. (:pull:`367).
+* Added more tests. (:pull:`367`).
 
 Bug fixes
 ^^^^^^^^^
