@@ -45,46 +45,6 @@ __all__ = [
 ]
 
 
-def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
-    """Customize a call to clisops.subset() that allows for an automatic buffer around the region.
-
-    Parameters
-    ----------
-    ds : xr.Dataset
-        Dataset to be subsetted
-    region : dict
-        Description of the region and the subsetting method (required fields listed in the Notes)
-
-    Notes
-    -----
-    'region' fields:
-        method: str
-            ['gridpoint', 'bbox', shape']
-        <method>: dict
-            Arguments specific to the method used.
-        buffer: float, optional
-            Multiplier to apply to the model resolution.
-
-    Returns
-    -------
-    xr.Dataset
-        Subsetted Dataset.
-
-    See Also
-    --------
-    clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
-    """
-    warnings.warn(
-        "clisops_subset is deprecated and will not be available in future versions. "
-        "Use xscen.spatial.subset instead.",
-        category=FutureWarning,
-    )
-
-    ds_subset = subset(ds, region=region)
-
-    return ds_subset
-
-
 @parse_config
 def extract_dataset(  # noqa: C901
     catalog: DataCatalog,
@@ -326,19 +286,6 @@ def extract_dataset(  # noqa: C901
 
         # subset to the region
         if region is not None:
-            if (region["method"] in region) and (
-                isinstance(region[region["method"]], dict)
-            ):
-                warnings.warn(
-                    "You seem to be using a deprecated version of region. Please use the new formatting.",
-                    category=FutureWarning,
-                )
-                region = deepcopy(region)
-                if "buffer" in region:
-                    region["tile_buffer"] = region.pop("buffer")
-                _kwargs = region.pop(region["method"])
-                region.update(_kwargs)
-
             ds = subset(ds, **region)
 
         # add relevant attrs
