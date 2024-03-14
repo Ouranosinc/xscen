@@ -35,8 +35,8 @@ class TestCreepFill:
         [(1, "clip"), (2, "clip"), (3, "clip"), (1, "wrap"), (2, "wrap"), (3, "wrap")],
     )
     def test_n(self, n, mode):
-        w = xs.creep_weights(self.ds["mask"], n=n, mode=mode)
-        out = xs.creep_fill(self.ds["tas"], w)
+        w = xs.spatial.creep_weights(self.ds["mask"], n=n, mode=mode)
+        out = xs.spatial.creep_fill(self.ds["tas"], w)
 
         if mode == "clip":
             neighbours_0 = {
@@ -135,11 +135,11 @@ class TestCreepFill:
 
     def test_wrong_mode(self):
         with pytest.raises(ValueError, match="mode must be either"):
-            xs.creep_weights(self.ds["mask"], n=1, mode="wrong")
+            xs.spatial.creep_weights(self.ds["mask"], n=1, mode="wrong")
 
     def test_n0(self):
-        w = xs.creep_weights(self.ds["mask"], n=0, mode="clip")
-        out = xs.creep_fill(self.ds["tas"], w)
+        w = xs.spatial.creep_weights(self.ds["mask"], n=0, mode="clip")
+        out = xs.spatial.creep_fill(self.ds["tas"], w)
         np.testing.assert_equal(out.isel(lat=0, lon=0), np.tile(np.nan, 3))
         np.testing.assert_equal(out.isel(lat=3, lon=3), np.tile(np.nan, 3))
 
@@ -167,7 +167,9 @@ class TestSubset:
     )
     def test_subset_gridpoint(self, kwargs, name):
         with pytest.warns(UserWarning, match="tile_buffer is not used"):
-            out = xs.subset(self.ds, "gridpoint", name=name, tile_buffer=5, **kwargs)
+            out = xs.spatial.subset(
+                self.ds, "gridpoint", name=name, tile_buffer=5, **kwargs
+            )
 
         if isinstance(kwargs["lon"], list):
             expected = {
@@ -212,9 +214,9 @@ class TestSubset:
             with pytest.raises(
                 ValueError, match="Both tile_buffer and clisops' buffer were requested."
             ):
-                xs.subset(self.ds, method, tile_buffer=tile_buffer, **kwargs)
+                xs.spatial.subset(self.ds, method, tile_buffer=tile_buffer, **kwargs)
         else:
-            out = xs.subset(self.ds, method, tile_buffer=tile_buffer, **kwargs)
+            out = xs.spatial.subset(self.ds, method, tile_buffer=tile_buffer, **kwargs)
 
             assert f"{method} spatial subsetting" in out.attrs["history"]
             if tile_buffer:
@@ -254,8 +256,8 @@ class TestSubset:
         )
 
         with pytest.raises(KeyError):
-            xs.subset(ds, "sel", lon=[-75, -70], lat=[-5, 0])
-        out = xs.subset(ds, "sel", rlon=[-5, 5], rlat=[0, 3])
+            xs.spatial.subset(ds, "sel", lon=[-75, -70], lat=[-5, 0])
+        out = xs.spatial.subset(ds, "sel", rlon=[-5, 5], rlat=[0, 3])
 
         assert "sel subsetting" in out.attrs["history"]
         np.testing.assert_array_equal(out["rlon"], np.arange(-5, 6))
@@ -264,14 +266,14 @@ class TestSubset:
     def test_history(self):
         ds = self.ds.copy(deep=True)
         ds.attrs["history"] = "this is previous history"
-        out = xs.subset(ds, "gridpoint", lon=-70, lat=45)
+        out = xs.spatial.subset(ds, "gridpoint", lon=-70, lat=45)
 
         assert "this is previous history" in out.attrs["history"].split("\n")[1]
         assert "gridpoint spatial subsetting" in out.attrs["history"].split("\n")[0]
 
     def test_subset_wrong_method(self):
         with pytest.raises(ValueError, match="Subsetting type not recognized"):
-            xs.subset(self.ds, "wrong", lon=-70, lat=45)
+            xs.spatial.subset(self.ds, "wrong", lon=-70, lat=45)
 
 
 def test_dask_coords():
