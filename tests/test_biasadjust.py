@@ -317,24 +317,3 @@ class TestAdjust:
             ).rename({"scen": "pr"})
 
         assert out_xscen.equals(out_xclim)
-
-    # mayeb don't need if we remove the arg ?
-    # def test_window(self):
-    #     dtrain = xs.train(
-    #         self.dref,
-    #         self.dsim.sel(time=slice("2001", "2003")),
-    #         method='ExtremeValues',
-    #         group=False,
-    #         xclim_train_args={'cluster_thresh': "2 degC", "q_thresh": 0.95},
-    #         var="tas",
-    #         period=["2001", "2003"],
-    #     )
-    #
-    #
-    #     out = xs.adjust(self.dtrain,
-    #                     self.dsim,
-    #                     periods=['2001', '2006'],
-    #                     xclim_adjust_args={'scen': scen,
-    #                                        'frac': 0.25},
-    #                     moving_yearly_window={'window': 2, 'step': 1},
-    #                     )
