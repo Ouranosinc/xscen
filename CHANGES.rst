@@ -4,7 +4,7 @@ Changelog
 
 v0.9.0 (unreleased)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user: `juliettelavoie`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -17,13 +17,16 @@ Internal changes
     * Addresses a handful of misconfigurations in the GitHub Workflows.
     * Added a few free `grep`-based hooks for finding unwanted artifacts in the code base.
     * Updated `ruff` to v0.2.0 and `black` to v24.2.0.
+* Added more tests. (:pull:`366`, :pull:`367`).
 * Refactored ``xs.spatial.subset`` into smaller functions. (:pull:`367`).
-* Added more tests. (:pull:`367).
 
 Bug fixes
 ^^^^^^^^^
 * Fix ``unstack_dates`` for the new frequency syntax introduced by pandas v2.2. (:pull:`359`).
 * ``subset_warming_level`` will not return partial subsets if the warming level is reached at the end of the timeseries. (:issue:`360`, :pull:`359`).
+* Loading of training in `adjust` is now done outside of the periods loop. (:pull:`366`).
+* Fixed bug for adding the preprocessing attributes inside the `adjust` function. (:pull:`366`).
+* Fixed a bug to accept `group = False` in `adjust` function. (:pull:`366`).
 * `creep_weights` now correctly handles the case where the grid is small, `n` is large, and `mode=wrap`. (:issue:`367`).
 
 v0.8.3 (2024-02-28)
