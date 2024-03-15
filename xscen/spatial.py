@@ -2,20 +2,23 @@
 
 import datetime
 import itertools
+import logging
 import warnings
-from copy import deepcopy
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import clisops.core.subset
 import dask
+import geopandas as gpd
 import numpy as np
 import sparse as sp
 import xarray as xr
 import xclim as xc
-from xclim.core.utils import uses_dask
 
 from .config import parse_config
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "creep_fill",
@@ -61,7 +64,14 @@ def creep_weights(mask: xr.DataArray, n: int = 1, mode: str = "clip") -> xr.Data
             neigh_idx_1d = np.ravel_multi_index(
                 neigh_idx_2d, mask.shape, order="C", mode=mode
             )
-            neigh_idx = np.unravel_index(np.unique(neigh_idx_1d), mask.shape, order="C")
+            if mode == "clip":
+                neigh_idx = np.unravel_index(
+                    np.unique(neigh_idx_1d), mask.shape, order="C"
+                )
+            elif mode == "wrap":
+                neigh_idx = np.unravel_index(neigh_idx_1d, mask.shape, order="C")
+            else:
+                raise ValueError("mode must be either 'clip' or 'wrap'")
             neigh = mask[neigh_idx]
             N = (neigh).sum()
             if N > 0:
@@ -125,18 +135,15 @@ def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
     )
 
 
-def subset(  # noqa: C901
+def subset(
     ds: xr.Dataset,
-    region: Optional[dict] = None,
+    method: str,
     *,
     name: Optional[str] = None,
-    method: Optional[
-        str
-    ] = None,  # FIXME: Once the region argument is removed, this should be made mandatory.
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
-    """
+    r"""
     Subset the data to a region.
 
     Either creates a slice and uses the .sel() method, or customizes a call to
@@ -146,19 +153,20 @@ def subset(  # noqa: C901
     ----------
     ds : xr.Dataset
         Dataset to be subsetted.
-    region: dict
-        Deprecated argument that is there for legacy reasons and will be abandoned eventually.
+    method : str
+        ['gridpoint', 'bbox', shape', 'sel']
+        If the method is `sel`, this is not a call to clisops but only a subsetting with the xarray .sel() fonction.
     name: str, optional
         Used to rename the 'cat:domain' attribute.
-    method : str
-        ['gridpoint', 'bbox', shape','sel']
-        If the method is `sel`, this is not a call to clisops but only a subsetting with the xarray .sel() fonction.
     tile_buffer : float
         For ['bbox', shape'], uses an approximation of the grid cell size to add a buffer around the requested region.
         This differs from clisops' 'buffer' argument in subset_shape().
-    kwargs : dict
-        Arguments to be sent to clisops.
-        If the method is `sel`, the keys are the dimensions to subset and the values are turned into a slice.
+    \*\*kwargs : dict
+        Arguments to be sent to clisops. See relevant function for details. Depending on the method, required kwargs are:
+        - gridpoint: lon, lat
+        - bbox: lon_bnds, lat_bnds
+        - shape: shape
+        - sel: slices for each dimension
 
     Returns
     -------
@@ -169,97 +177,254 @@ def subset(  # noqa: C901
     --------
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
-    if region is not None:
+    if tile_buffer > 0 and method in ["gridpoint", "sel"]:
         warnings.warn(
-            "The argument 'region' has been deprecated and will be abandoned in a future release.",
-            category=FutureWarning,
-        )
-        method = method or region.get("method")
-        if ("buffer" in region) and ("shape" in region):
-            warnings.warn(
-                "To avoid confusion with clisops' buffer argument, xscen's 'buffer' has been renamed 'tile_buffer'.",
-                category=FutureWarning,
-            )
-            tile_buffer = tile_buffer or region.get("buffer", 0)
-        else:
-            tile_buffer = tile_buffer or region.get("tile_buffer", 0)
-        kwargs = deepcopy(region[region["method"]])
-
-    if uses_dask(ds.lon) or uses_dask(ds.lat):
-        warnings.warn("Loading longitude and latitude for more efficient subsetting.")
-        ds["lon"], ds["lat"] = dask.compute(ds.lon, ds.lat)
-    if tile_buffer > 0:
-        if method not in ["bbox", "shape"]:
-            warnings.warn(
-                "tile_buffer has been specified, but is not used for the requested subsetting method.",
-            )
-        # estimate the model resolution
-        if len(ds.lon.dims) == 1:  # 1D lat-lon
-            lon_res = np.abs(ds.lon.diff("lon")[0].values)
-            lat_res = np.abs(ds.lat.diff("lat")[0].values)
-        else:
-            lon_res = np.abs(ds.lon[0, 0].values - ds.lon[0, 1].values)
-            lat_res = np.abs(ds.lat[0, 0].values - ds.lat[1, 0].values)
-
-    if method in ["gridpoint"]:
-        ds_subset = clisops.core.subset_gridpoint(ds, **kwargs)
-        new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{method} spatial subsetting on {len(kwargs['lon'])} coordinates - clisops v{clisops.__version__}"
+            f"tile_buffer is not used for the '{method}' method. Ignoring the argument.",
+            UserWarning,
         )
 
-    elif method in ["bbox"]:
-        if tile_buffer > 0:
-            # adjust the boundaries
-            kwargs["lon_bnds"] = (
-                kwargs["lon_bnds"][0] - lon_res * tile_buffer,
-                kwargs["lon_bnds"][1] + lon_res * tile_buffer,
-            )
-            kwargs["lat_bnds"] = (
-                kwargs["lat_bnds"][0] - lat_res * tile_buffer,
-                kwargs["lat_bnds"][1] + lat_res * tile_buffer,
-            )
-
-        if xc.core.utils.uses_dask(ds.cf["longitude"]):
-            ds[ds.cf["longitude"].name].load()
-        if xc.core.utils.uses_dask(ds.cf["latitude"]):
-            ds[ds.cf["latitude"].name].load()
-
-        ds_subset = clisops.core.subset_bbox(ds, **kwargs)
-        new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{method} spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
-            f", lon_bnds={np.array(kwargs['lon_bnds'])}, lat_bnds={np.array(kwargs['lat_bnds'])}"
-            f" - clisops v{clisops.__version__}"
-        )
-
-    elif method in ["shape"]:
-        if tile_buffer > 0:
-            if kwargs.get("buffer") is not None:
-                raise NotImplementedError(
-                    "Both tile_buffer and clisops' buffer were requested. Use only one."
-                )
-            kwargs["buffer"] = np.max([lon_res, lat_res]) * tile_buffer
-
-        ds_subset = clisops.core.subset_shape(ds, **kwargs)
-        new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{method} spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
-            f", shape={Path(kwargs['shape']).name if isinstance(kwargs['shape'], (str, Path)) else 'gpd.GeoDataFrame'}"
-            f" - clisops v{clisops.__version__}"
-        )
-
-    elif method in ["sel"]:
-        arg_sel = {dim: slice(*map(float, bounds)) for dim, bounds in kwargs.items()}
-        ds_subset = ds.sel(**arg_sel)
-        new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"{method} subsetting with arguments {arg_sel}"
-        )
-
+    if method == "gridpoint":
+        ds_subset = _subset_gridpoint(ds, name=name, **kwargs)
+    elif method == "bbox":
+        ds_subset = _subset_bbox(ds, name=name, tile_buffer=tile_buffer, **kwargs)
+    elif method == "shape":
+        ds_subset = _subset_shape(ds, name=name, tile_buffer=tile_buffer, **kwargs)
+    elif method == "sel":
+        ds_subset = _subset_sel(ds, name=name, **kwargs)
     else:
-        raise ValueError("Subsetting type not recognized")
+        raise ValueError(
+            "Subsetting type not recognized. Use 'gridpoint', 'bbox', 'shape' or 'sel'."
+        )
 
+    return ds_subset
+
+
+def _subset_gridpoint(
+    ds: xr.Dataset,
+    lon: Union[float, Sequence[float], xr.DataArray],
+    lat: Union[float, Sequence[float], xr.DataArray],
+    *,
+    name: Optional[str] = None,
+    **kwargs,
+) -> xr.Dataset:
+    r"""Subset the data to a gridpoint.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset to be subsetted.
+    lon : float or Sequence[float] or xr.DataArray
+        Longitude coordinate(s). Must be of the same length as lat.
+    lat : float or Sequence[float] or xr.DataArray
+        Latitude coordinate(s). Must be of the same length as lon.
+    name: str, optional
+        Used to rename the 'cat:domain' attribute.
+    \*\*kwargs : dict
+        Other arguments to be sent to clisops. Possible kwargs are:
+        - start_date (str): Start date for the subset in the format 'YYYY-MM-DD'.
+        - end_date (str): End date for the subset in the format 'YYYY-MM-DD'.
+        - first_level (int or float): First level of the subset.
+        - last_level (int or float): Last level of the subset.
+        - tolerance (float): Masks values if the distance to the nearest gridpoint is larger than tolerance in meters.
+        - add_distance (bool): If True, adds a variable with the distance to the nearest gridpoint.
+
+    Returns
+    -------
+    xr.Dataset
+        Subsetted Dataset.
+    """
+    ds = _load_lon_lat(ds)
+    if not hasattr(lon, "__iter__"):
+        lon = [lon]
+    if not hasattr(lat, "__iter__"):
+        lat = [lat]
+
+    ds_subset = clisops.core.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
+    new_history = (
+        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+        f"gridpoint spatial subsetting on {len(lon)} coordinates - clisops v{clisops.__version__}"
+    )
+
+    return update_history_and_name(ds_subset, new_history, name)
+
+
+def _subset_bbox(
+    ds: xr.Dataset,
+    lon_bnds: Union[tuple[float, float], list[float]],
+    lat_bnds: Union[tuple[float, float], list[float]],
+    *,
+    name: Optional[str] = None,
+    tile_buffer: float = 0,
+    **kwargs,
+) -> xr.Dataset:
+    r"""Subset the data to a bounding box.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset to be subsetted.
+    lon_bnds : tuple or list of two floats
+        Longitude boundaries of the bounding box.
+    lat_bnds : tuple or list of two floats
+        Latitude boundaries of the bounding box.
+    name: str, optional
+        Used to rename the 'cat:domain' attribute.
+    tile_buffer: float
+        Uses an approximation of the grid cell size to add a dynamic buffer around the requested region.
+    \*\*kwargs : dict
+        Other arguments to be sent to clisops. Possible kwargs are:
+        - start_date (str): Start date for the subset in the format 'YYYY-MM-DD'.
+        - end_date (str): End date for the subset in the format 'YYYY-MM-DD'.
+        - first_level (int or float): First level of the subset.
+        - last_level (int or float): Last level of the subset.
+        - time_values (Sequence[str]): A list of datetime strings to subset.
+        - level_values (Sequence[int or float]): A list of levels to subset.
+
+    Returns
+    -------
+    xr.Dataset
+        Subsetted Dataset.
+    """
+    ds = _load_lon_lat(ds)
+
+    if tile_buffer > 0:
+        lon_res, lat_res = _estimate_grid_resolution(ds)
+        lon_bnds = (
+            lon_bnds[0] - lon_res * tile_buffer,
+            lon_bnds[1] + lon_res * tile_buffer,
+        )
+        lat_bnds = (
+            lat_bnds[0] - lat_res * tile_buffer,
+            lat_bnds[1] + lat_res * tile_buffer,
+        )
+
+    ds_subset = clisops.core.subset_bbox(
+        ds, lon_bnds=lon_bnds, lat_bnds=lat_bnds, **kwargs
+    )
+    new_history = (
+        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+        f"bbox spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
+        f", lon_bnds={np.array(lon_bnds)}, lat_bnds={np.array(lat_bnds)}"
+        f" - clisops v{clisops.__version__}"
+    )
+
+    return update_history_and_name(ds_subset, new_history, name)
+
+
+def _subset_shape(
+    ds: xr.Dataset,
+    shape: Union[str, Path, gpd.GeoDataFrame],
+    *,
+    name: Optional[str] = None,
+    tile_buffer: float = 0,
+    **kwargs,
+) -> xr.Dataset:
+    r"""Subset the data to a shape.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset to be subsetted.
+    shape : str or gpd.GeoDataFrame
+        Path to the shapefile or GeoDataFrame.
+    name: str, optional
+        Used to rename the 'cat:domain' attribute.
+    tile_buffer: float
+        Uses an approximation of the grid cell size to add a buffer around the requested region.
+    \*\*kwargs : dict
+        Other arguments to be sent to clisops. Possible kwargs are:
+        - raster_crs (str or int): EPSG number or PROJ4 string.
+        - shape_crs (str or int): EPSG number or PROJ4 string.
+        - buffer (float): Buffer size to add around the shape. Units are based on the shape degrees/metres.
+        - start_date (str): Start date for the subset in the format 'YYYY-MM-DD'.
+        - end_date (str): End date for the subset in the format 'YYYY-MM-DD'.
+        - first_level (int or float): First level of the subset.
+        - last_level (int or float): Last level of the subset.
+
+    Returns
+    -------
+    xr.Dataset
+        Subsetted Dataset.
+    """
+    ds = _load_lon_lat(ds)
+
+    if tile_buffer > 0:
+        if kwargs.get("buffer") is not None:
+            raise ValueError(
+                "Both tile_buffer and clisops' buffer were requested. Use only one."
+            )
+        lon_res, lat_res = _estimate_grid_resolution(ds)
+        kwargs["buffer"] = np.max([lon_res, lat_res]) * tile_buffer
+
+    ds_subset = clisops.core.subset_shape(ds, shape=shape, **kwargs)
+    new_history = (
+        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+        f"shape spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
+        f", shape={Path(shape).name if isinstance(shape, (str, Path)) else 'gpd.GeoDataFrame'}"
+        f" - clisops v{clisops.__version__}"
+    )
+
+    return update_history_and_name(ds_subset, new_history, name)
+
+
+def _subset_sel(ds: xr.Dataset, *, name: Optional[str] = None, **kwargs) -> xr.Dataset:
+    r"""Subset the data using the .sel() method.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset to be subsetted.
+    name: str, optional
+        Used to rename the 'cat:domain' attribute.
+    \*\*kwargs : dict
+        The keys are the dimensions to subset and the values are turned into a slice.
+
+    Returns
+    -------
+    xr.Dataset
+        Subsetted Dataset.
+    """
+    # Create a dictionary with slices for each dimension
+    arg_sel = {dim: slice(*map(float, bounds)) for dim, bounds in kwargs.items()}
+
+    # Subset the dataset
+    ds_subset = ds.sel(**arg_sel)
+
+    # Update the history attribute
+    new_history = (
+        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+        f"sel subsetting with arguments {arg_sel}"
+    )
+
+    return update_history_and_name(ds_subset, new_history, name)
+
+
+def _load_lon_lat(ds: xr.Dataset) -> xr.Dataset:
+    """Load longitude and latitude for more efficient subsetting."""
+    if xc.core.utils.uses_dask(ds.cf["longitude"]):
+        logger.info("Loading longitude for more efficient subsetting.")
+        (ds[ds.cf["longitude"].name],) = dask.compute(ds[ds.cf["longitude"].name])
+    if xc.core.utils.uses_dask(ds.cf["latitude"]):
+        logger.info("Loading latitude for more efficient subsetting.")
+        (ds[ds.cf["latitude"].name],) = dask.compute(ds[ds.cf["latitude"].name])
+
+    return ds
+
+
+def _estimate_grid_resolution(ds: xr.Dataset) -> tuple[float, float]:
+    # Since this is to compute a buffer, we take the maximum difference as an approximation.
+    # Estimate the grid resolution
+    if len(ds.lon.dims) == 1:  # 1D lat-lon
+        lon_res = np.abs(ds.lon.diff("lon").max().values)
+        lat_res = np.abs(ds.lat.diff("lat").max().values)
+    else:
+        lon_res = np.abs(ds.lon.diff(ds.cf["X"].name).max().values)
+        lat_res = np.abs(ds.lat.diff(ds.cf["Y"].name).max().values)
+
+    return lon_res, lat_res
+
+
+def update_history_and_name(ds_subset, new_history, name):
     history = (
         new_history + " \n " + ds_subset.attrs["history"]
         if "history" in ds_subset.attrs
@@ -268,5 +433,4 @@ def subset(  # noqa: C901
     ds_subset.attrs["history"] = history
     if name is not None:
         ds_subset.attrs["cat:domain"] = name
-
     return ds_subset
