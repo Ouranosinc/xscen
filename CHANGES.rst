@@ -19,6 +19,7 @@ Internal changes
     * Updated `ruff` to v0.2.0 and `black` to v24.2.0.
 * Added more tests. (:pull:`366`, :pull:`367`).
 * Refactored ``xs.spatial.subset`` into smaller functions. (:pull:`367`).
+* An `encoding` argument was added to ``xs.config.load_config``. (:pull:`370`).
 
 Bug fixes
 ^^^^^^^^^
