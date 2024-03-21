@@ -10,6 +10,7 @@ Breaking changes
 ^^^^^^^^^^^^^^^^
 * Removed support for the old instances of the `region` argument in ``spatial_mean``, ``extract_dataset``, and ``subset``. (:pull:`367`).
 * Removed ``xscen.extract.clisops_subset``. (:pull:`367`).
+* ``dtr`` (the function) was renamed to ``dtr_from_minmax`` to avoid confusion with the `dtr` variable. (:pull:`372`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -17,7 +18,7 @@ Internal changes
     * Addresses a handful of misconfigurations in the GitHub Workflows.
     * Added a few free `grep`-based hooks for finding unwanted artifacts in the code base.
     * Updated `ruff` to v0.2.0 and `black` to v24.2.0.
-* Added more tests. (:pull:`366`, :pull:`367`).
+* Added more tests. (:pull:`366`, :pull:`367`, :pull:`372`).
 * Refactored ``xs.spatial.subset`` into smaller functions. (:pull:`367`).
 * An `encoding` argument was added to ``xs.config.load_config``. (:pull:`370`).
 
@@ -29,6 +30,7 @@ Bug fixes
 * Fixed bug for adding the preprocessing attributes inside the `adjust` function. (:pull:`366`).
 * Fixed a bug to accept `group = False` in `adjust` function. (:pull:`366`).
 * `creep_weights` now correctly handles the case where the grid is small, `n` is large, and `mode=wrap`. (:issue:`367`).
+* Fixed a bug in ``tasmin_from_dtr`` and ``tasmax_from_dtr``, when `dtr` units differed from tasmin/max. (:pull:`372`).
 
 v0.8.3 (2024-02-28)
 -------------------
