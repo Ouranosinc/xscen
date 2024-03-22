@@ -4,7 +4,7 @@ Changelog
 
 v0.9.0 (unreleased)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user: `juliettelavoie`), Marco Braun (:user:`vindelico`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user: `juliettelavoie`), Marco Braun (:user: `vindelico`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
