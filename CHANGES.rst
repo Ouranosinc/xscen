@@ -4,7 +4,7 @@ Changelog
 
 v0.9.0 (unreleased)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user: `juliettelavoie`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -14,6 +14,7 @@ Breaking changes
 
 Internal changes
 ^^^^^^^^^^^^^^^^
+* Modified ``xscen.utils.change_unit`` to always adopt the name from the `variables_and_units dictionary` if the physical units are equal but their names are not (ex. degC <-> ˚C) (:pull:`373`).
 * Updated the `cookiecutter` template to the latest version. (:pull:`358`):
     * Addresses a handful of misconfigurations in the GitHub Workflows.
     * Added a few free `grep`-based hooks for finding unwanted artifacts in the code base.
