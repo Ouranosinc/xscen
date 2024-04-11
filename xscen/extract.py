@@ -814,7 +814,8 @@ def search_data_catalogs(  # noqa: C901
                             valid_tp = []
                             for var, group in varcat.df.groupby(
                                 varcat.esmcat.aggregation_control.groupby_attrs
-                                + ["variable"]
+                                + ["variable"],
+                                observed=True,
                             ):
                                 valid_tp.append(
                                     subset_file_coverage(

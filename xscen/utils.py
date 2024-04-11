@@ -172,7 +172,7 @@ def date_parser(  # noqa: C901
     date : str, cftime.datetime, pd.Timestamp, datetime.datetime, pd.Period
         Date to be converted
     end_of_period : bool or str
-        If 'Y' or 'M', the returned date will be the end of the year or month that contains the received date.
+        If 'YE' or 'ME', the returned date will be the end of the year or month that contains the received date.
         If True, the period is inferred from the date's precision, but `date` must be a string, otherwise nothing is done.
     out_dtype : str
         Choices are 'datetime', 'period' or 'str'
@@ -245,12 +245,12 @@ def date_parser(  # noqa: C901
 
     if isinstance(end_of_period, str) or (end_of_period is True and fmt):
         quasiday = (pd.Timedelta(1, "d") - pd.Timedelta(1, "s")).as_unit(date.unit)
-        if end_of_period == "Y" or "m" not in fmt:
+        if end_of_period in ["Y", "YE"] or "m" not in fmt:
             date = (
-                pd.tseries.frequencies.to_offset("A-DEC").rollforward(date) + quasiday
+                pd.tseries.frequencies.to_offset("YE-DEC").rollforward(date) + quasiday
             )
-        elif end_of_period == "M" or "d" not in fmt:
-            date = pd.tseries.frequencies.to_offset("M").rollforward(date) + quasiday
+        elif end_of_period in ["M", "ME"] or "d" not in fmt:
+            date = pd.tseries.frequencies.to_offset("ME").rollforward(date) + quasiday
         # TODO: Implement subdaily ?
 
     if out_dtype == "str":
