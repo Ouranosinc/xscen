@@ -175,7 +175,7 @@ def extract_dataset(  # noqa: C901
     )
 
     out_dict = {}
-    for xrfreq in pd.unique([x for y in variables_and_freqs.values() for x in y]):
+    for xrfreq in np.unique([x for y in variables_and_freqs.values() for x in y]):
         ds = xr.Dataset()
         attrs = {}
         # iterate on the datasets, in reverse timedelta order
@@ -814,7 +814,8 @@ def search_data_catalogs(  # noqa: C901
                             valid_tp = []
                             for var, group in varcat.df.groupby(
                                 varcat.esmcat.aggregation_control.groupby_attrs
-                                + ["variable"]
+                                + ["variable"],
+                                observed=True,
                             ):
                                 valid_tp.append(
                                     subset_file_coverage(
