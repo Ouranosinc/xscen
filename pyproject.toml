@@ -55,7 +55,7 @@ dependencies = [
   "pandas >=2.2",
   "parse",
   # Used when opening catalogs.
-  "pyarrow",
+  "pyarrow>=10.0.1",
   "pyyaml",
   "rechunker",
   "scipy",

@@ -35,7 +35,7 @@ dependencies:
   - zarr
   # Opt
   - nc-time-axis >=1.3.1
-  - pyarrow >=1.0.0
+  - pyarrow >=10.0.1
   # Dev
   - babel
   - black ==24.2.0
