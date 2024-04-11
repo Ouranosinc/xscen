@@ -1,6 +1,5 @@
 """Functions to reduce an ensemble of simulations."""
 
-import logging
 from typing import Optional, Union
 
 import numpy as np
@@ -8,8 +7,6 @@ import xarray as xr
 import xclim.ensembles as xce
 
 from .config import parse_config
-
-logger = logging.getLogger(__name__)
 
 __all__ = ["build_reduction_data", "reduce_ensemble"]
 
