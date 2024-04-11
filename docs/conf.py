@@ -181,7 +181,6 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
-    "notebooks/global_tas_average_obs.ipynb"
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
