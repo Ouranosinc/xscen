@@ -55,7 +55,7 @@ dependencies = [
   "pandas >=2.2",
   "parse",
   # Used when opening catalogs.
-  "pyarrow",
+  "pyarrow>=10.0.1",
   "pyyaml",
   "rechunker",
   "scipy",
@@ -127,7 +127,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.8.4-dev.6"
+current_version = "0.8.4-dev.8"
 commit = true
 commit_args = "--no-verify"
 tag = false

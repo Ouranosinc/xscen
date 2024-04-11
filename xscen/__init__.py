@@ -53,7 +53,7 @@ from .utils import clean_up
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.8.4-dev.6"
+__version__ = "0.8.4-dev.8"
 
 
 def warning_on_one_line(
@@ -74,10 +74,4 @@ warnings.filterwarnings(
     message="The default of observed=False is deprecated and will be changed to True in a future version of pandas. "
     "Pass observed=False to retain current behavior or observed=True to adopt the future default "
     "and silence this warning.",
-)
-warnings.filterwarnings(
-    "ignore",
-    category=FutureWarning,
-    module="intake_esm",
-    message="DataFrame.applymap has been deprecated. Use DataFrame.map instead.",
 )
