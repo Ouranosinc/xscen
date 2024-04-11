@@ -21,6 +21,7 @@ Internal changes
 * Added more tests. (:pull:`366`, :pull:`367`, :pull:`372`).
 * Refactored ``xs.spatial.subset`` into smaller functions. (:pull:`367`).
 * An `encoding` argument was added to ``xs.config.load_config``. (:pull:`370`).
+* Various small fixes to the code to address FutureWarnings. (:pull:`380`).
 
 Bug fixes
 ^^^^^^^^^
