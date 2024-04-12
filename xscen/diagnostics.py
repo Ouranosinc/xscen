@@ -270,9 +270,8 @@ def health_checks(  # noqa: C901
                                 "missing",
                             )
                     else:
-                        warnings.warn(
+                        logger.info(
                             f"Variable '{v}' has no time dimension. The missing data check will be skipped.",
-                            UserWarning,
                         )
 
     if flags is not None:
