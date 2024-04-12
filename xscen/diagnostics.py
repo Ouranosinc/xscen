@@ -262,11 +262,17 @@ def health_checks(  # noqa: C901
             for method, kwargs in missing.items():
                 kwargs.setdefault("freq", "YS")
                 for v in ds.data_vars:
-                    ms = getattr(xc.core.missing, method)(ds[v], **kwargs)
-                    if ms.any():
-                        _error(
-                            f"The variable '{v}' has missing values according to the '{method}' method.",
-                            "missing",
+                    if "time" in ds[v].dims:
+                        ms = getattr(xc.core.missing, method)(ds[v], **kwargs)
+                        if ms.any():
+                            _error(
+                                f"The variable '{v}' has missing values according to the '{method}' method.",
+                                "missing",
+                            )
+                    else:
+                        warnings.warn(
+                            f"Variable '{v}' has no time dimension. The missing data check will be skipped.",
+                            UserWarning,
                         )
 
     if flags is not None:
