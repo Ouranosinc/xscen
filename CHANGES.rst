@@ -34,6 +34,7 @@ Bug fixes
 * `creep_weights` now correctly handles the case where the grid is small, `n` is large, and `mode=wrap`. (:issue:`367`).
 * Fixed a bug in ``tasmin_from_dtr`` and ``tasmax_from_dtr``, when `dtr` units differed from tasmin/max. (:pull:`372`).
 * Fixed a bug where the requested chunking would be ignored when saving a dataset (:pull:`379`).
+* The missing value check in ``health_checks`` will no longer crasg if a variable has no time dimension. (:pull:`382`).
 
 v0.8.3 (2024-02-28)
 -------------------
