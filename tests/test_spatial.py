@@ -275,6 +275,20 @@ class TestSubset:
         with pytest.raises(ValueError, match="Subsetting type not recognized"):
             xs.spatial.subset(self.ds, "wrong", lon=-70, lat=45)
 
+    def test_subset_no_attributes(self):
+        ds = self.ds.copy()
+        ds.lat.attrs = {}
+        ds.lon.attrs = {}
+        assert "latitude" not in ds.cf
+
+        xs.spatial.subset(
+            ds,
+            "bbox",
+            name="test",
+            lon_bnds=[-63, -60],
+            lat_bnds=[47, 50],
+        )
+
 
 def test_dask_coords():
     ds = datablock_3d(
