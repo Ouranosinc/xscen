@@ -401,6 +401,8 @@ def save_to_netcdf(
     for var in list(ds.data_vars.keys()):
         if keepbits := _get_keepbits(bitround, var, ds[var].dtype):
             ds = ds.assign({var: round_bits(ds[var], keepbits)})
+        # Remove original_shape from encoding, since it can cause issues with some engines.
+        ds[var].encoding.pop("original_shape", None)
 
     _coerce_attrs(ds.attrs)
     for var in ds.variables.values():
@@ -519,6 +521,8 @@ def save_to_zarr(  # noqa: C901
                 encoding.pop(var)
         if keepbits := _get_keepbits(bitround, var, ds[var].dtype):
             ds = ds.assign({var: round_bits(ds[var], keepbits)})
+        # Remove original_shape from encoding, since it can cause issues with some engines.
+        ds[var].encoding.pop("original_shape", None)
 
     if len(ds.data_vars) == 0:
         return None
@@ -904,8 +908,12 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
         ds[rechunk_var] = ds[rechunk_var].chunk(
             {d: chnks for d, chnks in rechunk_dims.items() if d in ds[rechunk_var].dims}
         )
-        ds[rechunk_var].encoding.pop("chunksizes", None)
+        ds[rechunk_var].encoding["chunksizes"] = tuple(
+            rechunk_dims[d] if d in rechunk_dims else ds[d].shape[0]
+            for d in ds[rechunk_var].dims
+        )
         ds[rechunk_var].encoding.pop("chunks", None)
+        ds[rechunk_var].encoding.pop("preferred_chunks", None)
 
     return ds
 

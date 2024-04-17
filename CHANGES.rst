@@ -4,7 +4,7 @@ Changelog
 
 v0.9.0 (unreleased)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user: `juliettelavoie`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -14,6 +14,7 @@ Breaking changes
 
 Internal changes
 ^^^^^^^^^^^^^^^^
+* Modified ``xscen.utils.change_unit`` to always adopt the name from the `variables_and_units dictionary` if the physical units are equal but their names are not (ex. degC <-> ˚C) (:pull:`373`).
 * Updated the `cookiecutter` template to the latest version. (:pull:`358`):
     * Addresses a handful of misconfigurations in the GitHub Workflows.
     * Added a few free `grep`-based hooks for finding unwanted artifacts in the code base.
@@ -21,6 +22,8 @@ Internal changes
 * Added more tests. (:pull:`366`, :pull:`367`, :pull:`372`).
 * Refactored ``xs.spatial.subset`` into smaller functions. (:pull:`367`).
 * An `encoding` argument was added to ``xs.config.load_config``. (:pull:`370`).
+* Various small fixes to the code to address FutureWarnings. (:pull:`380`).
+* ``xs.spatial.subset`` will try to guess CF coordinate if it can't find "latitude" or "longitude" in ``ds.cf``. (:pull:`384`).
 
 Bug fixes
 ^^^^^^^^^
@@ -31,6 +34,8 @@ Bug fixes
 * Fixed a bug to accept `group = False` in `adjust` function. (:pull:`366`).
 * `creep_weights` now correctly handles the case where the grid is small, `n` is large, and `mode=wrap`. (:issue:`367`).
 * Fixed a bug in ``tasmin_from_dtr`` and ``tasmax_from_dtr``, when `dtr` units differed from tasmin/max. (:pull:`372`).
+* Fixed a bug where the requested chunking would be ignored when saving a dataset (:pull:`379`).
+* The missing value check in ``health_checks`` will no longer crasg if a variable has no time dimension. (:pull:`382`).
 
 v0.8.3 (2024-02-28)
 -------------------

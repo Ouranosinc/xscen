@@ -183,6 +183,9 @@ def subset(
             UserWarning,
         )
 
+    if "latitude" not in ds.cf or "longitude" not in ds.cf:
+        ds = ds.cf.guess_coord_axis()
+
     if method == "gridpoint":
         ds_subset = _subset_gridpoint(ds, name=name, **kwargs)
     elif method == "bbox":

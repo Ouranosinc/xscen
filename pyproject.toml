@@ -55,7 +55,7 @@ dependencies = [
   "pandas >=2.2",
   "parse",
   # Used when opening catalogs.
-  "pyarrow",
+  "pyarrow>=10.0.1",
   "pyyaml",
   "rechunker",
   "scipy",
@@ -71,7 +71,7 @@ dependencies = [
 dev = [
   # Dev tools and testing
   "pip >=23.3.0",
-  "black ==24.3.0",
+  "black ==24.4.0",
   "blackdoc ==0.3.9",
   "bump-my-version >=0.18.3",
   "coverage >=6.2.2,<8.0.0",
@@ -127,7 +127,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.8.4-dev.6"
+current_version = "0.8.4-dev.13"
 commit = true
 commit_args = "--no-verify"
 tag = false
