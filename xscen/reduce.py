@@ -1,5 +1,6 @@
 """Functions to reduce an ensemble of simulations."""
 
+import warnings
 from typing import Optional, Union
 
 import numpy as np
@@ -37,6 +38,13 @@ def build_reduction_data(
     xr.DataArray
         2D DataArray of dimensions "realization" and "criteria", to be used as input for ensemble reduction.
     """
+    warnings.warn(
+        "This function will be dropped in a future version, as it is now redundant with xclim.ensembles.make_criteria."
+        "Either use xclim.ensembles.make_criteria directly (preceded by xclim.ensembles.create_ensemble if needed) or "
+        "use xscen's reduce_ensemble function to build the criteria and reduce the ensemble in one step.",
+        FutureWarning,
+    )
+
     # Use metadata to identify the simulation attributes
     info = {}
     keys = datasets.keys() if isinstance(datasets, dict) else range(len(datasets))
@@ -77,8 +85,15 @@ def build_reduction_data(
 
 
 @parse_config
-def reduce_ensemble(data: xr.DataArray, method: str, kwargs: dict):
-    """Reduce an ensemble of simulations using clustering algorithms from xclim.ensembles.
+def reduce_ensemble(
+    data: Union[xr.DataArray, dict, list, xr.Dataset],
+    method: str,
+    *,
+    horizons: Optional[list[str]] = None,
+    create_kwargs: Optional[dict] = None,
+    **kwargs,
+):
+    r"""Reduce an ensemble of simulations using clustering algorithms from xclim.ensembles.
 
     Parameters
     ----------
@@ -86,11 +101,17 @@ def reduce_ensemble(data: xr.DataArray, method: str, kwargs: dict):
         Selection criteria data : 2-D xr.DataArray with dimensions 'realization' and 'criteria'.
         These are the values used for clustering. Realizations represent the individual original
         ensemble members and criteria the variables/indicators used in the grouping algorithm.
-        This data can be generated using build_reduction_data().
+        This data can be generated using py:func:`xclim.ensembles.make_criteria`.
+        Alternatively, either a xr.Dataset, a list of xr.Dataset or a dictionary of xr.Dataset can be passed,
+        in which case the data will be built using py:func:`xclim.ensembles.create_ensemble` and py:func:`xclim.ensembles.make_criteria`.
     method : str
       ['kkz', 'kmeans']. Clustering method.
-    kwargs : dict
-        Arguments to send to either xclim.ensembles.kkz_reduce_ensemble or xclim.ensembles.kmeans_reduce_ensemble
+    horizons : list of str, optional
+        Subset of horizons on which to create the data. Only used if `data` needs to be built.
+    create_kwargs : dict, optional
+        Arguments to pass to py:func:`xclim.ensembles.create_ensemble` if `data` is not an xr.DataArray.
+    \*\*kwargs : dict
+        Arguments to send to either py:func:`xclim.ensembles.kkz_reduce_ensemble` or py:func:`xclim.ensembles.kmeans_reduce_ensemble`.
 
     Returns
     -------
@@ -99,8 +120,24 @@ def reduce_ensemble(data: xr.DataArray, method: str, kwargs: dict):
     clusters : dict
         If using kmeans clustering, realizations grouped by cluster.
     fig_data : dict
-        If using kmeans clustering, data necessary to call xclim.ensembles.plot_rsqprofile()
+        If using kmeans clustering, data necessary to call py:func:`xclim.ensembles.plot_rsqprofile`.
+
+    Notes
+    -----
+    If building `data` to be constructed by this function, the datasets should already have a climatology computed on them, such that the data
+    has no temporal dimension aside from the "horizon" coordinate (which is optional and might be used to subset the data).
+    If the indicators are a mix of yearly, seasonal, and monthly, they should be stacked on the same time/horizon axis and put in the same dataset.
+    You can use py:func:`xscen.utils.unstack_dates` on seasonal or monthly indicators to this end.
     """
+    if isinstance(data, (list, dict)):
+        data = xce.create_ensemble(datasets=data, **(create_kwargs or {}))
+    if horizons:
+        if "horizon" not in data.dims:
+            raise ValueError("Data must have a 'horizon' dimension to be subsetted.")
+        data = data.sel(horizon=horizons)
+    if "criteria" not in data.dims:
+        data = xce.make_criteria(data)
+
     selected = getattr(xce, f"{method}_reduce_ensemble")(data=data, **kwargs)
 
     clusters = {}
