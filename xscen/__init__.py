@@ -14,7 +14,6 @@ from . import (
     extract,
     indicators,
     io,
-    reduce,
     regrid,
     scripting,
     spatial,
@@ -38,7 +37,6 @@ from .extract import (
 )
 from .indicators import compute_indicators
 from .io import save_to_netcdf, save_to_table, save_to_zarr
-from .reduce import build_reduction_data, reduce_ensemble
 from .regrid import *
 from .scripting import (
     TimeoutException,

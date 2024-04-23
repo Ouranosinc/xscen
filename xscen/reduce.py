@@ -9,8 +9,6 @@ import xclim.ensembles as xce
 
 from .config import parse_config
 
-__all__ = ["build_reduction_data", "reduce_ensemble"]
-
 
 @parse_config
 def build_reduction_data(
@@ -129,32 +127,17 @@ def reduce_ensemble(
     If the indicators are a mix of yearly, seasonal, and monthly, they should be stacked on the same time/horizon axis and put in the same dataset.
     You can use py:func:`xscen.utils.unstack_dates` on seasonal or monthly indicators to this end.
     """
-    if isinstance(data, (list, dict)):
-        data = xce.create_ensemble(datasets=data, **(create_kwargs or {}))
-    if horizons:
-        if "horizon" not in data.dims:
-            raise ValueError("Data must have a 'horizon' dimension to be subsetted.")
-        data = data.sel(horizon=horizons)
-    if "criteria" not in data.dims:
-        data = xce.make_criteria(data)
-
-    selected = getattr(xce, f"{method}_reduce_ensemble")(data=data, **kwargs)
-
-    clusters = {}
-    fig_data = {}
-    if method == "kmeans":
-        fig_data = selected[2]
-        clusters_tmp = selected[1]
-        selected = selected[0]
-        realization = np.arange(len(clusters_tmp))
-
-        clusters = {
-            g: data.realization.isel(realization=realization[clusters_tmp == g])
-            for g in np.unique(clusters_tmp)
-        }
-    selected = data.realization.isel(realization=selected)
-
-    return selected, clusters, fig_data
+    warnings.warn(
+        "This function has been moved to xscen.ensembles.reduce_ensemble. This version will be dropped in a future release.",
+        FutureWarning,
+    )
+    return reduce_ensemble(
+        data=data,
+        method=method,
+        horizons=horizons,
+        create_kwargs=create_kwargs,
+        **kwargs,
+    )
 
 
 def _concat_criteria(criteria: Optional[xr.DataArray], ens: xr.Dataset):

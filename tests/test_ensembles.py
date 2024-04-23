@@ -10,6 +10,7 @@ try:
     import xesmf as xe
 except ImportError:
     xe = None
+from xclim.testing import open_dataset
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
@@ -1114,4 +1115,58 @@ class TestEnsemblePartition:
                 datasets=datasets,
                 subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
                 indicators_kw=dict(indicators=[xc.atmos.tg_mean, xc.indicators.cf.tg]),
+            )
+
+
+class TestReduceEnsemble:
+    def test_with_criteria(self):
+        ds = open_dataset("EnsembleReduce/TestEnsReduceCriteria.nc")
+        selected, clusters, fig_data = xs.reduce_ensemble(
+            ds["data"], method="kmeans", max_clusters=3
+        )
+        assert selected.shape == (3,)
+        np.testing.assert_array_equal(selected, [4, 7, 23])
+        assert len(clusters) == 3
+        assert fig_data is not None
+
+    @pytest.mark.parametrize("horizon", ["1981-2010", "2021-2050"])
+    def test_without_criteria(self, horizon):
+        datasets = {
+            "ACCESS": "EnsembleStats/BCCAQv2+ANUSPLIN300_ACCESS1-0_historical+rcp45_r1i1p1_1950-2100_tg_mean_YS.nc",
+            "BNU-ESM": "EnsembleStats/BCCAQv2+ANUSPLIN300_BNU-ESM_historical+rcp45_r1i1p1_1950-2100_tg_mean_YS.nc",
+            "CCSM4-r1": "EnsembleStats/BCCAQv2+ANUSPLIN300_CCSM4_historical+rcp45_r1i1p1_1950-2100_tg_mean_YS.nc",
+            "CCSM4-r2": "EnsembleStats/BCCAQv2+ANUSPLIN300_CCSM4_historical+rcp45_r2i1p1_1950-2100_tg_mean_YS.nc",
+            "CNRM-CM5": "EnsembleStats/BCCAQv2+ANUSPLIN300_CNRM-CM5_historical+rcp45_r1i1p1_1970-2050_tg_mean_YS.nc",
+        }
+        for d in datasets:
+            ds = open_dataset(datasets[d]).isel(lon=slice(0, 4), lat=slice(0, 4))
+            ds = xs.climatological_op(
+                ds,
+                op="mean",
+                window=30,
+                periods=[["1981", "2010"], ["2021", "2050"]],
+                horizons_as_dim=True,
+            ).drop_vars("time")
+            datasets[d] = xs.compute_deltas(ds, reference_horizon="1981-2010")
+
+        selected, clusters, fig_data = xs.reduce_ensemble(
+            datasets, method="kkz", horizons=[horizon], num_select=4
+        )
+        assert selected.shape == (4,)
+        answer = (
+            ["ACCESS", "BNU-ESM", "CNRM-CM5", "CCSM4-r1"]
+            if horizon == "2021-2050"
+            else ["ACCESS", "BNU-ESM", "CCSM4-r1", "CCSM4-r2"]
+        )
+        np.testing.assert_array_equal(selected, answer)
+        assert clusters == {}
+        assert fig_data == {}
+
+    def test_errors(self):
+        ds = open_dataset("EnsembleReduce/TestEnsReduceCriteria.nc")
+        with pytest.raises(
+            ValueError, match="Data must have a 'horizon' dimension to be subsetted."
+        ):
+            xs.reduce_ensemble(
+                ds["data"], method="kmeans", horizons=["1981-2010"], max_clusters=3
             )
