@@ -6,11 +6,18 @@ v0.9.0 (unreleased)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).
 
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* ``xs.reduce_ensemble`` will now call ``xclim.ensembles.create_ensemble`` and ``xclim.ensembles.make_critera`` if required. (:pull:`386`).
+
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * Removed support for the old instances of the `region` argument in ``spatial_mean``, ``extract_dataset``, and ``subset``. (:pull:`367`).
 * Removed ``xscen.extract.clisops_subset``. (:pull:`367`).
 * ``dtr`` (the function) was renamed to ``dtr_from_minmax`` to avoid confusion with the `dtr` variable. (:pull:`372`).
+* The ``xscen.reduce`` module has been abandoned. (:pull:`386`).
+    * ``build_reduction_data`` has been made redundant by ``xclim.ensembles.make_critera`` and will be removed in a future release.
+    * ``xscen.reduce.reduce_ensemble`` has been moved to ``xscen.ensembles.reduce_ensemble``, as a module was no longer necessary.
 
 Internal changes
 ^^^^^^^^^^^^^^^^
