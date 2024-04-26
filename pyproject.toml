@@ -162,7 +162,7 @@ values = [
 [tool.coverage.run]
 relative_files = true
 include = ["xscen/*"]
-omit = ["docs/notebooks/*.ipynb", "tests/*.py"]
+omit = ["docs/notebooks/*.ipynb", "tests/*.py", "xscen/reduce.py"] # FIXME: Remove xscen/reduce.py when it's fully deleted.
 
 [tool.isort]
 append_only = true

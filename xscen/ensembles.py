@@ -25,6 +25,7 @@ __all__ = [
     "build_partition_data",
     "ensemble_stats",
     "generate_weights",
+    "reduce_ensemble",
 ]
 
 
@@ -764,3 +765,76 @@ def build_partition_data(
     ens = ens.rename(rename_dict)
 
     return ens
+
+
+@parse_config
+def reduce_ensemble(
+    data: Union[xr.DataArray, dict, list, xr.Dataset],
+    method: str,
+    *,
+    horizons: Optional[list[str]] = None,
+    create_kwargs: Optional[dict] = None,
+    **kwargs,
+):
+    r"""Reduce an ensemble of simulations using clustering algorithms from xclim.ensembles.
+
+    Parameters
+    ----------
+    data : xr.DataArray
+        Selection criteria data : 2-D xr.DataArray with dimensions 'realization' and 'criteria'.
+        These are the values used for clustering. Realizations represent the individual original
+        ensemble members and criteria the variables/indicators used in the grouping algorithm.
+        This data can be generated using py:func:`xclim.ensembles.make_criteria`.
+        Alternatively, either a xr.Dataset, a list of xr.Dataset or a dictionary of xr.Dataset can be passed,
+        in which case the data will be built using py:func:`xclim.ensembles.create_ensemble` and py:func:`xclim.ensembles.make_criteria`.
+    method : str
+      ['kkz', 'kmeans']. Clustering method.
+    horizons : list of str, optional
+        Subset of horizons on which to create the data. Only used if `data` needs to be built.
+    create_kwargs : dict, optional
+        Arguments to pass to py:func:`xclim.ensembles.create_ensemble` if `data` is not an xr.DataArray.
+    \*\*kwargs : dict
+        Arguments to send to either py:func:`xclim.ensembles.kkz_reduce_ensemble` or py:func:`xclim.ensembles.kmeans_reduce_ensemble`.
+
+    Returns
+    -------
+    selected : xr.DataArray
+        DataArray of dimension 'realization' with the selected simulations.
+    clusters : dict
+        If using kmeans clustering, realizations grouped by cluster.
+    fig_data : dict
+        If using kmeans clustering, data necessary to call py:func:`xclim.ensembles.plot_rsqprofile`.
+
+    Notes
+    -----
+    If building `data` to be constructed by this function, the datasets should already have a climatology computed on them, such that the data
+    has no temporal dimension aside from the "horizon" coordinate (which is optional and might be used to subset the data).
+    If the indicators are a mix of yearly, seasonal, and monthly, they should be stacked on the same time/horizon axis and put in the same dataset.
+    You can use py:func:`xscen.utils.unstack_dates` on seasonal or monthly indicators to this end.
+    """
+    if isinstance(data, (list, dict)):
+        data = ensembles.create_ensemble(datasets=data, **(create_kwargs or {}))
+    if horizons:
+        if "horizon" not in data.dims:
+            raise ValueError("Data must have a 'horizon' dimension to be subsetted.")
+        data = data.sel(horizon=horizons)
+    if "criteria" not in data.dims:
+        data = ensembles.make_criteria(data)
+
+    selected = getattr(ensembles, f"{method}_reduce_ensemble")(data=data, **kwargs)
+
+    clusters = {}
+    fig_data = {}
+    if method == "kmeans":
+        fig_data = selected[2]
+        clusters_tmp = selected[1]
+        selected = selected[0]
+        realization = np.arange(len(clusters_tmp))
+
+        clusters = {
+            g: data.realization.isel(realization=realization[clusters_tmp == g])
+            for g in np.unique(clusters_tmp)
+        }
+    selected = data.realization.isel(realization=selected)
+
+    return selected, clusters, fig_data
