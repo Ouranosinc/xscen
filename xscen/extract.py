@@ -29,7 +29,7 @@ from .catutils import parse_from_ds
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
 from .spatial import subset
-from .utils import CV
+from .utils import CV, _xarray_defaults
 from .utils import ensure_correct_time as _ensure_correct_time
 from .utils import get_cat_attrs, natural_sort, standardize_periods, xrfreq_to_timedelta
 
@@ -161,17 +161,16 @@ def extract_dataset(  # noqa: C901
         }
 
     # Default arguments to send xarray
-    xr_open_kwargs = xr_open_kwargs or {}
-    xr_combine_kwargs = xr_combine_kwargs or {}
-    xr_combine_kwargs.setdefault("data_vars", "minimal")
+    xr_kwargs = _xarray_defaults(
+        xr_open_kwargs=xr_open_kwargs or {}, xr_combine_kwargs=xr_combine_kwargs or {}
+    )
 
     # Open the catalog
     ds_dict = catalog.to_dataset_dict(
-        xarray_open_kwargs=xr_open_kwargs,
-        xarray_combine_by_coords_kwargs=xr_combine_kwargs,
         preprocess=preprocess,
         # Only print a progress bar when it is minimally useful
         progressbar=(len(catalog.keys()) > 1),
+        **xr_kwargs,
     )
 
     out_dict = {}

@@ -23,6 +23,7 @@ from intake_esm.cat import ESMCatalogModel
 
 from .config import CONFIG, args_as_str, recursive_update
 from .utils import (
+    _xarray_defaults,
     date_parser,
     ensure_correct_time,
     ensure_new_xrfreq,
@@ -529,6 +530,9 @@ class DataCatalog(intake_esm.esm_datastore):
             raise ValueError(
                 f"Expected exactly one dataset, received {N} instead : {cat.keys()}"
             )
+
+        kwargs = _xarray_defaults(**kwargs)
+
         ds = cat.to_dask(**kwargs)
         return ds
 
