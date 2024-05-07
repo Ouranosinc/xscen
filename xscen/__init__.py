@@ -53,6 +53,7 @@ __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
 __version__ = "0.9.0"
 
+
 def warning_on_one_line(
     message: str, category: Warning, filename: str, lineno: int, file=None, line=None
 ):
