@@ -29,7 +29,7 @@ from .catutils import parse_from_ds
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
 from .spatial import subset
-from .utils import CV, _xarray_kwargs
+from .utils import CV, _xarray_defaults
 from .utils import ensure_correct_time as _ensure_correct_time
 from .utils import get_cat_attrs, natural_sort, standardize_periods, xrfreq_to_timedelta
 
@@ -161,7 +161,7 @@ def extract_dataset(  # noqa: C901
         }
 
     # Default arguments to send xarray
-    xr_kwargs = _xarray_kwargs(
+    xr_kwargs = _xarray_defaults(
         xr_open_kwargs=xr_open_kwargs or {}, xr_combine_kwargs=xr_combine_kwargs or {}
     )
 
