@@ -119,21 +119,6 @@ class TestEnsembleStats:
             decimal=2,
         )
 
-    # FIXME: This function is deprecated, so this test should be removed eventually.
-    @pytest.mark.parametrize("p_vals", [True, False])
-    def test_change_significance(self, p_vals):
-        ens = self.make_ensemble(10)
-        with pytest.warns(
-            FutureWarning,
-            match="Function change_significance is deprecated as of xclim 0.47",
-        ):
-            out = xs.ensemble_stats(
-                ens,
-                statistics={"change_significance": {"test": None, "p_vals": p_vals}},
-            )
-
-        assert len(out.data_vars) == 3 if p_vals else 2
-
     @pytest.mark.parametrize("fractions", ["only", "both", "nested", "missing"])
     def test_robustness_input(self, fractions):
         ens = self.make_ensemble(10)

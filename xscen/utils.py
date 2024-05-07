@@ -1402,3 +1402,17 @@ def ensure_new_xrfreq(freq: str) -> str:  # noqa: C901
         freq = freq.replace("U", "us")
 
     return freq
+
+
+def _xarray_defaults(**kwargs):
+    """Translate from xscen's extract names to intake-esm names and put better defaults."""
+    if "xr_open_kwargs" in kwargs:
+        kwargs["xarray_open_kwargs"] = kwargs.pop("xr_open_kwargs")
+    if "xr_combine_kwargs" in kwargs:
+        kwargs["xarray_combine_by_coords_kwargs"] = kwargs.pop("xr_combine_kwargs")
+
+    kwargs.setdefault("xarray_open_kwargs", {}).setdefault("chunks", {})
+    kwargs.setdefault("xarray_combine_by_coords_kwargs", {}).setdefault(
+        "data_vars", "minimal"
+    )
+    return kwargs

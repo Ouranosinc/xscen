@@ -31,6 +31,7 @@ Internal changes
 * An `encoding` argument was added to ``xs.config.load_config``. (:pull:`370`).
 * Various small fixes to the code to address FutureWarnings. (:pull:`380`).
 * ``xs.spatial.subset`` will try to guess CF coordinate if it can't find "latitude" or "longitude" in ``ds.cf``. (:pull:`384`).
+* ``xs.extract_dataset`` and ``xs.DataCatalog.to_dataset`` will now default to opening datasets with option ``chunks={}``, which tries to respect chunking on disk. (:pull:`398`, :issue:`368`).
 
 Bug fixes
 ^^^^^^^^^

@@ -134,7 +134,7 @@ def compute_indicators(  # noqa: C901
             ind.injected_parameters["freq"]
             if "freq" in ind.injected_parameters
             else (
-                ind.parameters["freq"]["default"]
+                ind.parameters["freq"].default
                 if "freq" in ind.parameters
                 else ind.src_freq
             )

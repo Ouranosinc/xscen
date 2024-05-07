@@ -202,6 +202,11 @@ exclude = [
   "build",
   "docs"
 ]
+
+[tool.ruff.format]
+line-ending = "auto"
+
+[tool.ruff.lint]
 ignore = [
   "D205",
   "D400",
@@ -214,9 +219,6 @@ select = [
   "F",
   "W"
 ]
-
-[tool.ruff.format]
-line-ending = "auto"
 
 [tool.ruff.lint.flake8-bandit]
 check-typed-exception = true
