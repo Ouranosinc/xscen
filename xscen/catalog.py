@@ -383,13 +383,14 @@ class DataCatalog(intake_esm.esm_datastore):
             if len_df > 0:
                 self.esmcat._df["variable"] = self.df.apply(check_variables, axis=1)
 
-    def exists_in_cat(self, **columns) -> bool:
+    def exists_in_cat(self, verbose=True, **columns) -> bool:
         """
         Check if there is an entry in the catalogue corresponding to the arguments given.
 
         Parameters
         ----------
         columns: Arguments that will be given to `catalog.search`
+        verbose: Log the result of the search.
 
         Returns
         -------
@@ -397,7 +398,7 @@ class DataCatalog(intake_esm.esm_datastore):
             True if there is an entry in the catalogue corresponding to the arguments given.
         """
         exists = bool(len(self.search(**columns)))
-        if exists:
+        if exists and verbose:
             logger.info(f"An entry exists for: {columns}")
         return exists
 

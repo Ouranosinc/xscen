@@ -787,6 +787,8 @@ def build_partition_data(
         ens = xr.merge(list_ds)
 
     elif isinstance(datasets, DataCatalog):
+        # TODO: add possibility of method and ref
+
         # special case to handle source (create one dimension with institution_source_member)
         ensemble_on_list = None
         if "source" in partition_dim:

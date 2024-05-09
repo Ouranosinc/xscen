@@ -184,6 +184,7 @@ def subset(  # noqa: C901
         else:
             tile_buffer = tile_buffer or region.get("tile_buffer", 0)
         kwargs = deepcopy(region[region["method"]])
+        name = region.get("name", None)
 
     if uses_dask(ds.lon) or uses_dask(ds.lat):
         warnings.warn("Loading longitude and latitude for more efficient subsetting.")
