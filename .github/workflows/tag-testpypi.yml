@@ -21,7 +21,7 @@ jobs:
         with:
           egress-policy: audit
       - name: Checkout code
-        uses: actions/checkout@v4.1.3
+        uses: actions/checkout@v4.1.5
       - name: Create Release
         uses: softprops/action-gh-release@v2
         env:
@@ -51,7 +51,7 @@ jobs:
             github.com:443
             pypi.org:443
             test.pypi.org:443
-      - uses: actions/checkout@v4.1.3
+      - uses: actions/checkout@v4.1.5
       - name: Set up Python3
         uses: actions/setup-python@v5.1.0
         with:
