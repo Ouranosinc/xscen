@@ -243,7 +243,7 @@ def date_parser(  # noqa: C901
         quasiday = (pd.Timedelta(1, "d") - pd.Timedelta(1, "s")).as_unit(date.unit)
         if end_of_period == "Y" or "m" not in fmt:
             date = (
-                pd.tseries.frequencies.to_offset("A-DEC").rollforward(date) + quasiday
+                pd.tseries.frequencies.to_offset("YE-DEC").rollforward(date) + quasiday
             )
         elif end_of_period == "M" or "d" not in fmt:
             date = pd.tseries.frequencies.to_offset("M").rollforward(date) + quasiday
