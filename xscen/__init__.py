@@ -14,7 +14,6 @@ from . import (
     extract,
     indicators,
     io,
-    reduce,
     regrid,
     scripting,
     spatial,
@@ -25,20 +24,19 @@ from . import (
 # Import top-level functions
 from .aggregate import *
 from .biasadjust import *
-from .catalog import DataCatalog, ProjectCatalog  # noqa
+from .catalog import DataCatalog, ProjectCatalog
 from .catutils import build_path, parse_directory
-from .config import CONFIG, load_config  # noqa
+from .config import CONFIG, load_config
 from .diagnostics import properties_and_measures
 from .ensembles import *
-from .extract import (  # noqa
+from .extract import (
     extract_dataset,
     get_warming_level,
     search_data_catalogs,
     subset_warming_level,
 )
-from .indicators import compute_indicators  # noqa
-from .io import save_to_netcdf, save_to_table, save_to_zarr  # noqa
-from .reduce import build_reduction_data, reduce_ensemble
+from .indicators import compute_indicators
+from .io import save_to_netcdf, save_to_table, save_to_zarr
 from .regrid import *
 from .scripting import (
     TimeoutException,
@@ -53,12 +51,12 @@ from .utils import clean_up
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.8.2"
+__version__ = "0.9.0"
 
 
 def warning_on_one_line(
     message: str, category: Warning, filename: str, lineno: int, file=None, line=None
-):  # noqa: D103
+):
     """Monkeypatch Reformat warning so that `warnings.warn` doesn't mention itself."""
     return f"{filename}:{lineno}: {category.__name__}: {message}\n"
 
@@ -72,11 +70,6 @@ warnings.filterwarnings(
     category=FutureWarning,
     module="intake_esm",
     message="The default of observed=False is deprecated and will be changed to True in a future version of pandas. "
-    "Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.",
-)
-warnings.filterwarnings(
-    "ignore",
-    category=FutureWarning,
-    module="intake_esm",
-    message="DataFrame.applymap has been deprecated. Use DataFrame.map instead.",
+    "Pass observed=False to retain current behavior or observed=True to adopt the future default "
+    "and silence this warning.",
 )

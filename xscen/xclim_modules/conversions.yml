@@ -65,7 +65,7 @@ indicators:
       - var_name: evspsblpot
   dtr:
     src_freq: D
-    compute: dtr
+    compute: dtr_from_minmax
     cf_attrs:
       units: K
       description: Daily temperature range.

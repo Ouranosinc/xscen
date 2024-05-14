@@ -2,7 +2,50 @@
 Changelog
 =========
 
-v0.8.3 (unreleased)
+v0.9.0 (2024-05-07)
+-------------------
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* ``xs.reduce_ensemble`` will now call ``xclim.ensembles.create_ensemble`` and ``xclim.ensembles.make_critera`` if required. (:pull:`386`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* Removed support for the old instances of the `region` argument in ``spatial_mean``, ``extract_dataset``, and ``subset``. (:pull:`367`).
+* Removed ``xscen.extract.clisops_subset``. (:pull:`367`).
+* ``dtr`` (the function) was renamed to ``dtr_from_minmax`` to avoid confusion with the `dtr` variable. (:pull:`372`).
+* The ``xscen.reduce`` module has been abandoned. (:pull:`386`).
+    * ``build_reduction_data`` has been made redundant by ``xclim.ensembles.make_critera`` and will be removed in a future release.
+    * ``xscen.reduce.reduce_ensemble`` has been moved to ``xscen.ensembles.reduce_ensemble``, as a module was no longer necessary.
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Modified ``xscen.utils.change_unit`` to always adopt the name from the `variables_and_units dictionary` if the physical units are equal but their names are not (ex. degC <-> ˚C) (:pull:`373`).
+* Updated the `cookiecutter` template to the latest version. (:pull:`358`):
+    * Addresses a handful of misconfigurations in the GitHub Workflows.
+    * Added a few free `grep`-based hooks for finding unwanted artifacts in the code base.
+    * Updated `ruff` to v0.2.0 and `black` to v24.2.0.
+* Added more tests. (:pull:`366`, :pull:`367`, :pull:`372`).
+* Refactored ``xs.spatial.subset`` into smaller functions. (:pull:`367`).
+* An `encoding` argument was added to ``xs.config.load_config``. (:pull:`370`).
+* Various small fixes to the code to address FutureWarnings. (:pull:`380`).
+* ``xs.spatial.subset`` will try to guess CF coordinate if it can't find "latitude" or "longitude" in ``ds.cf``. (:pull:`384`).
+* ``xs.extract_dataset`` and ``xs.DataCatalog.to_dataset`` will now default to opening datasets with option ``chunks={}``, which tries to respect chunking on disk. (:pull:`398`, :issue:`368`).
+
+Bug fixes
+^^^^^^^^^
+* Fix ``unstack_dates`` for the new frequency syntax introduced by pandas v2.2. (:pull:`359`).
+* ``subset_warming_level`` will not return partial subsets if the warming level is reached at the end of the timeseries. (:issue:`360`, :pull:`359`).
+* Loading of training in `adjust` is now done outside of the periods loop. (:pull:`366`).
+* Fixed bug for adding the preprocessing attributes inside the `adjust` function. (:pull:`366`).
+* Fixed a bug to accept `group = False` in `adjust` function. (:pull:`366`).
+* `creep_weights` now correctly handles the case where the grid is small, `n` is large, and `mode=wrap`. (:issue:`367`).
+* Fixed a bug in ``tasmin_from_dtr`` and ``tasmax_from_dtr``, when `dtr` units differed from tasmin/max. (:pull:`372`).
+* Fixed a bug where the requested chunking would be ignored when saving a dataset (:pull:`379`).
+* The missing value check in ``health_checks`` will no longer crasg if a variable has no time dimension. (:pull:`382`).
+
+v0.8.3 (2024-02-28)
 -------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
 
@@ -15,13 +58,15 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * Added tests for diagnostics. (:pull:`352`).
 * Added a `SECURITY.md` file to the repository and the documentation. (:pull:`353`).
-* Added `tox` modifier for testing builds against the `main` development branch of `xclim`. (:pull:`351`).
+* Added `tox` modifier for testing builds against the `main` development branch of `xclim`. (:pull:`351`, :pull:`355`).
+* Added a `requirements_upstream.txt` file to the repository to track the development branches of relevant dependencies. (:pull:`355`).
+* Added a dedicated GitHub Workflow to evaluate compatibility with upstream dependencies. (:pull:`355`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now requires `pandas` >= 2.2 and `xclim` >= 0.48.2. (:pull:`351`).
-* Functions that output a dict with keys as xrfreq (such as ``extract_dataset``, ``compute_indicators``) will now return the new nomenclature (e.g. "YS-JAN" instead of "AS-JAN"). (:pull:`351`).
-* Going from `xrfreq` to frequencies or timedeltas will still work, but the opposite (frequency --> xrfreq/timedelta) will now only result in the new pandas nomenclature. (:pull:`351`).
+* Functions that output a dict with keys as xrfreq (such as ``extract_dataset``, ``compute_indicators``) will now return the new nomenclature (e.g. ``"YS-JAN"`` instead of ``"AS-JAN"``). (:pull:`351`).
+* Going from `xrfreq` to frequencies or timedeltas will still work, but the opposite (frequency --> xrfreq/timedelta) will now only result in the new `pandas` nomenclature. (:pull:`351`).
 
 v0.8.2 (2024-02-12)
 -------------------

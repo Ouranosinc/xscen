@@ -26,13 +26,13 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(".."))
 if os.environ.get("READTHEDOCS") and "ESMFMKFILE" not in os.environ:
-    # RTD doesn't activate the env, and esmpy depends on a env var set there
+    # RTD doesn't activate the env, and esmpy depends on an env var set there
     # We assume the `os` package is in {ENV}/lib/pythonX.X/os.py
     # See conda-forge/esmf-feedstock#91 and readthedocs/readthedocs.org#4067
     os.environ["ESMFMKFILE"] = str(Path(os.__file__).parent.parent / "esmf.mk")
 
-import xscen  # noqa
-import xarray  # noqa
+import xscen  # noqa: E402,F401
+import xarray  # noqa: E402
 
 xarray.DataArray.__module__ = "xarray"
 xarray.Dataset.__module__ = "xarray"
@@ -181,7 +181,6 @@ exclude_patterns = [
     "_build",
     "Thumbs.db",
     ".DS_Store",
-    "notebooks/global_tas_average_obs.ipynb"
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.

@@ -30,14 +30,7 @@ from pandas import isna
 from .catalog import COLUMNS, DataCatalog, generate_id
 from .config import parse_config
 from .io import get_engine
-from .utils import (  # noqa
-    CV,
-    date_parser,
-    ensure_correct_time,
-    ensure_new_xrfreq,
-    get_cat_attrs,
-    standardize_periods,
-)
+from .utils import CV, date_parser, ensure_new_xrfreq, get_cat_attrs
 
 logger = logging.getLogger(__name__)
 
@@ -434,7 +427,7 @@ def _parse_first_ds(
 
 
 @parse_config
-def parse_directory(  # noqa:C901
+def parse_directory(  # noqa: C901
     directories: list[Union[str, os.PathLike]],
     patterns: list[str],
     *,
@@ -641,11 +634,13 @@ def parse_directory(  # noqa:C901
 
     # translate xrfreq into frequencies and vice-versa
     if {"xrfreq", "frequency"}.issubset(df.columns):
-        df["xrfreq"].fillna(
-            df["frequency"].apply(CV.frequency_to_xrfreq, default=pd.NA), inplace=True
+        df.fillna(
+            {"xrfreq": df["frequency"].apply(CV.frequency_to_xrfreq, default=pd.NA)},
+            inplace=True,
         )
-        df["frequency"].fillna(
-            df["xrfreq"].apply(CV.xrfreq_to_frequency, default=pd.NA), inplace=True
+        df.fillna(
+            {"frequency": df["xrfreq"].apply(CV.xrfreq_to_frequency, default=pd.NA)},
+            inplace=True,
         )
 
     # Parse dates
@@ -764,7 +759,7 @@ def parse_from_ds(  # noqa: C901
             attrs["variable"] = tuple(sorted(variables))
         elif name in ("frequency", "xrfreq") and time is not None and time.size > 3:
             # round to the minute to catch floating point imprecision
-            freq = xr.infer_freq(time.round("T"))
+            freq = xr.infer_freq(time.round("min"))
             if freq:
                 if "xrfreq" in names:
                     attrs["xrfreq"] = freq

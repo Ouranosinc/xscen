@@ -21,7 +21,7 @@ from .utils import CV, standardize_periods
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["compute_indicators", "load_xclim_module"]
+__all__ = ["compute_indicators", "load_xclim_module", "registry_from_module"]
 
 
 def load_xclim_module(
@@ -134,7 +134,7 @@ def compute_indicators(  # noqa: C901
             ind.injected_parameters["freq"]
             if "freq" in ind.injected_parameters
             else (
-                ind.parameters["freq"]["default"]
+                ind.parameters["freq"].default
                 if "freq" in ind.parameters
                 else ind.src_freq
             )

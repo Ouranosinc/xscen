@@ -8,13 +8,13 @@ import xarray as xr
 import xclim as xc
 from xclim import sdba
 from xclim.core.calendar import convert_calendar, get_calendar
-from xclim.sdba import construct_moving_yearly_window, unpack_moving_yearly_window
 
 from .catutils import parse_from_ds
 from .config import parse_config
 from .utils import minimum_calendar, standardize_periods
 
 logger = logging.getLogger(__name__)
+xc.set_options(sdba_encode_cf=True, sdba_extra_output=False)
 
 
 __all__ = [
@@ -51,6 +51,7 @@ def _add_preprocessing_attr(scen, train_kwargs):
         scen.attrs[
             "bias_adjustment"
         ] += ", ref and hist were prepared with " + " and ".join(preproc)
+    return scen
 
 
 @parse_config
@@ -122,7 +123,10 @@ def train(
         ref = dref[var[0]]
         hist = dhist[var[0]]
 
-    group = group or {"group": "time.dayofyear", "window": 31}
+    # we want to put default if group is None, but not if group is False
+    if group is None:
+        group = {"group": "time.dayofyear", "window": 31}
+
     xclim_train_args = xclim_train_args or {}
     if method == "DetrendedQuantileMapping":
         xclim_train_args.setdefault("nquantiles", 15)
@@ -196,7 +200,6 @@ def adjust(
     to_level: str = "biasadjusted",
     bias_adjust_institution: Optional[str] = None,
     bias_adjust_project: Optional[str] = None,
-    moving_yearly_window: Optional[dict] = None,
     align_on: Optional[str] = "year",
 ) -> xr.Dataset:
     """
@@ -219,12 +222,6 @@ def adjust(
       The institution to assign to the output.
     bias_adjust_project : str, optional
       The project to assign to the output.
-    moving_yearly_window: dict, optional
-      Arguments to pass to `xclim.sdba.construct_moving_yearly_window`.
-      If not None, `construct_moving_yearly_window` will be called on dsim (and scen in xclim_adjust_args if it exists)
-      before adjusting and `unpack_moving_yearly_window` will be called on the output after the adjustment.
-      `construct_moving_yearly_window` stacks windows of the dataArray in a new 'movingwin' dimension.
-      `unpack_moving_yearly_window` unpacks it to a normal time series.
     align_on: str, optional
       `align_on` argument for the fonction `xclim.core.calendar.convert_calendar`.
 
@@ -238,17 +235,8 @@ def adjust(
     xclim.sdba.adjustment.DetrendedQuantileMapping, xclim.sdba.adjustment.ExtremeValues
 
     """
-    # TODO: To be adequately fixed later
-
     xclim_adjust_args = deepcopy(xclim_adjust_args)
     xclim_adjust_args = xclim_adjust_args or {}
-
-    if moving_yearly_window:
-        dsim = construct_moving_yearly_window(dsim, **moving_yearly_window)
-        if "scen" in xclim_adjust_args:
-            xclim_adjust_args["scen"] = construct_moving_yearly_window(
-                xclim_adjust_args["scen"], **moving_yearly_window
-            )
 
     # evaluate the dict that was stored as a string
     if not isinstance(dtrain.attrs["train_params"], dict):
@@ -269,42 +257,36 @@ def adjust(
     if simcal != mincal:
         sim = convert_calendar(sim, mincal, align_on=align_on)
 
+    # adjust
+    ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)
+
+    if ("detrend" in xclim_adjust_args) and (
+        isinstance(xclim_adjust_args["detrend"], dict)
+    ):
+        name, kwargs = list(xclim_adjust_args["detrend"].items())[0]
+        kwargs = kwargs or {}
+        kwargs.setdefault("group", ADJ.group)
+        kwargs.setdefault("kind", ADJ.kind)
+        xclim_adjust_args["detrend"] = getattr(sdba.detrending, name)(**kwargs)
+
     # do the adjustment for all the simulation_period lists
     periods = standardize_periods(periods)
     slices = []
     for period in periods:
         sim_sel = sim.sel(time=slice(period[0], period[1]))
 
-        # adjust
-        ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)
-
-        if ("detrend" in xclim_adjust_args) and (
-            isinstance(xclim_adjust_args["detrend"], dict)
-        ):
-            name, kwargs = list(xclim_adjust_args["detrend"].items())[0]
-            kwargs = kwargs or {}
-            kwargs.setdefault("group", ADJ.group)
-            kwargs.setdefault("kind", ADJ.kind)
-            xclim_adjust_args["detrend"] = getattr(sdba.detrending, name)(**kwargs)
-
-        with xc.set_options(sdba_encode_cf=True, sdba_extra_output=False):
-            out = ADJ.adjust(sim_sel, **xclim_adjust_args)
-            slices.extend([out])
+        out = ADJ.adjust(sim_sel, **xclim_adjust_args)
+        slices.extend([out])
     # put all the adjusted period back together
     dscen = xr.concat(slices, dim="time")
 
-    _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
+    dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
     dscen = xr.Dataset(data_vars={var: dscen}, attrs=dsim.attrs)
-    # TODO: History, attrs, etc. (TODO kept from previous version of `biasadjust`)
-    # TODO: Check for variables to add (grid_mapping, etc.) (TODO kept from previous version of `biasadjust`)
     dscen.attrs["cat:processing_level"] = to_level
     dscen.attrs["cat:variable"] = parse_from_ds(dscen, ["variable"])["variable"]
     if bias_adjust_institution is not None:
         dscen.attrs["cat:bias_adjust_institution"] = bias_adjust_institution
     if bias_adjust_project is not None:
         dscen.attrs["cat:bias_adjust_project"] = bias_adjust_project
-
-    if moving_yearly_window:
-        dscen = unpack_moving_yearly_window(dscen)
 
     return dscen

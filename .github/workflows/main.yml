@@ -32,7 +32,7 @@ jobs:
           - "3.x"
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
         with:
           disable-sudo: true
           egress-policy: block
@@ -40,8 +40,8 @@ jobs:
             files.pythonhosted.org:443
             github.com:443
             pypi.org:443
-      - uses: actions/checkout@v4.1.1
-      - uses: actions/setup-python@v5.0.0
+      - uses: actions/checkout@v4.1.3
+      - uses: actions/setup-python@v5.1.0
         with:
           python-version: "3.x"
       - name: Install tox
@@ -67,7 +67,7 @@ jobs:
           - python-version: "3.10"
             tox-build: "py310-coveralls"
           - python-version: "3.11"
-            tox-build: "py311-xclim-coveralls"
+            tox-build: "py311-coveralls"
           - python-version: "3.12"
             tox-build: "py312-esmpy-coveralls"
     defaults:
@@ -75,10 +75,10 @@ jobs:
         shell: bash -l {0}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
         with:
           egress-policy: audit
-      - uses: actions/checkout@v4.1.1
+      - uses: actions/checkout@v4.1.3
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
         uses: mamba-org/setup-micromamba@v1.8.1
         with:
@@ -124,53 +124,45 @@ jobs:
 #          COVERALLS_SERVICE_NAME: github
 
   test-conda:
-    name: Python${{ matrix.python-version }} (conda, upstream=${{ matrix.xclim-upstream }})
+    name: Python${{ matrix.python-version }} (conda)
     needs: lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
           - python-version: "3.9"
-            xclim-upstream: false
           - python-version: "3.10"
-            xclim-upstream: false
           - python-version: "3.11"
-            xclim-upstream: false
           - python-version: "3.12"
-            xclim-upstream: true
     defaults:
       run:
         shell: bash -l {0}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
         with:
           egress-policy: audit
-      - uses: actions/checkout@v4.1.1
+      - uses: actions/checkout@v4.1.3
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
         uses: mamba-org/setup-micromamba@v1.8.1
         with:
           cache-downloads: true
+          cache-environment: true
           environment-file: environment-dev.yml
           create-args: >-
-            mamba
             python=${{ matrix.python-version }}
       - name: Downgrade intake-esm
         if: matrix.python-version == '3.9'
         run: |
           micromamba install -y -c conda-forge intake-esm=2023.11.10
-      - name: Install xclim main branch
-        if: matrix.xclim-upstream
-        run: |
-          python -m pip install git+https://github.com/Ouranosinc/xclim.git@main
       - name: Conda and Mamba versions
         run: |
-          mamba --version
+          micromamba list
           echo "micromamba $(micromamba --version)"
       - name: Compile catalogs and install xscen
         run: |
           make translate
-          python -m pip install --no-deps .
+          python -m pip install --no-user --no-deps .
       - name: Check versions
         run: |
           conda list
@@ -194,10 +186,6 @@ jobs:
     runs-on: ubuntu-latest
     container: python:3-slim
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
-        with:
-          gress-policy: audit
       - name: Coveralls Finished
         run: |
           python -m pip install --upgrade coveralls

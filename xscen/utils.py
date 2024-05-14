@@ -33,10 +33,13 @@ from .config import parse_config
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "CV",
     "add_attr",
     "change_units",
     "clean_up",
     "date_parser",
+    "ensure_correct_time",
+    "ensure_new_xrfreq",
     "get_cat_attrs",
     "maybe_unstack",
     "minimum_calendar",
@@ -48,6 +51,7 @@ __all__ = [
     "unstack_dates",
     "unstack_fill_nan",
     "update_attr",
+    "xrfreq_to_timedelta",
 ]
 
 TRANSLATOR = defaultdict(lambda: lambda s: s)
@@ -168,7 +172,7 @@ def date_parser(  # noqa: C901
     date : str, cftime.datetime, pd.Timestamp, datetime.datetime, pd.Period
         Date to be converted
     end_of_period : bool or str
-        If 'Y' or 'M', the returned date will be the end of the year or month that contains the received date.
+        If 'YE' or 'ME', the returned date will be the end of the year or month that contains the received date.
         If True, the period is inferred from the date's precision, but `date` must be a string, otherwise nothing is done.
     out_dtype : str
         Choices are 'datetime', 'period' or 'str'
@@ -241,12 +245,12 @@ def date_parser(  # noqa: C901
 
     if isinstance(end_of_period, str) or (end_of_period is True and fmt):
         quasiday = (pd.Timedelta(1, "d") - pd.Timedelta(1, "s")).as_unit(date.unit)
-        if end_of_period == "Y" or "m" not in fmt:
+        if end_of_period in ["Y", "YE"] or "m" not in fmt:
             date = (
                 pd.tseries.frequencies.to_offset("YE-DEC").rollforward(date) + quasiday
             )
-        elif end_of_period == "M" or "d" not in fmt:
-            date = pd.tseries.frequencies.to_offset("M").rollforward(date) + quasiday
+        elif end_of_period in ["M", "ME"] or "d" not in fmt:
+            date = pd.tseries.frequencies.to_offset("ME").rollforward(date) + quasiday
         # TODO: Implement subdaily ?
 
     if out_dtype == "str":
@@ -714,6 +718,9 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
                     raise NotImplementedError(
                         f"No known transformation between {ds[v].units} and {variables_and_units[v]} (temporal dimensionality mismatch)."
                     )
+            elif (v in ds) and (ds[v].units != variables_and_units[v]):
+                # update unit name if physical units are equal but not their name (ex. degC vs °C)
+                ds[v] = ds[v].assign_attrs(units=variables_and_units[v])
 
     return ds
 
@@ -1078,7 +1085,7 @@ def unstack_dates(
         )
 
     # Fast track for annual
-    if base == "A":
+    if base in "YA":
         if seasons:
             seaname = seasons[first.month]
         elif anchor == "JAN":
@@ -1395,3 +1402,17 @@ def ensure_new_xrfreq(freq: str) -> str:  # noqa: C901
         freq = freq.replace("U", "us")
 
     return freq
+
+
+def _xarray_defaults(**kwargs):
+    """Translate from xscen's extract names to intake-esm names and put better defaults."""
+    if "xr_open_kwargs" in kwargs:
+        kwargs["xarray_open_kwargs"] = kwargs.pop("xr_open_kwargs")
+    if "xr_combine_kwargs" in kwargs:
+        kwargs["xarray_combine_by_coords_kwargs"] = kwargs.pop("xr_combine_kwargs")
+
+    kwargs.setdefault("xarray_open_kwargs", {}).setdefault("chunks", {})
+    kwargs.setdefault("xarray_combine_by_coords_kwargs", {}).setdefault(
+        "data_vars", "minimal"
+    )
+    return kwargs

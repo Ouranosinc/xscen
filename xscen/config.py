@@ -130,7 +130,9 @@ def args_as_str(*args: tuple[Any, ...]) -> tuple[str, ...]:
     return tuple(new_args)
 
 
-def load_config(*elements, reset: bool = False, verbose: bool = False):
+def load_config(
+    *elements, reset: bool = False, encoding: str = None, verbose: bool = False
+):
     """Load configuration from given files or key=value pairs.
 
     Once all elements are loaded, special sections are dispatched to their module, but only if
@@ -151,6 +153,8 @@ def load_config(*elements, reset: bool = False, verbose: bool = False):
         "key=value" pairs are set last, after all files are being processed.
     reset: bool
         If True, the current config is erased before loading files.
+    encoding: str, optional
+        The encoding to use when reading files.
     verbose: bool
         if True, each element triggers a INFO log line.
 
@@ -184,7 +188,7 @@ def load_config(*elements, reset: bool = False, verbose: bool = False):
                 configfiles = [file]
 
             for configfile in configfiles:
-                with configfile.open() as f:
+                with configfile.open(encoding=encoding) as f:
                     recursive_update(CONFIG, yaml.safe_load(f))
                     if verbose:
                         logger.info(f"Updated the config with {configfile}.")

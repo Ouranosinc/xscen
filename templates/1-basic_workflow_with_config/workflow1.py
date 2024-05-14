@@ -417,7 +417,7 @@ if __name__ == "__main__":
                     xs.measure_time(name=f"{cur}", logger=logger),
                 ):
                     # Compute climatological mean
-                    ds_mean = xs.climatological_mean(ds=ds_input)
+                    ds_mean = xs.climatological_op(ds=ds_input)
 
                     # Save to zarr
                     path = f"{CONFIG['paths']['task']}".format(**cur)

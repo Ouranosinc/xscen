@@ -18,13 +18,18 @@ import xclim as xc
 from intake_esm.derived import DerivedVariableRegistry
 from xclim.core.calendar import compare_offsets
 
-from .catalog import DataCatalog  # noqa
-from .catalog import ID_COLUMNS, concat_data_catalogs, generate_id, subset_file_coverage
+from .catalog import (
+    ID_COLUMNS,
+    DataCatalog,
+    concat_data_catalogs,
+    generate_id,
+    subset_file_coverage,
+)
 from .catutils import parse_from_ds
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
 from .spatial import subset
-from .utils import CV
+from .utils import CV, _xarray_defaults
 from .utils import ensure_correct_time as _ensure_correct_time
 from .utils import get_cat_attrs, natural_sort, standardize_periods, xrfreq_to_timedelta
 
@@ -38,46 +43,6 @@ __all__ = [
     "search_data_catalogs",
     "subset_warming_level",
 ]
-
-
-def clisops_subset(ds: xr.Dataset, region: dict) -> xr.Dataset:
-    """Customize a call to clisops.subset() that allows for an automatic buffer around the region.
-
-    Parameters
-    ----------
-    ds : xr.Dataset
-        Dataset to be subsetted
-    region : dict
-        Description of the region and the subsetting method (required fields listed in the Notes)
-
-    Notes
-    -----
-    'region' fields:
-        method: str
-            ['gridpoint', 'bbox', shape']
-        <method>: dict
-            Arguments specific to the method used.
-        buffer: float, optional
-            Multiplier to apply to the model resolution.
-
-    Returns
-    -------
-    xr.Dataset
-        Subsetted Dataset.
-
-    See Also
-    --------
-    clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
-    """
-    warnings.warn(
-        "clisops_subset is deprecated and will not be available in future versions. "
-        "Use xscen.spatial.subset instead.",
-        category=FutureWarning,
-    )
-
-    ds_subset = subset(ds, region=region)
-
-    return ds_subset
 
 
 @parse_config
@@ -196,21 +161,20 @@ def extract_dataset(  # noqa: C901
         }
 
     # Default arguments to send xarray
-    xr_open_kwargs = xr_open_kwargs or {}
-    xr_combine_kwargs = xr_combine_kwargs or {}
-    xr_combine_kwargs.setdefault("data_vars", "minimal")
+    xr_kwargs = _xarray_defaults(
+        xr_open_kwargs=xr_open_kwargs or {}, xr_combine_kwargs=xr_combine_kwargs or {}
+    )
 
     # Open the catalog
     ds_dict = catalog.to_dataset_dict(
-        xarray_open_kwargs=xr_open_kwargs,
-        xarray_combine_by_coords_kwargs=xr_combine_kwargs,
         preprocess=preprocess,
         # Only print a progress bar when it is minimally useful
         progressbar=(len(catalog.keys()) > 1),
+        **xr_kwargs,
     )
 
     out_dict = {}
-    for xrfreq in pd.unique([x for y in variables_and_freqs.values() for x in y]):
+    for xrfreq in np.unique([x for y in variables_and_freqs.values() for x in y]):
         ds = xr.Dataset()
         attrs = {}
         # iterate on the datasets, in reverse timedelta order
@@ -321,19 +285,6 @@ def extract_dataset(  # noqa: C901
 
         # subset to the region
         if region is not None:
-            if (region["method"] in region) and (
-                isinstance(region[region["method"]], dict)
-            ):
-                warnings.warn(
-                    "You seem to be using a deprecated version of region. Please use the new formatting.",
-                    category=FutureWarning,
-                )
-                region = deepcopy(region)
-                if "buffer" in region:
-                    region["tile_buffer"] = region.pop("buffer")
-                _kwargs = region.pop(region["method"])
-                region.update(_kwargs)
-
             ds = subset(ds, **region)
 
         # add relevant attrs
@@ -862,7 +813,8 @@ def search_data_catalogs(  # noqa: C901
                             valid_tp = []
                             for var, group in varcat.df.groupby(
                                 varcat.esmcat.aggregation_control.groupby_attrs
-                                + ["variable"]
+                                + ["variable"],
+                                observed=True,
                             ):
                                 valid_tp.append(
                                     subset_file_coverage(
@@ -978,7 +930,7 @@ def get_warming_level(  # noqa: C901
     -------
     dict, list or str
         If `realization` is not a sequence, the output will follow the format indicated by `return_horizon`.
-        If `realization` is a sequence, the output will be a list or dictionary depending on `output`,
+        If `realization` is a sequence, the output will be of the same type,
         with values following the format indicated by `return_horizon`.
     """
     tas_src = tas_src or Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
@@ -1102,7 +1054,7 @@ def get_warming_level(  # noqa: C901
     if isinstance(realization, xr.DataArray):
         if return_horizon:
             return xr.DataArray(
-                out, dims=(realization.dims[0], "bounds"), coords=realization.coords
+                out, dims=(realization.dims[0], "wl_bounds"), coords=realization.coords
             )
         return xr.DataArray(out, dims=(realization.dims[0],), coords=realization.coords)
 
@@ -1122,6 +1074,7 @@ def subset_warming_level(
     r"""
     Subsets the input dataset with only the window of time over which the requested level of global warming
     is first reached, using the IPCC Atlas method.
+    A warming level is considered reached only if the full `window` years are available in the dataset.
 
     Parameters
     ----------
@@ -1230,23 +1183,30 @@ def subset_warming_level(
         reals = []
         for real in bounds.realization.values:
             start, end = bounds.sel(realization=real).values
-            if start is not None:
-                data = ds.sel(realization=[real], time=slice(start, end))
+            data = ds.sel(realization=[real], time=slice(start, end))
+            wl_not_reached = (
+                (start is None)
+                or (data.time.size == 0)
+                or ((data.time.dt.year[-1] - data.time.dt.year[0] + 1) != window)
+            )
+            if not wl_not_reached:
                 bnds_crd = [
                     date_cls(int(start), 1, 1),
                     date_cls(int(end) + 1, 1, 1) - datetime.timedelta(seconds=1),
                 ]
             else:
+                # In the case of not reaching the WL, data might be too short
+                # We create it again with the proper length
                 data = (
                     ds.sel(realization=[real]).isel(time=slice(0, fake_time.size))
-                    * np.NaN
+                    * np.nan
                 )
-                bnds_crd = [np.NaN, np.NaN]
+                bnds_crd = [np.nan, np.nan]
             reals.append(
                 data.expand_dims(warminglevel=wl_crd).assign_coords(
                     time=fake_time[: data.time.size],
                     warminglevel_bounds=(
-                        ("realization", "warminglevel", "bounds"),
+                        ("realization", "warminglevel", "wl_bounds"),
                         [[bnds_crd]],
                     ),
                 )
@@ -1257,19 +1217,24 @@ def subset_warming_level(
         start_yr, end_yr = get_warming_level(ds, wl=wl, return_horizon=True, **kwargs)
         # cut the window selected above and expand dims with wl_crd
         ds_wl = ds.sel(time=slice(start_yr, end_yr))
+        wl_not_reached = (
+            (start_yr is None)
+            or (ds_wl.time.size == 0)
+            or ((ds_wl.time.dt.year[-1] - ds_wl.time.dt.year[0] + 1) != window)
+        )
         if fake_time is None:
-            # WL not reached or completely outside ds time
-            if start_yr is None or ds_wl.time.size == 0:
+            # WL not reached, not in ds, or not fully contained in ds.time
+            if wl_not_reached:
                 return None
             ds_wl = ds_wl.expand_dims(warminglevel=wl_crd)
         else:
-            # WL not reached or not completely inside ds time
-            if start_yr is None or ds_wl.time.size == 0:
+            # WL not reached, not in ds, or not fully contained in ds.time
+            if wl_not_reached:
                 ds_wl = ds.isel(time=slice(0, fake_time.size)) * np.NaN
-                wlbnds = (("warminglevel", "bounds"), [[np.NaN, np.NaN]])
+                wlbnds = (("warminglevel", "wl_bounds"), [[np.NaN, np.NaN]])
             else:
                 wlbnds = (
-                    ("warminglevel", "bounds"),
+                    ("warminglevel", "wl_bounds"),
                     [
                         [
                             date_cls(int(start_yr), 1, 1),
