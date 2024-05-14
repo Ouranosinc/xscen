@@ -540,10 +540,10 @@ logging: # general logging args
       class : logging.StreamHandler
       formatter: default
       level : INFO
-#    file:
-#      class: logging.FileHandler
-#      formatter: default
-#      level : DEBUG
+    file:
+      class: logging.FileHandler
+      formatter: default
+      level : DEBUG
   loggers:
     xscen:
       propagate: False
