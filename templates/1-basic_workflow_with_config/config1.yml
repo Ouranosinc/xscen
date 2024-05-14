@@ -138,6 +138,7 @@ extract:
         - '1950'
         - '2100'
       other_search_criteria: # put the simulations you want here
+        processing_level: raw
         mip_era: CMIP6
         experiment:
           - ssp245
