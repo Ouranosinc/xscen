@@ -2,6 +2,14 @@
 Changelog
 =========
 
+v0.9.1 (unreleased)
+-------------------
+Contributors to this version: Pascal Bourgault (:user:`aulemahal`).
+
+Bug fixes
+^^^^^^^^^
+* Fixed defaults for ``xr_combine_kwargs`` in ``extract_dataset`` (:pull:`402`).
+
 v0.9.0 (2024-05-07)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).
