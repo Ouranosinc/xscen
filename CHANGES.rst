@@ -4,7 +4,11 @@ Changelog
 
 v0.9.1 (unreleased)
 -------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`).
+Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`).
+
+Bug fixes
+^^^^^^^^^
+* Fixed defaults for ``xr_combine_kwargs`` in ``extract_dataset``. (:pull:`402`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
