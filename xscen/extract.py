@@ -281,7 +281,9 @@ def extract_dataset(  # noqa: C901
             slices = []
             for period in periods_extract:
                 slices.extend([ds.sel({"time": slice(period[0], period[1])})])
-            ds = xr.concat(slices, dim="time", **xr_combine_kwargs)
+            ds = xr.concat(
+                slices, dim="time", **xr_kwargs["xarray_combine_by_coords_kwargs"]
+            )
 
         # subset to the region
         if region is not None:
