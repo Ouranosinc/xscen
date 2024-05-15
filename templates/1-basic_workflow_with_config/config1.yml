@@ -138,6 +138,7 @@ extract:
         - '1950'
         - '2100'
       other_search_criteria: # put the simulations you want here
+        processing_level: raw
         mip_era: CMIP6
         experiment:
           - ssp245
@@ -540,7 +541,7 @@ logging: # general logging args
       class : logging.StreamHandler
       formatter: default
       level : INFO
-#    file:
+#    file: #Uncomment if you want a log file, don't forget to also uncomment the filename in paths1.yml.
 #      class: logging.FileHandler
 #      formatter: default
 #      level : DEBUG

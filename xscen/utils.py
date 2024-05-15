@@ -133,20 +133,23 @@ def update_attr(
     others = others or []
     # .strip(' .') removes trailing and leading whitespaces and dots
     if attr in ds.attrs:
-        others = {
+
+        others_attrs = {
             f"attr{i}": dso.attrs.get(attr, "").strip(" .")
             for i, dso in enumerate(others, 1)
         }
-        ds.attrs[attr] = new.format(attr=ds.attrs[attr].strip(" ."), **others, **fmt)
+        ds.attrs[attr] = new.format(
+            attr=ds.attrs[attr].strip(" ."), **others_attrs, **fmt
+        )
     # All existing locales
     for key in fnmatch.filter(ds.attrs.keys(), f"{attr}_??"):
         loc = key[-2:]
-        others = {
+        others_attrs = {
             f"attr{i}": dso.attrs.get(key, dso.attrs.get(attr, "")).strip(" .")
             for i, dso in enumerate(others, 1)
         }
         ds.attrs[key] = TRANSLATOR[loc](new).format(
-            attr=ds.attrs[key].strip(" ."), **others, **fmt
+            attr=ds.attrs[key].strip(" ."), **others_attrs, **fmt
         )
 
 

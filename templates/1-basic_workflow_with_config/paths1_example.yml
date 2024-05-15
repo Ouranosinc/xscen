@@ -54,10 +54,10 @@ dask:
     local_directory: DASK_PATH
     dashboard_address: YOUR_RANDOM_NUMBER
 
-logging:
-    handlers:
-        file:
-            filename: PATH/logger.log
+#logging: #Uncomment if you want a log file
+#    handlers:
+#        file:
+#            filename: PATH/logger.log
 
 utils:
     stack_drop_nans:
