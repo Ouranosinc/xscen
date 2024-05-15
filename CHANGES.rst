@@ -4,11 +4,15 @@ Changelog
 
 v0.9.1 (unreleased)
 -------------------
-Contributors to this version: Pascal Bourgault (:user:`aulemahal`).
+Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`).
 
 Bug fixes
 ^^^^^^^^^
-* Fixed defaults for ``xr_combine_kwargs`` in ``extract_dataset`` (:pull:`402`).
+* Fixed defaults for ``xr_combine_kwargs`` in ``extract_dataset``. (:pull:`402`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* `cartopy` has been pinned above version '0.23.0' in order to address a licensing issue. (:pull:`403`).
 
 v0.9.0 (2024-05-07)
 -------------------
