@@ -36,7 +36,7 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
   "babel",
-  "cartopy",
+  "cartopy >=0.23.0",
   "cftime",
   "cf_xarray >=0.7.6",
   "clisops >=0.10",

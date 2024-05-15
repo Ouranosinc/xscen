@@ -4,7 +4,7 @@ Changelog
 
 v0.9.1 (unreleased)
 -------------------
-Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`).
+Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
 
 Bug fixes
 ^^^^^^^^^
@@ -12,6 +12,9 @@ Bug fixes
 * Fixed bug with `xs.utils.update_attr`(:issue:`404`, :pull:`405`).
 * Fixed template 1 bugs due to changes in versions of dependencies. ( :pull:`405`).
 
+Internal changes
+^^^^^^^^^^^^^^^^
+* `cartopy` has been pinned above version '0.23.0' in order to address a licensing issue. (:pull:`403`).
 
 v0.9.0 (2024-05-07)
 -------------------
