@@ -541,10 +541,10 @@ logging: # general logging args
       class : logging.StreamHandler
       formatter: default
       level : INFO
-    file:
-      class: logging.FileHandler
-      formatter: default
-      level : DEBUG
+#    file: #Uncomment if you want a log file, don't forget to also uncomment the filename in paths1.yml.
+#      class: logging.FileHandler
+#      formatter: default
+#      level : DEBUG
   loggers:
     xscen:
       propagate: False
