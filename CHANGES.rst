@@ -2,6 +2,15 @@
 Changelog
 =========
 
+v0.10.0 Unreleased
+-------------------
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`)
+
+Bug fixes
+^^^^^^^^^
+* Fix bug with `xs.utils.update_attr`(:issue:`404`, :pull:`405`).
+* Fixes to template 1 due to new changes in versions of dependencies. ( :pull:`405`).
+
 v0.9.0 (2024-05-07)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).
