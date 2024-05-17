@@ -306,5 +306,5 @@ From the command line on your Linux distribution, simply run the following from 
 Code of Conduct
 ---------------
 
-Please note that this project is released with a `Contributor Code of Conduct <https://github.com/Ouranosinc/xscen/blob/main/CODE_OF_CONDUCT.rst>`_.
+Please note that this project is released with a `Contributor Code of Conduct <https://github.com/Ouranosinc/xscen/blob/main/CODE_OF_CONDUCT.md>`_.
 By participating in this project you agree to abide by its terms.
