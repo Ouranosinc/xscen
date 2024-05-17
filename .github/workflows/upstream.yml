@@ -5,7 +5,7 @@ on:
       - main
     paths-ignore:
       - .cruft.json
-      - CHANGES.rst
+      - CHANGELOG.rst
       - README.rst
       - pyproject.toml
       - setup.cfg

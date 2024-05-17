@@ -11,41 +11,45 @@ Because of some packages being absent from PyPI (such as `xESMF`), we strongly r
 
 .. code-block:: console
 
-    $ conda install -c conda-forge xscen
+    conda install -c conda-forge xscen
 
 .. note::
 
-    If you are unable to install the package due to missing dependencies, ensure that `conda-forge` is listed as a source in your `conda` configuration: `$ conda config --add channels conda-forge`!
+    If you are unable to install the package due to missing dependencies, ensure that `conda-forge` is listed as a source in your `conda` configuration: `conda config --add channels conda-forge`!
 
 If for some reason you wish to install the `PyPI` version of `xscen` into an existing Anaconda environment (*not recommended*), this can be performed with:
 
 .. code-block:: console
 
-    $ python -m pip install xscen
+    python -m pip install xscen
 
 Development Installation (Anaconda + pip)
 -----------------------------------------
 
-For development purposes, we provide the means for generating a conda environment with the latest dependencies in an `environment.yml` file at the top-level of the `Github repo`_.
+For development purposes, we provide the means for generating a conda environment with the latest dependencies in an `environment.yml` file at the top-level of the `Github repo <https://github.com/Ouranosinc/xscen>`_.
 
 In order to get started, first clone the repo locally:
 
 .. code-block:: console
 
-    $ git clone git@github.com:Ouranosinc/xscen.git
+    git clone git@github.com:Ouranosinc/xscen.git
+
+Or download the `tarball <https://github.com/Ouranosinc/xscen/tarball/main>`_:
+
+ .. code-block:: console
+
+    curl -OJL https://github.com/Ouranosinc/xscen/tarball/main
 
 Then you can create the environment and install the package:
 
 .. code-block:: console
 
-    $ cd xscen
-    $ conda env create -f environment.yml
+    cd xscen
+    conda env create -f environment.yml
 
 Finally, perform an `--editable` install of xscen and compile the translation catalogs:
 
 .. code-block:: console
 
-    $ python -m pip install -e .
-    $ make translate
-
-.. _Github repo: https://github.com/Ouranosinc/xscen
+    python -m pip install -e .
+    make translate
