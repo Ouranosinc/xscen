@@ -263,7 +263,7 @@ include-package-data = true
 version = {attr = "xscen.__version__"}
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["xscen"]
 
 # [tool.setuptools.packages.find]

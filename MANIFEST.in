@@ -4,13 +4,16 @@ include CONTRIBUTING.rst
 include LICENSE
 include Makefile
 include README.rst
+include pyproject.toml
+include setup.cfg
+include setup.py
 include .zenodo.json
 
-recursive-include xscen *.py *.yml
-recursive-include xscen/CVs *.json
-recursive-include xscen/data/fr *.yml *.csv
-recursive-include xscen/data *.nc
-recursive-include xscen/data/fr/LC_MESSAGES *.mo *.po
+recursive-include src/xscen *.py *.yml
+recursive-include src/xscen/CVs *.json
+recursive-include src/xscen/data/fr *.yml *.csv
+recursive-include src/xscen/data *.nc
+recursive-include src/xscen/data/fr/LC_MESSAGES *.mo *.po
 recursive-include tests *.py
 recursive-include docs conf.py Makefile make.bat *.png *.rst *.yml
 recursive-include docs/locales *.mo *.po
