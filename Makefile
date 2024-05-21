@@ -56,13 +56,13 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint/flake8: ## check style with flake8
-	python -m ruff check xscen tests
-	python -m flake8 --config=.flake8 xscen tests
+	python -m ruff check src/xscen tests
+	python -m flake8 --config=.flake8 src/xscen tests
 
 lint/black: ## check style with black
-	python -m black --check xscen tests
-	python -m blackdoc --check xscen docs
-	python -m isort --check xscen tests
+	python -m black --check src/xscen tests
+	python -m blackdoc --check src/xscen docs
+	python -m isort --check src/xscen tests
 
 lint: lint/black lint/flake8 ## check style
 
