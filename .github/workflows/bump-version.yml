@@ -33,10 +33,10 @@ on:
       - environment.yml
       - pyproject.toml
       - setup.py
+      - src/xscen/__init__.py
       - templates
       - tests/*.py
       - tox.ini
-      - xscen/__init__.py
 
 permissions:
   contents: read
