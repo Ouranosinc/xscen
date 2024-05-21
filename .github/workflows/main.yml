@@ -92,6 +92,9 @@ jobs:
             mamba
             python=${{ matrix.python-version }}
             tox
+      - name: Compile catalogs
+        run: |
+          make translate
       - name: Test with tox
         run: |
           python -m tox -e ${{ matrix.tox-build }}
