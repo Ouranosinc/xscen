@@ -71,7 +71,7 @@ dependencies = [
 dev = [
   # Dev tools and testing
   "pip >=23.3.0",
-  "black ==24.4.2",
+  "black[jupyter] ==24.4.2",
   "blackdoc ==0.3.9",
   "bump-my-version >=0.18.3",
   "coverage >=7.0.0",
@@ -164,7 +164,7 @@ values = [
 [tool.coverage.run]
 relative_files = true
 include = ["src/xscen/*"]
-omit = ["docs/notebooks/*.ipynb", "tests/*.py", "xscen/reduce.py"] # FIXME: Remove xscen/reduce.py when it's fully deleted.
+omit = ["docs/notebooks/*.ipynb", "tests/*.py", "src/xscen/reduce.py"] # FIXME: Remove xscen/reduce.py when it's fully deleted.
 
 [tool.isort]
 append_only = true
@@ -204,7 +204,7 @@ testpaths = "tests"
 markers = ["requires_netcdf: marks tests that require netcdf files to run"]
 
 [tool.ruff]
-src = ["xscen"]
+src = ["src/xscen"]
 line-length = 150
 target-version = "py39"
 exclude = [

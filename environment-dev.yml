@@ -74,3 +74,5 @@ dependencies:
   - build
   - wheel
   - pip >=23.3.0
+  - pip:
+    - flake8-alphabetize
