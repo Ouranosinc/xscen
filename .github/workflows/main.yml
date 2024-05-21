@@ -91,6 +91,7 @@ jobs:
             esmf=${{ env.esmf-version }}
             mamba
             python=${{ matrix.python-version }}
+            babel
             tox
       - name: Compile catalogs
         run: |
