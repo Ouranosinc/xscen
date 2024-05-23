@@ -675,6 +675,106 @@ def generate_weights(  # noqa: C901
     return weights
 
 
+def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
+    list_ds = []
+    # calendars = []
+    for ds in datasets:
+        if subset_kw:
+            ds = subset(ds, **subset_kw)
+            ds = ds.drop_vars(
+                ["lat", "lon", "rlat", "rlon", "rotated_pole"], errors="ignore"
+            )
+
+        if regrid_kw:
+            ds = regrid_dataset(ds, **regrid_kw)
+
+        # if indicators_kw:
+        #     dict_ind = compute_indicators(ds, **indicators_kw)
+        #     if len(dict_ind) > 1:
+        #         raise ValueError(
+        #             f"The indicators computation should return only indicators of the same frequency.Returned frequencies: {dict_ind.keys()}"
+        #         )
+        #     else:
+        #         ds = list(dict_ind.values())[0]
+
+        # # get calendar of each dataset
+        # if calendar_kw is None:
+        #     if "time" in ds.coords:
+        #         time = xr.decode_cf(ds).time
+        #         ds["time"] = time
+        #         calendars.append(xc.core.calendar.get_calendar(time))
+
+        for dim in partition_dim:
+            if f"cat:{dim}" in ds.attrs:
+                ds = ds.expand_dims(**{dim: [ds.attrs[f"cat:{dim}"]]})
+
+        if "bias_adjust_project" in ds.dims:
+            ds = ds.assign_coords(
+                method=("bias_adjust_project", ds.attrs.get("cat:method", np.nan))
+            )
+            ds = ds.assign_coords(
+                reference=(
+                    "bias_adjust_project",
+                    ds.attrs.get("cat:reference", np.nan),
+                )
+            )
+
+        if "realization" in partition_dim:
+            new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
+            ds = ds.expand_dims(realization=[new_source])
+        list_ds.append(ds)
+    ens = xr.merge(list_ds, combine_attrs="drop_conflicts")
+    return ens
+
+
+def _partition_from_catalog(
+    datasets, partition_dim, subset_kw, regrid_kw, to_dataset_kw
+):
+    # TODO: add possibility of method and ref
+
+    # special case to handle source (create one dimension with institution_source_member)
+    ensemble_on_list = None
+    if "source" in partition_dim:
+        partition_dim.remove("source")
+        ensemble_on_list = ["institution", "source", "member"]
+
+    subcat = datasets
+
+    # create a dataset for each bias_adjust_project, modify grid and concat them
+    # if no bias_adjust_project, use source
+    dim_with_different_grid = (
+        "bias_adjust_project" if "bias_adjust_project" in partition_dim else "source"
+    )
+    list_ds = []
+    for d in subcat.df[dim_with_different_grid].unique():
+        ds = subcat.search(**{dim_with_different_grid: d}).to_dataset(
+            concat_on=partition_dim,
+            create_ensemble_on=ensemble_on_list,
+            **to_dataset_kw,
+        )
+        if subset_kw:
+            ds = subset(ds, **subset_kw)
+        if regrid_kw:
+            ds = regrid_dataset(ds, **regrid_kw)
+
+        if "bias_adjust_project" in ds.dims:
+            ds = ds.assign_coords(
+                method=("bias_adjust_project", ds.attrs.get("cat:method", np.nan))
+            )
+            ds = ds.assign_coords(
+                reference=(
+                    "bias_adjust_project",
+                    ds.attrs.get("cat:reference", np.nan),
+                )
+            )
+
+        list_ds.append(ds)
+    ens = xr.concat(
+        list_ds, dim=dim_with_different_grid, combine_attrs="drop_conflicts"
+    )
+    return ens
+
+
 def build_partition_data(
     datasets: Union[dict, list[xr.Dataset]],
     partition_dim: list[str] = ["realization", "experiment", "bias_adjust_project"],
@@ -749,76 +849,12 @@ def build_partition_data(
     calendar_kw = calendar_kw or {}
 
     if isinstance(datasets, list):
-        list_ds = []
-        # calendars = []
-        for ds in datasets:
-            if subset_kw:
-                ds = subset(ds, **subset_kw)
-                ds = ds.drop_vars(
-                    ["lat", "lon", "rlat", "rlon", "rotated_pole"], errors="ignore"
-                )
-
-            if regrid_kw:
-                ds = regrid_dataset(ds, **regrid_kw)
-
-            # if indicators_kw:
-            #     dict_ind = compute_indicators(ds, **indicators_kw)
-            #     if len(dict_ind) > 1:
-            #         raise ValueError(
-            #             f"The indicators computation should return only indicators of the same frequency.Returned frequencies: {dict_ind.keys()}"
-            #         )
-            #     else:
-            #         ds = list(dict_ind.values())[0]
-
-            # # get calendar of each dataset
-            # if calendar_kw is None:
-            #     if "time" in ds.coords:
-            #         time = xr.decode_cf(ds).time
-            #         ds["time"] = time
-            #         calendars.append(xc.core.calendar.get_calendar(time))
-
-            for dim in partition_dim:
-                if f"cat:{dim}" in ds.attrs:
-                    ds = ds.expand_dims(**{dim: [ds.attrs[f"cat:{dim}"]]})
-
-            if "realization" in partition_dim:
-                new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
-                ds = ds.expand_dims(realization=[new_source])
-            list_ds.append(ds)
-        ens = xr.merge(list_ds)
+        ens = _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw)
 
     elif isinstance(datasets, DataCatalog):
-        # TODO: add possibility of method and ref
-
-        # special case to handle source (create one dimension with institution_source_member)
-        ensemble_on_list = None
-        if "source" in partition_dim:
-            partition_dim.remove("source")
-            ensemble_on_list = ["institution", "source", "member"]
-
-        subcat = datasets
-
-        # create a dataset for each bias_adjust_project, modify grid and concat them
-        # if no bias_adjust_project, use source
-        dim_with_different_grid = (
-            "bias_adjust_project"
-            if "bias_adjust_project" in partition_dim
-            else "source"
+        ens = _partition_from_catalog(
+            datasets, partition_dim, subset_kw, regrid_kw, to_dataset_kw
         )
-        list_ds = []
-        for d in subcat.df[dim_with_different_grid].unique():
-            ds = subcat.search(**{dim_with_different_grid: d}).to_dataset(
-                concat_on=partition_dim,
-                create_ensemble_on=ensemble_on_list,
-                **to_dataset_kw,
-            )
-            if subset_kw:
-                ds = subset(ds, **subset_kw)
-            if regrid_kw:
-                ds = regrid_dataset(ds, **regrid_kw)
-
-            list_ds.append(ds)
-        ens = xr.concat(list_ds, dim=dim_with_different_grid)
 
     else:
         raise ValueError(
