@@ -14,6 +14,7 @@ import xarray as xr
 from xclim import ensembles
 
 from .catalog import DataCatalog
+from .catutils import generate_id
 from .config import parse_config
 from .regrid import regrid_dataset
 from .spatial import subset
@@ -737,7 +738,6 @@ def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
 def _partition_from_catalog(
     datasets, partition_dim, subset_kw, regrid_kw, to_dataset_kw
 ):
-    # TODO: add possibility of method and ref
 
     # special case to handle source (create one dimension with institution_source_member)
     ensemble_on_list = None
@@ -748,18 +748,46 @@ def _partition_from_catalog(
     subcat = datasets
 
     # create a dataset for each bias_adjust_project, modify grid and concat them
-    # if no bias_adjust_project, use source
-    dim_with_different_grid = (
-        "bias_adjust_project" if "bias_adjust_project" in partition_dim else "source"
-    )
+    # choose with dim that exists in partition_dim and is the first in the order of preference
+    order_of_preference = ["reference", "bias_adjust_project", "source"]
+    dim_with_different_grid = list(set(partition_dim) & set(order_of_preference))[0]
+    # dim_with_different_grid = (
+    #     "bias_adjust_project" if "bias_adjust_project" in partition_dim else "source"
+    # )
+
+    # trick for method
+    if "method" in partition_dim:
+        # replace id with bias_adjust_project with method and ref.
+        datasets.df["id"] = generate_id(
+            datasets.df,
+            [
+                "method",
+                "reference",
+                "mip_era",
+                "activity",
+                "driving_model",
+                "institution",
+                "source",
+                "experiment",
+                "member",
+                "domain",
+            ],
+        )
+
+    # get attrs that are common to all datasets
+    common_attrs = {}
+    for col, series in subcat.df.items():
+        if (series[0] == series).all():
+            common_attrs[f"cat:{col}"] = series[0]
+
     list_ds = []
-    common_attrs = False
     for d in subcat.df[dim_with_different_grid].unique():
         ds = subcat.search(**{dim_with_different_grid: d}).to_dataset(
             concat_on=partition_dim,
             create_ensemble_on=ensemble_on_list,
             **to_dataset_kw,
         )
+
         if subset_kw:
             ds = subset(ds, **subset_kw)
         if regrid_kw:
@@ -775,9 +803,6 @@ def _partition_from_catalog(
                     [ds.attrs.get("cat:reference", np.nan)],
                 )
             )
-        a = ds.attrs
-        a.pop("intake_esm_vars", None)  # remove list for intersection to work
-        common_attrs = dict(common_attrs.items() & a.items()) if common_attrs else a
         list_ds.append(ds)
     ens = xr.concat(list_ds, dim=dim_with_different_grid)
     ens.attrs = common_attrs
