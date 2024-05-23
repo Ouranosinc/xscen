@@ -8,7 +8,7 @@ Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Trevor James
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* `xsce` now uses a `src layout <https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/>`_ in lieu of a flat layout. (:pull:`407`).
+* `xscen` now uses a `src layout <https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/>`_ in lieu of a flat layout. (:pull:`407`).
 
 Bug fixes
 ^^^^^^^^^
