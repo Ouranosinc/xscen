@@ -678,6 +678,8 @@ def generate_weights(  # noqa: C901
 def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
     list_ds = []
     # calendars = []
+    # only keep attrs common to all datasets
+    common_attrs = False
     for ds in datasets:
         if subset_kw:
             ds = subset(ds, **subset_kw)
@@ -710,20 +712,25 @@ def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
 
         if "bias_adjust_project" in ds.dims:
             ds = ds.assign_coords(
-                method=("bias_adjust_project", ds.attrs.get("cat:method", np.nan))
+                method=("bias_adjust_project", [ds.attrs.get("cat:method", np.nan)])
             )
             ds = ds.assign_coords(
                 reference=(
                     "bias_adjust_project",
-                    ds.attrs.get("cat:reference", np.nan),
+                    [ds.attrs.get("cat:reference", np.nan)],
                 )
             )
 
         if "realization" in partition_dim:
             new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
             ds = ds.expand_dims(realization=[new_source])
+
+        a = ds.attrs
+        a.pop("intake_esm_vars", None)  # remove list for intersection to work
+        common_attrs = dict(common_attrs.items() & a.items()) if common_attrs else a
         list_ds.append(ds)
-    ens = xr.merge(list_ds, combine_attrs="drop_conflicts")
+    ens = xr.merge(list_ds)
+    ens.attrs = common_attrs
     return ens
 
 
@@ -746,6 +753,7 @@ def _partition_from_catalog(
         "bias_adjust_project" if "bias_adjust_project" in partition_dim else "source"
     )
     list_ds = []
+    common_attrs = False
     for d in subcat.df[dim_with_different_grid].unique():
         ds = subcat.search(**{dim_with_different_grid: d}).to_dataset(
             concat_on=partition_dim,
@@ -759,19 +767,20 @@ def _partition_from_catalog(
 
         if "bias_adjust_project" in ds.dims:
             ds = ds.assign_coords(
-                method=("bias_adjust_project", ds.attrs.get("cat:method", np.nan))
+                method=("bias_adjust_project", [ds.attrs.get("cat:method", np.nan)])
             )
             ds = ds.assign_coords(
                 reference=(
                     "bias_adjust_project",
-                    ds.attrs.get("cat:reference", np.nan),
+                    [ds.attrs.get("cat:reference", np.nan)],
                 )
             )
-
+        a = ds.attrs
+        a.pop("intake_esm_vars", None)  # remove list for intersection to work
+        common_attrs = dict(common_attrs.items() & a.items()) if common_attrs else a
         list_ds.append(ds)
-    ens = xr.concat(
-        list_ds, dim=dim_with_different_grid, combine_attrs="drop_conflicts"
-    )
+    ens = xr.concat(list_ds, dim=dim_with_different_grid)
+    ens.attrs = common_attrs
     return ens
 
 
