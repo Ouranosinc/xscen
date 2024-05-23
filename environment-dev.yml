@@ -41,8 +41,8 @@ dependencies:
   - black ==24.2.0
   - blackdoc ==0.3.9
   - bump-my-version >=0.18.3
-#  - coverage>=6.2.2,<7.0.0
-#  - coveralls>=3.3.1
+  - coverage>=7.0.0
+  - coveralls>=3.3.1
   - flake8 >=6.1.0
   - flake8-rst-docstrings>=0.3.0
   - ipykernel
@@ -55,8 +55,10 @@ dependencies:
   - pooch
   - pre-commit >=3.3.2
   - pytest >=7.3.1
-#  - pytest-cov >=4.0.0
-  - ruff >=0.1.0
+  - pytest-cov >=4.0.0
+  - ruff >=0.3.0
+  - setuptools >=65.0.0
+  - setuptools-scm >=8.0.0
   - sphinx
   - sphinx-autoapi
   - sphinx-rtd-theme >=1.0
@@ -71,9 +73,6 @@ dependencies:
   # packaging
   - build
   - wheel
-  - pip
+  - pip >=23.3.0
   - pip:
-     # coverage is not available in conda-forge for Python3.12
-     - coverage>=6.2.2,<7.0.0
-     - coveralls>=3.3.1
-     - pytest-cov >=4.0.0
+    - flake8-alphabetize
