@@ -747,22 +747,20 @@ def _partition_from_catalog(
 
     subcat = datasets
 
-    # create a dataset for each bias_adjust_project, modify grid and concat them
-    # choose with dim that exists in partition_dim and is the first in the order of preference
-    order_of_preference = ["reference", "bias_adjust_project", "source"]
-    dim_with_different_grid = list(set(partition_dim) & set(order_of_preference))[0]
-    # dim_with_different_grid = (
-    #     "bias_adjust_project" if "bias_adjust_project" in partition_dim else "source"
-    # )
+    # get attrs that are common to all datasets
+    common_attrs = {}
+    for col, series in subcat.df.items():
+        if (series[0] == series).all():
+            common_attrs[f"cat:{col}"] = series[0]
 
-    # trick for method
+    # trick when using method/ref, instead of bias_adjust_project
     if "method" in partition_dim:
         # replace id with bias_adjust_project with method and ref.
         datasets.df["id"] = generate_id(
             datasets.df,
             [
-                "method",
-                "reference",
+                "method",  # instead of bias_adjust_project
+                "reference",  # instead of bias_adjust_project
                 "mip_era",
                 "activity",
                 "driving_model",
@@ -774,11 +772,10 @@ def _partition_from_catalog(
             ],
         )
 
-    # get attrs that are common to all datasets
-    common_attrs = {}
-    for col, series in subcat.df.items():
-        if (series[0] == series).all():
-            common_attrs[f"cat:{col}"] = series[0]
+    # create a dataset for each bias_adjust_project, modify grid and concat them
+    # choose with dim that exists in partition_dim and is the first in the order of preference
+    order_of_preference = ["reference", "bias_adjust_project", "source"]
+    dim_with_different_grid = list(set(partition_dim) & set(order_of_preference))[0]
 
     list_ds = []
     for d in subcat.df[dim_with_different_grid].unique():
@@ -793,6 +790,7 @@ def _partition_from_catalog(
         if regrid_kw:
             ds = regrid_dataset(ds, **regrid_kw)
 
+        # add coords method and reference
         if "bias_adjust_project" in ds.dims:
             ds = ds.assign_coords(
                 method=("bias_adjust_project", [ds.attrs.get("cat:method", np.nan)])
@@ -912,6 +910,9 @@ def build_partition_data(
     rename_dict.setdefault("bias_adjust_project", "downscaling")
     rename_dict = {k: v for k, v in rename_dict.items() if k in ens.dims}
     ens = ens.rename(rename_dict)
+
+    ens.attrs["cat:processing_level"] = "partition_ensemble"
+    ens.attrs["cat:id"] = generate_id(ens)[0]
 
     return ens
 
