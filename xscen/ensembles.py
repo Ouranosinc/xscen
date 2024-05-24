@@ -738,11 +738,22 @@ def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
 def _partition_from_catalog(
     datasets, partition_dim, subset_kw, regrid_kw, to_dataset_kw
 ):
+    if ("method" in partition_dim or "reference" in partition_dim) and (
+        "bias_adjust_project" in partition_dim
+    ):
+        raise ValueError(
+            "The partition_dim can have either method and reference or bias_adjust_project, not both."
+        )
+
+    if ("realization" in partition_dim) and ("source" in partition_dim):
+        raise ValueError(
+            "The partition_dim can have either realization or source, not both."
+        )
 
     # special case to handle source (create one dimension with institution_source_member)
     ensemble_on_list = None
-    if "source" in partition_dim:
-        partition_dim.remove("source")
+    if "realization" in partition_dim:
+        partition_dim.remove("realization")
         ensemble_on_list = ["institution", "source", "member"]
 
     subcat = datasets
@@ -753,24 +764,25 @@ def _partition_from_catalog(
         if (series[0] == series).all():
             common_attrs[f"cat:{col}"] = series[0]
 
-    # trick when using method/ref, instead of bias_adjust_project
-    if "method" in partition_dim:
-        # replace id with bias_adjust_project with method and ref.
-        datasets.df["id"] = generate_id(
-            datasets.df,
-            [
-                "method",  # instead of bias_adjust_project
-                "reference",  # instead of bias_adjust_project
-                "mip_era",
-                "activity",
-                "driving_model",
-                "institution",
-                "source",
-                "experiment",
-                "member",
-                "domain",
-            ],
-        )
+    col_id = [
+        (
+            "method" if "method" in partition_dim else None
+        ),  # instead of bias_adjust_project
+        (
+            "reference" if "reference" in partition_dim else None
+        ),  # instead of bias_adjust_project
+        "bias_adjust_project" if "bias_adjust_project" in partition_dim else None,
+        "mip_era",
+        "activity",
+        "driving_model",
+        "institution" if "realization" in partition_dim else None,
+        "source",
+        "experiment",
+        "member" if "realization" in partition_dim else None,
+        "domain",
+    ]
+
+    datasets.df["id"] = generate_id(datasets.df, col_id)
 
     # create a dataset for each bias_adjust_project, modify grid and concat them
     # choose with dim that exists in partition_dim and is the first in the order of preference
@@ -911,7 +923,7 @@ def build_partition_data(
     rename_dict = {k: v for k, v in rename_dict.items() if k in ens.dims}
     ens = ens.rename(rename_dict)
 
-    ens.attrs["cat:processing_level"] = "partition_ensemble"
+    ens.attrs["cat:processing_level"] = "partition-ensemble"
     ens.attrs["cat:id"] = generate_id(ens)[0]
 
     return ens
