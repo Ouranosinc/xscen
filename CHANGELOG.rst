@@ -14,7 +14,7 @@ Bug fixes
 ^^^^^^^^^
 * Fixed defaults for ``xr_combine_kwargs`` in ``extract_dataset`` (:pull:`402`).
 * Fixed bug with `xs.utils.update_attr`(:issue:`404`, :pull:`405`).
-* Fixed template 1 bugs due to changes in versions of dependencies. ( :pull:`405`).
+* Fixed template 1 bugs due to changes in dependencies. ( :pull:`405`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
