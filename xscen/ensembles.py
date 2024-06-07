@@ -828,6 +828,7 @@ def build_partition_data(
     calendar_kw: dict = None,
     rename_dict: dict = None,
     to_dataset_kw: dict = None,
+    to_level: dict = "partition-ensemble",
 ):
     """Get the input for the xclim partition functions.
 
@@ -872,6 +873,8 @@ def build_partition_data(
     rename_dict:
         Dictionary to rename the dimensions from xscen names to xclim names.
         The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
+    to_level: str
+        The processing level of the output dataset. Default is 'partition-ensemble'.
 
     Returns
     -------
@@ -923,7 +926,7 @@ def build_partition_data(
     rename_dict = {k: v for k, v in rename_dict.items() if k in ens.dims}
     ens = ens.rename(rename_dict)
 
-    ens.attrs["cat:processing_level"] = "partition-ensemble"
+    ens.attrs["cat:processing_level"] = to_level
     ens.attrs["cat:id"] = generate_id(ens)[0]
 
     return ens
