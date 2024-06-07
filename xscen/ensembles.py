@@ -828,7 +828,7 @@ def build_partition_data(
     calendar_kw: dict = None,
     rename_dict: dict = None,
     to_dataset_kw: dict = None,
-    to_level: dict = "partition-ensemble",
+    to_level: str = "partition-ensemble",
 ):
     """Get the input for the xclim partition functions.
 
