@@ -713,7 +713,10 @@ def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
 
         if "bias_adjust_project" in ds.dims:
             ds = ds.assign_coords(
-                method=("bias_adjust_project", [ds.attrs.get("cat:method", np.nan)])
+                adjustment=(
+                    "bias_adjust_project",
+                    [ds.attrs.get("cat:adjustment", np.nan)],
+                )
             )
             ds = ds.assign_coords(
                 reference=(
@@ -738,11 +741,12 @@ def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
 def _partition_from_catalog(
     datasets, partition_dim, subset_kw, regrid_kw, to_dataset_kw
 ):
-    if ("method" in partition_dim or "reference" in partition_dim) and (
+
+    if ("adjustment" in partition_dim or "reference" in partition_dim) and (
         "bias_adjust_project" in partition_dim
     ):
         raise ValueError(
-            "The partition_dim can have either method and reference or bias_adjust_project, not both."
+            "The partition_dim can have either adjustment and reference or bias_adjust_project, not both."
         )
 
     if ("realization" in partition_dim) and ("source" in partition_dim):
@@ -766,8 +770,8 @@ def _partition_from_catalog(
 
     col_id = [
         (
-            "method" if "method" in partition_dim else None
-        ),  # instead of bias_adjust_project
+            "adjustment" if "adjustment" in partition_dim else None
+        ),  # instead of bias_adjust_project, need to use adjustment, not method bc .sel
         (
             "reference" if "reference" in partition_dim else None
         ),  # instead of bias_adjust_project
@@ -802,11 +806,14 @@ def _partition_from_catalog(
         if regrid_kw:
             ds = regrid_dataset(ds, **regrid_kw)
 
-        # add coords method and reference
+        # add coords adjustment and reference
         if "bias_adjust_project" in ds.dims:
             ds = ds.assign_coords(
-                method=("bias_adjust_project", [ds.attrs.get("cat:method", np.nan)])
-            )
+                adjustment=(
+                    "bias_adjust_project",
+                    [ds.attrs.get("cat:adjustment", np.nan)],
+                )
+            )  # need to use adjustment, not method bc .sel
             ds = ds.assign_coords(
                 reference=(
                     "bias_adjust_project",
