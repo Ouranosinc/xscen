@@ -786,10 +786,10 @@ def _partition_from_catalog(
         "domain",
     ]
 
-    datasets.df["id"] = generate_id(datasets.df, col_id)
+    subcat.df["id"] = generate_id(subcat.df, col_id)
 
     # create a dataset for each bias_adjust_project, modify grid and concat them
-    # choose with dim that exists in partition_dim and is the first in the order of preference
+    # choose dim that exists in partition_dim and first in the order of preference
     order_of_preference = ["reference", "bias_adjust_project", "source"]
     dim_with_different_grid = list(set(partition_dim) & set(order_of_preference))[0]
 
