@@ -2,6 +2,14 @@
 Changelog
 =========
 
+v0.9.2 (unreleased)
+-------------------
+Contributors to this version: Pascal Bourgault (:user:`aulemahal`).
+
+Bug fixes
+^^^^^^^^^
+* Avoid modification of mutable arguments in ``search_data_catalogs`` (:pull:`413`).
+
 v0.9.1 (2024-06-04)
 -------------------
 Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
