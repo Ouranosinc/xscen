@@ -88,6 +88,8 @@ def regrid_dataset(  # noqa: C901
 
     regridder_kwargs = regridder_kwargs or {}
 
+    domain = ds.attrs["cat:domain"] if "cat:domain" in ds_grid.attrs else "unknown"
+
     ds_grids = []  # list of target grids
     reg_arguments = []  # list of accompanying arguments for xe.Regridder()
     if intermediate_grids:
@@ -121,7 +123,7 @@ def regrid_dataset(  # noqa: C901
             # give unique name to weights file
             weights_filename = os.path.join(
                 weights_location,
-                f"{id}_regrid{i}"
+                f"{id}_{domain}_regrid{i}"
                 f"{'_'.join(kwargs[k] for k in kwargs if isinstance(kwargs[k], str))}.nc",
             )
 
