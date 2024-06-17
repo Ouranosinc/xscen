@@ -2,6 +2,31 @@
 Changelog
 =========
 
+v0.9.1 (2024-06-04)
+-------------------
+Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* `xscen` now uses a `src layout <https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/>`_ in lieu of a flat layout. (:pull:`407`).
+
+Bug fixes
+^^^^^^^^^
+* Fixed defaults for ``xr_combine_kwargs`` in ``extract_dataset`` (:pull:`402`).
+* Fixed bug with `xs.utils.update_attr`(:issue:`404`, :pull:`405`).
+* Fixed template 1 bugs due to changes in dependencies. ( :pull:`405`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* `cartopy` has been pinned above version '0.23.0' in order to address a licensing issue. (:pull:`403`).
+* The cookiecutter template has been updated to the latest commit via `cruft`. (:pull:`407`).
+    * GitHub Workflows now point to commits rather than tags.
+    * `Dependabot` will now only update on a monthly schedule.
+    * Dependencies have been updated and synchronized.
+    * ``CHANGES.rst`` is now ``CHANGELOG.rst`` (see: ` KeepAChangelog <https://keepachangelog.com/en/1.0.0/>`_).
+    * The ``CODE_OF_CONDUCT.rst`` file adapted to `Contributor Covenant v2.1 <https://www.contributor-covenant.org/version/2/1/code_of_conduct/>`_.
+    * Maintainer-specific directions are now found under ``releasing.rst``
+
 v0.9.0 (2024-05-07)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Marco Braun (:user:`vindelico`).

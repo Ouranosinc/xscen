@@ -56,13 +56,13 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint/flake8: ## check style with flake8
-	ruff xscen tests
-	flake8 --config=.flake8 xscen tests
+	python -m ruff check src/xscen tests
+	python -m flake8 --config=.flake8 src/xscen tests
 
 lint/black: ## check style with black
-	black --check xscen tests
-	blackdoc --check xscen docs
-	isort --check xscen tests
+	python -m black --check src/xscen tests
+	python -m blackdoc --check src/xscen docs
+	python -m isort --check src/xscen tests
 
 lint: lint/black lint/flake8 ## check style
 
@@ -77,7 +77,7 @@ initialize-translations: clean-docs ## initialize translations, ignoring autodoc
 	sphinx-intl update -p docs/_build/gettext -d docs/locales -l fr
 
 autodoc: clean-docs ## create sphinx-apidoc files
-	sphinx-apidoc -o docs/apidoc --module-first xscen
+	sphinx-apidoc -o docs/apidoc --module-first src/xscen
 
 linkcheck: autodoc ## run checks over all external links found throughout the documentation
 	env SKIP_NOTEBOOKS=1 $(MAKE) -C docs linkcheck
@@ -106,7 +106,8 @@ install: clean ## install the package to the active Python's site-packages
 	python -m pip install .
 
 dev: clean ## install the package in editable mode with all development dependencies
-	python -m pip install --editable ".[dev]"
+	python -m pip install --editable ".[all]"
+	pre-commit install
 
 findfrench:  ## Extract phrases and update the French translation catalog (this doesn't translate)
 	python setup.py extract_messages

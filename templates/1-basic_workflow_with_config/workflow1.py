@@ -105,7 +105,8 @@ if __name__ == "__main__":
                                     ds,
                                     ds[list(ds.data_vars)[0]]
                                     .isel(time=0, drop=True)
-                                    .notnull(),
+                                    .notnull()
+                                    .compute(),
                                 )
                             # Prepare the filename for the zarr file, using the format specified in paths1.yml
                             path = CONFIG["paths"]["task"].format(**cur)

@@ -6,7 +6,7 @@ on:
       - main
     paths-ignore:
       - .cruft.json
-      - CHANGES.rst
+      - CHANGELOG.rst
       - README.rst
       - pyproject.toml
       - setup.cfg
@@ -32,7 +32,7 @@ jobs:
           - "3.x"
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
+        uses: step-security/harden-runner@f086349bfa2bd1361f7909c78558e816508cdc10 # v2.8.0
         with:
           disable-sudo: true
           egress-policy: block
@@ -40,10 +40,12 @@ jobs:
             files.pythonhosted.org:443
             github.com:443
             pypi.org:443
-      - uses: actions/checkout@v4.1.5
-      - uses: actions/setup-python@v5.1.0
+      - name: Checkout Repository
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - name: Setup Python${{ matrix.python-version }}
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5.1.0
         with:
-          python-version: "3.x"
+          python-version: ${{ matrix.python-version }}
       - name: Install tox
         run: |
           python -m pip install tox
@@ -75,12 +77,13 @@ jobs:
         shell: bash -l {0}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
+        uses: step-security/harden-runner@f086349bfa2bd1361f7909c78558e816508cdc10 # v2.8.0
         with:
           egress-policy: audit
-      - uses: actions/checkout@v4.1.5
+      - name: Checkout Repository
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
-        uses: mamba-org/setup-micromamba@v1.8.1
+        uses: mamba-org/setup-micromamba@f8b8a1e23a26f60a44c853292711bacfd3eac822 # v1.9.0
         with:
           cache-downloads: true
           environment-name: xscen-pypi
@@ -88,7 +91,11 @@ jobs:
             esmf=${{ env.esmf-version }}
             mamba
             python=${{ matrix.python-version }}
+            babel
             tox
+      - name: Compile catalogs
+        run: |
+          make translate
       - name: Test with tox
         run: |
           python -m tox -e ${{ matrix.tox-build }}
@@ -139,12 +146,13 @@ jobs:
         shell: bash -l {0}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@a4aa98b93cab29d9b1101a6143fb8bce00e2eac4 # v2.7.1
+        uses: step-security/harden-runner@f086349bfa2bd1361f7909c78558e816508cdc10 # v2.8.0
         with:
           egress-policy: audit
-      - uses: actions/checkout@v4.1.5
+      - name: Checkout Repository
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
-        uses: mamba-org/setup-micromamba@v1.8.1
+        uses: mamba-org/setup-micromamba@f8b8a1e23a26f60a44c853292711bacfd3eac822 # v1.9.0
         with:
           cache-downloads: true
           cache-environment: true

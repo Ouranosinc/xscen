@@ -6,7 +6,7 @@ dependencies:
   # Don't forget to sync changes between environment.yml, environment-dev.yml, and setup.py!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
-  - cartopy
+  - cartopy >=0.23.0
   - cftime
   - cf_xarray >=0.7.6
   - clisops >=0.10
@@ -35,6 +35,8 @@ dependencies:
   - zarr
   # To install from source and get translations
   - babel
+  - setuptools >=65.0.0
+  - setuptools-scm >=8.0.0
   # Opt
   - nc-time-axis >=1.3.1
   - pyarrow >=10.0.1
