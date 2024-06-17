@@ -2,6 +2,15 @@
 Changelog
 =========
 
+v0.9.2 (Unreleased)
+-------------------
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Include domain in `weight_location` in ``regrid_dataset``. (:pull:`414`).
+
+
 v0.9.1 (2024-06-04)
 -------------------
 Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
