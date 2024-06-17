@@ -133,17 +133,15 @@ def regrid_dataset(  # noqa: C901
             ):
                 kwargs["weights"] = weights_filename
                 kwargs["reuse_weights"] = True
-                regridder_kwargs["weights"] = weights_filename
-                regridder_kwargs["reuse_weights"] = True
 
             # Extract args that are to be given at call time.
             # output_chunks is only valid for xesmf >= 0.8, so don't add it be default to the call_kwargs
-            call_kwargs = {"skipna": regridder_kwargs.pop("skipna", False)}
-            if "output_chunks" in regridder_kwargs:
-                call_kwargs["output_chunks"] = regridder_kwargs.pop("output_chunks")
+            call_kwargs = {"skipna": kwargs.pop("skipna", False)}
+            if "output_chunks" in kwargs:
+                call_kwargs["output_chunks"] = kwargs.pop("output_chunks")
 
             regridder = _regridder(
-                ds_in=ds, ds_grid=ds_grid, filename=weights_filename, **regridder_kwargs
+                ds_in=ds, ds_grid=ds_grid, filename=weights_filename, **kwargs
             )
 
             # The regridder (when fed Datasets) doesn't like if 'mask' is present.
