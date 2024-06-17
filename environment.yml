@@ -20,7 +20,7 @@ dependencies:
   - matplotlib
   - netCDF4
   - numcodecs
-  - numpy
+  - numpy <2.0.0
   - pandas >=2.2
   - parse
   - pyyaml
