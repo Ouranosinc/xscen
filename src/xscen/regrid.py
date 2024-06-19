@@ -88,7 +88,7 @@ def regrid_dataset(  # noqa: C901
 
     regridder_kwargs = regridder_kwargs or {}
 
-    domain = ds.attrs.get("cat:domain", "unknown")
+    domain = ds_grid.attrs.get("cat:domain", "unknown")
 
     ds_grids = []  # list of target grids
     reg_arguments = []  # list of accompanying arguments for xe.Regridder()
