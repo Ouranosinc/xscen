@@ -992,7 +992,10 @@ def get_warming_level(  # noqa: C901
         info_models.append(info)
 
     # open nc
-    tas = xr.open_dataset(tas_src, engine="h5netcdf").tas
+    tas = xr.open_dataset(
+        tas_src,
+        # engine="h5netcdf"
+    ).tas
 
     def _get_warming_level(model):
         # choose colum based in ds cat attrs, +'$' to ensure a full match (matches end-of-string)
