@@ -2,6 +2,21 @@
 Changelog
 =========
 
+v0.9.2 (Unreleased)
+-------------------
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
+
+
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Include domain in `weight_location` in ``regrid_dataset``. (:pull:`414`).
+* Added pins to xarray, xclim,  h5py, and netcdf4. (:pull:`414`).
+
+Bug fixes
+^^^^^^^^^
+* Fixed bug with reusing weights (:pull:`414`, :issue:`411`).
+
 v0.9.1 (2024-06-04)
 -------------------
 Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
