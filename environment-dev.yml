@@ -15,10 +15,10 @@ dependencies:
   - fsspec
   - geopandas
   - h5netcdf
-  - h5py <3.11
+  - h5py <3.11 # writting and reading with engine h5netcdf was broken
   - intake-esm >=2023.07.07
   - matplotlib
-  - netCDF4 <1.7
+  - netCDF4 <1.7 # writting and reading with engine h5netcdf was broken
   - numcodecs
   - numpy
   - pandas >=2.2
@@ -29,7 +29,7 @@ dependencies:
   - shapely >=2.0
   - sparse
   - toolz
-  - xarray >=2023.11.0, <2024.6.0
+  - xarray >=2023.11.0, <2024.6.0 # xarray 2024.6.0 pinned until xarray#3138 is fixed
   - xclim >=0.50, <0.51
   - xesmf >=0.7
   - zarr

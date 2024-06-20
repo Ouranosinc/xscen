@@ -6,13 +6,12 @@ v0.9.2 (Unreleased)
 -------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
 
-Breaking changes
-^^^^^^^^^^^^^^^^
-* `numpy` has been pinned below v2.0.0 until `xscen` can be updated to support the latest version. (:pull:`414`).
+
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Include domain in `weight_location` in ``regrid_dataset``. (:pull:`414`).
+* Added pins to xarray, xclim,  h5py, and netcdf4. (:pull:`414`).
 
 Bug fixes
 ^^^^^^^^^
