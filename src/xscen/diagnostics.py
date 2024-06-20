@@ -559,7 +559,7 @@ def measures_improvement(
     ds1 = meas_datasets[0]
     ds2 = meas_datasets[1]
     if dim is None:
-        dims = ds1.dims
+        dim = ds1.dims
     dims = [dim] if isinstance(dim, str) else dim
 
     percent_better = []

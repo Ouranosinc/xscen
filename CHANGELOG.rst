@@ -12,7 +12,7 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * Include domain in `weight_location` in ``regrid_dataset``. (:pull:`414`).
 * Added pins to xarray, xclim,  h5py, and netcdf4. (:pull:`414`).
-* `xs.diagnostics.measures_improvement` now accepts `dim`, which specifies `dimension(s)` on which the proportion of improved pixels are computed.
+* `xs.diagnostics.measures_improvement` now accepts `dim`, which specifies `dimension(s)` on which the proportion of improved pixels are computed. (:pull:`416`)
 
 Bug fixes
 ^^^^^^^^^
