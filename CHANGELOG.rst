@@ -16,6 +16,7 @@ Internal changes
 Bug fixes
 ^^^^^^^^^
 * Fixed bug with reusing weights (:pull:`414`, :issue:`411`).
+* Fixed bug in `update_from_ds` when "time" is a coordinate, but not a dimension. (:pull: `417`).
 
 v0.9.1 (2024-06-04)
 -------------------
