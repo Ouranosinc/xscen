@@ -88,6 +88,8 @@ def regrid_dataset(  # noqa: C901
 
     regridder_kwargs = regridder_kwargs or {}
 
+    domain = ds_grid.attrs.get("cat:domain", "unknown")
+
     ds_grids = []  # list of target grids
     reg_arguments = []  # list of accompanying arguments for xe.Regridder()
     if intermediate_grids:
@@ -121,7 +123,7 @@ def regrid_dataset(  # noqa: C901
             # give unique name to weights file
             weights_filename = os.path.join(
                 weights_location,
-                f"{id}_regrid{i}"
+                f"{id}_{domain}_regrid{i}"
                 f"{'_'.join(kwargs[k] for k in kwargs if isinstance(kwargs[k], str))}.nc",
             )
 
@@ -134,12 +136,12 @@ def regrid_dataset(  # noqa: C901
 
             # Extract args that are to be given at call time.
             # output_chunks is only valid for xesmf >= 0.8, so don't add it be default to the call_kwargs
-            call_kwargs = {"skipna": regridder_kwargs.pop("skipna", False)}
-            if "output_chunks" in regridder_kwargs:
-                call_kwargs["output_chunks"] = regridder_kwargs.pop("output_chunks")
+            call_kwargs = {"skipna": kwargs.pop("skipna", False)}
+            if "output_chunks" in kwargs:
+                call_kwargs["output_chunks"] = kwargs.pop("output_chunks")
 
             regridder = _regridder(
-                ds_in=ds, ds_grid=ds_grid, filename=weights_filename, **regridder_kwargs
+                ds_in=ds, ds_grid=ds_grid, filename=weights_filename, **kwargs
             )
 
             # The regridder (when fed Datasets) doesn't like if 'mask' is present.

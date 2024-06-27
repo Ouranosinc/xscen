@@ -45,11 +45,11 @@ dependencies = [
   "fsspec",
   "geopandas",
   "h5netcdf",
-  "h5py",
+  "h5py <3.11",
   "intake-esm >=2023.07.07,<v2024.2.6; python_version == '3.9'",
   "intake-esm >=2023.07.07; python_version >= '3.10'",
   "matplotlib",
-  "netCDF4",
+  "netCDF4 <1.7",
   "numcodecs",
   "numpy",
   "pandas >=2.2",
@@ -62,8 +62,8 @@ dependencies = [
   "shapely >=2.0",
   "sparse",
   "toolz",
-  "xarray >=2023.11.0",
-  "xclim >=0.48.2",
+  "xarray >=2023.11.0, <2024.6.0",
+  "xclim >=0.50, <0.51",
   "zarr"
 ]
 
@@ -129,7 +129,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.9.1"
+current_version = "0.9.2-dev.1"
 commit = true
 commit_args = "--no-verify"
 tag = false
