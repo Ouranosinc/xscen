@@ -16,6 +16,7 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * Include domain in `weight_location` in ``regrid_dataset``. (:pull:`414`).
 * Added pins to `xarray`, `xclim`, `h5py`, and `netcdf4`. (:pull:`414`).
+* Add ``.zip`` and ``.zarr.zip`` as possible file extensions for Zarr datasets. (:pull: `426`).
 
 v0.9.1 (2024-06-04)
 -------------------
