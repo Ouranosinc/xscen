@@ -40,7 +40,10 @@ __all__ = ["build_path", "parse_directory", "parse_from_ds", "register_parse_typ
 
 
 SUFFIX_TO_FORMAT = {".nc": "nc", ".zip": "zarr", ".zarr.zip": "zarr", ".zarr": "zarr"}
+"""Mapping from file suffix to format.
 
+This is used to populate the "format" esm catalog column from the parsed path.
+"""
 
 EXTRA_PARSE_TYPES = {}
 """Extra parse types to add to parse's default.
