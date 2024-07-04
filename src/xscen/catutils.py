@@ -39,7 +39,13 @@ __all__ = ["build_path", "parse_directory", "parse_from_ds", "register_parse_typ
 # ## File finding and path parsing ## #
 
 
-SUFFIX_TO_FORMAT = {".nc": "nc", ".zip": "zarr", ".zarr.zip": "zarr", ".zarr": "zarr"}
+SUFFIX_TO_FORMAT = {
+    ".nc": "nc",
+    ".nc4": "nc",
+    ".zip": "zarr",
+    ".zarr.zip": "zarr",
+    ".zarr": "zarr",
+}
 """Mapping from file suffix to format.
 
 This is used to populate the "format" esm catalog column from the parsed path.
@@ -229,7 +235,7 @@ def _name_parser(
         return None
 
     d["path"] = abs_path
-    d["format"] = SUFFIX_TO_FORMAT.get(path.suffix)
+    d["format"] = SUFFIX_TO_FORMAT.get(path.suffix, path.suffix[1:])
 
     if "DATES" in d:
         d["date_start"], d["date_end"] = d.pop("DATES")
