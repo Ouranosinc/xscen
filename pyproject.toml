@@ -45,7 +45,7 @@ dependencies = [
   "fsspec",
   "geopandas",
   "h5netcdf",
-  "h5py <3.11",
+  "h5py",
   "intake-esm >=2023.07.07,<v2024.2.6; python_version == '3.9'",
   "intake-esm >=2023.07.07; python_version >= '3.10'",
   "matplotlib",
