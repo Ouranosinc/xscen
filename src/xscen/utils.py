@@ -476,11 +476,11 @@ def unstack_fill_nan(
                 ]
             )
 
-        out = (
-            ds.drop_vars(dims)
-            .assign_coords({dim: pd.MultiIndex.from_arrays(crds, names=dims)})
-            .unstack(dim)
-        )
+        # explicitly get lat and lon
+        mindex_obj = pd.MultiIndex.from_arrays(crds, names=dims)
+        mindex_coords = xr.Coordinates.from_pandas_multiindex(mindex_obj, dim)
+
+        out = ds.drop_vars(dims).assign_coords(mindex_coords).unstack(dim)
 
         if not isinstance(coords, (list, tuple)) and coords is not None:
             out = out.reindex(**coords.coords)
