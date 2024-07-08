@@ -4,9 +4,11 @@ import cftime
 import numpy as np
 import pandas as pd
 import pytest
+import xarray as xr
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
+from xscen.testing import datablock_3d
 
 
 class TestDateParser:
@@ -83,3 +85,60 @@ class TestScripting:
             }
         elif prefix == "dog:":
             assert out == {"source": "CanESM5"}
+
+
+class TestStackNan:
+
+    def test_no_nan(self):
+        ds = datablock_3d(
+            np.zeros((20, 10, 10)),
+            "tas",
+            "lon",
+            -5,
+            "lat",
+            80.5,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        mask = xr.where(ds.tas.isel(time=0).isnull(), False, True).drop_vars("time")
+        out = xs.utils.stack_drop_nans(ds, mask=mask)
+        assert "loc" in out.dims
+        assert out.sizes["loc"] == 100
+
+        ds_unstack = xs.utils.unstack_fill_nan(out)
+        assert ds_unstack.equals(ds)
+
+    def test_nan(self, tmp_path):
+        data = np.zeros((20, 10, 10))
+        data[:, 0, 0] = [np.nan] * 20
+        ds = datablock_3d(
+            data,
+            "tas",
+            "lon",
+            -5,
+            "lat",
+            80.5,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+
+        mask = xr.where(ds.tas.isel(time=0).isnull(), False, True).drop_vars("time")
+        ds.attrs["cat:domain"] = "RegionEssai"
+        out = xs.utils.stack_drop_nans(
+            ds,
+            mask=mask,
+            new_dim="loc1",
+            to_file=str(tmp_path / "coords_{domain}_{shape}.nc"),
+        )
+        assert "loc1" in out.dims
+        assert out.sizes["loc1"] == 99
+        assert (tmp_path / "coords_RegionEssai_10x10.nc").is_file()
+
+        ds_unstack = xs.utils.unstack_fill_nan(
+            out, dim="loc1", coords=str(tmp_path / "coords_{domain}_{shape}.nc")
+        )
+        assert ds_unstack.equals(ds)
