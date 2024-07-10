@@ -2,21 +2,23 @@
 Changelog
 =========
 
-v0.9.2 (Unreleased)
+v0.9.2 (unreleased)
 -------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Éric Dupuis (:user:`coxipi`)
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Éric Dupuis (:user:`coxipi`)
 
-
+Bug fixes
+^^^^^^^^^
+* Fixed bug with reusing weights. (:issue:`411`, :pull:`414`).
+* Fixed bug in `update_from_ds` when "time" is a coordinate, but not a dimension. (:pull: `417`).
+* Avoid modification of mutable arguments in ``search_data_catalogs`` (:pull:`413`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Include domain in `weight_location` in ``regrid_dataset``. (:pull:`414`).
-* Added pins to xarray, xclim,  h5py, and netcdf4. (:pull:`414`).
-* `xs.diagnostics.measures_improvement` now accepts `dim`, which specifies `dimension(s)` on which the proportion of improved pixels are computed. (:pull:`416`)
-
-Bug fixes
-^^^^^^^^^
-* Fixed bug with reusing weights (:pull:`414`, :issue:`411`).
+* Added pins to `xarray`, `xclim`, `h5py`, and `netcdf4`. (:pull:`414`).
+* Add ``.zip`` and ``.zarr.zip`` as possible file extensions for Zarr datasets. (:pull:`426`).
+* Explicitly assign coords of multiindex in `xs.unstack_fill_nan`. (:pull:`427`).
+* `diagnostics.measures_improvement` now accepts dim`, which specifies `dimension(s)` on which the proportion of improved pixels are computed. (:pull:`416`)
 
 v0.9.1 (2024-06-04)
 -------------------
