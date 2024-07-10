@@ -548,6 +548,10 @@ def measures_improvement(
     -------
     xr.Dataset
         Dataset containing information on the fraction of improved grid points for each property.
+
+    Notes
+    -----
+    If `dim` is specified, it should be present in every dimension.
     """
     if isinstance(meas_datasets, dict):
         meas_datasets = list(meas_datasets.values())
@@ -560,8 +564,12 @@ def measures_improvement(
     ds1 = meas_datasets[0]
     ds2 = meas_datasets[1]
     if dim is not None:
-        # it is assumed that `dim` is present in every variable
         dims = [dim] if isinstance(dim, str) else dim
+        for v in ds1.data_vars:
+            if set(dims).issubset(set(ds1[v].dims)) is False:
+                raise ValueError(
+                    f"Dimension provided `dim` ({dim}) must be in every variable of `meas_datasets`"
+                )
 
     percent_better = []
     for var in ds2.data_vars:
