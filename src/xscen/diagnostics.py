@@ -551,7 +551,7 @@ def measures_improvement(
 
     Notes
     -----
-    If `dim` is specified, it should be present in every dimension.
+    If `dim` is specified, it should be present in every variable of  `meas_datasets`.
     """
     if isinstance(meas_datasets, dict):
         meas_datasets = list(meas_datasets.values())
