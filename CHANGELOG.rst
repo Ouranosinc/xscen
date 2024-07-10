@@ -4,7 +4,7 @@ Changelog
 
 v0.9.2 (unreleased)
 -------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Éric Dupuis (:user:`coxipi`)
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Éric Dupuis (:user:`coxipi`).
 
 Bug fixes
 ^^^^^^^^^
