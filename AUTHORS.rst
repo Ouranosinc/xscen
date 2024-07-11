@@ -23,3 +23,4 @@ Contributors
 * Yannick Rousseau
 * Marco Braun <Braun.Marco@ouranos.ca> `@vindelico <https://github.com/vindelico>`_
 * Sarah-Claude Bourdeau-Goulet <bourdeau-goulet.sarah-claude@ouranos.ca> `@sarahclaude <https://github.com/sarahclaude>`_
+* Éric Dupuis <dupuis.eric@ouranos.ca> `@coxipi <https://github.com/coxipi>`_
