@@ -539,8 +539,7 @@ def measures_improvement(
         Both datasets must have the same variables.
         It is also possible to pass a dictionary where the values are the datasets and the key are not used.
     dim : str or sequence of str, optional
-        Dimension(s) on which to compute the percentage of improved grid points. Default is `None`, which reduces
-        all dimensions.
+        Dimension(s) on which to compute the percentage of improved grid points. Default is `None`, which reduces all dimensions.
     to_level: str
         processing_level to assign to the output dataset
 

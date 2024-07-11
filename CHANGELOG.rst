@@ -18,7 +18,7 @@ Internal changes
 * Added pins to `xarray`, `xclim`, `h5py`, and `netcdf4`. (:pull:`414`).
 * Add ``.zip`` and ``.zarr.zip`` as possible file extensions for Zarr datasets. (:pull:`426`).
 * Explicitly assign coords of multiindex in `xs.unstack_fill_nan`. (:pull:`427`).
-* `diagnostics.measures_improvement` now accepts dim`, which specifies `dimension(s)` on which the proportion of improved pixels are computed. (:pull:`416`)
+* `diagnostics.measures_improvement` now accepts `dim`, which specifies `dimension(s)` on which the proportion of improved pixels are computed. (:pull:`416`)
 
 v0.9.1 (2024-06-04)
 -------------------
