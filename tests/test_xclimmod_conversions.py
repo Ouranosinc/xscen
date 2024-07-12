@@ -58,4 +58,5 @@ def test_dtr():
 
     dtr = conv.dtr_from_minmax(tasmin, tasmax)
     assert dtr.attrs["units"] == "K"
+    assert dtr.attrs["units"] == "temperature: difference"
     np.testing.assert_array_equal(dtr, (tasmax + 273.15) - tasmin)
