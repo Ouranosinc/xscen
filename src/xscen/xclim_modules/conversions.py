@@ -99,10 +99,9 @@ def dtr_from_minmax(tasmin: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
 
     Returns
     -------
-    xr.DataArray, K
+    xr.DataArray
       Daily temperature range
     """
-    # We force K to overcome the "delta degree" ambiguity
     tasmin = convert_units_to(tasmin, tasmax)
     dtr = tasmax - tasmin
     dtr.attrs["units"] = tasmin.attrs["units"]
