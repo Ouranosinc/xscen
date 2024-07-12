@@ -626,7 +626,9 @@ def compute_deltas(  # noqa: C901
             if (isinstance(kind, dict) and kind[vv] == "+") or kind == "+":
                 _kind = "abs."
                 deltas[v_name] = other_hz[vv] - ref[vv]
-                unit = pint2cfattrs(units2pint(other_hz[vv].units), is_difference=True)
+                unit = pint2cfattrs(
+                    units2pint(other_hz[vv].attrs["units"]), is_difference=True
+                )
                 deltas[v_name].attrs.update(unit)
             elif (isinstance(kind, dict) and kind[vv] == "/") or kind == "/":
                 _kind = "rel."
