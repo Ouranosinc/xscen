@@ -31,6 +31,9 @@ from .indicators import compute_indicators
 from .spatial import subset
 from .utils import standardize_periods, unstack_dates, update_attr
 
+# from xclim.core.units import pint2cfattrs, units2pint
+
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -625,6 +628,9 @@ def compute_deltas(  # noqa: C901
             if (isinstance(kind, dict) and kind[vv] == "+") or kind == "+":
                 _kind = "abs."
                 deltas[v_name] = other_hz[vv] - ref[vv]
+                # will only work with xclim 0.52
+                # unit=pint2cfattrs(units2pint(other_hz[vv].units),is_difference=True)
+                # deltas[v_name].attrs.update(unit)
             elif (isinstance(kind, dict) and kind[vv] == "/") or kind == "/":
                 _kind = "rel."
                 deltas[v_name] = other_hz[vv] / ref[vv]
