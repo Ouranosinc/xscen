@@ -30,7 +30,7 @@ dependencies:
   - sparse
   - toolz
   - xarray >=2023.11.0, <2024.6.0
-  - xclim >=0.50, <0.51
+  - xclim
   - xesmf >=0.7
   - zarr
   # To install from source and get translations
