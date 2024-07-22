@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import shutil as sh
 import warnings
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
@@ -535,6 +536,71 @@ class DataCatalog(intake_esm.esm_datastore):
 
         ds = cat.to_dask(**kwargs)
         return ds
+
+    def copy_files(
+        self, dest: Union[str, os.PathLike], flat: bool = True, unzip: bool = False
+    ):
+        """Copy each file of the catalog to another location, unzipping datasets along the way if requested.
+
+        Parameters
+        ----------
+        cat: DataCatalog or ProjectCatalog
+            A catalog to copy.
+        dest: str, path
+            The root directory of the destination.
+        flat: bool
+            If True (default), all dataset files are copied in the same directory.
+            Renaming with an integer suffix ("{name}_01.{ext}") is done in case of duplicate file names.
+            If False, :py:func:`xscen.catutils.build_path` (with default arguments) is used to generated the new path below the destination.
+            Nothing is done in case of duplicates in that case.
+        unzip: bool
+            If True, any datasets with a `.zip` suffix are unzipped during the copy (or rather instead of a copy).
+
+        Returns
+        -------
+        A catalog identical to self except with updated filenames.
+        """
+        # Local imports to avoid circular imports
+        from .catutils import build_path
+        from .io import unzip_directory
+
+        dest = Path(dest)
+        data = self.df.copy()
+        if flat:
+            new_paths = []
+            for path in map(Path, data.path.values):
+                if unzip and path.suffix == ".zip":
+                    new = dest / path.with_suffix("").name
+                else:
+                    new = dest / path.name
+                if new in new_paths:
+                    suffixes = "".join(new.suffixes)
+                    name = new.name.removesuffix(suffixes)
+                    i = 1
+                    while new in new_paths:
+                        new = dest / (name + f"_{i:02d}" + suffixes)
+                        i += 1
+                new_paths.append(new)
+            data["new_path"] = new_paths
+        else:
+            data = build_path(data, root=dest).drop(columns=["new_path_type"])
+
+        logger.debug(f"Will copy {len(data)} files.")
+        for i, row in data.iterrows():
+            old = Path(row.path)
+            new = Path(row.new_path)
+            if unzip and old.suffix == ".zip":
+                logger.info(f"Unzipping {old} to {new}.")
+                unzip_directory(old, new)
+            elif old.is_dir():
+                logger.info(f"Copying directory tree {old} to {new}.")
+                sh.copytree(old, new)
+            else:
+                logger.info(f"Copying file {old} to {new}.")
+                sh.copy(old, new)
+        data["path"] = data["new_path"]
+        data = data.drop(columns=["new_path"])
+        return self.__class__({"esmcat": self.esmcat.dict(), "df": data})
 
 
 class ProjectCatalog(DataCatalog):
