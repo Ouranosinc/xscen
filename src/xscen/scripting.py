@@ -20,7 +20,8 @@ from typing import Optional, Union
 import xarray as xr
 from matplotlib.figure import Figure
 
-from .catalog import ProjectCatalog
+from .catalog import DataCatalog, ProjectCatalog
+from .catutils import build_path
 from .config import parse_config
 from .utils import get_cat_attrs
 
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "TimeoutException",
+    "copy_catalog",
     "measure_time",
     "move_and_delete",
     "save_and_update",
@@ -488,3 +490,69 @@ def move_and_delete(
         pass
     else:
         raise ValueError("`deleting` should be a list.")
+
+
+def copy_catalog(
+    cat: DataCatalog,
+    dest: Union[str, os.PathLike],
+    flat: bool = True,
+    unzip: bool = False,
+) -> DataCatalog:
+    """Copy each file of the catalog to another location, unzipping datasets along the way.
+
+    Parameters
+    ----------
+    cat: DataCatalog or ProjectCatalog
+        A catalog to copy.
+    dest: str, path
+        The root directory of the destination.
+    flat: bool
+        If True (default), all dataset files are copied in the same directory.
+        Renaming with an integer suffix ("{name}_01.{ext}") is done in case of duplicate file names.
+        If False, :py:func:`xscen.catutils.build_path` (with default arguments) is used to generated the new path below the destination.
+        Nothing is done in case of duplicates in that case.
+    unzip: bool
+        If True, any datasets with a `.zip` suffix are unzipped during the copy (or rather instead of a copy).
+
+    Returns
+    -------
+    DataCatalog
+        A catalog identical to `cat` except with updated filenames.
+    """
+    # Local import to avoid circular imports
+    from .io import unzip_directory
+
+    dest = Path(dest)
+    data = cat.df.copy()
+    if flat:
+        new_paths = []
+        for path in map(Path, data.path.values):
+            new = dest / path.name
+            if new in new_paths:
+                suffixes = "".join(path.suffixes)
+                name = path.name.removesuffix(suffixes)
+                i = 1
+                while new in new_paths:
+                    new = dest / (name + f"_{i:02d}" + suffixes)
+                    i += 1
+            new_paths.append(new)
+        data["new_path"] = new_paths
+    else:
+        data = build_path(data, root=dest).drop(columns=["new_path_type"])
+
+    logger.debug(f"Will copy {len(data)} files.")
+    for i, row in data.iterrows():
+        old = Path(row.path)
+        new = Path(row.new_path)
+        if unzip and old.suffix == ".zip":
+            logger.info(f"Unzipping {old} to {new}.")
+            unzip_directory(old, new)
+        elif old.is_dir():
+            logger.info(f"Copying directory tree {old} to {new}.")
+            sh.copytree(old, new)
+        else:
+            logger.info(f"Copying file {old} to {new}.")
+            sh.copy(old, new)
+    data["path"] = data["new_path"]
+    data = data.drop(columns=["new_path"])
+    return cat.__class__({"esmcat": cat.esmcat.dict(), "df": data})
