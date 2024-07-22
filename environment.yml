@@ -18,7 +18,7 @@ dependencies:
   - h5py <3.11
   - intake-esm >=2023.07.07
   - matplotlib
-  - netCDF4 <1.7
+  - netCDF4
   - numcodecs
   - numpy
   - pandas >=2.2
