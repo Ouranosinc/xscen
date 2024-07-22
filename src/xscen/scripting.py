@@ -21,7 +21,6 @@ import xarray as xr
 from matplotlib.figure import Figure
 
 from .catalog import DataCatalog, ProjectCatalog
-from .catutils import build_path
 from .config import parse_config
 from .utils import get_cat_attrs
 
@@ -519,7 +518,8 @@ def copy_catalog(
     DataCatalog
         A catalog identical to `cat` except with updated filenames.
     """
-    # Local import to avoid circular imports
+    # Local imports to avoid circular imports
+    from .catutils import build_path
     from .io import unzip_directory
 
     dest = Path(dest)
