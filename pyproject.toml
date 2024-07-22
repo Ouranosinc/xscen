@@ -49,7 +49,7 @@ dependencies = [
   "intake-esm >=2023.07.07,<v2024.2.6; python_version == '3.9'",
   "intake-esm >=2023.07.07; python_version >= '3.10'",
   "matplotlib",
-  "netCDF4",
+  "netCDF4 <1.7",
   "numcodecs",
   "numpy",
   "pandas >=2.2",
