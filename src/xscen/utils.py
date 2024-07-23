@@ -1421,3 +1421,11 @@ def _xarray_defaults(**kwargs):
         "data_vars", "minimal"
     )
     return kwargs
+
+
+def rechunk_for_resample(obj: xr.DataArray | xr.Dataset, **resample_kwargs):
+    if not uses_dask(obj):
+        return obj
+
+    res = obj.resample(**resample_kwargs)
+    return flox.xarray.rechunk_for_blockwise(obj, res._dim, res._codes)
