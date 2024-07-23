@@ -19,6 +19,10 @@ on:
       - .zenodo.json
       - AUTHORS.rst
       - CHANGELOG.rst
+      - CI/**/*.in
+      - CI/**/*.py
+      - CI/**/*.txt
+      - CODE_OF_CONDUCT.md
       - CONTRIBUTING.rst
       - Makefile
       - .readthedocs.yml
@@ -29,7 +33,7 @@ on:
       - pyproject.toml
       - tests/**.py
       - tox.ini
-      - xsdba/__init__.py
+      - src/xsdba/__init__.py
   workflow_dispatch:
 
 permissions:
