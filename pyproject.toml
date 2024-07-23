@@ -47,7 +47,7 @@ dev = [
   "coverage >=7.5.0",
   "coveralls >=4.0.0",
   "mypy",
-  "numpydoc >=1.7.0",
+  # "numpydoc >=1.7.0",
   "pytest >=8.2.2",
   "pytest-cov >=5.0.0",
   "black ==24.4.2",
