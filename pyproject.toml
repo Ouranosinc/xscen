@@ -161,7 +161,7 @@ values = [
 [tool.coverage.run]
 omit = ["tests/*.py"]
 relative_files = true
-source = "xsdba"
+source = ["xsdba"]
 
 [tool.flit.sdist]
 include = [
