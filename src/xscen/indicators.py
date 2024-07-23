@@ -11,6 +11,7 @@ from typing import Optional, Union
 import xarray as xr
 import xclim as xc
 from intake_esm import DerivedVariableRegistry
+from xclim.core.calendar import parse_offset, construct_offset
 from xclim.core.indicator import Indicator
 from yaml import safe_load
 
@@ -61,6 +62,41 @@ def load_xclim_module(
 
     return xc.build_indicator_module_from_yaml(filename)
 
+
+def get_indicator_outputs(ind : xc.core.indicator.Indicator, in_freq: str):
+    """Returns the variables names and resampling frequency of a given indicator.
+
+    CAUTION : Some indicators will build the variable name on-the-fly according to the arguments.
+    This function will return the template string (with "{}").
+
+    Parameters
+    ----------
+    ind : Indicator
+        An xclim indicator
+    in_freq : str
+        The data's sampling frequency.
+
+    Returns
+    -------
+    var_names : list
+        List of variable names
+    freq : str
+        Indicator resampling frequency. "fx" for time-reducing indicator.
+    """
+    if isinstance(ind, xc.core.indicator.ReducingIndicator):
+        frq = 'fx'
+    if not isinstance(ind, xc.core.indicator.ResamplingIndicator):
+        frq = in_freq
+    else:
+        frq = (
+            ind.injected_parameters["freq"]
+            if "freq" in ind.injected_parameters
+            else ind.parameters["freq"].default
+        )
+    if frq == 'YS':
+        frq = 'YS-JAN'
+    var_names = [cfa['var_name'] for cfa in ind.cf_attrs]
+    return var_names, frq
 
 @parse_config
 def compute_indicators(  # noqa: C901
@@ -134,22 +170,6 @@ def compute_indicators(  # noqa: C901
     else:
         logger.info(f"Computing {N} indicators.")
 
-    def _infer_freq_from_meta(ind, in_freq):
-        if isinstance(ind, xc.core.indicator.ReducingIndicator):
-            return 'fx'
-        frq = (
-            ind.injected_parameters["freq"]
-            if "freq" in ind.injected_parameters
-            else (
-                ind.parameters["freq"].default
-                if "freq" in ind.parameters
-                else in_freq
-            )
-        )
-        if frq == 'YS':
-            return 'YS-JAN'
-        return frq
-
     periods = standardize_periods(periods)
     in_freq = xr.infer_freq(ds.time) if 'time' in ds.dims else 'fx'
     dss_rechunked = {}
@@ -162,7 +182,7 @@ def compute_indicators(  # noqa: C901
             iden = ind.identifier
         logger.info(f"{i} - Computing {iden}.")
 
-        freq = _infer_freq_from_meta(ind, in_freq)
+        _, freq = get_indicator_outputs(ind, in_freq)
         # Pandas as no semiannual frequency and 2Q is capricious
         if freq.startswith('2Q'):
             logger.debug('Dropping beginning of timeseries to ensure semiannual frequency works.')
