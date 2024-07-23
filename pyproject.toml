@@ -1,0 +1,322 @@
+[build-system]
+requires = ["flit_core >=3.9,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "xsdba"
+authors = [
+  {name = "Trevor James Smith", email = "smith.trevorj@ouranos.ca"}
+]
+maintainers = [
+  {name = "Trevor James Smith", email = "smith.trevorj@ouranos.ca"}
+]
+readme = {file = "README.rst", content-type = "text/x-rst"}
+requires-python = ">=3.8.0"
+keywords = ["xsdba"]
+license = {file = "LICENSE"}
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Natural Language :: English",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython"
+]
+dynamic = ["description", "version"]
+dependencies = [
+  "typer >=0.12.3"
+]
+
+[project.optional-dependencies]
+dev = [
+  # Dev tools and testing
+  "pip >=24.0",
+  "bump-my-version >=0.24.3",
+  "watchdog >=3.0.0",
+  "flake8 >=7.1.0",
+  "flake8-rst-docstrings >=0.3.0",
+  "flit >=3.9.0,<4.0",
+  "tox >=4.16.0",
+  "coverage >=7.5.0",
+  "coveralls >=4.0.0",
+  "mypy",
+  "numpydoc >=1.7.0",
+  "pytest >=8.2.2",
+  "pytest-cov >=5.0.0",
+  "black ==24.4.2",
+  "blackdoc ==0.3.9",
+  "isort ==5.13.2",
+  "ruff >=0.5.0",
+  "pre-commit >=3.5.0"
+]
+docs = [
+  # Documentation and examples
+  "sphinx >=7.0.0",
+  "sphinx-codeautolink",
+  "sphinx-copybutton",
+  "sphinx-intl",
+  "sphinx-rtd-theme >=1.0",
+  "nbsphinx",
+  "pandoc",
+  "ipython",
+  "ipykernel",
+  "jupyter_client"
+]
+all = ["xsdba[dev]", "xsdba[docs]"]
+
+[project.scripts]
+xsdba = "xsdba.cli:app"
+
+[project.urls]
+# "Homepage" = "https://xsdba.readthedocs.io/"
+# "Changelog" = "https://xsdba.readthedocs.io/en/stable/history.html"
+# "About Ouranos" = "https://ouranos.ca/en/"
+"Issue tracker" = "https://github.com/Ouranosinc/xsdba/issues"
+"changelog" = "https://github.com/Ouranosinc/xsdba/blob/main/CHANGELOG.rst"
+"homepage" = "https://github.com/Ouranosinc/xsdba"
+
+[tool]
+
+[tool.black]
+target-version = [
+  "py38",
+  "py39",
+  "py310",
+  "py311",
+  "py312"
+]
+
+[tool.bumpversion]
+current_version = "0.1.0"
+commit = true
+commit_args = "--no-verify"
+tag = false
+tag_name = "v{new_version}"
+allow_dirty = true
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(\\-(?P<release>[a-z]+)(\\.(?P<build>\\d+)))?"
+serialize = [
+  "{major}.{minor}.{patch}-{release}.{build}",
+  "{major}.{minor}.{patch}"
+]
+
+[[tool.bumpversion.files]]
+filename = "CHANGELOG.rst"
+include_bumps = ["release"]
+search = """\
+`Unreleased <https://github.com/Ouranosinc/xsdba>`_ (latest)
+------------------------------------------------------------
+"""
+replace = """\
+`Unreleased <https://github.com/Ouranosinc/xsdba>`_ (latest)
+------------------------------------------------------------
+
+Contributors:
+
+Changes
+^^^^^^^
+* No change.
+
+Fixes
+^^^^^
+* No change.
+
+.. _changes_{new_version}:
+
+`v{new_version} <https://github.com/Ouranosinc/xsdba/tree/{new_version}>`_
+----------------------------------------------------------
+"""
+
+[[tool.bumpversion.files]]
+filename = "src/xsdba/__init__.py"
+search = "__version__ = \"{current_version}\""
+replace = "__version__ = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = "tests/test_xsdba.py"
+search = "__version__ = \"{current_version}\""
+replace = "__version__ = \"{new_version}\""
+
+[[tool.bumpversion.files]]
+filename = ".cruft.json"
+search = "\"version\": \"{current_version}\""
+replace = "\"version\": \"{new_version}\""
+
+[tool.bumpversion.parts.build]
+independent = false
+
+[tool.bumpversion.parts.release]
+optional_value = "release"
+values = [
+  "dev",
+  "release"
+]
+
+[tool.coverage.run]
+omit = ["tests/*.py"]
+relative_files = true
+source = "xsdba"
+
+[tool.flit.sdist]
+include = [
+  ".zenodo.json",
+  "AUTHORS.rst",
+  "CHANGELOG.rst",
+  "CONTRIBUTING.rst",
+  "LICENSE",
+  "Makefile",
+  "README.rst",
+  "environment-dev.yml",
+  "environment-docs.yml",
+  "docs/_static/_images/*.gif",
+  "docs/_static/_images/*.jpg",
+  "docs/_static/_images/*.png",
+  "docs/_static/_images/*.rst",
+  "docs/Makefile",
+  "docs/conf.py",
+  "docs/make.bat",
+  "src/xsdba",
+  "tests/*.py",
+  "tox.ini"
+]
+exclude = [
+  "*.py[co]",
+  "__pycache__",
+  ".coveralls.yml",
+  ".editorconfig",
+  ".flake8",
+  ".gitignore",
+  ".pre-commit-config.yaml",
+  ".readthedocs.yml",
+  ".yamllint.yaml",
+  "docs/_*",
+  "docs/apidoc/modules.rst",
+  "docs/apidoc/xsdba*.rst",
+  "docs/locales"
+]
+
+[tool.isort]
+profile = "black"
+py_version = 38
+
+[tool.mypy]
+files = "."
+python_version = 3.9
+show_error_codes = true
+strict = true
+warn_no_return = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+  # Don't require test functions to include types
+  "tests.*"
+]
+allow_untyped_defs = true
+disable_error_code = "attr-defined"
+ignore_missing_imports = true
+
+[tool.numpydoc_validation]
+checks = [
+  "all", # report on all checks, except the below
+  "EX01",
+  "SA01",
+  "ES01"
+]
+# remember to use single quotes for regex in TOML
+exclude = [
+  # don't report on objects that match any of these regex
+  '\.undocumented_method$',
+  '\.__repr__$'
+]
+override_SS05 = [
+  # override SS05 to allow docstrings starting with these words
+  '^Process ',
+  '^Assess ',
+  '^Access '
+]
+
+[tool.pytest.ini_options]
+addopts = [
+  "--verbose",
+  "--color=yes"
+]
+filterwarnings = ["ignore::UserWarning"]
+testpaths = "tests"
+
+[tool.ruff]
+src = ["xsdba"]
+line-length = 150
+target-version = "py38"
+exclude = [
+  ".eggs",
+  ".git",
+  "build",
+  "docs"
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.ruff.lint]
+extend-select = [
+  "RUF022" # unsorted-dunder-all
+]
+ignore = [
+  "COM", # commas
+  "D205", # blank-line-after-summary
+  "D400", # ends-in-period
+  "D401" # non-imperative-mood
+]
+preview = true
+select = [
+  "BLE", # blind-except
+  "C90", # mccabe-complexity
+  "D", # docstrings
+  "E", # pycodestyle errors
+  "FLY002", # static-join-to-fstring
+  "G", # logging-format
+  "N", # naming conventions
+  "PERF", # iterator performance
+  "PTH", # pathlib
+  "RUF010", # explicit-f-string-type-conversion
+  "RUF013", # implicit-optional
+  "S", # bandit
+  "UP", # python version conventions
+  "W" # pycodestyle warnings
+]
+
+[tool.ruff.lint.flake8-bandit]
+check-typed-exception = true
+
+[tool.ruff.lint.isort]
+known-first-party = ["xsdba"]
+case-sensitive = true
+detect-same-package = false
+lines-after-imports = 2
+no-lines-before = ["future", "standard-library"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.ruff.lint.per-file-ignores]
+"docs/**" = ["E402"]
+"src/xsdba/**/__init__.py" = ["F401", "F403"]
+"tests/**" = ["D100", "D101", "D102", "D103", "S101"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 180
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"

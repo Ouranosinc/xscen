@@ -1,0 +1,4 @@
+bump-my-version==0.24.3
+pip==24.1.2
+flit==3.9.0
+tox==4.16.0
