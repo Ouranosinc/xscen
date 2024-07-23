@@ -538,7 +538,11 @@ class DataCatalog(intake_esm.esm_datastore):
         return ds
 
     def copy_files(
-        self, dest: Union[str, os.PathLike], flat: bool = True, unzip: bool = False
+        self,
+        dest: Union[str, os.PathLike],
+        flat: bool = True,
+        unzip: bool = False,
+        inplace: bool = False,
     ):
         """Copy each file of the catalog to another location, unzipping datasets along the way if requested.
 
@@ -555,17 +559,20 @@ class DataCatalog(intake_esm.esm_datastore):
             Nothing is done in case of duplicates in that case.
         unzip: bool
             If True, any datasets with a `.zip` suffix are unzipped during the copy (or rather instead of a copy).
+        inplace : bool
+            If True, the catalog is updated in place. If False (default), a copy is returned.
 
         Returns
         -------
-        A catalog identical to self except with updated filenames.
+        If inplace is False, this returs a catalog similar to self except with updated filenames. Some special attributes are not preserved,
+        such as those added by :py:func:`xscen.extract.search_data_catalogs`. In this case, use `inplace=True`.
         """
         # Local imports to avoid circular imports
         from .catutils import build_path
         from .io import unzip_directory
 
         dest = Path(dest)
-        data = self.df.copy()
+        data = self.esmcat._df.copy()
         if flat:
             new_paths = []
             for path in map(Path, data.path.values):
@@ -598,6 +605,9 @@ class DataCatalog(intake_esm.esm_datastore):
             else:
                 logger.info(f"Copying file {old} to {new}.")
                 sh.copy(old, new)
+        if inplace:
+            self.esmcat._df["path"] = data["new_path"]
+            return
         data["path"] = data["new_path"]
         data = data.drop(columns=["new_path"])
         return self.__class__({"esmcat": self.esmcat.dict(), "df": data})
