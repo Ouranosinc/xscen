@@ -98,6 +98,7 @@ def get_indicator_outputs(ind : xc.core.indicator.Indicator, in_freq: str):
     var_names = [cfa['var_name'] for cfa in ind.cf_attrs]
     return var_names, frq
 
+
 @parse_config
 def compute_indicators(  # noqa: C901
     ds: xr.Dataset,
