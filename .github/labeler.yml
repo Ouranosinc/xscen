@@ -8,13 +8,32 @@
 # Uncomment the following lines to enable the labeler (requires labels with the same name to exist in the repository)
 
 # label 'ci' all automation-related steps and files
-#'CI':
-#  - changed-files:
-#    - any-glob-to-any-file:
-#      - '.editorconfig'
-#      - '.flake8'
-#      - '.pre-commit-config.yaml'
-#      - '.yamllint.yml'
-#      - '.github/workflows/*'
-#      - 'tox.ini'
-#      - 'Makefile'
+'CI':
+ - changed-files:
+   - any-glob-to-any-file:
+     - '.editorconfig'
+     - '.flake8'
+     - '.pre-commit-config.yaml'
+     - '.readthedocs.yml'
+     - '.yamllint.yml'
+     - '.github/workflows/*'
+     - 'docs/Makefile'
+     - 'tox.ini'
+     - 'CI/**/*'
+     - 'Makefile'
+# label 'docs' all documentation-related steps and files
+'docs':
+ - changed-files:
+   - any-glob-to-any-file:
+     - '.readthedocs.yml'
+     - '.zenodo.json'
+     - 'docs/**/*'
+     - 'environment-docs.yml'
+     - 'AUTHORS.rst'
+     - 'CONTRIBUTING.rst'
+     - 'CODE_OF_CONDUCT.md'
+     - 'DISCUSSION_TEMPLATE/**/*'
+     - 'ISSUE_TEMPLATE/**/*'
+     - 'ISSUE_TEMPLATE.md'
+     - 'PULL_REQUEST_TEMPLATE.md'
+     - 'README.rst'

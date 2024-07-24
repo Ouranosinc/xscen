@@ -10,7 +10,7 @@ on:
       - README.rst
       - pyproject.toml
       - tests/test_xsdba.py
-      - xsdba/__init__.py
+      - src/xsdba/__init__.py
   pull_request:
 
 concurrency:

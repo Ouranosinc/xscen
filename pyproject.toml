@@ -39,7 +39,7 @@ dev = [
   # Dev tools and testing
   "pip >=24.0",
   "bump-my-version >=0.24.3",
-  "watchdog >=3.0.0",
+  "watchdog >=4.0.0",
   "flake8 >=7.1.0",
   "flake8-rst-docstrings >=0.3.0",
   "flit >=3.9.0,<4.0",
@@ -161,7 +161,7 @@ values = [
 [tool.coverage.run]
 omit = ["tests/*.py"]
 relative_files = true
-source = "xsdba"
+source = ["xsdba"]
 
 [tool.flit.sdist]
 include = [
