@@ -12,14 +12,14 @@ import pandas as pd
 import xarray as xr
 import xclim as xc
 from intake_esm import DerivedVariableRegistry
-from xclim.core.calendar import parse_offset, construct_offset
+from xclim.core.calendar import construct_offset, parse_offset
 from xclim.core.indicator import Indicator
 from yaml import safe_load
 
 from xscen.config import parse_config
 
 from .catutils import parse_from_ds
-from .utils import CV, standardize_periods, rechunk_for_resample
+from .utils import CV, rechunk_for_resample, standardize_periods
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ def load_xclim_module(
     return xc.build_indicator_module_from_yaml(filename)
 
 
-def get_indicator_outputs(ind : xc.core.indicator.Indicator, in_freq: str):
+def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str):
     """Returns the variables names and resampling frequency of a given indicator.
 
     CAUTION : Some indicators will build the variable name on-the-fly according to the arguments.
@@ -85,7 +85,7 @@ def get_indicator_outputs(ind : xc.core.indicator.Indicator, in_freq: str):
         Indicator resampling frequency. "fx" for time-reducing indicator.
     """
     if isinstance(ind, xc.core.indicator.ReducingIndicator):
-        frq = 'fx'
+        frq = "fx"
     if not isinstance(ind, xc.core.indicator.ResamplingIndicator):
         frq = in_freq
     else:
@@ -94,9 +94,9 @@ def get_indicator_outputs(ind : xc.core.indicator.Indicator, in_freq: str):
             if "freq" in ind.injected_parameters
             else ind.parameters["freq"].default
         )
-    if frq == 'YS':
-        frq = 'YS-JAN'
-    var_names = [cfa['var_name'] for cfa in ind.cf_attrs]
+    if frq == "YS":
+        frq = "YS-JAN"
+    var_names = [cfa["var_name"] for cfa in ind.cf_attrs]
     return var_names, frq
 
 
@@ -173,7 +173,7 @@ def compute_indicators(  # noqa: C901
         logger.info(f"Computing {N} indicators.")
 
     periods = standardize_periods(periods)
-    in_freq = xr.infer_freq(ds.time) if 'time' in ds.dims else 'fx'
+    in_freq = xr.infer_freq(ds.time) if "time" in ds.dims else "fx"
     dss_rechunked = {}
 
     out_dict = dict()
@@ -186,16 +186,18 @@ def compute_indicators(  # noqa: C901
 
         _, freq = get_indicator_outputs(ind, in_freq)
         # Pandas as no semiannual frequency and 2Q is capricious
-        if freq.startswith('2Q'):
-            logger.debug('Dropping beginning of timeseries to ensure semiannual frequency works.')
+        if freq.startswith("2Q"):
+            logger.debug(
+                "Dropping beginning of timeseries to ensure semiannual frequency works."
+            )
             ds = fix_semiannual(ds, freq)
 
-        if rechunk_input and freq not in ['fx', in_freq]:
+        if rechunk_input and freq not in ["fx", in_freq]:
             if freq not in dss_rechunked:
-                logger.debug(f'Rechunking with flox for freq {freq}')
+                logger.debug(f"Rechunking with flox for freq {freq}")
                 dss_rechunked[freq] = rechunk_for_resample(ds, time=freq)
             else:
-                logger.debug(f'Using rechunked for freq {freq}')
+                logger.debug(f"Using rechunked for freq {freq}")
             ds_in = dss_rechunked[freq]
         else:
             ds_in = ds
@@ -395,8 +397,8 @@ def fix_semiannual(ds, freq):
     """
     # I hate that we have to do that
     mul, b, s, anc = parse_offset(freq)
-    if mul != 2 or b != 'Q':
-        raise NotImplementedError('This only fixes 2Q frequencies.')
+    if mul != 2 or b != "Q":
+        raise NotImplementedError("This only fixes 2Q frequencies.")
     # Get MONTH: N mapping (invert xarray's)
     months_inv = xr.coding.cftime_offsets._MONTH_ABBREVIATIONS
     months = dict(zip(months_inv.values(), months_inv.keys()))
@@ -408,14 +410,14 @@ def fix_semiannual(ds, freq):
         freq = construct_offset(mul, b, True, months_inv[m1])
     m2 = _wrap_month(m1 + 6)
 
-    time = ds.indexes['time']
+    time = ds.indexes["time"]
     if isinstance(time, xr.CFTimeIndex):
         offset = xr.coding.cftime_offsets.to_offset(freq)
         is_on_offset = offset.onOffset
     else:
         offset = pd.tseries.frequencies.to_offset(freq)
         is_on_offset = offset.is_on_offset
-    
+
     if is_on_offset(time[0]) and time[0].month in (m1, m2):
         # wow, already correct!
         return ds
