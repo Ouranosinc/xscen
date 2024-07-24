@@ -8,6 +8,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Optional, Union
 
+import pandas as pd
 import xarray as xr
 import xclim as xc
 from intake_esm import DerivedVariableRegistry
