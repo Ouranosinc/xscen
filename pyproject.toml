@@ -75,12 +75,11 @@ all = ["xsdba[dev]", "xsdba[docs]"]
 xsdba = "xsdba.cli:app"
 
 [project.urls]
-# "Homepage" = "https://xsdba.readthedocs.io/"
-# "Changelog" = "https://xsdba.readthedocs.io/en/stable/history.html"
-# "About Ouranos" = "https://ouranos.ca/en/"
+"Homepage" = "https://xsdba.readthedocs.io/"
+"Changelog" = "https://xsdba.readthedocs.io/en/stable/changelog.html"
+"About Ouranos" = "https://ouranos.ca/en/"
 "Issue tracker" = "https://github.com/Ouranosinc/xsdba/issues"
-"changelog" = "https://github.com/Ouranosinc/xsdba/blob/main/CHANGELOG.rst"
-"homepage" = "https://github.com/Ouranosinc/xsdba"
+"Source" = "https://github.com/Ouranosinc/xsdba/"
 
 [tool]
 
