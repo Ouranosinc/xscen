@@ -21,7 +21,7 @@ from packaging.version import Version
 
 from xsdba.testing import TESTDATA_BRANCH
 from xsdba.testing import open_dataset as _open_dataset
-from xsdba.testing import test_timeseries
+from xsdba.testing import test_timeseries, test_timelonlatseries
 
 # import xclim
 # from xclim import __version__ as __xclim_version__
@@ -88,6 +88,10 @@ def open_dataset(threadsafe_data_dir):
 
     return _open_session_scoped_file
 
+
+@pytest.fixture
+def timelonlatseries():
+    return test_timelonlatseries
 
 @pytest.fixture
 def lat_series():

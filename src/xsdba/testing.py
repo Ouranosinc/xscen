@@ -1,5 +1,6 @@
 """Testing utilities for xsdba."""
 
+import warnings
 import hashlib
 import logging
 import os
@@ -11,8 +12,9 @@ import pandas as pd
 import xarray as xr
 from platformdirs import user_cache_dir
 from xarray import open_dataset as _open_dataset
+import collections 
 
-__all__ = ["test_timeseries"]
+__all__ = ["test_timeseries", "test_timelonlatseries"]
 
 # keeping xclim-testdata for now, since it's still this on gitHub
 _default_cache_dir = Path(user_cache_dir("xclim-testdata"))
@@ -44,6 +46,39 @@ try:
 except ImportError:
     SocketBlockedError = None
 
+def test_timelonlatseries(values, name, start="2000-01-01"):
+    """Create a DataArray with time, lon and lat dimensions."""
+    coords = collections.OrderedDict()
+    for dim, n in zip(("time", "lon", "lat"), values.shape):
+        if dim == "time":
+            coords[dim] = pd.date_range(start, periods=n, freq="D")
+        else:
+            coords[dim] = xr.IndexVariable(dim, np.arange(n))
+
+    if name == "tas":
+        attrs = {
+            "standard_name": "air_temperature",
+            "cell_methods": "time: mean within days",
+            "units": "K",
+            "kind": "+",
+        }
+    elif name == "pr":
+        attrs = {
+            "standard_name": "precipitation_flux",
+            "cell_methods": "time: sum over day",
+            "units": "kg m-2 s-1",
+            "kind": "*",
+        }
+    else:
+        raise ValueError(f"Name `{name}` not supported.")
+
+    return xr.DataArray(
+        values,
+        coords=coords,
+        dims=list(coords.keys()),
+        name=name,
+        attrs=attrs,
+    )
 
 # XC
 def test_timeseries(
