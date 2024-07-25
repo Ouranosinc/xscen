@@ -4,6 +4,7 @@ Logging utilities
 """
 
 from __future__ import annotations
+
 import logging as _logging
 import warnings
 
@@ -52,4 +53,3 @@ def raise_warn_or_log(
         warnings.warn(message, stacklevel=stacklevel + 1)
     else:  # mode == "raise"
         raise err from err_type(message)
-
