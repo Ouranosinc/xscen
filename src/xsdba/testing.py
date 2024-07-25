@@ -1,21 +1,21 @@
 """Testing utilities for xsdba."""
 
-import warnings
+import collections
 import hashlib
 import logging
 import os
+import warnings
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.request import urlopen, urlretrieve
 from urllib.parse import urljoin, urlparse
+from urllib.request import urlopen, urlretrieve
 
 import pandas as pd
 import xarray as xr
 from platformdirs import user_cache_dir
 from xarray import open_dataset as _open_dataset
-import collections 
 
-__all__ = ["test_timeseries", "test_timelonlatseries"]
+__all__ = ["test_timelonlatseries", "test_timeseries"]
 
 # keeping xclim-testdata for now, since it's still this on gitHub
 _default_cache_dir = Path(user_cache_dir("xclim-testdata"))
@@ -46,6 +46,7 @@ try:
     from pytest_socket import SocketBlockedError
 except ImportError:
     SocketBlockedError = None
+
 
 def test_timelonlatseries(values, name, start="2000-01-01"):
     """Create a DataArray with time, lon and lat dimensions."""
@@ -81,6 +82,7 @@ def test_timelonlatseries(values, name, start="2000-01-01"):
         attrs=attrs,
     )
 
+
 # XC
 def test_timeseries(
     values,
@@ -113,7 +115,8 @@ def file_md5_checksum(f_name):
         hash_md5.update(f.read())
     return hash_md5.hexdigest()
 
-# XC 
+
+# XC
 def audit_url(url: str, context: str = None) -> str:
     """Check if the URL is well-formed.
 
@@ -133,6 +136,7 @@ def audit_url(url: str, context: str = None) -> str:
         logger.error(msg)
         raise URLError(msg)
     return url
+
 
 # XC (oh dear)
 def _get(
