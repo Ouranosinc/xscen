@@ -1,4 +1,4 @@
-"""
+"""# noqa: SS01
 LOESS Smoothing Submodule
 =========================
 """
@@ -76,7 +76,7 @@ def _loess_nb(
     niter : int
         Number of robustness iterations to execute.
     weight_func : numba func
-        Numba function giving the weights when passed abs(x - xi) / hi
+        Numba function giving the weights when passed abs(x - xi) / hi.
     dx : float
         The spacing of the x coordinates. If above 0, this enables the optimization for equally spaced x coordinates.
         Must be 0 if spacing is unequal (default).
@@ -193,7 +193,7 @@ def loess_smoothing(
 
     Parameters
     ----------
-    da: xr.DataArray
+    da : xr.DataArray
       The data to smooth using the loess approach.
     dim : str
       Name of the dimension along which to perform the loess.

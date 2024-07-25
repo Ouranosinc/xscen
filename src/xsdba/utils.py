@@ -1,4 +1,4 @@
-"""
+"""# noqa: SS01
 Statistical Downscaling and Bias Adjustment Utilities
 =====================================================
 """
@@ -49,17 +49,18 @@ def map_cdf(
     Parameters
     ----------
     ds : xr.Dataset
-      Variables: x, Values from which to pick,
-      y, Reference values giving the ranking
+        Variables:
+            x : Values from which to pick.
+            y : Reference values giving the ranking.
     y_value : float, array
-      Value within the support of `y`.
+        Value within the support of `y`.
     dim : str
-      Dimension along which to compute quantile.
+        Dimension along which to compute quantile.
 
     Returns
     -------
     array
-      Quantile of `x` with the same CDF as `y_value` in `y`.
+        Quantile of `x` with the same CDF as `y_value` in `y`.
     """
     return xr.apply_ufunc(
         map_cdf_1d,
@@ -380,17 +381,17 @@ def add_cyclic_bounds(
     Parameters
     ----------
     da : xr.DataArray or xr.Dataset
-        An array
+        An array.
     att : str
-        The name of the coordinate to make cyclic
+        The name of the coordinate to make cyclic.
     cyclic_coords : bool
-        If True, the coordinates are made cyclic as well,
-        if False, the new values are guessed using the same step as their neighbour.
+        If True, the coordinates are made cyclic as well.
+        If False, the new values are guessed using the same step as their neighbour.
 
     Returns
     -------
     xr.DataArray or xr.Dataset
-        da but with the last element along att prepended and the last one appended.
+        A DataArray or Dataset but with the last element along att prepended and the last one appended.
     """
     qmf = da.pad({att: (1, 1)}, mode="wrap")
 
@@ -570,7 +571,7 @@ def interp_on_quantiles(
 def rank(
     da: xr.DataArray, dim: str | list[str] = "time", pct: bool = False
 ) -> xr.DataArray:
-    """Ranks data along a dimension.
+    """Rank data along a dimension.
 
     Replicates `xr.DataArray.rank` but as a function usable in a Grouper.apply(). Xarray's docstring is below:
 
@@ -581,18 +582,18 @@ def rank(
 
     Parameters
     ----------
-    da: xr.DataArray
-      Source array.
+    da : xr.DataArray
+        Source array.
     dim : str | list[str], hashable
-      Dimension(s) over which to compute rank.
+        Dimension(s) over which to compute rank.
     pct : bool, optional
-      If True, compute percentage ranks, otherwise compute integer ranks.
-      Percentage ranks range from 0 to 1, in opposition to xarray's implementation,
-      where they range from 1/N to 1.
+        If True, compute percentage ranks, otherwise compute integer ranks.
+        Percentage ranks range from 0 to 1, in opposition to xarray's implementation,
+        where they range from 1/N to 1.
 
     Returns
     -------
-    DataArray
+    xr.DataArray
         DataArray with the same coordinates and dtype 'float64'.
 
     Notes
@@ -607,7 +608,7 @@ def rank(
     dims = dim if isinstance(dim, list) else [dim]
     rnk_dim = dims[0] if len(dims) == 1 else get_temp_dimname(da_dims, "temp")
 
-    # multi-dimensional ranking through stacking
+    # multidimensional ranking through stacking
     if len(dims) > 1:
         da = da.stack(**{rnk_dim: dims})
     rnk = da.rank(rnk_dim, pct=pct)
@@ -636,12 +637,12 @@ def pc_matrix(arr: np.ndarray | dsk.Array) -> np.ndarray | dsk.Array:
     Parameters
     ----------
     arr : numpy.ndarray or dask.array.Array
-      2D array (M, N) of the M coordinates of N points.
+        2D array (M, N) of the M coordinates of N points.
 
     Returns
     -------
     numpy.ndarray or dask.array.Array
-      MxM Array of the same type as arr.
+        MxM Array of the same type as arr.
     """
     # Get appropriate math module
     mod = dsk if isinstance(arr, dsk.Array) else np
@@ -677,17 +678,17 @@ def best_pc_orientation_simple(
     Parameters
     ----------
     R : np.ndarray
-      MxM Matrix defining the final transformation.
+        MxM Matrix defining the final transformation.
     Hinv : np.ndarray
-      MxM Matrix defining the (inverse) first transformation.
+        MxM Matrix defining the (inverse) first transformation.
     val : float
-      The coordinate of the test point (same for all axes). It should be much
-      greater than the largest furthest point in the array used to define B.
+        The coordinate of the test point (same for all axes). It should be much
+        greater than the largest furthest point in the array used to define B.
 
     Returns
     -------
     np.ndarray
-      Mx1 vector of orientation correction (1 or -1).
+        Mx1 vector of orientation correction (1 or -1).
 
     See Also
     --------
@@ -727,20 +728,20 @@ def best_pc_orientation_full(
     Parameters
     ----------
     R : np.ndarray
-      MxM Matrix defining the final transformation.
+        MxM Matrix defining the final transformation.
     Hinv : np.ndarray
-      MxM Matrix defining the (inverse) first transformation.
+        MxM Matrix defining the (inverse) first transformation.
     Rmean : np.ndarray
-      M vector defining the target distribution center point.
+        M vector defining the target distribution center point.
     Hmean : np.ndarray
-      M vector defining the original distribution center point.
+        M vector defining the original distribution center point.
     hist : np.ndarray
-      MxN matrix of all training observations of the M variables/sites.
+        MxN matrix of all training observations of the M variables/sites.
 
     Returns
     -------
     np.ndarray
-      M vector of orientation correction (1 or -1).
+        M vector of orientation correction (1 or -1).
 
     References
     ----------
@@ -776,11 +777,11 @@ def get_clusters_1d(
     Parameters
     ----------
     data : 1D ndarray
-      Values to get clusters from.
+        Values to get clusters from.
     u1 : float
-      Extreme value threshold, at least one value in the cluster must exceed this.
+        Extreme value threshold, at least one value in the cluster must exceed this.
     u2 : float
-      Cluster threshold, values above this can be part of a cluster.
+        Cluster threshold, values above this can be part of a cluster.
 
     Returns
     -------
@@ -829,27 +830,27 @@ def get_clusters(data: xr.DataArray, u1, u2, dim: str = "time") -> xr.Dataset:
 
     Parameters
     ----------
-    data: 1D ndarray
-      Values to get clusters from.
+    data : 1D ndarray
+        Values to get clusters from.
     u1 : float
-      Extreme value threshold, at least one value in the cluster must exceed this.
+        Extreme value threshold, at least one value in the cluster must exceed this.
     u2 : float
-      Cluster threshold, values above this can be part of a cluster.
+        Cluster threshold, values above this can be part of a cluster.
     dim : str
-      Dimension name.
+        Dimension name.
 
     Returns
     -------
     xr.Dataset
-      With variables,
-        - `nclusters` : Number of clusters for each point (with `dim` reduced), int
-        - `start` : First index in the cluster (`dim` reduced, new `cluster`), int
-        - `end` : Last index in the cluster, inclusive (`dim` reduced, new `cluster`), int
-        - `maxpos` : Index of the maximal value within the cluster (`dim` reduced, new `cluster`), int
-        - `maximum` : Maximal value within the cluster (`dim` reduced, new `cluster`), same dtype as data.
+        With variables,
+            - `nclusters` : Number of clusters for each point (with `dim` reduced), int
+            - `start` : First index in the cluster (`dim` reduced, new `cluster`), int
+            - `end` : Last index in the cluster, inclusive (`dim` reduced, new `cluster`), int
+            - `maxpos` : Index of the maximal value within the cluster (`dim` reduced, new `cluster`), int
+            - `maximum` : Maximal value within the cluster (`dim` reduced, new `cluster`), same dtype as data.
 
-      For `start`, `end` and `maxpos`, -1 means NaN and should always correspond to a `NaN` in `maximum`.
-      The length along `cluster` is half the size of "dim", the maximal theoretical number of clusters.
+        For `start`, `end` and `maxpos`, -1 means NaN and should always correspond to a `NaN` in `maximum`.
+        The length along `cluster` is half the size of "dim", the maximal theoretical number of clusters.
     """
 
     def _get_clusters(arr, u1, u2, N):
@@ -913,24 +914,23 @@ def rand_rot_matrix(
 
     Parameters
     ----------
-    crd: xr.DataArray
-      1D coordinate DataArray along which the rotation occurs.
-      The output will be square with the same coordinate replicated,
-      the second renamed to `new_dim`.
+    crd : xr.DataArray
+        1D coordinate DataArray along which the rotation occurs.
+        The output will be square with the same coordinate replicated,
+        the second renamed to `new_dim`.
     num : int
-      If larger than 1 (default), the number of matrices to generate, stacked along a "matrices" dimension.
+        If larger than 1 (default), the number of matrices to generate, stacked along a "matrices" dimension.
     new_dim : str
-      Name of the new "prime" dimension, defaults to the same name as `crd` + "_prime".
+        Name of the new "prime" dimension, defaults to the same name as `crd` + "_prime".
 
     Returns
     -------
     xr.DataArray
-      float, NxN if num = 1, numxNxN otherwise, where N is the length of crd.
+        Data of type float, NxN if num = 1, numxNxN otherwise, where N is the length of crd.
 
     References
     ----------
     :cite:cts:`sdba-mezzadri_how_2007`
-
     """
     if num > 1:
         return xr.concat([rand_rot_matrix(crd, num=1) for i in range(num)], "matrices")

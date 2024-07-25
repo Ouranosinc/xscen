@@ -1,5 +1,5 @@
 # pylint: disable=no-value-for-parameter
-"""
+"""# noqa: SS01
 Numba-accelerated Utilities
 ===========================
 """
@@ -26,10 +26,11 @@ except ImportError:
     nogil=True,
     cache=False,
 )
-def _get_indexes(
+def _get_indexes(  # noqa: PR07
     arr: np.array, virtual_indexes: np.array, valid_values_count: np.array
 ) -> tuple[np.array, np.array]:
-    """Get the valid indexes of arr neighbouring virtual_indexes.
+    """
+    Get the valid indexes of arr neighbouring virtual_indexes.
 
     Parameters
     ----------
@@ -40,7 +41,7 @@ def _get_indexes(
     Returns
     -------
     array-like, array-like
-        A tuple of virtual_indexes neighbouring indexes (previous and next)
+        A tuple of virtual_indexes neighbouring indexes (previous and next).
 
     Notes
     -----

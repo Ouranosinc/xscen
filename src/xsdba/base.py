@@ -1,4 +1,4 @@
-"""
+"""# noqa: SS01
 Base Classes and Developer Tools
 ================================
 """
@@ -8,7 +8,7 @@ from __future__ import annotations
 import datetime as pydt
 from collections.abc import Sequence
 from inspect import _empty, signature  # noqa
-from typing import Callable
+from typing import Any, Callable
 
 import cftime
 import dask.array as dsk
@@ -104,11 +104,11 @@ class ParametrizableWithDataset(Parametrizable):
 
 # XC put here to avoid circular import
 def uses_dask(*das: xr.DataArray | xr.Dataset) -> bool:
-    """Evaluate whether dask is installed and array is loaded as a dask array.
+    r"""Evaluate whether dask is installed and array is loaded as a dask array.
 
     Parameters
     ----------
-    das: xr.DataArray or xr.Dataset
+    \*das : xr.DataArray or xr.Dataset
         DataArrays or Datasets to check.
 
     Returns
@@ -414,7 +414,7 @@ class Grouper(Parametrizable):
             (if False, default) (including the window and dimensions given through `add_dims`).
             The dimensions used are also written in the "group_compute_dims" attribute.
             If all the input arrays are missing one of the 'add_dims', it is silently omitted.
-        \*\*kwargs
+        \*\*kwargs : dict
             Other keyword arguments to pass to the function.
 
         Returns
@@ -433,7 +433,6 @@ class Grouper(Parametrizable):
 
             - If there is only one group, the singleton dimension is squeezed out of the output
             - The output is rechunked as to have only 1 chunk along the new dimension.
-
 
         Notes
         -----
@@ -592,7 +591,7 @@ def map_blocks(  # noqa: C901
     ----------
     reduces : sequence of strings
         Name of the dimensions that are removed by the function.
-    \*\*out_vars
+    \*\*out_vars : dict
         Mapping from variable names in the output to their *new* dimensions.
         The placeholders ``Grouper.PROP``, ``Grouper.DIM`` and ``Grouper.ADD_DIMS`` can be used to signify
         ``group.prop``,``group.dim`` and ``group.add_dims`` respectively.
@@ -815,7 +814,7 @@ def map_groups(
         if main_only is False, and [Grouper.DIM] if main_only is True. See :py:func:`map_blocks`.
     main_only : bool
         Same as for :py:meth:`Grouper.apply`.
-    \*\*out_vars
+    \*\*out_vars : dict
         Mapping from variable names in the output to their *new* dimensions.
         The placeholders ``Grouper.PROP``, ``Grouper.DIM`` and ``Grouper.ADD_DIMS`` can be used to signify
         ``group.prop``,``group.dim`` and ``group.add_dims``, respectively.

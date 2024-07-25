@@ -1,16 +1,18 @@
 """Testing utilities for xsdba."""
 
+from __future__ import annotations
+
 import collections
 import hashlib
 import logging
 import os
 import warnings
 from pathlib import Path
-from typing import Optional
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
 from urllib.request import urlopen, urlretrieve
 
+import numpy as np
 import pandas as pd
 import xarray as xr
 from platformdirs import user_cache_dir
@@ -118,7 +120,7 @@ def file_md5_checksum(f_name):
 
 
 # XC
-def audit_url(url: str, context: Optional[str] = None) -> str:
+def audit_url(url: str, context: str | None = None) -> str:
     """Check if the URL is well-formed.
 
     Raises
@@ -273,11 +275,11 @@ def open_dataset(
         URL to GitHub repository where the data is stored.
     branch : str, optional
         For GitHub-hosted files, the branch to download from.
-    cache_dir : Path
-        The directory in which to search for and write cached data.
     cache : bool
         If True, then cache data locally for use on subsequent calls.
-    \*\*kwargs
+    cache_dir : Path
+        The directory in which to search for and write cached data.
+    \*\*kwargs : dict
         For NetCDF files, keywords passed to :py:func:`xarray.open_dataset`.
 
     Returns

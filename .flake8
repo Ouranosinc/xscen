@@ -12,6 +12,9 @@ ignore =
 	F,
 	W503
 per-file-ignores =
+rst-directives =
+	bibliography,
+	autolink-skip
 rst-roles =
 	doc,
 	mod,
