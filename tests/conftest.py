@@ -27,7 +27,7 @@ from xsdba.testing import test_timelonlatseries, test_timeseries
 # from xclim import __version__ as __xclim_version__
 # from xclim.core.calendar import max_doy
 # from xclim.testing import helpers
-# from xclim.testing.utils import _default_cache_dir  # noqa
+# from xclim.testing.utils import _default_cache_dir
 # from xclim.testing.utils import get_file
 # from xclim.testing.utils import open_dataset as _open_dataset
 
@@ -197,7 +197,7 @@ def add_example_dataarray(xdoctest_namespace, timeseries) -> None:
 def is_matplotlib_installed(xdoctest_namespace) -> None:
     def _is_matplotlib_installed():
         try:
-            import matplotlib  # noqa
+            import matplotlib
 
             return
         except ImportError:

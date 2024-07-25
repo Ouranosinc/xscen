@@ -434,7 +434,7 @@ def _interp_on_quantiles_1D(newx, oldx, oldy, method, extrap):  # noqa: N802
     return out
 
 
-def _interp_on_quantiles_2D(newx, newg, oldx, oldy, oldg, method, extrap):  # noqa
+def _interp_on_quantiles_2D(newx, newg, oldx, oldy, oldg, method, extrap):  # noqa: N802
     mask_new = np.isnan(newx) | np.isnan(newg)
     mask_old = np.isnan(oldy) | np.isnan(oldx) | np.isnan(oldg)
     out = np.full_like(newx, np.NaN, dtype=f"float{oldy.dtype.itemsize * 8}")

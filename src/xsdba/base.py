@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import datetime as pydt
 from collections.abc import Sequence
-from inspect import _empty, signature  # noqa
+from inspect import _empty, signature
 from typing import Any, Callable
 
 import cftime
@@ -745,9 +745,7 @@ def map_blocks(  # noqa: C901
                 # Optimization to circumvent the slow pickle.dumps(cftime_array)
                 # List of the keys to avoid changing the coords dict while iterating over it.
                 for crd in list(ds.coords.keys()):
-                    if xr.core.common._contains_cftime_datetimes(
-                        ds[crd].variable
-                    ):  # noqa
+                    if xr.core.common._contains_cftime_datetimes(ds[crd].variable):
                         ds[crd] = xr.conventions.encode_cf_variable(ds[crd].variable)
 
             def _call_and_transpose_on_exit(dsblock, **f_kwargs):

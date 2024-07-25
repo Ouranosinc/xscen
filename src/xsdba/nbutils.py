@@ -277,7 +277,7 @@ def quantile(da: DataArray, q: np.ndarray, dim: str | Sequence[Hashable]) -> Dat
     nogil=True,
     cache=False,
 )
-def remove_NaNs(x):  # noqa
+def remove_NaNs(x):  # noqa: N802
     """Remove NaN values from series."""
     remove = np.zeros_like(x[0, :], dtype=boolean)
     for i in range(x.shape[0]):
@@ -386,9 +386,7 @@ def _first_and_last_nonnull(arr):
     nogil=True,
     cache=False,
 )
-def _extrapolate_on_quantiles(
-    interp, oldx, oldg, oldy, newx, newg, method="constant"
-):  # noqa
+def _extrapolate_on_quantiles(interp, oldx, oldg, oldy, newx, newg, method="constant"):
     """Apply extrapolation to the output of interpolation on quantiles with a given grouping.
 
     Arguments are the same as _interp_on_quantiles_2D.
