@@ -10,7 +10,7 @@ Development Lead
 Co-Developers
 -------------
 
-None yet. Why not be the first?
+* Éric Dupuis <dupuis.eric@ouranos.ca> `@coxipi <https://github.com/coxipi>`_
 
 Contributors
 ------------
