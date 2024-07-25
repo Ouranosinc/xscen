@@ -239,9 +239,7 @@ def loess_smoothing(
     x = da[dim]
     x = ((x - x[0]) / (x[-1] - x[0])).astype(float)
 
-    weight_func = {"tricube": _tricube_weighting, "gaussian": _gaussian_weighting}.get(
-        weights, weights
-    )
+    weight_func = {"tricube": _tricube_weighting, "gaussian": _gaussian_weighting}.get(weights, weights)
 
     reg_func = {0: _constant_regression, 1: _linear_regression}[d]
 
@@ -250,9 +248,7 @@ def loess_smoothing(
         if equal_spacing is None:
             equal_spacing = True
     elif equal_spacing:
-        warn(
-            "The equal spacing optimization was requested, but the x axis is not equally spaced. Strange results might occur."
-        )
+        warn("The equal spacing optimization was requested, but the x axis is not equally spaced. Strange results might occur.")
     if equal_spacing:
         dx = float(x[1] - x[0])
     else:
