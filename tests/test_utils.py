@@ -5,9 +5,10 @@ import pytest
 import xarray as xr
 from scipy.stats import norm
 
-from xclim.sdba import nbutils as nbu
-from xclim.sdba import utils as u
-from xclim.sdba.base import Grouper
+from xsdba import nbutils as nbu
+from xsdba import utils as u
+from xsdba.base import Grouper
+
 
 
 def test_ecdf(timelonlatseries, random):

@@ -14,9 +14,9 @@ import jsonpickle
 import numpy as np
 import xarray as xr
 from boltons.funcutils import wraps
-from xclim.core.calendar import get_calendar
-from xclim.core.options import OPTIONS, SDBA_ENCODE_CF
-from xclim.core.utils import uses_dask
+from xsdba.options import OPTIONS, SDBA_ENCODE_CF
+import datetime as pydt
+import cftime
 
 
 # ## Base class for the sdba module
@@ -93,6 +93,72 @@ class ParametrizableWithDataset(Parametrizable):
         """
         self.ds = ds
         self.ds.attrs[self._attribute] = jsonpickle.encode(self)
+
+# XC put here to avoid circular import
+def uses_dask(*das: xr.DataArray | xr.Dataset) -> bool:
+    """Evaluate whether dask is installed and array is loaded as a dask array.
+
+    Parameters
+    ----------
+    das: xr.DataArray or xr.Dataset
+        DataArrays or Datasets to check.
+
+    Returns
+    -------
+    bool
+        True if any of the passed objects is using dask.
+    """
+    if len(das) > 1:
+        return any([uses_dask(da) for da in das])
+    da = das[0]
+    if isinstance(da, xr.DataArray) and isinstance(da.data, dsk.Array):
+        return True
+    if isinstance(da, xr.Dataset) and any(isinstance(var.data, dsk.Array) for var in da.variables.values()):
+        return True
+    return False
+
+
+# XC put here to avoid circular import
+def get_calendar(obj: Any, dim: str = "time") -> str:
+    """Return the calendar of an object.
+
+    Parameters
+    ----------
+    obj : Any
+      An object defining some date.
+      If `obj` is an array/dataset with a datetime coordinate, use `dim` to specify its name.
+      Values must have either a datetime64 dtype or a cftime dtype.
+      `obj` can also be a python datetime.datetime, a cftime object or a pandas Timestamp
+      or an iterable of those, in which case the calendar is inferred from the first value.
+    dim : str
+      Name of the coordinate to check (if `obj` is a DataArray or Dataset).
+
+    Raises
+    ------
+    ValueError
+      If no calendar could be inferred.
+
+    Returns
+    -------
+    str
+      The Climate and Forecasting (CF) calendar name.
+      Will always return "standard" instead of "gregorian", following CF conventions 1.9.
+    """
+    if isinstance(obj, (xr.DataArray, xr.Dataset)):
+        return obj[dim].dt.calendar
+    elif isinstance(obj, xr.CFTimeIndex):
+        obj = obj.values[0]
+    else:
+        obj = np.take(obj, 0)
+        # Take zeroth element, overcome cases when arrays or lists are passed.
+    if isinstance(obj, pydt.datetime):  # Also covers pandas Timestamp
+        return "standard"
+    if isinstance(obj, cftime.datetime):
+        if obj.calendar == "gregorian":
+            return "standard"
+        return obj.calendar
+
+    raise ValueError(f"Calendar could not be inferred from object of type {type(obj)}.")
 
 
 class Grouper(Parametrizable):

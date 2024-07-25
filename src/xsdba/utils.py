@@ -9,6 +9,7 @@ import itertools
 from typing import Callable
 from warnings import warn
 
+
 import numpy as np
 import xarray as xr
 from boltons.funcutils import wraps
@@ -17,55 +18,11 @@ from scipy.interpolate import griddata, interp1d
 from scipy.stats import spearmanr
 from xarray.core.utils import get_temp_dimname
 
-from .base import Grouper, parse_group
+from .base import Grouper, parse_group, uses_dask
 from .nbutils import _extrapolate_on_quantiles
 
 MULTIPLICATIVE = "*"
 ADDITIVE = "+"
-
-
-# XC
-class ValidationError(ValueError):
-    """Error raised when input data to an indicator fails the validation tests."""
-
-    @property
-    def msg(self):  # noqa
-        return self.args[0]
-
-
-# XC
-def raise_warn_or_log(
-    err: Exception,
-    mode: str,
-    msg: str | None = None,
-    err_type: type = ValueError,
-    stacklevel: int = 1,
-):
-    """Raise, warn or log an error according.
-
-    Parameters
-    ----------
-    err : Exception
-        An error.
-    mode : {'ignore', 'log', 'warn', 'raise'}
-        What to do with the error.
-    msg : str, optional
-        The string used when logging or warning.
-        Defaults to the `msg` attr of the error (if present) or to "Failed with <err>".
-    err_type : type
-        The type of error/exception to raise.
-    stacklevel : int
-        Stacklevel when warning. Relative to the call of this function (1 is added).
-    """
-    message = msg or getattr(err, "msg", f"Failed with {err!r}.")
-    if mode == "ignore":
-        pass
-    elif mode == "log":
-        logger.info(message)
-    elif mode == "warn":
-        warnings.warn(message, stacklevel=stacklevel + 1)
-    else:  # mode == "raise"
-        raise err from err_type(message)
 
 
 def _ecdf_1d(x, value):
@@ -138,28 +95,6 @@ def ecdf(x: xr.DataArray, value: float, dim: str = "time") -> xr.DataArray:
     return (x <= value).sum(dim) / x.notnull().sum(dim)
 
 
-# XC
-def uses_dask(*das: xr.DataArray | xr.Dataset) -> bool:
-    """Evaluate whether dask is installed and array is loaded as a dask array.
-
-    Parameters
-    ----------
-    das: xr.DataArray or xr.Dataset
-        DataArrays or Datasets to check.
-
-    Returns
-    -------
-    bool
-        True if any of the passed objects is using dask.
-    """
-    if len(das) > 1:
-        return any([uses_dask(da) for da in das])
-    da = das[0]
-    if isinstance(da, xr.DataArray) and isinstance(da.data, dsk.Array):
-        return True
-    if isinstance(da, xr.Dataset) and any(isinstance(var.data, dsk.Array) for var in da.variables.values()):
-        return True
-    return False
 
 
 # XC

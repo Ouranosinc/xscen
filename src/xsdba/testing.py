@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen, urlretrieve
+from urllib.parse import urljoin, urlparse
 
 import pandas as pd
 import xarray as xr
@@ -112,6 +113,26 @@ def file_md5_checksum(f_name):
         hash_md5.update(f.read())
     return hash_md5.hexdigest()
 
+# XC 
+def audit_url(url: str, context: str = None) -> str:
+    """Check if the URL is well-formed.
+
+    Raises
+    ------
+    URLError
+        If the URL is not well-formed.
+    """
+    msg = ""
+    result = urlparse(url)
+    if result.scheme == "http":
+        msg = f"{context if context else ''} URL is not using secure HTTP: '{url}'".strip()
+    if not all([result.scheme, result.netloc]):
+        msg = f"{context if context else ''} URL is not well-formed: '{url}'".strip()
+
+    if msg:
+        logger.error(msg)
+        raise URLError(msg)
+    return url
 
 # XC (oh dear)
 def _get(
