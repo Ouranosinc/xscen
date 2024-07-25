@@ -6,6 +6,7 @@ import logging
 import os
 import warnings
 from pathlib import Path
+from typing import Optional
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
 from urllib.request import urlopen, urlretrieve
@@ -117,7 +118,7 @@ def file_md5_checksum(f_name):
 
 
 # XC
-def audit_url(url: str, context: str = None) -> str:
+def audit_url(url: str, context: Optional[str] = None) -> str:
     """Check if the URL is well-formed.
 
     Raises
@@ -165,13 +166,22 @@ def _get(
                 remote_md5 = f.read()
             if local_md5.strip() != remote_md5.strip():
                 local_file.unlink()
-                msg = f"MD5 checksum for {local_file.as_posix()} does not match upstream md5. " "Attempting new download."
+                msg = (
+                    f"MD5 checksum for {local_file.as_posix()} does not match upstream md5. "
+                    "Attempting new download."
+                )
                 warnings.warn(msg)
         except HTTPError:
-            msg = f"{md5_name.as_posix()} not accessible in remote repository. " "Unable to determine validity with upstream repo."
+            msg = (
+                f"{md5_name.as_posix()} not accessible in remote repository. "
+                "Unable to determine validity with upstream repo."
+            )
             warnings.warn(msg)
         except URLError:
-            msg = f"{md5_name.as_posix()} not found in remote repository. " "Unable to determine validity with upstream repo."
+            msg = (
+                f"{md5_name.as_posix()} not found in remote repository. "
+                "Unable to determine validity with upstream repo."
+            )
             warnings.warn(msg)
         except SocketBlockedError:
             msg = f"Unable to access {md5_name.as_posix()} online. Testing suite is being run with `--disable-socket`."
@@ -191,7 +201,10 @@ def _get(
             msg = f"{fullname.as_posix()} not accessible in remote repository. Aborting file retrieval."
             raise FileNotFoundError(msg) from e
         except URLError as e:
-            msg = f"{fullname.as_posix()} not found in remote repository. " "Verify filename and repository address. Aborting file retrieval."
+            msg = (
+                f"{fullname.as_posix()} not found in remote repository. "
+                "Verify filename and repository address. Aborting file retrieval."
+            )
             raise FileNotFoundError(msg) from e
         # gives TypeError: catching classes that do not inherit from BaseException is not allowed
         except SocketBlockedError as e:
@@ -221,7 +234,10 @@ def _get(
                 remote_md5 = f.read()
             if local_md5.strip() != remote_md5.strip():
                 local_file.unlink()
-                msg = f"{local_file.as_posix()} and md5 checksum do not match. " "There may be an issue with the upstream origin data."
+                msg = (
+                    f"{local_file.as_posix()} and md5 checksum do not match. "
+                    "There may be an issue with the upstream origin data."
+                )
                 raise OSError(msg)
         except OSError as e:
             logger.error(e)

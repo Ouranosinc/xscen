@@ -25,3 +25,8 @@ rst-roles =
 	py:mod,
 	py:obj,
 	py:ref
+	ref,
+	cite:cts,
+	cite:p,
+	cite:t,
+	cite:ts
