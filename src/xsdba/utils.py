@@ -9,7 +9,6 @@ import itertools
 from typing import Callable
 from warnings import warn
 
-
 import numpy as np
 import xarray as xr
 from boltons.funcutils import wraps
@@ -93,8 +92,6 @@ def ecdf(x: xr.DataArray, value: float, dim: str = "time") -> xr.DataArray:
       Empirical CDF.
     """
     return (x <= value).sum(dim) / x.notnull().sum(dim)
-
-
 
 
 # XC
