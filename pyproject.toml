@@ -1,3 +1,5 @@
+# SPLIT: many checks removed
+
 [build-system]
 requires = ["flit_core >=3.9,<4"]
 build-backend = "flit_core.buildapi"
@@ -67,7 +69,13 @@ docs = [
   "pandoc",
   "ipython",
   "ipykernel",
-  "jupyter_client"
+  "jupyter_client",
+  # ADD
+  "sphinx-autobuild >=2024.4.16",
+  "sphinx-autodoc-typehints",
+  "sphinx-mdinclude",
+  "sphinxcontrib-bibtex",
+  "sphinxcontrib-svg2pdfconverter[Cairosvg]"
 ]
 all = ["xsdba[dev]", "xsdba[docs]"]
 
@@ -227,9 +235,18 @@ ignore_missing_imports = true
 [tool.numpydoc_validation]
 checks = [
   "all", # report on all checks, except the below
+  "ES01",
   "EX01",
+  "GL01",
+  "GL08",
+  "PR01",
+  "PR08",
+  "RT01",
+  "RT03",
   "SA01",
-  "ES01"
+  "SA04",
+  "SS03",
+  "SS06"
 ]
 # remember to use single quotes for regex in TOML
 exclude = [
@@ -277,7 +294,15 @@ ignore = [
   "COM", # commas
   "D205", # blank-line-after-summary
   "D400", # ends-in-period
-  "D401" # non-imperative-mood
+  "D401", # non-imperative-mood
+  # WIP xsdba
+  "D200",
+  "FLY002",
+  "N801",
+  "N803",
+  "N806",
+  "PTH123",
+  "S310"
 ]
 preview = true
 select = [
