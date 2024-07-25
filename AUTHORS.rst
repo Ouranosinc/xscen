@@ -5,7 +5,7 @@ Credits
 Development Lead
 ----------------
 
-* Trevor James Smith <smith.trevorj@ouranos.ca> `@Ouranosinc <https://github.com/Ouranosinc>`_
+* Trevor James Smith <smith.trevorj@ouranos.ca> `@Zeitsperre <https://github.com/Zeitsperre>`_
 
 Co-Developers
 -------------
