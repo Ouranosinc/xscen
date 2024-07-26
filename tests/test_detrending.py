@@ -15,8 +15,6 @@ from xsdba.detrending import (
 )
 
 
-
-
 def test_poly_detrend_and_from_ds(timelonlatseries, tmp_path):
     x = timelonlatseries(np.arange(20 * 365.25), "tas")
 
