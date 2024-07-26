@@ -12,7 +12,7 @@ dependencies:
   - scipy
   - numba
   - numpy<2.0 # to accomodate numba
-  
+
   # Dev tools and testing
   - pip >=24.0
   - bump-my-version >=0.24.3
