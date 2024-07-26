@@ -7,9 +7,11 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "xsdba"
 authors = [
+  {name = "Éric Dupuis", email = "dupuis.eric@ouranos.ca"},
   {name = "Trevor James Smith", email = "smith.trevorj@ouranos.ca"}
 ]
 maintainers = [
+  {name = "Éric Dupuis", email = "dupuis.eric@ouranos.ca"},
   {name = "Trevor James Smith", email = "smith.trevorj@ouranos.ca"}
 ]
 readme = {file = "README.rst", content-type = "text/x-rst"}
