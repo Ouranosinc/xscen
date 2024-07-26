@@ -5,12 +5,14 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from xsdba.loess import _constant_regression  # noqa
-from xsdba.loess import _gaussian_weighting  # noqa
-from xsdba.loess import _linear_regression  # noqa
-from xsdba.loess import _loess_nb  # noqa
-from xsdba.loess import _tricube_weighting  # noqa
-from xsdba.loess import loess_smoothing
+from xsdba.loess import (
+    _constant_regression,
+    _gaussian_weighting,
+    _linear_regression,
+    _loess_nb,
+    _tricube_weighting,
+    loess_smoothing,
+)
 
 
 @pytest.mark.slow

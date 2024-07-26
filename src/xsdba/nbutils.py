@@ -1,5 +1,5 @@
 # pylint: disable=no-value-for-parameter
-"""
+"""# noqa: SS01
 Numba-accelerated Utilities
 ===========================
 """
@@ -26,8 +26,11 @@ except ImportError:
     nogil=True,
     cache=False,
 )
-def _get_indexes(arr: np.array, virtual_indexes: np.array, valid_values_count: np.array) -> tuple[np.array, np.array]:
-    """Get the valid indexes of arr neighbouring virtual_indexes.
+def _get_indexes(  # noqa: PR07
+    arr: np.array, virtual_indexes: np.array, valid_values_count: np.array
+) -> tuple[np.array, np.array]:
+    """
+    Get the valid indexes of arr neighbouring virtual_indexes.
 
     Parameters
     ----------
@@ -38,7 +41,7 @@ def _get_indexes(arr: np.array, virtual_indexes: np.array, valid_values_count: n
     Returns
     -------
     array-like, array-like
-        A tuple of virtual_indexes neighbouring indexes (previous and next)
+        A tuple of virtual_indexes neighbouring indexes (previous and next).
 
     Notes
     -----
@@ -127,9 +130,13 @@ def _nan_quantile_1d(
     valid_values_count = (~np.isnan(arr)).sum()
 
     # Computation of indexes
-    virtual_indexes = valid_values_count * quantiles + (alpha + quantiles * (1 - alpha - beta)) - 1
+    virtual_indexes = (
+        valid_values_count * quantiles + (alpha + quantiles * (1 - alpha - beta)) - 1
+    )
     virtual_indexes = np.asarray(virtual_indexes)
-    previous_indexes, next_indexes = _get_indexes(arr, virtual_indexes, valid_values_count)
+    previous_indexes, next_indexes = _get_indexes(
+        arr, virtual_indexes, valid_values_count
+    )
     # Sorting
     arr.sort()
 
@@ -141,7 +148,9 @@ def _nan_quantile_1d(
     interpolation = _linear_interpolation(previous, next_elements, gamma)
     # When an interpolation is in Nan range, (near the end of the sorted array) it means
     # we can clip to the array max value.
-    result = np.where(np.isnan(interpolation), arr[np.intp(valid_values_count) - 1], interpolation)
+    result = np.where(
+        np.isnan(interpolation), arr[np.intp(valid_values_count) - 1], interpolation
+    )
     return result
 
 
@@ -158,7 +167,9 @@ def _vecquantiles(arr, rnk, res):
         res[0] = np.nanquantile(arr, rnk)
 
 
-def vecquantiles(da: DataArray, rnk: DataArray, dim: str | Sequence[Hashable]) -> DataArray:
+def vecquantiles(
+    da: DataArray, rnk: DataArray, dim: str | Sequence[Hashable]
+) -> DataArray:
     """For when the quantile (rnk) is different for each point.
 
     da and rnk must share all dimensions but dim.
@@ -266,7 +277,7 @@ def quantile(da: DataArray, q: np.ndarray, dim: str | Sequence[Hashable]) -> Dat
     nogil=True,
     cache=False,
 )
-def remove_NaNs(x):  # noqa
+def remove_NaNs(x):  # noqa: N802
     """Remove NaN values from series."""
     remove = np.zeros_like(x[0, :], dtype=boolean)
     for i in range(x.shape[0]):
@@ -375,7 +386,7 @@ def _first_and_last_nonnull(arr):
     nogil=True,
     cache=False,
 )
-def _extrapolate_on_quantiles(interp, oldx, oldg, oldy, newx, newg, method="constant"):  # noqa
+def _extrapolate_on_quantiles(interp, oldx, oldg, oldy, newx, newg, method="constant"):
     """Apply extrapolation to the output of interpolation on quantiles with a given grouping.
 
     Arguments are the same as _interp_on_quantiles_2D.
@@ -412,9 +423,15 @@ def _pairwise_haversine_and_bins(lond, latd, transpose=False):
             dlon = lon[j] - lon[i]
             dists[i, j] = 6367 * np.arctan2(
                 np.sqrt(
-                    (np.cos(lat[j]) * np.sin(dlon)) ** 2 + (np.cos(lat[i]) * np.sin(lat[j]) - np.sin(lat[i]) * np.cos(lat[j]) * np.cos(dlon)) ** 2
+                    (np.cos(lat[j]) * np.sin(dlon)) ** 2
+                    + (
+                        np.cos(lat[i]) * np.sin(lat[j])
+                        - np.sin(lat[i]) * np.cos(lat[j]) * np.cos(dlon)
+                    )
+                    ** 2
                 ),
-                np.sin(lat[i]) * np.sin(lat[j]) + np.cos(lat[i]) * np.cos(lat[j]) * np.cos(dlon),
+                np.sin(lat[i]) * np.sin(lat[j])
+                + np.cos(lat[i]) * np.cos(lat[j]) * np.cos(dlon),
             )
             if transpose:
                 dists[j, i] = dists[i, j]

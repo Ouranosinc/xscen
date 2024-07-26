@@ -27,7 +27,7 @@ from xsdba.testing import test_timelonlatseries, test_timeseries
 # from xclim import __version__ as __xclim_version__
 # from xclim.core.calendar import max_doy
 # from xclim.testing import helpers
-# from xclim.testing.utils import _default_cache_dir  # noqa
+# from xclim.testing.utils import _default_cache_dir
 # from xclim.testing.utils import get_file
 # from xclim.testing.utils import open_dataset as _open_dataset
 
@@ -82,9 +82,13 @@ def threadsafe_data_dir(tmp_path_factory) -> Path:
 
 @pytest.fixture(scope="session")
 def open_dataset(threadsafe_data_dir):
-    def _open_session_scoped_file(file: str | os.PathLike, branch: str = TESTDATA_BRANCH, **xr_kwargs):
+    def _open_session_scoped_file(
+        file: str | os.PathLike, branch: str = TESTDATA_BRANCH, **xr_kwargs
+    ):
         xr_kwargs.setdefault("engine", "h5netcdf")
-        return _open_dataset(file, cache_dir=threadsafe_data_dir, branch=branch, **xr_kwargs)
+        return _open_dataset(
+            file, cache_dir=threadsafe_data_dir, branch=branch, **xr_kwargs
+        )
 
     return _open_session_scoped_file
 
@@ -135,7 +139,13 @@ def areacella() -> xr.DataArray:
     d_lat = np.diff(lat_bnds)
     lon = np.convolve(lon_bnds, [0.5, 0.5], "valid")
     lat = np.convolve(lat_bnds, [0.5, 0.5], "valid")
-    area = r * np.radians(d_lat)[:, np.newaxis] * r * np.cos(np.radians(lat)[:, np.newaxis]) * np.radians(d_lon)
+    area = (
+        r
+        * np.radians(d_lat)[:, np.newaxis]
+        * r
+        * np.cos(np.radians(lat)[:, np.newaxis])
+        * np.radians(d_lon)
+    )
     return xr.DataArray(
         data=area,
         dims=("lat", "lon"),
@@ -187,7 +197,7 @@ def add_example_dataarray(xdoctest_namespace, timeseries) -> None:
 def is_matplotlib_installed(xdoctest_namespace) -> None:
     def _is_matplotlib_installed():
         try:
-            import matplotlib  # noqa
+            import matplotlib
 
             return
         except ImportError:

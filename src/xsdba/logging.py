@@ -1,4 +1,4 @@
-"""
+"""# noqa: SS01
 Logging utilities
 ================================
 """
@@ -16,7 +16,8 @@ class ValidationError(ValueError):
     """Error raised when input data to an indicator fails the validation tests."""
 
     @property
-    def msg(self):  # noqa
+    def msg(self):
+        """Return the error message."""
         return self.args[0]
 
 

@@ -1,22 +1,23 @@
-"""
+"""# noqa: SS01
 Base Classes and Developer Tools
 ================================
 """
 
 from __future__ import annotations
 
+import datetime as pydt
 from collections.abc import Sequence
-from inspect import _empty, signature  # noqa
-from typing import Callable
+from inspect import _empty, signature
+from typing import Any, Callable
 
+import cftime
 import dask.array as dsk
 import jsonpickle
 import numpy as np
 import xarray as xr
 from boltons.funcutils import wraps
+
 from xsdba.options import OPTIONS, SDBA_ENCODE_CF
-import datetime as pydt
-import cftime
 
 
 # ## Base class for the sdba module
@@ -65,7 +66,13 @@ class Parametrizable(dict):
         }
         # The representation only includes the parameters with a value different from their default
         # and those not explicitly excluded.
-        params = ", ".join([f"{k}={v!r}" for k, v in self.items() if k not in self._repr_hide_params and v not in defaults.get(k, [])])
+        params = ", ".join(
+            [
+                f"{k}={v!r}"
+                for k, v in self.items()
+                if k not in self._repr_hide_params and v not in defaults.get(k, [])
+            ]
+        )
         return f"{self.__class__.__name__}({params})"
 
 
@@ -94,13 +101,14 @@ class ParametrizableWithDataset(Parametrizable):
         self.ds = ds
         self.ds.attrs[self._attribute] = jsonpickle.encode(self)
 
+
 # XC put here to avoid circular import
 def uses_dask(*das: xr.DataArray | xr.Dataset) -> bool:
-    """Evaluate whether dask is installed and array is loaded as a dask array.
+    r"""Evaluate whether dask is installed and array is loaded as a dask array.
 
     Parameters
     ----------
-    das: xr.DataArray or xr.Dataset
+    \*das : xr.DataArray or xr.Dataset
         DataArrays or Datasets to check.
 
     Returns
@@ -113,7 +121,9 @@ def uses_dask(*das: xr.DataArray | xr.Dataset) -> bool:
     da = das[0]
     if isinstance(da, xr.DataArray) and isinstance(da.data, dsk.Array):
         return True
-    if isinstance(da, xr.Dataset) and any(isinstance(var.data, dsk.Array) for var in da.variables.values()):
+    if isinstance(da, xr.Dataset) and any(
+        isinstance(var.data, dsk.Array) for var in da.variables.values()
+    ):
         return True
     return False
 
@@ -249,14 +259,21 @@ class Grouper(Parametrizable):
         if self.prop == "month":
             return xr.DataArray(np.arange(1, 13), dims=("month",), name="month")
         if self.prop == "season":
-            return xr.DataArray(["DJF", "MAM", "JJA", "SON"], dims=("season",), name="season")
+            return xr.DataArray(
+                ["DJF", "MAM", "JJA", "SON"], dims=("season",), name="season"
+            )
         if self.prop == "dayofyear":
             if ds is not None:
                 cal = get_calendar(ds, dim=self.dim)
-                mdoy = max(xr.coding.calendar_ops._days_in_year(yr, cal) for yr in np.unique(ds[self.dim].dt.year))
+                mdoy = max(
+                    xr.coding.calendar_ops._days_in_year(yr, cal)
+                    for yr in np.unique(ds[self.dim].dt.year)
+                )
             else:
                 mdoy = 365
-            return xr.DataArray(np.arange(1, mdoy + 1), dims="dayofyear", name="dayofyear")
+            return xr.DataArray(
+                np.arange(1, mdoy + 1), dims="dayofyear", name="dayofyear"
+            )
         if self.prop == "group":
             return xr.DataArray([1], dims=("group",), name="group")
         # TODO: woups what happens when there is no group? (prop is None)
@@ -283,13 +300,26 @@ class Grouper(Parametrizable):
             if da is not None:
                 das[da.name] = da
 
-            da = xr.Dataset(data_vars={name: das.pop(name) for name in list(das.keys()) if self.dim in das[name].dims})
+            da = xr.Dataset(
+                data_vars={
+                    name: das.pop(name)
+                    for name in list(das.keys())
+                    if self.dim in das[name].dims
+                }
+            )
 
             # "Ungroup" the grouped arrays
-            da = da.assign({name: broadcast(var, da[self.dim], group=self, interp="nearest") for name, var in das.items()})
+            da = da.assign(
+                {
+                    name: broadcast(var, da[self.dim], group=self, interp="nearest")
+                    for name, var in das.items()
+                }
+            )
 
         if not main_only and self.window > 1:
-            da = da.rolling(center=True, **{self.dim: self.window}).construct(window_dim="window")
+            da = da.rolling(center=True, **{self.dim: self.window}).construct(
+                window_dim="window"
+            )
             if uses_dask(da):
                 # Rechunk. There might be padding chunks.
                 da = da.chunk({self.dim: -1})
@@ -341,7 +371,10 @@ class Grouper(Parametrizable):
             i = getattr(ind, self.prop)
 
         if not np.issubdtype(i.dtype, np.integer):
-            raise ValueError(f"Index {self.name} is not of type int (rather {i.dtype}), " f"but {self.__class__.__name__} requires integer indexes.")
+            raise ValueError(
+                f"Index {self.name} is not of type int (rather {i.dtype}), "
+                f"but {self.__class__.__name__} requires integer indexes."
+            )
 
         if interp and self.dim == "time" and self.prop == "month":
             i = ind.month - 0.5 + ind.day / ind.days_in_month
@@ -381,7 +414,7 @@ class Grouper(Parametrizable):
             (if False, default) (including the window and dimensions given through `add_dims`).
             The dimensions used are also written in the "group_compute_dims" attribute.
             If all the input arrays are missing one of the 'add_dims', it is silently omitted.
-        \*\*kwargs
+        \*\*kwargs : dict
             Other keyword arguments to pass to the function.
 
         Returns
@@ -401,7 +434,6 @@ class Grouper(Parametrizable):
             - If there is only one group, the singleton dimension is squeezed out of the output
             - The output is rechunked as to have only 1 chunk along the new dimension.
 
-
         Notes
         -----
         For the special case where a Dataset is returned, but only some of its variable where reduced by the grouping,
@@ -412,7 +444,11 @@ class Grouper(Parametrizable):
         if isinstance(da, (dict, xr.Dataset)):
             grpd = self.group(main_only=main_only, **da)
             dim_chunks = min(  # Get smallest chunking to rechunk if the operation is non-grouping
-                [d.chunks[d.get_axis_num(self.dim)] for d in da.values() if uses_dask(d) and self.dim in d.dims]
+                [
+                    d.chunks[d.get_axis_num(self.dim)]
+                    for d in da.values()
+                    if uses_dask(d) and self.dim in d.dims
+                ]
                 or [[]],  # pass [[]] if no DataArrays have chunks so min doesn't fail
                 key=len,
             )
@@ -420,7 +456,9 @@ class Grouper(Parametrizable):
             grpd = self.group(da, main_only=main_only)
             # Get chunking to rechunk is the operation is non-grouping
             # To match the behaviour of the case above, an empty list signifies that dask is not used for the input.
-            dim_chunks = [] if not uses_dask(da) else da.chunks[da.get_axis_num(self.dim)]
+            dim_chunks = (
+                [] if not uses_dask(da) else da.chunks[da.get_axis_num(self.dim)]
+            )
 
         if main_only:
             dims = self.dim
@@ -440,7 +478,9 @@ class Grouper(Parametrizable):
         if isinstance(out, xr.Dataset):
             for name, outvar in out.data_vars.items():
                 if "_group_apply_reshape" in outvar.attrs:
-                    out[name] = self.group(outvar, main_only=True).first(skipna=False, keep_attrs=True)
+                    out[name] = self.group(outvar, main_only=True).first(
+                        skipna=False, keep_attrs=True
+                    )
                     del out[name].attrs["_group_apply_reshape"]
 
         # Save input parameters as attributes of output DataArray.
@@ -491,8 +531,15 @@ def parse_group(func: Callable, kwargs=None, allow_only=None) -> Callable:
             _kwargs.setdefault("group", default_group)
             if not isinstance(_kwargs["group"], Grouper):
                 _kwargs = Grouper.from_kwargs(**_kwargs)
-        if allowed is not None and "group" in _kwargs and _kwargs["group"].prop not in allowed:
-            raise ValueError(f"Grouping on {_kwargs['group'].prop_name} is not allowed for this " f"function. Should be one of {allowed}.")
+        if (
+            allowed is not None
+            and "group" in _kwargs
+            and _kwargs["group"].prop not in allowed
+        ):
+            raise ValueError(
+                f"Grouping on {_kwargs['group'].prop_name} is not allowed for this "
+                f"function. Should be one of {allowed}."
+            )
         return _kwargs
 
     if kwargs is not None:  # Not used as a decorator
@@ -507,7 +554,9 @@ def parse_group(func: Callable, kwargs=None, allow_only=None) -> Callable:
     return _parse_group
 
 
-def duck_empty(dims: xr.DataArray.dims, sizes, dtype="float64", chunks=None) -> xr.DataArray:
+def duck_empty(
+    dims: xr.DataArray.dims, sizes, dtype="float64", chunks=None
+) -> xr.DataArray:
     """Return an empty DataArray based on a numpy or dask backend, depending on the "chunks" argument."""
     shape = [sizes[dim] for dim in dims]
     if chunks:
@@ -542,7 +591,7 @@ def map_blocks(  # noqa: C901
     ----------
     reduces : sequence of strings
         Name of the dimensions that are removed by the function.
-    \*\*out_vars
+    \*\*out_vars : dict
         Mapping from variable names in the output to their *new* dimensions.
         The placeholders ``Grouper.PROP``, ``Grouper.DIM`` and ``Grouper.ADD_DIMS`` can be used to signify
         ``group.prop``,``group.dim`` and ``group.add_dims`` respectively.
@@ -559,7 +608,9 @@ def map_blocks(  # noqa: C901
                 if e in out:
                     indx = out.index(e)
                     if indx < last_index:
-                        raise ValueError("Dimensions order mismatch, lists are not mergeable.")
+                        raise ValueError(
+                            "Dimensions order mismatch, lists are not mergeable."
+                        )
                     last_index = indx
                 else:
                     out.insert(last_index + 1, e)
@@ -581,7 +632,9 @@ def map_blocks(  # noqa: C901
             group = kwargs.get("group")
 
             # Ensure group is given as it might not be in the signature of the wrapped func
-            if {Grouper.PROP, Grouper.DIM, Grouper.ADD_DIMS}.intersection(out_dims + red_dims) and group is None:
+            if {Grouper.PROP, Grouper.DIM, Grouper.ADD_DIMS}.intersection(
+                out_dims + red_dims
+            ) and group is None:
                 raise ValueError("Missing required `group` argument.")
 
             # Make translation dict
@@ -605,16 +658,37 @@ def map_blocks(  # noqa: C901
 
             for dim in new_dims:
                 if dim in ds.dims and dim not in reduced_dims:
-                    raise ValueError(f"Dimension {dim} is meant to be added by the " "computation but it is already on one of the inputs.")
+                    raise ValueError(
+                        f"Dimension {dim} is meant to be added by the "
+                        "computation but it is already on one of the inputs."
+                    )
             if uses_dask(ds):
                 # Use dask if any of the input is dask-backed.
-                chunks = dict(ds.chunks) if isinstance(ds, xr.Dataset) else dict(zip(ds.dims, ds.chunks))
+                chunks = (
+                    dict(ds.chunks)
+                    if isinstance(ds, xr.Dataset)
+                    else dict(zip(ds.dims, ds.chunks))
+                )
                 badchunks = {}
                 if group is not None:
-                    badchunks.update({dim: chunks.get(dim) for dim in group.add_dims + [group.dim] if len(chunks.get(dim, [])) > 1})
-                badchunks.update({dim: chunks.get(dim) for dim in reduced_dims if len(chunks.get(dim, [])) > 1})
+                    badchunks.update(
+                        {
+                            dim: chunks.get(dim)
+                            for dim in group.add_dims + [group.dim]
+                            if len(chunks.get(dim, [])) > 1
+                        }
+                    )
+                badchunks.update(
+                    {
+                        dim: chunks.get(dim)
+                        for dim in reduced_dims
+                        if len(chunks.get(dim, [])) > 1
+                    }
+                )
                 if badchunks:
-                    raise ValueError(f"The dimension(s) over which we group, reduce or interpolate cannot be chunked ({badchunks}).")
+                    raise ValueError(
+                        f"The dimension(s) over which we group, reduce or interpolate cannot be chunked ({badchunks})."
+                    )
             else:
                 chunks = None
 
@@ -642,14 +716,18 @@ def map_blocks(  # noqa: C901
                     ds[dim] = ds[dim]
                     coords[dim] = ds[dim]
                 else:
-                    raise ValueError(f"This function adds the {dim} dimension, its coordinate must be provided as a keyword argument.")
+                    raise ValueError(
+                        f"This function adds the {dim} dimension, its coordinate must be provided as a keyword argument."
+                    )
             sizes.update({name: crd.size for name, crd in coords.items()})
 
             # Create the output dataset, but empty
             tmpl = xr.Dataset(coords=coords)
             if isinstance(ds, xr.Dataset):
                 # Get largest dtype of the inputs, assign it to the output.
-                dtype = max((da.dtype for da in ds.data_vars.values()), key=lambda d: d.itemsize)
+                dtype = max(
+                    (da.dtype for da in ds.data_vars.values()), key=lambda d: d.itemsize
+                )
             else:
                 dtype = ds.dtype
 
@@ -667,7 +745,7 @@ def map_blocks(  # noqa: C901
                 # Optimization to circumvent the slow pickle.dumps(cftime_array)
                 # List of the keys to avoid changing the coords dict while iterating over it.
                 for crd in list(ds.coords.keys()):
-                    if xr.core.common._contains_cftime_datetimes(ds[crd].variable):  # noqa
+                    if xr.core.common._contains_cftime_datetimes(ds[crd].variable):
                         ds[crd] = xr.conventions.encode_cf_variable(ds[crd].variable)
 
             def _call_and_transpose_on_exit(dsblock, **f_kwargs):
@@ -676,22 +754,34 @@ def map_blocks(  # noqa: C901
                     _decode_cf_coords(dsblock)
                     func_out = func(dsblock, **f_kwargs).transpose(*all_dims)
                 except Exception as err:
-                    raise ValueError(f"{func.__name__} failed on block with coords : {dsblock.coords}.") from err
+                    raise ValueError(
+                        f"{func.__name__} failed on block with coords : {dsblock.coords}."
+                    ) from err
                 return func_out
 
             # Fancy patching for explicit dask task names
             _call_and_transpose_on_exit.__name__ = f"block_{func.__name__}"
 
             # Remove all auxiliary coords on both tmpl and ds
-            extra_coords = {name: crd for name, crd in ds.coords.items() if name not in crd.dims}
+            extra_coords = {
+                name: crd for name, crd in ds.coords.items() if name not in crd.dims
+            }
             ds = ds.drop_vars(extra_coords.keys())
             # Coords not sharing dims with `all_dims` (like scalar aux coord on reduced 1D input) are absent from tmpl
             tmpl = tmpl.drop_vars(extra_coords.keys(), errors="ignore")
 
             # Call
-            out = ds.map_blocks(_call_and_transpose_on_exit, template=tmpl, kwargs=kwargs)
+            out = ds.map_blocks(
+                _call_and_transpose_on_exit, template=tmpl, kwargs=kwargs
+            )
             # Add back the extra coords, but only those which have compatible dimensions (like xarray would have done)
-            out = out.assign_coords({name: crd for name, crd in extra_coords.items() if set(crd.dims).issubset(out.dims)})
+            out = out.assign_coords(
+                {
+                    name: crd
+                    for name, crd in extra_coords.items()
+                    if set(crd.dims).issubset(out.dims)
+                }
+            )
 
             # Finally remove coords we added... 'ignore' in case they were already removed.
             out = out.drop_vars(added_coords, errors="ignore")
@@ -703,7 +793,9 @@ def map_blocks(  # noqa: C901
     return _decorator
 
 
-def map_groups(reduces: Sequence[str] | None = None, main_only: bool = False, **out_vars) -> Callable:
+def map_groups(
+    reduces: Sequence[str] | None = None, main_only: bool = False, **out_vars
+) -> Callable:
     r"""Decorator for declaring functions acting only on groups and wrapping them into a map_blocks.
 
     This is the same as `map_blocks` but adds a call to `group.apply()` in the mapped func and the default
@@ -720,7 +812,7 @@ def map_groups(reduces: Sequence[str] | None = None, main_only: bool = False, **
         if main_only is False, and [Grouper.DIM] if main_only is True. See :py:func:`map_blocks`.
     main_only : bool
         Same as for :py:meth:`Grouper.apply`.
-    \*\*out_vars
+    \*\*out_vars : dict
         Mapping from variable names in the output to their *new* dimensions.
         The placeholders ``Grouper.PROP``, ``Grouper.DIM`` and ``Grouper.ADD_DIMS`` can be used to signify
         ``group.prop``,``group.dim`` and ``group.add_dims``, respectively.
