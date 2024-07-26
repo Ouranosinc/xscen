@@ -185,12 +185,6 @@ def compute_indicators(  # noqa: C901
         logger.info(f"{i} - Computing {iden}.")
 
         _, freq = get_indicator_outputs(ind, in_freq)
-        # Pandas as no semiannual frequency and 2Q is capricious
-        if freq.startswith("2Q"):
-            logger.debug(
-                "Dropping beginning of timeseries to ensure semiannual frequency works."
-            )
-            ds = fix_semiannual(ds, freq)
 
         if rechunk_input and freq not in ["fx", in_freq]:
             if freq not in dss_rechunked:
@@ -203,6 +197,10 @@ def compute_indicators(  # noqa: C901
             ds_in = ds
 
         if periods is None:
+            # Pandas as no semiannual frequency and 2Q is capricious
+            if freq.startswith("2Q"):
+                logger.debug("Dropping start of timeseries to ensure semiannual frequency works.")
+                ds_in = fix_semiannual(ds_in, freq)
             # Make the call to xclim
             out = ind(ds=ds_in)
 
@@ -219,6 +217,10 @@ def compute_indicators(  # noqa: C901
             for period in periods:
                 # Make the call to xclim
                 ds_subset = ds_in.sel(time=slice(period[0], period[1]))
+                # Pandas as no semiannual frequency and 2Q is capricious
+                if freq.startswith("2Q"):
+                    logger.debug("Dropping start of timeseries to ensure semiannual frequency works.")
+                    ds_subset = fix_semiannual(ds_subset, freq)
                 tmp = ind(ds=ds_subset)
 
                 # In the case of multiple outputs, merge them into a single dataset
