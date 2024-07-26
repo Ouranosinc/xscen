@@ -1,4 +1,4 @@
-"""
+"""# noqa: SS01
 Units Handling Submodule
 ========================
 """
@@ -11,6 +11,7 @@ import xarray as xr
 
 
 def extract_units(arg):
+    """Extract units from a string, DataArray, or scalar."""
     if not (isinstance(arg, (str, xr.DataArray)) or np.isscalar(arg)):
         raise TypeError("Argument must be a str, DataArray, or scalar.")
     elif isinstance(arg, xr.DataArray):
@@ -24,6 +25,8 @@ def extract_units(arg):
 
 
 def check_units(args_to_check):
+    """Decorator to check that all arguments have the same units (or no units)."""
+
     # if no units are present (DataArray without units attribute or float), then no check is performed
     # if units are present, then check is performed
     # in mixed cases, an error is raised
