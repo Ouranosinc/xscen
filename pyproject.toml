@@ -26,7 +26,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -95,7 +94,6 @@ xsdba = "xsdba.cli:app"
 
 [tool.black]
 target-version = [
-  "py38",
   "py39",
   "py310",
   "py311",
@@ -212,7 +210,7 @@ exclude = [
 
 [tool.isort]
 profile = "black"
-py_version = 38
+py_version = 39
 
 [tool.mypy]
 files = "."
@@ -275,7 +273,7 @@ usefixtures = "xdoctest_namespace"
 [tool.ruff]
 src = ["xsdba"]
 line-length = 150
-target-version = "py38"
+target-version = "py39"
 exclude = [
   ".eggs",
   ".git",
