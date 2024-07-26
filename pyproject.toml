@@ -267,6 +267,7 @@ addopts = [
 ]
 filterwarnings = ["ignore::UserWarning"]
 testpaths = "tests"
+usefixtures = "xdoctest_namespace"
 
 [tool.ruff]
 src = ["xsdba"]

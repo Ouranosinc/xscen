@@ -5,19 +5,18 @@ Base Classes and Developer Tools
 
 from __future__ import annotations
 
-import datetime as pydt
 from collections.abc import Sequence
 from inspect import _empty, signature  # noqa
 from typing import Callable
 
-import cftime
 import dask.array as dsk
 import jsonpickle
 import numpy as np
 import xarray as xr
 from boltons.funcutils import wraps
-
 from xsdba.options import OPTIONS, SDBA_ENCODE_CF
+import datetime as pydt
+import cftime
 
 
 # ## Base class for the sdba module
@@ -94,7 +93,6 @@ class ParametrizableWithDataset(Parametrizable):
         """
         self.ds = ds
         self.ds.attrs[self._attribute] = jsonpickle.encode(self)
-
 
 # XC put here to avoid circular import
 def uses_dask(*das: xr.DataArray | xr.Dataset) -> bool:
