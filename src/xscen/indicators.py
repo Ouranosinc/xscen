@@ -178,7 +178,6 @@ def compute_indicators(  # noqa: C901
             iden = ind.identifier
         logger.info(f"{i} - Computing {iden}.")
 
-
         _, freq = get_indicator_outputs(ind, in_freq)
         if periods is None:
             # Pandas as no semiannual frequency and 2Q is capricious
