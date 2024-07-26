@@ -114,7 +114,6 @@ def compute_indicators(  # noqa: C901
     periods: Optional[Union[list[str], list[list[str]]]] = None,
     restrict_years: bool = True,
     to_level: Optional[str] = "indicators",
-    rechunk_input: bool = False,
 ) -> dict:
     """Calculate variables and indicators based on a YAML call to xclim.
 
@@ -144,10 +143,6 @@ def compute_indicators(  # noqa: C901
     to_level : str, optional
         The processing level to assign to the output.
         If None, the processing level of the inputs is preserved.
-    rechunk_input : bool
-        If True, the dataset is rechunked with :py:func:`flox.xarray.rechunk_for_blockwise`
-        according to the resampling frequency of the indicator. Each rechunking is done
-        once per frequency with :py:func:`xscen.utils.rechunk_for_resample`.
 
     Returns
     -------
@@ -174,7 +169,6 @@ def compute_indicators(  # noqa: C901
 
     periods = standardize_periods(periods)
     in_freq = xr.infer_freq(ds.time) if "time" in ds.dims else "fx"
-    dss_rechunked = {}
 
     out_dict = dict()
     for i, ind in enumerate(indicators, 1):
@@ -184,25 +178,17 @@ def compute_indicators(  # noqa: C901
             iden = ind.identifier
         logger.info(f"{i} - Computing {iden}.")
 
+
         _, freq = get_indicator_outputs(ind, in_freq)
-        # Pandas as no semiannual frequency and 2Q is capricious
-        if freq.startswith("2Q"):
-            logger.debug(
-                "Dropping beginning of timeseries to ensure semiannual frequency works."
-            )
-            ds = fix_semiannual(ds, freq)
-
-        if rechunk_input and freq not in ["fx", in_freq]:
-            if freq not in dss_rechunked:
-                logger.debug(f"Rechunking with flox for freq {freq}")
-                dss_rechunked[freq] = rechunk_for_resample(ds, time=freq)
-            else:
-                logger.debug(f"Using rechunked for freq {freq}")
-            ds_in = dss_rechunked[freq]
-        else:
-            ds_in = ds
-
         if periods is None:
+            # Pandas as no semiannual frequency and 2Q is capricious
+            if freq.startswith("2Q"):
+                logger.debug(
+                    "Dropping beginning of timeseries to ensure semiannual frequency works."
+                )
+                ds_in = fix_semiannual(ds, freq)
+            else:
+                ds_in = ds
             # Make the call to xclim
             out = ind(ds=ds_in)
 
@@ -218,8 +204,13 @@ def compute_indicators(  # noqa: C901
             concats = []
             for period in periods:
                 # Make the call to xclim
-                ds_subset = ds_in.sel(time=slice(period[0], period[1]))
-                tmp = ind(ds=ds_subset)
+                ds_subset = ds.sel(time=slice(period[0], period[1]))
+                # Pandas as no semiannual frequency and 2Q is capricious
+                if freq.startswith("2Q"):
+                    ds_in = fix_semiannual(ds_subset, freq)
+                else:
+                    ds_in = ds
+                tmp = ind(ds=ds_in)
 
                 # In the case of multiple outputs, merge them into a single dataset
                 if isinstance(tmp, tuple):
