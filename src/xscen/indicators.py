@@ -199,7 +199,9 @@ def compute_indicators(  # noqa: C901
         if periods is None:
             # Pandas as no semiannual frequency and 2Q is capricious
             if freq.startswith("2Q"):
-                logger.debug("Dropping start of timeseries to ensure semiannual frequency works.")
+                logger.debug(
+                    "Dropping start of timeseries to ensure semiannual frequency works."
+                )
                 ds_in = fix_semiannual(ds_in, freq)
             # Make the call to xclim
             out = ind(ds=ds_in)
@@ -219,7 +221,9 @@ def compute_indicators(  # noqa: C901
                 ds_subset = ds_in.sel(time=slice(period[0], period[1]))
                 # Pandas as no semiannual frequency and 2Q is capricious
                 if freq.startswith("2Q"):
-                    logger.debug("Dropping start of timeseries to ensure semiannual frequency works.")
+                    logger.debug(
+                        "Dropping start of timeseries to ensure semiannual frequency works."
+                    )
                     ds_subset = fix_semiannual(ds_subset, freq)
                 tmp = ind(ds=ds_subset)
 
