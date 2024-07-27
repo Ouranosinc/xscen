@@ -13,15 +13,17 @@ import dask.array as dsk
 import numpy as np
 import xarray as xr
 from xarray.core.utils import get_temp_dimname
+
 from xsdba.base import get_calendar, max_doy, parse_offset, uses_dask
 from xsdba.formatting import update_xsdba_history
-# from xclim.core.units import convert_units_to, infer_context, units
 
 from ._processing import _adapt_freq, _normalize, _reordering
 from .base import Grouper
 from .nbutils import _escore
+from .units import check_units, convert_units_to, harmonize_units
 from .utils import ADDITIVE, copy_all_attrs
-from .units import check_units, harmonize_units, convert_units_to
+
+# from xclim.core.units import convert_units_to, infer_context, units
 
 
 __all__ = [
@@ -227,9 +229,7 @@ def jitter(
             jitter_dist = np.random.uniform(
                 low=jitter_min, high=jitter_lower, size=x.shape
             )
-        out = out.where(
-            ~((x < jitter_lower) & notnull), jitter_dist.astype(x.dtype)
-        )
+        out = out.where(~((x < jitter_lower) & notnull), jitter_dist.astype(x.dtype))
     if upper is not None:
         if maximum is None:
             raise ValueError("If 'upper' is given, so must 'maximum'.")
@@ -243,16 +243,14 @@ def jitter(
             jitter_dist = np.random.uniform(
                 low=jitter_upper, high=jitter_max, size=x.shape
             )
-        out = out.where(
-            ~((x >= jitter_upper) & notnull), jitter_dist.astype(x.dtype)
-        )
+        out = out.where(~((x >= jitter_upper) & notnull), jitter_dist.astype(x.dtype))
 
     copy_all_attrs(out, x)  # copy attrs and same units
     return out
 
 
 @update_xsdba_history
-@harmonize_units(["data","norm"])
+@harmonize_units(["data", "norm"])
 def normalize(
     data: xr.DataArray,
     norm: xr.DataArray | None = None,
@@ -577,9 +575,7 @@ def to_additive_space(
     # with units.context(infer_context(data.attrs.get("standard_name"))):
     lower_bound_array = np.array(lower_bound).astype(float)
     if upper_bound is not None:
-        upper_bound_array = np.array(upper_bound).astype(
-            float
-        )
+        upper_bound_array = np.array(upper_bound).astype(float)
 
     with xr.set_options(keep_attrs=True), np.errstate(divide="ignore"):
         if trans == "log":
@@ -698,9 +694,7 @@ def from_additive_space(
         # FIXME: convert_units_to is causing issues since it can't handle all variations of Quantified here
         lower_bound_array = np.array(lower_bound).astype(float)
         if trans == "logit":
-            upper_bound_array = np.array(upper_bound).astype(
-                float
-            )
+            upper_bound_array = np.array(upper_bound).astype(float)
     else:
         raise ValueError(
             "Parameters missing. Either all parameters are given as attributes of data, "

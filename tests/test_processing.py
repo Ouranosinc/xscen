@@ -5,7 +5,6 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from xsdba.units import units
 # from xsdba.adjustment import EmpiricalQuantileMapping
 from xsdba.base import Grouper
 from xsdba.processing import (
@@ -23,6 +22,7 @@ from xsdba.processing import (
     unstack_variables,
     unstandardize,
 )
+from xsdba.units import units
 
 
 def test_jitter_both():
@@ -251,16 +251,14 @@ def test_to_additive(timelonlatseries):
 
 def test_from_additive(timelonlatseries):
     # log
-    pr = timelonlatseries(np.array([0, 1e-5, 1, np.e**10]), attrs={"units":"mm/d"})
-    pr2 = from_additive_space(
-        to_additive_space(pr, lower_bound="0 mm/d", trans="log")
-    )
+    pr = timelonlatseries(np.array([0, 1e-5, 1, np.e**10]), attrs={"units": "mm/d"})
+    pr2 = from_additive_space(to_additive_space(pr, lower_bound="0 mm/d", trans="log"))
     np.testing.assert_allclose(pr[1:], pr2[1:])
     pr2.attrs.pop("history")
     assert pr.attrs == pr2.attrs
 
     # logit
-    hurs = timelonlatseries(np.array([0, 1e-5, 0.9, 1]), attrs={"units":"%"})
+    hurs = timelonlatseries(np.array([0, 1e-5, 0.9, 1]), attrs={"units": "%"})
     hurs2 = from_additive_space(
         to_additive_space(hurs, lower_bound="0 %", trans="logit", upper_bound="100 %")
     )
@@ -269,7 +267,9 @@ def test_from_additive(timelonlatseries):
 
 def test_normalize(timelonlatseries, random):
     tas = timelonlatseries(
-        random.standard_normal((int(365.25 * 36),)) + 273.15, attrs={"units": "K"}, start="2000-01-01"
+        random.standard_normal((int(365.25 * 36),)) + 273.15,
+        attrs={"units": "K"},
+        start="2000-01-01",
     )
 
     xp, norm = normalize(tas, group="time.dayofyear")
@@ -296,9 +296,9 @@ def test_stack_variables(open_dataset):
 
     da1p = da1.sortby("multivar", ascending=False)
 
-# XSDBA FUTURE PR
-#     with pytest.raises(ValueError, match="Inputs have different multivariate"):
-#         EmpiricalQuantileMapping.train(da1p, da2)
+    # XSDBA FUTURE PR
+    #     with pytest.raises(ValueError, match="Inputs have different multivariate"):
+    #         EmpiricalQuantileMapping.train(da1p, da2)
 
     ds1p = unstack_variables(da1)
 

@@ -1,4 +1,4 @@
-"""
+"""# noqa: SS01
 Units Handling Submodule
 ========================
 """
@@ -115,6 +115,7 @@ def str2pint(val: str) -> pint.Quantity:
 
 
 def extract_units(arg):
+    """Extract units from a string, DataArray, or scalar."""
     if not (isinstance(arg, (str, xr.DataArray)) or np.isscalar(arg)):
         print(arg)
         raise TypeError(f"Argument must be a str, DataArray, or scalar. Got {type(arg)}")
@@ -129,7 +130,7 @@ def extract_units(arg):
 
 
 def check_units(args_to_check):
-    """Check that units are compatible with dimensions, otherwise raise a `ValidationError`."""
+    """Decorator to check that all arguments have the same units (or no units)."""
     # if no units are present (DataArray without units attribute or float), then no check is performed
     # if units are present, then check is performed
     # in mixed cases, an error is raised

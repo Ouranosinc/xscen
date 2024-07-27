@@ -6,26 +6,23 @@ Base Classes and Developer Tools
 from __future__ import annotations
 
 import datetime as pydt
+import itertools
 from collections.abc import Sequence
 from inspect import _empty, signature
 from typing import Any, Callable, NewType, TypeVar
-from pint import Quantity
-
-
-import itertools
 
 import cftime
 import dask.array as dsk
 import jsonpickle
 import numpy as np
+import pandas as pd
 import xarray as xr
 from boltons.funcutils import wraps
-import pandas as pd 
+from pint import Quantity
 
 from xsdba.options import OPTIONS, SDBA_ENCODE_CF
 
-
-# XC: 
+# XC:
 #: Type annotation for strings representing full dates (YYYY-MM-DD), may include time.
 DateStr = NewType("DateStr", str)
 
@@ -34,6 +31,7 @@ DayOfYearStr = NewType("DayOfYearStr", str)
 
 #: Type annotation for thresholds and other not-exactly-a-variable quantities
 Quantified = TypeVar("Quantified", xr.DataArray, str, Quantity)
+
 
 # ## Base class for the sdba module
 class Parametrizable(dict):
@@ -117,7 +115,8 @@ class ParametrizableWithDataset(Parametrizable):
         self.ds.attrs[self._attribute] = jsonpickle.encode(self)
 
 
-# XC 
+# XC
+
 
 def copy_all_attrs(ds: xr.Dataset | xr.DataArray, ref: xr.Dataset | xr.DataArray):
     """Copy all attributes of ds to ref, including attributes of shared coordinates, and variables in the case of Datasets."""
@@ -127,6 +126,7 @@ def copy_all_attrs(ds: xr.Dataset | xr.DataArray, ref: xr.Dataset | xr.DataArray
     for name, var in extras.items():
         if name in others:
             var.attrs.update(ref[name].attrs)
+
 
 # XC put here to avoid circular import
 def uses_dask(*das: xr.DataArray | xr.Dataset) -> bool:
@@ -153,7 +153,8 @@ def uses_dask(*das: xr.DataArray | xr.Dataset) -> bool:
         return True
     return False
 
-# XC 
+
+# XC
 # Maximum day of year in each calendar.
 max_doy = {
     "standard": 366,
@@ -167,7 +168,8 @@ max_doy = {
     "360_day": 360,
 }
 
-# XC 
+
+# XC
 def parse_offset(freq: str) -> tuple[int, str, bool, str | None]:
     """Parse an offset string.
 
@@ -207,6 +209,7 @@ def parse_offset(freq: str) -> tuple[int, str, bool, str | None]:
         base = "D"
         anchor = None
     return mult, base, start, anchor
+
 
 # XC put here to avoid circular import
 def get_calendar(obj: Any, dim: str = "time") -> str:
@@ -251,7 +254,7 @@ def get_calendar(obj: Any, dim: str = "time") -> str:
     raise ValueError(f"Calendar could not be inferred from object of type {type(obj)}.")
 
 
-# XC 
+# XC
 def gen_call_string(funcname: str, *args, **kwargs) -> str:
     r"""Generate a signature string for use in the history attribute.
 
@@ -292,7 +295,6 @@ def gen_call_string(funcname: str, *args, **kwargs) -> str:
         elements.append(rep)
 
     return f"{funcname}({', '.join(elements)})"
-
 
 
 class Grouper(Parametrizable):

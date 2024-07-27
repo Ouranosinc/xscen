@@ -1,14 +1,17 @@
 """
-Formatting Utilities 
+Formatting Utilities
 ===================================
 """
+
 from __future__ import annotations
 
 import datetime as dt
+import itertools
+from inspect import signature
+
 import xarray as xr
 from boltons.funcutils import wraps
-from inspect import signature
-import itertools
+
 
 # XC
 def merge_attributes(
@@ -63,6 +66,7 @@ def merge_attributes(
         return merged_attr[: -len(new_line)]  # Remove the last added new_line
     return merged_attr
 
+
 # XC
 def update_history(
     hist_str: str,
@@ -115,7 +119,8 @@ def update_history(
     )
     return merged_history
 
-# XC 
+
+# XC
 def update_xsdba_history(func: Callable):
     """Decorator that auto-generates and fills the history attribute.
 
