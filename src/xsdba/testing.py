@@ -51,7 +51,7 @@ except ImportError:
     SocketBlockedError = None
 
 
-def test_timelonlatseries(values, attrs = None, start="2000-01-01"):
+def test_timelonlatseries(values, attrs=None, start="2000-01-01"):
     """Create a DataArray with time, lon and lat dimensions."""
     attrs = {} if attrs is None else attrs
     coords = collections.OrderedDict()
