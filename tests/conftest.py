@@ -19,9 +19,8 @@ import xarray as xr
 from filelock import FileLock
 from packaging.version import Version
 
-from xsdba.testing import TESTDATA_BRANCH
+from xsdba.testing import TESTDATA_BRANCH, test_timelonlatseries, test_timeseries
 from xsdba.testing import open_dataset as _open_dataset
-from xsdba.testing import test_timelonlatseries, test_timeseries
 
 # import xclim
 # from xclim import __version__ as __xclim_version__

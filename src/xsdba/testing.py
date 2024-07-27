@@ -51,8 +51,9 @@ except ImportError:
     SocketBlockedError = None
 
 
-def test_timelonlatseries(values, name, start="2000-01-01"):
+def test_timelonlatseries(values, attrs = None, start="2000-01-01"):
     """Create a DataArray with time, lon and lat dimensions."""
+    attrs = {} if attrs is None else attrs
     coords = collections.OrderedDict()
     for dim, n in zip(("time", "lon", "lat"), values.shape):
         if dim == "time":
@@ -60,28 +61,10 @@ def test_timelonlatseries(values, name, start="2000-01-01"):
         else:
             coords[dim] = xr.IndexVariable(dim, np.arange(n))
 
-    if name == "tas":
-        attrs = {
-            "standard_name": "air_temperature",
-            "cell_methods": "time: mean within days",
-            "units": "K",
-            "kind": "+",
-        }
-    elif name == "pr":
-        attrs = {
-            "standard_name": "precipitation_flux",
-            "cell_methods": "time: sum over day",
-            "units": "kg m-2 s-1",
-            "kind": "*",
-        }
-    else:
-        raise ValueError(f"Name `{name}` not supported.")
-
     return xr.DataArray(
         values,
         coords=coords,
         dims=list(coords.keys()),
-        name=name,
         attrs=attrs,
     )
 

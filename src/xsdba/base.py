@@ -8,7 +8,11 @@ from __future__ import annotations
 import datetime as pydt
 from collections.abc import Sequence
 from inspect import _empty, signature
-from typing import Any, Callable
+from typing import Any, Callable, NewType, TypeVar
+from pint import Quantity
+
+
+import itertools
 
 import cftime
 import dask.array as dsk
@@ -16,9 +20,20 @@ import jsonpickle
 import numpy as np
 import xarray as xr
 from boltons.funcutils import wraps
+import pandas as pd 
 
 from xsdba.options import OPTIONS, SDBA_ENCODE_CF
 
+
+# XC: 
+#: Type annotation for strings representing full dates (YYYY-MM-DD), may include time.
+DateStr = NewType("DateStr", str)
+
+#: Type annotation for strings representing dates without a year (MM-DD).
+DayOfYearStr = NewType("DayOfYearStr", str)
+
+#: Type annotation for thresholds and other not-exactly-a-variable quantities
+Quantified = TypeVar("Quantified", xr.DataArray, str, Quantity)
 
 # ## Base class for the sdba module
 class Parametrizable(dict):
@@ -102,6 +117,17 @@ class ParametrizableWithDataset(Parametrizable):
         self.ds.attrs[self._attribute] = jsonpickle.encode(self)
 
 
+# XC 
+
+def copy_all_attrs(ds: xr.Dataset | xr.DataArray, ref: xr.Dataset | xr.DataArray):
+    """Copy all attributes of ds to ref, including attributes of shared coordinates, and variables in the case of Datasets."""
+    ds.attrs.update(ref.attrs)
+    extras = ds.variables if isinstance(ds, xr.Dataset) else ds.coords
+    others = ref.variables if isinstance(ref, xr.Dataset) else ref.coords
+    for name, var in extras.items():
+        if name in others:
+            var.attrs.update(ref[name].attrs)
+
 # XC put here to avoid circular import
 def uses_dask(*das: xr.DataArray | xr.Dataset) -> bool:
     r"""Evaluate whether dask is installed and array is loaded as a dask array.
@@ -127,6 +153,60 @@ def uses_dask(*das: xr.DataArray | xr.Dataset) -> bool:
         return True
     return False
 
+# XC 
+# Maximum day of year in each calendar.
+max_doy = {
+    "standard": 366,
+    "gregorian": 366,
+    "proleptic_gregorian": 366,
+    "julian": 366,
+    "noleap": 365,
+    "365_day": 365,
+    "all_leap": 366,
+    "366_day": 366,
+    "360_day": 360,
+}
+
+# XC 
+def parse_offset(freq: str) -> tuple[int, str, bool, str | None]:
+    """Parse an offset string.
+
+    Parse a frequency offset and, if needed, convert to cftime-compatible components.
+
+    Parameters
+    ----------
+    freq : str
+      Frequency offset.
+
+    Returns
+    -------
+    multiplier : int
+        Multiplier of the base frequency. "[n]W" is always replaced with "[7n]D",
+        as xarray doesn't support "W" for cftime indexes.
+    offset_base : str
+        Base frequency.
+    is_start_anchored : bool
+        Whether coordinates of this frequency should correspond to the beginning of the period (`True`)
+        or its end (`False`). Can only be False when base is Y, Q or M; in other words, xclim assumes frequencies finer
+        than monthly are all start-anchored.
+    anchor : str, optional
+        Anchor date for bases Y or Q. As xarray doesn't support "W",
+        neither does xclim (anchor information is lost when given).
+
+    """
+    # Useful to raise on invalid freqs, convert Y to A and get default anchor (A, Q)
+    offset = pd.tseries.frequencies.to_offset(freq)
+    base, *anchor = offset.name.split("-")
+    anchor = anchor[0] if len(anchor) > 0 else None
+    start = ("S" in base) or (base[0] not in "AYQM")
+    if base.endswith("S") or base.endswith("E"):
+        base = base[:-1]
+    mult = offset.n
+    if base == "W":
+        mult = 7 * mult
+        base = "D"
+        anchor = None
+    return mult, base, start, anchor
 
 # XC put here to avoid circular import
 def get_calendar(obj: Any, dim: str = "time") -> str:
@@ -169,6 +249,50 @@ def get_calendar(obj: Any, dim: str = "time") -> str:
         return obj.calendar
 
     raise ValueError(f"Calendar could not be inferred from object of type {type(obj)}.")
+
+
+# XC 
+def gen_call_string(funcname: str, *args, **kwargs) -> str:
+    r"""Generate a signature string for use in the history attribute.
+
+    DataArrays and Dataset are replaced with their name, while Nones, floats, ints and strings are printed directly.
+    All other objects have their type printed between < >.
+
+    Arguments given through positional arguments are printed positionnally and those
+    given through keywords are printed prefixed by their name.
+
+    Parameters
+    ----------
+    funcname : str
+        Name of the function
+    \*args, \*\*kwargs
+        Arguments given to the function.
+
+    Example
+    -------
+    >>> A = xr.DataArray([1], dims=("x",), name="A")
+    >>> gen_call_string("func", A, b=2.0, c="3", d=[10] * 100)
+    "func(A, b=2.0, c='3', d=<list>)"
+    """
+    elements = []
+    chain = itertools.chain(zip([None] * len(args), args), kwargs.items())
+    for name, val in chain:
+        if isinstance(val, xr.DataArray):
+            rep = val.name or "<array>"
+        elif isinstance(val, (int, float, str, bool)) or val is None:
+            rep = repr(val)
+        else:
+            rep = repr(val)
+            if len(rep) > 50:
+                rep = f"<{type(val).__name__}>"
+
+        if name is not None:
+            rep = f"{name}={rep}"
+
+        elements.append(rep)
+
+    return f"{funcname}({', '.join(elements)})"
+
 
 
 class Grouper(Parametrizable):

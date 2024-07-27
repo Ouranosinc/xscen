@@ -12,6 +12,7 @@ dependencies:
   - scipy
   - numba
   - numpy<2.0 # to accomodate numba
+  - cf-xarray # to accomodate numba
 
   # Dev tools and testing
   - pip >=24.0
