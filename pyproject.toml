@@ -50,6 +50,8 @@ dev = [
   "coverage >=7.5.0",
   "coveralls >=4.0.0",
   "mypy",
+  "netcdf4",
+  "h5",
   "numpydoc >=1.7.0",
   "pytest >=8.2.2",
   "pytest-cov >=5.0.0",
@@ -239,8 +241,11 @@ checks = [
   "GL01",
   "GL08",
   "PR01",
+  "PR02", #
+  "PR04", #
   "PR07",
   "PR08",
+  "PR10", #
   "RT01",
   "RT03",
   "SA01",
@@ -303,7 +308,8 @@ ignore = [
   "N803",
   "N806",
   "PTH123",
-  "S310"
+  "S310",
+  "PERF401" # don't force list comprehensions
 ]
 preview = true
 select = [

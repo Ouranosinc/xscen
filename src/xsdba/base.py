@@ -8,6 +8,7 @@ from __future__ import annotations
 import datetime as pydt
 import itertools
 from collections.abc import Sequence
+from enum import IntEnum
 from inspect import _empty, signature
 from typing import Any, Callable, NewType, TypeVar
 
@@ -118,6 +119,99 @@ class ParametrizableWithDataset(Parametrizable):
 # XC
 
 
+class InputKind(IntEnum):
+    """Constants for input parameter kinds.
+
+    For use by external parses to determine what kind of data the indicator expects.
+    On the creation of an indicator, the appropriate constant is stored in
+    :py:attr:`xclim.core.indicator.Indicator.parameters`. The integer value is what gets stored in the output
+    of :py:meth:`xclim.core.indicator.Indicator.json`.
+
+    For developers : for each constant, the docstring specifies the annotation a parameter of an indice function
+    should use in order to be picked up by the indicator constructor. Notice that we are using the annotation format
+    as described in `PEP 604 <https://peps.python.org/pep-0604/>`_, i.e. with '|' indicating a union and without import
+    objects from `typing`.
+    """
+
+    VARIABLE = 0
+    """A data variable (DataArray or variable name).
+
+       Annotation : ``xr.DataArray``.
+    """
+    OPTIONAL_VARIABLE = 1
+    """An optional data variable (DataArray or variable name).
+
+       Annotation : ``xr.DataArray | None``. The default should be None.
+    """
+    QUANTIFIED = 2
+    """A quantity with units, either as a string (scalar), a pint.Quantity (scalar) or a DataArray (with units set).
+
+       Annotation : ``xclim.core.utils.Quantified`` and an entry in the :py:func:`xclim.core.units.declare_units`
+       decorator. "Quantified" translates to ``str | xr.DataArray | pint.util.Quantity``.
+    """
+    FREQ_STR = 3
+    """A string representing an "offset alias", as defined by pandas.
+
+       See the Pandas documentation on :ref:`timeseries.offset_aliases` for a list of valid aliases.
+
+       Annotation : ``str`` + ``freq`` as the parameter name.
+    """
+    NUMBER = 4
+    """A number.
+
+       Annotation : ``int``, ``float`` and unions thereof, potentially optional.
+    """
+    STRING = 5
+    """A simple string.
+
+       Annotation : ``str`` or ``str | None``. In most cases, this kind of parameter makes sense
+       with choices indicated in the docstring's version of the annotation with curly braces.
+       See :ref:`notebooks/extendxclim:Defining new indices`.
+    """
+    DAY_OF_YEAR = 6
+    """A date, but without a year, in the MM-DD format.
+
+       Annotation : :py:obj:`xclim.core.utils.DayOfYearStr` (may be optional).
+    """
+    DATE = 7
+    """A date in the YYYY-MM-DD format, may include a time.
+
+       Annotation : :py:obj:`xclim.core.utils.DateStr` (may be optional).
+    """
+    NUMBER_SEQUENCE = 8
+    """A sequence of numbers
+
+       Annotation : ``Sequence[int]``, ``Sequence[float]`` and unions thereof, may include single ``int`` and ``float``,
+       may be optional.
+    """
+    BOOL = 9
+    """A boolean flag.
+
+       Annotation : ``bool``, may be optional.
+    """
+    DICT = 10
+    """A dictionary.
+
+       Annotation : ``dict`` or ``dict | None``, may be optional.
+    """
+    KWARGS = 50
+    """A mapping from argument name to value.
+
+       Developers : maps the ``**kwargs``. Please use as little as possible.
+    """
+    DATASET = 70
+    """An xarray dataset.
+
+       Developers : as indices only accept DataArrays, this should only be added on the indicator's constructor.
+    """
+    OTHER_PARAMETER = 99
+    """An object that fits None of the previous kinds.
+
+       Developers : This is the fallback kind, it will raise an error in xclim's unit tests if used.
+    """
+
+
+# XC
 def copy_all_attrs(ds: xr.Dataset | xr.DataArray, ref: xr.Dataset | xr.DataArray):
     """Copy all attributes of ds to ref, including attributes of shared coordinates, and variables in the case of Datasets."""
     ds.attrs.update(ref.attrs)
@@ -194,7 +288,6 @@ def parse_offset(freq: str) -> tuple[int, str, bool, str | None]:
     anchor : str, optional
         Anchor date for bases Y or Q. As xarray doesn't support "W",
         neither does xclim (anchor information is lost when given).
-
     """
     # Useful to raise on invalid freqs, convert Y to A and get default anchor (A, Q)
     offset = pd.tseries.frequencies.to_offset(freq)
@@ -252,49 +345,6 @@ def get_calendar(obj: Any, dim: str = "time") -> str:
         return obj.calendar
 
     raise ValueError(f"Calendar could not be inferred from object of type {type(obj)}.")
-
-
-# XC
-def gen_call_string(funcname: str, *args, **kwargs) -> str:
-    r"""Generate a signature string for use in the history attribute.
-
-    DataArrays and Dataset are replaced with their name, while Nones, floats, ints and strings are printed directly.
-    All other objects have their type printed between < >.
-
-    Arguments given through positional arguments are printed positionnally and those
-    given through keywords are printed prefixed by their name.
-
-    Parameters
-    ----------
-    funcname : str
-        Name of the function
-    \*args, \*\*kwargs
-        Arguments given to the function.
-
-    Example
-    -------
-    >>> A = xr.DataArray([1], dims=("x",), name="A")
-    >>> gen_call_string("func", A, b=2.0, c="3", d=[10] * 100)
-    "func(A, b=2.0, c='3', d=<list>)"
-    """
-    elements = []
-    chain = itertools.chain(zip([None] * len(args), args), kwargs.items())
-    for name, val in chain:
-        if isinstance(val, xr.DataArray):
-            rep = val.name or "<array>"
-        elif isinstance(val, (int, float, str, bool)) or val is None:
-            rep = repr(val)
-        else:
-            rep = repr(val)
-            if len(rep) > 50:
-                rep = f"<{type(val).__name__}>"
-
-        if name is not None:
-            rep = f"{name}={rep}"
-
-        elements.append(rep)
-
-    return f"{funcname}({', '.join(elements)})"
 
 
 class Grouper(Parametrizable):

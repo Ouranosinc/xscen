@@ -7,21 +7,24 @@ import inspect
 from copy import deepcopy
 from functools import wraps
 
+import pint
+
 # this dependency is "necessary" for convert_units_to
 # if we only do checks, we could get rid of it
-import cf_xarray.units
+
+
+try:
+    # allows to use cf units
+    import cf_xarray.units
+except ImportError:  # noqa: S110
+    # cf-xarray is not installed, this will not be used
+    pass
 import numpy as np
-import pint
 import xarray as xr
 
 from .base import Quantified, copy_all_attrs
 
-# shamelessly adapted from `cf-xarray` (which adopted it from MetPy and xclim itself)
-units = deepcopy(cf_xarray.units.units)
-# Switch this flag back to False. Not sure what that implies, but it breaks some tests.
-units.force_ndarray_like = False  # noqa: F841
-# Another alias not included by cf_xarray
-units.define("@alias percent = pct")
+units = pint.get_application_registry()
 
 
 # XC
@@ -120,13 +123,17 @@ def str2pint(val: str) -> pint.Quantity:
 
 def extract_units(arg):
     """Extract units from a string, DataArray, or scalar."""
-    if not (isinstance(arg, (str, xr.DataArray)) or np.isscalar(arg)):
+    if not (
+        isinstance(arg, (str, xr.DataArray, pint.Unit, units.Unit)) or np.isscalar(arg)
+    ):
         print(arg)
         raise TypeError(
             f"Argument must be a str, DataArray, or scalar. Got {type(arg)}"
         )
     elif isinstance(arg, xr.DataArray):
         ustr = None if "units" not in arg.attrs else arg.attrs["units"]
+    elif isinstance(arg, pint.Unit | units.Unit):
+        ustr = f"{arg:cf}"  # XC: from pint2cfunits
     elif isinstance(arg, str):
         ustr = str2pint(arg).units
     else:  # (scalar case)
@@ -219,7 +226,7 @@ def convert_units_to(  # noqa: C901
             out = source.copy(data=units.convert(source.data, source_unit, target_unit))
             out = out.assign_attrs(units=target_unit)
         else:
-            out = str2pint(source).to(target_unit)
+            out = str2pint(source).to(target_unit).m
         return out
 
 

@@ -1,4 +1,4 @@
-"""
+"""# noqa: SS01
 Formatting Utilities
 ===================================
 """
@@ -29,9 +29,9 @@ def merge_attributes(
     ----------
     attribute : str
         The attribute to merge.
-    inputs_list : xr.DataArray or xr.Dataset
+    \*inputs_list : xr.DataArray or xr.Dataset
         The datasets or variables that were used to produce the new object.
-        Inputs given that way will be prefixed by their `name` attribute if available.
+        Inputs given that way will be prefixed by their "name" attribute if available.
     new_line : str
         The character to put between each instance of the attributes. Usually, in CF-conventions,
         the history attributes uses '\\n' while cell_methods uses ' '.
@@ -47,9 +47,7 @@ def merge_attributes(
     str
         The new attribute made from the combination of the ones from all the inputs.
     """
-    inputs = []
-    for in_ds in inputs_list:
-        inputs.append((getattr(in_ds, "name", None), in_ds))
+    inputs = [getattr(in_ds, "name", None) for in_ds in inputs_list]
     inputs += list(inputs_kws.items())
 
     merged_attr = ""
@@ -165,7 +163,11 @@ def update_xsdba_history(func: Callable):
 
 
 # XC
-def gen_call_string(funcname: str, *args, **kwargs) -> str:
+def gen_call_string(
+    funcname: str,
+    *args,
+    **kwargs,
+) -> str:
     r"""Generate a signature string for use in the history attribute.
 
     DataArrays and Dataset are replaced with their name, while Nones, floats, ints and strings are printed directly.
@@ -177,9 +179,7 @@ def gen_call_string(funcname: str, *args, **kwargs) -> str:
     Parameters
     ----------
     funcname : str
-        Name of the function
-    \*args, \*\*kwargs
-        Arguments given to the function.
+        Name of the function.
 
     Example
     -------

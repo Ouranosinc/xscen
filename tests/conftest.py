@@ -21,7 +21,12 @@ from packaging.version import Version
 
 from xsdba.testing import TESTDATA_BRANCH
 from xsdba.testing import open_dataset as _open_dataset
-from xsdba.testing import test_timelonlatseries, test_timeseries
+from xsdba.testing import (
+    test_cannon_2015_dist,
+    test_cannon_2015_rvs,
+    test_timelonlatseries,
+    test_timeseries,
+)
 from xsdba.utils import apply_correction, equally_spaced_nodes
 
 # import xclim
@@ -66,6 +71,49 @@ from xsdba.utils import apply_correction, equally_spaced_nodes
 
 
 @pytest.fixture
+def cannon_2015_rvs():
+    return test_cannon_2015_rvs
+
+
+@pytest.fixture
+def cannon_2015_dist():
+    return test_cannon_2015_dist
+
+
+# @pytest.fixture
+# def ref_hist_sim_tuto(socket_enabled):  # noqa: F841
+#     """Return ref, hist, sim time series of air temperature.
+
+#     socket_enabled is a fixture that enables the use of the internet to download the tutorial dataset while the
+#     `--disable-socket` flag has been called. This fixture will crash if the `air_temperature` tutorial file is
+#     not on disk while the internet is unavailable.
+#     """
+
+#     def _ref_hist_sim_tuto(sim_offset=3, delta=0.1, smth_win=3, trend=True):
+#         ds = xr.tutorial.open_dataset("air_temperature")
+#         ref = ds.air.resample(time="D").mean(keep_attrs=True)
+#         hist = ref.rolling(time=smth_win, min_periods=1).mean(keep_attrs=True) + delta
+#         hist.attrs["units"] = ref.attrs["units"]
+#         sim_time = hist.time + np.timedelta64(730 + sim_offset * 365, "D").astype(
+#             "<m8[ns]"
+#         )
+#         sim = hist + (
+#             0
+#             if not trend
+#             else xr.DataArray(
+#                 np.linspace(0, 2, num=hist.time.size),
+#                 dims=("time",),
+#                 coords={"time": hist.time},
+#                 attrs={"units": hist.attrs["units"]},
+#             )
+#         )
+#         sim["time"] = sim_time
+#         return ref, hist, sim
+
+#     return _ref_hist_sim_tuto
+
+
+@pytest.fixture
 def random() -> np.random.Generator:
     return np.random.default_rng(seed=list(map(ord, "𝕽𝔞𝖓𝔡𝖔𝔪")))
 
@@ -102,17 +150,17 @@ def mon_triangular():
 
 # XC (name changed)
 @pytest.fixture
-def mon_timelonlatseries(series, mon_triangular):
-    def _mon_timelonlatseries(values, name):
+def mon_timelonlatseries(timelonlatseries, mon_triangular):
+    def _mon_timelonlatseries(values, attrs):
         """Random time series whose mean varies over a monthly cycle."""
-        x = timelonlatseries(values, name)
+        x = timelonlatseries(values, attrs)
         m = mon_triangular
-        factor = timelonlatseriesseries(m[x.time.dt.month - 1], name)
+        factor = timelonlatseries(m[x.time.dt.month - 1], attrs)
 
         with xr.set_options(keep_attrs=True):
             return apply_correction(x, factor, x.kind)
 
-    return _mon_series
+    return _mon_timelonlatseries
 
 
 @pytest.fixture
@@ -230,14 +278,14 @@ def is_matplotlib_installed(xdoctest_namespace) -> None:
 
 
 # ADAPT or REMOVE?
-# @pytest.fixture(scope="function")
-# def atmosds(threadsafe_data_dir) -> xr.Dataset:
-#     return _open_dataset(
-#         threadsafe_data_dir.joinpath("atmosds.nc"),
-#         cache_dir=threadsafe_data_dir,
-#         branch=helpers.TESTDATA_BRANCH,
-#         engine="h5netcdf",
-#     ).load()
+@pytest.fixture(scope="function")
+def atmosds(threadsafe_data_dir) -> xr.Dataset:
+    return _open_dataset(
+        threadsafe_data_dir.joinpath("atmosds.nc"),
+        cache_dir=threadsafe_data_dir,
+        branch=TESTDATA_BRANCH,
+        engine="h5netcdf",
+    ).load()
 
 
 # @pytest.fixture(scope="function")
