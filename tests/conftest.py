@@ -22,6 +22,7 @@ from packaging.version import Version
 from xsdba.testing import TESTDATA_BRANCH
 from xsdba.testing import open_dataset as _open_dataset
 from xsdba.testing import test_timelonlatseries, test_timeseries
+from xsdba.utils import apply_correction, equally_spaced_nodes
 
 # import xclim
 # from xclim import __version__ as __xclim_version__
@@ -91,6 +92,27 @@ def open_dataset(threadsafe_data_dir):
         )
 
     return _open_session_scoped_file
+
+
+# XC
+@pytest.fixture
+def mon_triangular():
+    return np.array(list(range(1, 7)) + list(range(7, 1, -1))) / 7
+
+
+# XC (name changed)
+@pytest.fixture
+def mon_timelonlatseries(series, mon_triangular):
+    def _mon_timelonlatseries(values, name):
+        """Random time series whose mean varies over a monthly cycle."""
+        x = timelonlatseries(values, name)
+        m = mon_triangular
+        factor = timelonlatseriesseries(m[x.time.dt.month - 1], name)
+
+        with xr.set_options(keep_attrs=True):
+            return apply_correction(x, factor, x.kind)
+
+    return _mon_series
 
 
 @pytest.fixture

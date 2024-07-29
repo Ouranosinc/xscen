@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-# from xsdba.adjustment import EmpiricalQuantileMapping
+from xsdba.adjustment import EmpiricalQuantileMapping
 from xsdba.base import Grouper
 from xsdba.processing import (
     adapt_freq,
@@ -296,9 +296,8 @@ def test_stack_variables(open_dataset):
 
     da1p = da1.sortby("multivar", ascending=False)
 
-    # XSDBA FUTURE PR
-    #     with pytest.raises(ValueError, match="Inputs have different multivariate"):
-    #         EmpiricalQuantileMapping.train(da1p, da2)
+    with pytest.raises(ValueError, match="Inputs have different multivariate"):
+        EmpiricalQuantileMapping.train(da1p, da2)
 
     ds1p = unstack_variables(da1)
 

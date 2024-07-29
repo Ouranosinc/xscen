@@ -51,7 +51,7 @@ except ImportError:
     SocketBlockedError = None
 
 
-def test_timelonlatseries(values, attrs = None, start="2000-01-01"):
+def test_timelonlatseries(values, attrs=None, start="2000-01-01"):
     """Create a DataArray with time, lon and lat dimensions."""
     attrs = {} if attrs is None else attrs
     coords = collections.OrderedDict()
@@ -307,3 +307,10 @@ def open_dataset(
         return ds
     except OSError as err:
         raise err
+
+
+# XC
+def nancov(X):
+    """Drop observations with NaNs from Numpy's cov."""
+    X_na = np.isnan(X).any(axis=0)
+    return np.cov(X[:, ~X_na])
