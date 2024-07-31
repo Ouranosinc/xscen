@@ -106,6 +106,7 @@ import re
 import warnings
 import weakref
 from collections import OrderedDict, defaultdict
+from collections.abc import Sequence
 from copy import deepcopy
 from dataclasses import asdict, dataclass
 from functools import reduce
@@ -117,7 +118,6 @@ from os import PathLike
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable, Optional, Union
-from collections.abc import Sequence
 
 import numpy as np
 import xarray
