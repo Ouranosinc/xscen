@@ -21,7 +21,7 @@ from xsdba.indicator import Indicator, base_registry
 # from xclim.core.units import ensure_delta
 from .base import Grouper
 from .typing import InputKind
-from .units import convert_units_to,  ensure_delta
+from .units import convert_units_to, ensure_delta
 from .utils import _pairwise_spearman
 
 

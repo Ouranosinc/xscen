@@ -341,9 +341,10 @@ def _add_default_kws(params_dict, params_to_check, func):
 
 
 # TODO: this changes the type of some variables (e.g. thresh : str -> float). This should probably not be allowed
-# TODO: support for Datasets and dict like in compare_units? 
+# TODO: support for Datasets and dict like in compare_units?
 def harmonize_units(params_to_check):
     """Compare units and perform a conversion if possible, otherwise raise a `ValidationError`."""
+
     # if no units are present (DataArray without units attribute or float), then no check is performed
     # if units are present, then check is performed
     # in mixed cases, an error is raised

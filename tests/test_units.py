@@ -21,6 +21,7 @@ from xsdba.units import (
     units,
 )
 
+
 class TestUnits:
     def test_temperature(self):
         assert 4 * units.d == 4 * units.day
@@ -44,6 +45,7 @@ class TestConvertUnitsTo:
     )
     def test_temperature_aliases(self, alias):
         assert alias == units("celsius")
+
 
 class TestUnitConversion:
     def test_pint2str(self):
@@ -107,41 +109,44 @@ def test_to_agg_units(in_u, opfunc, op, exp, exp_u):
 
 
 class TestHarmonizeUnits:
-    def test_simple(self): 
-        da =  xr.DataArray([1,2], attrs={"units": "K"})
+    def test_simple(self):
+        da = xr.DataArray([1, 2], attrs={"units": "K"})
         thr = "1 K"
+
         @harmonize_units(["da", "thr"])
-        def gt(da, thr): 
+        def gt(da, thr):
             return (da > thr).sum().values
 
         assert gt(da, thr) == 1
-    
-    def test_no_units(self): 
-        da =  xr.DataArray([1,2])
+
+    def test_no_units(self):
+        da = xr.DataArray([1, 2])
         thr = 1
+
         @harmonize_units(["da", "thr"])
-        def gt(da, thr): 
+        def gt(da, thr):
             return (da > thr).sum().values
 
         assert gt(da, thr) == 1
-    def test_wrong_decorator(self): 
-        da =  xr.DataArray([1,2], attrs={"units": "K"})
+
+    def test_wrong_decorator(self):
+        da = xr.DataArray([1, 2], attrs={"units": "K"})
         thr = "1 K"
+
         @harmonize_units(["da", "thrr"])
-        def gt(da, thr): 
+        def gt(da, thr):
             return (da > thr).sum().values
 
         with pytest.raises(TypeError, match="should be a subset of"):
             gt(da, thr)
 
-    def test_wrong_input_catched_by_decorator(self): 
-        da =  xr.DataArray([1,2], attrs={"units": "K"})
+    def test_wrong_input_catched_by_decorator(self):
+        da = xr.DataArray([1, 2], attrs={"units": "K"})
         thr = "1 K"
+
         @harmonize_units(["da", "thr"])
-        def gt(da, thr): 
+        def gt(da, thr):
             return (da > thr).sum().values
 
         with pytest.raises(TypeError, match="were passed but only"):
             gt(da)
-        
-        

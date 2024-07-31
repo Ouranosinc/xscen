@@ -61,7 +61,7 @@ class BaseDetrend(ParametrizableWithDataset):
         new.set_dataset(new._get_trend(da).rename("trend").to_dataset())
         if "units" in da.attrs:
             new.ds.trend.attrs["units"] = da.attrs["units"]
-            
+
         return new
 
     def _get_trend(self, da: xr.DataArray):
