@@ -21,7 +21,7 @@ from xsdba.indicator import Indicator, base_registry
 # from xclim.core.units import ensure_delta
 from .base import Grouper
 from .typing import InputKind
-from .units import compare_units, ensure_delta
+from .units import convert_units_to,  ensure_delta
 from .utils import _pairwise_spearman
 
 
@@ -48,14 +48,14 @@ class StatisticalMeasure(Indicator):
             )
         return super()._ensure_correct_parameters(parameters)
 
-    @compare_units([{"das": "ref"}, {"das": "sim"}])
     def _preprocess_and_checks(self, das, params):
         """Perform parent's checks and also check convert units so that sim matches ref."""
         das, params = super()._preprocess_and_checks(das, params)
 
         # Convert grouping and check if allowed:
-        sim = das["sim"]
+        das["sim"] = convert_units_to(das["sim"], das["ref"])
         ref = das["ref"]
+        sim = das["sim"]
 
         # Check if common coordinates are identical.
         newsim, newref = xr.broadcast(sim, ref)
@@ -110,11 +110,10 @@ class StatisticalPropertyMeasure(Indicator):
 
         return super()._ensure_correct_parameters(parameters)
 
-    @compare_units([{"das": "ref"}, {"das": "sim"}])
     def _preprocess_and_checks(self, das, params):
         """Perform parent's checks and also check convert units so that sim matches ref."""
         das, params = super()._preprocess_and_checks(das, params)
-
+        das["sim"] = convert_units_to(das["sim"], das["ref"])
         # Convert grouping and check if allowed:
         if isinstance(params["group"], str):
             params["group"] = Grouper(params["group"])

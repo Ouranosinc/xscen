@@ -9,7 +9,7 @@ import xarray as xr
 
 from .base import Grouper, ParametrizableWithDataset, map_groups, parse_group
 from .loess import loess_smoothing
-from .units import compare_units
+from .units import harmonize_units
 from .utils import ADDITIVE, apply_correction, invert
 
 
@@ -59,7 +59,9 @@ class BaseDetrend(ParametrizableWithDataset):
         """
         new = self.__class__(**self.parameters)
         new.set_dataset(new._get_trend(da).rename("trend").to_dataset())
-        new.ds.trend.attrs["units"] = da.attrs.get("units", "")
+        if "units" in da.attrs:
+            new.ds.trend.attrs["units"] = da.attrs["units"]
+            
         return new
 
     def _get_trend(self, da: xr.DataArray):
@@ -91,13 +93,13 @@ class BaseDetrend(ParametrizableWithDataset):
             raise ValueError("You must call fit() before retrending")
         return self._retrend(da, self.ds.trend)
 
-    @compare_units(["da", "trend"])
+    @harmonize_units(["da", "trend"])
     def _detrend(self, da, trend):
         """Detrend."""
         # Remove trend from series
         return apply_correction(da, invert(trend, self.kind), self.kind)
 
-    @compare_units(["da", "trend"])
+    @harmonize_units(["da", "trend"])
     def _retrend(self, da, trend):
         """Retrend."""
         # Add trend to series

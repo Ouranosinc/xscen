@@ -15,8 +15,8 @@ from xsdba.detrending import (
 )
 
 
-def test_poly_detrend_and_from_ds(timelonlatseries, tmp_path):
-    x = timelonlatseries(np.arange(20 * 365.25), "tas")
+def test_poly_detrend_and_from_ds(timeseries, tmp_path):
+    x = timeseries(np.arange(20 * 365.25))
 
     poly = PolyDetrend(degree=1)
     fx = poly.fit(x)
@@ -41,8 +41,8 @@ def test_poly_detrend_and_from_ds(timelonlatseries, tmp_path):
 
 
 @pytest.mark.slow
-def test_loess_detrend(timelonlatseries):
-    x = timelonlatseries(np.arange(12 * 365.25), "tas")
+def test_loess_detrend(timeseries):
+    x = timeseries(np.arange(12 * 365.25))
     det = LoessDetrend(group="time", d=0, niter=1, f=0.2)
     fx = det.fit(x)
     dx = fx.detrend(x)
@@ -53,8 +53,8 @@ def test_loess_detrend(timelonlatseries):
     np.testing.assert_array_almost_equal(xt, x)
 
 
-def test_mean_detrend(timelonlatseries):
-    x = timelonlatseries(np.arange(20 * 365.25), "tas")
+def test_mean_detrend(timeseries):
+    x = timeseries(np.arange(20 * 365.25))
 
     md = MeanDetrend().fit(x)
     assert (md.ds.trend == x.mean()).all()
@@ -65,8 +65,8 @@ def test_mean_detrend(timelonlatseries):
     np.testing.assert_array_almost_equal(x, x2)
 
 
-def test_rollingmean_detrend(timelonlatseries):
-    x = timelonlatseries(np.arange(12 * 365.25), "tas")
+def test_rollingmean_detrend(timeseries):
+    x = timeseries(np.arange(12 * 365.25))
     det = RollingMeanDetrend(group="time", win=29, min_periods=1)
     fx = det.fit(x)
     dx = fx.detrend(x)
@@ -93,8 +93,8 @@ def test_rollingmean_detrend(timelonlatseries):
     assert fx.ds.trend.notnull().sum() == 365
 
 
-def test_no_detrend(timelonlatseries):
-    x = timelonlatseries(np.arange(12 * 365.25), "tas")
+def test_no_detrend(timeseries):
+    x = timeseries(np.arange(12 * 365.25))
 
     det = NoDetrend(group="time.dayofyear", kind="+")
 

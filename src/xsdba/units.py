@@ -247,6 +247,7 @@ def extract_units(arg):
     return ustr if ustr is None else pint.Quantity(1, ustr).units
 
 
+# TODO: Think, is this really needed?
 def compare_units(args_to_check):
     """Decorator to check that all arguments have the same units (or no units)."""
 
@@ -340,9 +341,9 @@ def _add_default_kws(params_dict, params_to_check, func):
 
 
 # TODO: this changes the type of some variables (e.g. thresh : str -> float). This should probably not be allowed
+# TODO: support for Datasets and dict like in compare_units? 
 def harmonize_units(params_to_check):
-    """Check that units are compatible with dimensions, otherwise raise a `ValidationError`."""
-
+    """Compare units and perform a conversion if possible, otherwise raise a `ValidationError`."""
     # if no units are present (DataArray without units attribute or float), then no check is performed
     # if units are present, then check is performed
     # in mixed cases, an error is raised
@@ -351,7 +352,7 @@ def harmonize_units(params_to_check):
         def _wrapper(*args, **kwargs):
             params_func = inspect.signature(func).parameters.keys()
             if set(params_to_check).issubset(set(params_func)) is False:
-                raise ValueError(
+                raise TypeError(
                     f"`harmonize_units' inputs `{params_to_check}` should be a subset of "
                     f"`{func.__name__}`'s arguments: `{params_func}` (arguments that can contain units)"
                 )
@@ -362,26 +363,21 @@ def harmonize_units(params_to_check):
             params_dict = _add_default_kws(params_dict, params_to_check, func)
             params_dict_keys = [k for k in params_dict.keys()]
             if set(params_dict.keys()) != set(params_to_check):
-                raise ValueError(
+                raise TypeError(
                     f"{params_to_check} were passed but only {params_dict.keys()} were found "
                     f"in `{func.__name__}`'s arguments"
                 )
             first_param = params_dict[params_to_check[0]]
             for param_name in params_dict.keys():
-                if isinstance(param_name, str):
-                    value = params_dict[param_name]
-                    key = param_name
-                if isinstance(
-                    param_name, dict
-                ):  # support for Dataset, or a dict of thresholds
-                    key, val = list(param_name.keys())[0], list(param_name.values())[0]
-                    value = params_dict[key][val]
+                value = params_dict[param_name]
                 if value is None:  # optional argument, should be ignored
                     continue
-                params_dict[key] = convert_units_to(value, first_param)
+                params_dict[param_name] = convert_units_to(value, first_param)
+            # reassign keyword arguments
             for k in [k for k in params_dict.keys() if k not in args_dict.keys()]:
                 kwargs[k] = params_dict[k]
                 params_dict.pop(k)
+            # reassign remaining arguments (passed as arg)
             args = list(args)
             for iarg in range(len(args)):
                 if arg_names[iarg] in params_dict.keys():

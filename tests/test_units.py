@@ -14,15 +14,12 @@ from xsdba.typing import Quantified
 from xsdba.units import (
     compare_units,
     convert_units_to,
+    harmonize_units,
     pint2str,
     str2pint,
     to_agg_units,
     units,
 )
-
-# ADAPT: More tests
-# TODO: Test compare_units, harmonize_units
-
 
 class TestUnits:
     def test_temperature(self):
@@ -47,11 +44,6 @@ class TestConvertUnitsTo:
     )
     def test_temperature_aliases(self, alias):
         assert alias == units("celsius")
-
-    # def test_offset_confusion(self):
-    #     out = convert_units_to("10 degC days", "K days")
-    #     assert out == 10
-
 
 class TestUnitConversion:
     def test_pint2str(self):
@@ -78,12 +70,6 @@ class TestUnitConversion:
 
         u = units2pint("1")
         assert pint2str(u) == ""
-
-    # def test_pint_multiply(self, pr_series):
-    #     a = timelonlatseries([1, 2, 3], attrs={"units": "kg m-2 /d"})
-    #     out = pint_multiply(a, 1 * units.days)
-    #     assert out[0] == 1 * 60 * 60 * 24
-    #     assert out.units == "kg m-2"
 
     def test_str2pint(self):
         Q_ = units.Quantity  # noqa
@@ -118,3 +104,44 @@ def test_to_agg_units(in_u, opfunc, op, exp, exp_u):
     out = to_agg_units(getattr(da, opfunc)(), da, op)
     np.testing.assert_allclose(out, exp)
     assert out.attrs["units"] == exp_u
+
+
+class TestHarmonizeUnits:
+    def test_simple(self): 
+        da =  xr.DataArray([1,2], attrs={"units": "K"})
+        thr = "1 K"
+        @harmonize_units(["da", "thr"])
+        def gt(da, thr): 
+            return (da > thr).sum().values
+
+        assert gt(da, thr) == 1
+    
+    def test_no_units(self): 
+        da =  xr.DataArray([1,2])
+        thr = 1
+        @harmonize_units(["da", "thr"])
+        def gt(da, thr): 
+            return (da > thr).sum().values
+
+        assert gt(da, thr) == 1
+    def test_wrong_decorator(self): 
+        da =  xr.DataArray([1,2], attrs={"units": "K"})
+        thr = "1 K"
+        @harmonize_units(["da", "thrr"])
+        def gt(da, thr): 
+            return (da > thr).sum().values
+
+        with pytest.raises(TypeError, match="should be a subset of"):
+            gt(da, thr)
+
+    def test_wrong_input_catched_by_decorator(self): 
+        da =  xr.DataArray([1,2], attrs={"units": "K"})
+        thr = "1 K"
+        @harmonize_units(["da", "thr"])
+        def gt(da, thr): 
+            return (da > thr).sum().values
+
+        with pytest.raises(TypeError, match="were passed but only"):
+            gt(da)
+        
+        

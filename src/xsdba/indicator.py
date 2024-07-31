@@ -156,7 +156,7 @@ from .options import (
     OPTIONS,
 )
 from .typing import InputKind
-from .units import compare_units, convert_units_to, units
+from .units import convert_units_to, units
 from .utils import load_module
 
 # Indicators registry
@@ -1149,7 +1149,7 @@ class Indicator(IndicatorRegistrar):
         return attrs
 
     @classmethod
-    def json(cls, args=None):
+    def json(self, args=None):
         """Return a serializable dictionary representation of the class.
 
         Parameters
