@@ -106,6 +106,7 @@ import re
 import warnings
 import weakref
 from collections import OrderedDict, defaultdict
+from collections.abc import Sequence
 from copy import deepcopy
 from dataclasses import asdict, dataclass
 from functools import reduce
@@ -117,7 +118,6 @@ from os import PathLike
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable, Optional, Union
-from collections.abc import Sequence
 
 import numpy as np
 import xarray
@@ -156,7 +156,7 @@ from .options import (
     OPTIONS,
 )
 from .typing import InputKind
-from .units import check_units, convert_units_to, units
+from .units import compare_units, convert_units_to, units
 from .utils import load_module
 
 # Indicators registry
@@ -1149,7 +1149,7 @@ class Indicator(IndicatorRegistrar):
         return attrs
 
     @classmethod
-    def json(self, args=None):
+    def json(cls, args=None):
         """Return a serializable dictionary representation of the class.
 
         Parameters

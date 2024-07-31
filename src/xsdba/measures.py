@@ -21,7 +21,7 @@ from xsdba.indicator import Indicator, base_registry
 # from xclim.core.units import ensure_delta
 from .base import Grouper
 from .typing import InputKind
-from .units import check_units, ensure_delta
+from .units import compare_units, ensure_delta
 from .utils import _pairwise_spearman
 
 
@@ -48,7 +48,7 @@ class StatisticalMeasure(Indicator):
             )
         return super()._ensure_correct_parameters(parameters)
 
-    @check_units([{"das": "ref"}, {"das": "sim"}])
+    @compare_units([{"das": "ref"}, {"das": "sim"}])
     def _preprocess_and_checks(self, das, params):
         """Perform parent's checks and also check convert units so that sim matches ref."""
         das, params = super()._preprocess_and_checks(das, params)
@@ -110,7 +110,7 @@ class StatisticalPropertyMeasure(Indicator):
 
         return super()._ensure_correct_parameters(parameters)
 
-    @check_units([{"das": "ref"}, {"das": "sim"}])
+    @compare_units([{"das": "ref"}, {"das": "sim"}])
     def _preprocess_and_checks(self, das, params):
         """Perform parent's checks and also check convert units so that sim matches ref."""
         das, params = super()._preprocess_and_checks(das, params)

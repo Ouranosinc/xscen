@@ -24,12 +24,13 @@ import warnings
 import numpy as np
 import xarray as xr
 
-from .calendar import parse_offset
+from .calendar import get_calendar, parse_offset
 from .typing import Quantified
 from .utils import copy_all_attrs
 
 units = pint.get_application_registry()
-
+# Another alias not included by cf_xarray
+units.define("@alias percent = pct")
 
 FREQ_UNITS = {
     "D": "d",
@@ -66,7 +67,7 @@ def infer_sampling_units(
     Returns
     -------
     int
-        The magnitude (number of base periods per period)
+        The magnitude (number of base periods per period).
     str
         Units as a string, understandable by pint.
     """
@@ -169,7 +170,7 @@ def pint2str(value: units.Quantity | units.Unit) -> str:
     Returns
     -------
     str
-        Units
+        Units.
 
     Notes
     -----
@@ -213,7 +214,7 @@ def ensure_delta(unit: str) -> str:
     Parameters
     ----------
     unit : str
-        unit to transform in delta (or not)
+        unit to transform in delta (or not).
     """
     u = units2pint(unit)
     d = 1 * u
@@ -246,7 +247,7 @@ def extract_units(arg):
     return ustr if ustr is None else pint.Quantity(1, ustr).units
 
 
-def check_units(args_to_check):
+def compare_units(args_to_check):
     """Decorator to check that all arguments have the same units (or no units)."""
 
     # if no units are present (DataArray without units attribute or float), then no check is performed
@@ -312,14 +313,6 @@ def convert_units_to(  # noqa: C901
         The outputted type is always similar to `source` initial type.
         Attributes are preserved unless an automatic CF conversion is performed,
         in which case only the new `standard_name` appears in the result.
-
-    See Also
-    --------
-    cf_conversion
-    amount2rate
-    rate2amount
-    amount2lwethickness
-    lwethickness2amount
     """
     # Target units
     target_unit = extract_units(target)
@@ -346,6 +339,7 @@ def _add_default_kws(params_dict, params_to_check, func):
     return params_dict
 
 
+# TODO: this changes the type of some variables (e.g. thresh : str -> float). This should probably not be allowed
 def harmonize_units(params_to_check):
     """Check that units are compatible with dimensions, otherwise raise a `ValidationError`."""
 
@@ -460,7 +454,7 @@ def to_agg_units(
 
     >>> degdays = convert_units_to(degdays, "K days")
     >>> degdays.units
-    'K d'
+    'K d'.
     """
     if op in ["amin", "min", "amax", "max", "mean", "sum"]:
         out.attrs["units"] = orig.attrs["units"]

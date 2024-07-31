@@ -20,7 +20,7 @@ from xsdba.formatting import update_xsdba_history
 from ._processing import _adapt_freq, _normalize, _reordering
 from .base import Grouper
 from .nbutils import _escore
-from .units import check_units, convert_units_to, harmonize_units
+from .units import compare_units, convert_units_to, harmonize_units
 from .utils import ADDITIVE, copy_all_attrs
 
 # from xclim.core.units import convert_units_to, infer_context, units
@@ -67,7 +67,7 @@ def adapt_freq(
     sim : xr.Dataset
         Simulated data, with a "time" dimension.
     group : str or Grouper
-        Grouping information, see base.Grouper
+        Grouping information, see base.Grouper.
     thresh : str
         Threshold below which values are considered zero, a quantity with units.
 
@@ -96,7 +96,6 @@ def adapt_freq(
     References
     ----------
     :cite:cts:`sdba-themesl_empirical-statistical_2012`
-
     """
     out = _adapt_freq(xr.Dataset(dict(sim=sim, ref=ref)), group=group, thresh=thresh)
 
@@ -134,7 +133,7 @@ def jitter_under_thresh(x: xr.DataArray, thresh: str) -> xr.DataArray:
 
     Returns
     -------
-    xr.DataArray
+    xr.DataArray.
 
     Notes
     -----
@@ -162,12 +161,11 @@ def jitter_over_thresh(x: xr.DataArray, thresh: str, upper_bnd: str) -> xr.DataA
 
     Returns
     -------
-    xr.DataArray
+    xr.DataArray.
 
     Notes
     -----
     If thresh is low, this will change the mean value of x.
-
     """
     j: xr.DataArray = jitter(
         x, lower=None, upper=thresh, minimum=None, maximum=upper_bnd
@@ -353,29 +351,28 @@ def unstandardize(da: xr.DataArray, mean: xr.DataArray, std: xr.DataArray):
 
 @update_xsdba_history
 def reordering(ref: xr.DataArray, sim: xr.DataArray, group: str = "time") -> xr.Dataset:
-    """Reorders data in `sim` following the order of ref.
+    """Reorder data in `sim` following the order of ref.
 
     The rank structure of `ref` is used to reorder the elements of `sim` along dimension "time", optionally doing the
     operation group-wise.
 
     Parameters
     ----------
-    sim : xr.DataArray
-        Array to reorder.
     ref : xr.DataArray
         Array whose rank order sim should replicate.
+    sim : xr.DataArray
+        Array to reorder.
     group : str
         Grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
 
     Returns
     -------
     xr.Dataset
-        sim reordered according to ref's rank order.
+        Sim reordered according to ref's rank order.
 
     References
     ----------
-    :cite:cts:`sdba-cannon_multivariate_2018`
-
+    :cite:cts:`sdba-cannon_multivariate_2018`.
     """
     ds = xr.Dataset({"sim": sim, "ref": ref})
     out: xr.Dataset = _reordering(ds, group=group).reordered
@@ -414,7 +411,7 @@ def escore(
     Returns
     -------
     xr.DataArray
-        e-score with dimensions not in `dims`.
+        Return e-score with dimensions not in `dims`.
 
     Notes
     -----
@@ -441,8 +438,7 @@ def escore(
 
     References
     ----------
-    :cite:cts:`sdba-baringhaus_new_2004,sdba-cannon_multivariate_2018,sdba-cannon_mbc_2020,sdba-szekely_testing_2004`
-
+    :cite:cts:`sdba-baringhaus_new_2004,sdba-cannon_multivariate_2018,sdba-cannon_mbc_2020,sdba-szekely_testing_2004`.
     """
     pts_dim, obs_dim = dims
 
@@ -563,14 +559,14 @@ def to_additive_space(
 
     See Also
     --------
+    Related functions
     from_additive_space : for the inverse transformation.
     jitter_under_thresh : Remove values exactly equal to the lower bound.
     jitter_over_thresh : Remove values exactly equal to the upper bound.
 
     References
     ----------
-    :cite:cts:`sdba-alavoine_distinct_2022`
-
+    :cite:cts:`sdba-alavoine_distinct_2022`.
     """
     # with units.context(infer_context(data.attrs.get("standard_name"))):
     lower_bound_array = np.array(lower_bound).astype(float)
@@ -666,7 +662,7 @@ def from_additive_space(
 
     References
     ----------
-    :cite:cts:`sdba-alavoine_distinct_2022`
+    :cite:cts:`sdba-alavoine_distinct_2022`.
 
     """
     if trans is None and lower_bound is None and units is None:
@@ -748,7 +744,6 @@ def stack_variables(ds: xr.Dataset, rechunk: bool = True, dim: str = "multivar")
         `sdba_transform_upper` are also set if the requested bounds are different from the defaults.
 
         Array with variables stacked along `dim` dimension. Units are set to "".
-
     """
     # Store original arrays' attributes
     attrs: dict = {}
@@ -825,7 +820,7 @@ def grouped_time_indexes(times, group):
     times : xr.DataArray
         Time dimension in the dataset of interest.
     group : str or Grouper
-        Grouping information, see base.Grouper
+        Grouping information, see base.Grouper.
 
     Returns
     -------
