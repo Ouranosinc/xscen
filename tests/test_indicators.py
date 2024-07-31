@@ -19,12 +19,11 @@ from xsdba.formatting import (
     parse_doc,
     update_history,
 )
-from xsdba.indicator import  Indicator, registry
-from xsdba.units import convert_units_to, units
-from xsdba.typing import InputKind, Quantified
+from xsdba.indicator import Indicator, registry
 from xsdba.logging import MissingVariableError
 from xsdba.options import set_options
-
+from xsdba.typing import InputKind, Quantified
+from xsdba.units import convert_units_to, units
 
 # # @declare_units(da="[temperature]", thresh="[temperature]")
 # def uniindtemp_compute(
@@ -183,11 +182,11 @@ multiOptVar = Indicator(
     ],
 )
 def test_keep_attrs(timelonlatseries, xcopt, xropt, exp):
-    tx = timelonlatseries(np.arange(360.0), attrs={"units":"K"})
-    tn = timelonlatseries(np.arange(360.0), attrs={"units":"K"})
+    tx = timelonlatseries(np.arange(360.0), attrs={"units": "K"})
+    tn = timelonlatseries(np.arange(360.0), attrs={"units": "K"})
     tx.attrs.update(something="blabla", bing="bang", foo="bar")
     tn.attrs.update(something="blabla", bing="bong")
-    with  set_options(keep_attrs=xcopt):
+    with set_options(keep_attrs=xcopt):
         with xr.set_options(keep_attrs=xropt):
             tg = multiOptVar(tasmin=tn, tasmax=tx)
     assert (tg.attrs.get("something") == "blabla") is exp
@@ -196,12 +195,12 @@ def test_keep_attrs(timelonlatseries, xcopt, xropt, exp):
 
 
 def test_as_dataset(timelonlatseries):
-    tx = timelonlatseries(np.arange(360.0), attrs={"units":"K"})
-    tn = timelonlatseries(np.arange(360.0), attrs={"units":"K"})
+    tx = timelonlatseries(np.arange(360.0), attrs={"units": "K"})
+    tn = timelonlatseries(np.arange(360.0), attrs={"units": "K"})
     tx.attrs.update(something="blabla", bing="bang", foo="bar")
     tn.attrs.update(something="blabla", bing="bong")
     dsin = xr.Dataset({"tasmax": tx, "tasmin": tn}, attrs={"fou": "barre"})
-    with  set_options(keep_attrs=True, as_dataset=True):
+    with set_options(keep_attrs=True, as_dataset=True):
         dsout = multiOptVar(ds=dsin)
     assert isinstance(dsout, xr.Dataset)
     assert dsout.attrs["fou"] == "barre"
@@ -218,8 +217,8 @@ def test_as_dataset(timelonlatseries):
 
 
 def test_opt_vars(timelonlatseries):
-    tn = timelonlatseries(np.zeros(365), attrs={"units":"K"})
-    tx = timelonlatseries(np.zeros(365), attrs={"units":"K"})
+    tn = timelonlatseries(np.zeros(365), attrs={"units": "K"})
+    tx = timelonlatseries(np.zeros(365), attrs={"units": "K"})
 
     multiOptVar(tasmin=tn, tasmax=tx)
     assert multiOptVar.parameters["tasmin"].kind == InputKind.OPTIONAL_VARIABLE
@@ -835,7 +834,7 @@ def test_update_history():
 
 def test_resampling_indicator_with_indexing(timeseries):
     tas = timeseries(np.ones(731) + 273.15, start="2003-01-01")
-    out = (tas>273.15).resample(time="YS").sum()
+    out = (tas > 273.15).resample(time="YS").sum()
     # out = xclim.atmos.tx_days_above(tas, thresh="0 degC", freq="YS")
     np.testing.assert_allclose(out, [365, 366])
 
