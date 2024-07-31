@@ -14,7 +14,7 @@ import numpy as np
 import xarray as xr
 from xarray.core.utils import get_temp_dimname
 
-from xsdba.base import get_calendar, max_doy, parse_offset, uses_dask
+from xsdba.calendar import get_calendar, max_doy, parse_offset, uses_dask
 from xsdba.formatting import update_xsdba_history
 
 from ._processing import _adapt_freq, _normalize, _reordering
@@ -388,7 +388,7 @@ def escore(
     tgt: xr.DataArray,
     sim: xr.DataArray,
     dims: Sequence[str] = ("variables", "time"),
-    N: int = 0,  # noqa
+    N: int = 0,
     scale: bool = False,
 ) -> xr.DataArray:
     r"""Energy score, or energy dissimilarity metric, based on :cite:t:`sdba-szekely_testing_2004` and :cite:t:`sdba-cannon_multivariate_2018`.

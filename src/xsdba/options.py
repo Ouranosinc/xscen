@@ -11,14 +11,15 @@ from typing import Callable
 
 from boltons.funcutils import wraps
 
-# from .locales import _valid_locales # from XC, not reproduced for now
+from .locales import _valid_locales
 from .logging import ValidationError, raise_warn_or_log
 
-# METADATA_LOCALES = "metadata_locales"
+METADATA_LOCALES = "metadata_locales"
 DATA_VALIDATION = "data_validation"
 CF_COMPLIANCE = "cf_compliance"
 CHECK_MISSING = "check_missing"
 MISSING_OPTIONS = "missing_options"
+RUN_LENGTH_UFUNC = "run_length_ufunc"
 SDBA_EXTRA_OUTPUT = "sdba_extra_output"
 SDBA_ENCODE_CF = "sdba_encode_cf"
 KEEP_ATTRS = "keep_attrs"
@@ -27,11 +28,12 @@ AS_DATASET = "as_dataset"
 MISSING_METHODS: dict[str, Callable] = {}
 
 OPTIONS = {
-    # METADATA_LOCALES: [],
+    METADATA_LOCALES: [],
     DATA_VALIDATION: "raise",
     CF_COMPLIANCE: "warn",
     CHECK_MISSING: "any",
     MISSING_OPTIONS: {},
+    RUN_LENGTH_UFUNC: "auto",
     SDBA_EXTRA_OUTPUT: False,
     SDBA_ENCODE_CF: False,
     KEEP_ATTRS: "xarray",
@@ -39,6 +41,7 @@ OPTIONS = {
 }
 
 _LOUDNESS_OPTIONS = frozenset(["log", "warn", "raise"])
+_RUN_LENGTH_UFUNC_OPTIONS = frozenset(["auto", True, False])
 _KEEP_ATTRS_OPTIONS = frozenset(["xarray", True, False])
 
 
@@ -57,11 +60,12 @@ def _valid_missing_options(mopts):
 
 
 _VALIDATORS = {
-    # METADATA_LOCALES: _valid_locales,
+    METADATA_LOCALES: _valid_locales,
     DATA_VALIDATION: _LOUDNESS_OPTIONS.__contains__,
     CF_COMPLIANCE: _LOUDNESS_OPTIONS.__contains__,
     CHECK_MISSING: lambda meth: meth != "from_context" and meth in MISSING_METHODS,
     MISSING_OPTIONS: _valid_missing_options,
+    RUN_LENGTH_UFUNC: _RUN_LENGTH_UFUNC_OPTIONS.__contains__,
     SDBA_EXTRA_OUTPUT: lambda opt: isinstance(opt, bool),
     SDBA_ENCODE_CF: lambda opt: isinstance(opt, bool),
     KEEP_ATTRS: _KEEP_ATTRS_OPTIONS.__contains__,
@@ -74,16 +78,16 @@ def _set_missing_options(mopts):
         OPTIONS[MISSING_OPTIONS][meth].update(opts)
 
 
-# def _set_metadata_locales(locales):
-#     if isinstance(locales, str):
-#         OPTIONS[METADATA_LOCALES] = [locales]
-#     else:
-#         OPTIONS[METADATA_LOCALES] = locales
+def _set_metadata_locales(locales):
+    if isinstance(locales, str):
+        OPTIONS[METADATA_LOCALES] = [locales]
+    else:
+        OPTIONS[METADATA_LOCALES] = locales
 
 
 _SETTERS = {
     MISSING_OPTIONS: _set_missing_options,
-    # METADATA_LOCALES: _set_metadata_locales,
+    METADATA_LOCALES: _set_metadata_locales,
 }
 
 

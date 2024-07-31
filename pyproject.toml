@@ -309,7 +309,10 @@ ignore = [
   "N806",
   "PTH123",
   "S310",
-  "PERF401" # don't force list comprehensions
+  "PERF401", # don't force list comprehensions
+  "PERF203", # allow try/except in loop
+  "E501", # line too long
+  "W505" # doc line too long
 ]
 preview = true
 select = [

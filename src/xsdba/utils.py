@@ -955,16 +955,6 @@ def rand_rot_matrix(
     ).astype("float32")
 
 
-def copy_all_attrs(ds: xr.Dataset | xr.DataArray, ref: xr.Dataset | xr.DataArray):
-    """Copy all attributes of ds to ref, including attributes of shared coordinates, and variables in the case of Datasets."""
-    ds.attrs.update(ref.attrs)
-    extras = ds.variables if isinstance(ds, xr.Dataset) else ds.coords
-    others = ref.variables if isinstance(ref, xr.Dataset) else ref.coords
-    for name, var in extras.items():
-        if name in others:
-            var.attrs.update(ref[name].attrs)
-
-
 def _pairwise_spearman(da, dims):
     """Area-averaged pairwise temporal correlation.
 
@@ -1016,3 +1006,47 @@ def _pairwise_spearman(da, dims):
             "allow_rechunk": True,
         },
     ).rename("correlation")
+
+
+# ADAPT: Maybe this is not the best place
+def copy_all_attrs(ds: xr.Dataset | xr.DataArray, ref: xr.Dataset | xr.DataArray):
+    """Copy all attributes of ds to ref, including attributes of shared coordinates, and variables in the case of Datasets."""
+    ds.attrs.update(ref.attrs)
+    extras = ds.variables if isinstance(ds, xr.Dataset) else ds.coords
+    others = ref.variables if isinstance(ref, xr.Dataset) else ref.coords
+    for name, var in extras.items():
+        if name in others:
+            var.attrs.update(ref[name].attrs)
+
+
+# ADAPT: Maybe this is not the best place
+def load_module(path: os.PathLike, name: str | None = None):
+    """Load a python module from a python file, optionally changing its name.
+
+    Examples
+    --------
+    Given a path to a module file (.py):
+
+    .. code-block:: python
+
+        from pathlib import Path
+        import os
+
+        path = Path("path/to/example.py")
+
+    The two following imports are equivalent, the second uses this method.
+
+    .. code-block:: python
+
+        os.chdir(path.parent)
+        import example as mod1
+
+        os.chdir(previous_working_dir)
+        mod2 = load_module(path)
+        mod1 == mod2
+    """
+    path = Path(path)
+    spec = importlib.util.spec_from_file_location(name or path.stem, path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)  # This executes code, effectively loading the module
+    return mod

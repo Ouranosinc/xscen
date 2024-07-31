@@ -8,7 +8,6 @@ from __future__ import annotations
 import datetime as pydt
 import itertools
 from collections.abc import Sequence
-from enum import IntEnum
 from inspect import _empty, signature
 from typing import Any, Callable, NewType, TypeVar
 
@@ -19,19 +18,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from boltons.funcutils import wraps
-from pint import Quantity
 
 from xsdba.options import OPTIONS, SDBA_ENCODE_CF
 
-# XC:
-#: Type annotation for strings representing full dates (YYYY-MM-DD), may include time.
-DateStr = NewType("DateStr", str)
-
-#: Type annotation for strings representing dates without a year (MM-DD).
-DayOfYearStr = NewType("DayOfYearStr", str)
-
-#: Type annotation for thresholds and other not-exactly-a-variable quantities
-Quantified = TypeVar("Quantified", xr.DataArray, str, Quantity)
+from .typing import InputKind
 
 
 # ## Base class for the sdba module
@@ -114,112 +104,6 @@ class ParametrizableWithDataset(Parametrizable):
         """
         self.ds = ds
         self.ds.attrs[self._attribute] = jsonpickle.encode(self)
-
-
-# XC
-
-
-class InputKind(IntEnum):
-    """Constants for input parameter kinds.
-
-    For use by external parses to determine what kind of data the indicator expects.
-    On the creation of an indicator, the appropriate constant is stored in
-    :py:attr:`xclim.core.indicator.Indicator.parameters`. The integer value is what gets stored in the output
-    of :py:meth:`xclim.core.indicator.Indicator.json`.
-
-    For developers : for each constant, the docstring specifies the annotation a parameter of an indice function
-    should use in order to be picked up by the indicator constructor. Notice that we are using the annotation format
-    as described in `PEP 604 <https://peps.python.org/pep-0604/>`_, i.e. with '|' indicating a union and without import
-    objects from `typing`.
-    """
-
-    VARIABLE = 0
-    """A data variable (DataArray or variable name).
-
-       Annotation : ``xr.DataArray``.
-    """
-    OPTIONAL_VARIABLE = 1
-    """An optional data variable (DataArray or variable name).
-
-       Annotation : ``xr.DataArray | None``. The default should be None.
-    """
-    QUANTIFIED = 2
-    """A quantity with units, either as a string (scalar), a pint.Quantity (scalar) or a DataArray (with units set).
-
-       Annotation : ``xclim.core.utils.Quantified`` and an entry in the :py:func:`xclim.core.units.declare_units`
-       decorator. "Quantified" translates to ``str | xr.DataArray | pint.util.Quantity``.
-    """
-    FREQ_STR = 3
-    """A string representing an "offset alias", as defined by pandas.
-
-       See the Pandas documentation on :ref:`timeseries.offset_aliases` for a list of valid aliases.
-
-       Annotation : ``str`` + ``freq`` as the parameter name.
-    """
-    NUMBER = 4
-    """A number.
-
-       Annotation : ``int``, ``float`` and unions thereof, potentially optional.
-    """
-    STRING = 5
-    """A simple string.
-
-       Annotation : ``str`` or ``str | None``. In most cases, this kind of parameter makes sense
-       with choices indicated in the docstring's version of the annotation with curly braces.
-       See :ref:`notebooks/extendxclim:Defining new indices`.
-    """
-    DAY_OF_YEAR = 6
-    """A date, but without a year, in the MM-DD format.
-
-       Annotation : :py:obj:`xclim.core.utils.DayOfYearStr` (may be optional).
-    """
-    DATE = 7
-    """A date in the YYYY-MM-DD format, may include a time.
-
-       Annotation : :py:obj:`xclim.core.utils.DateStr` (may be optional).
-    """
-    NUMBER_SEQUENCE = 8
-    """A sequence of numbers
-
-       Annotation : ``Sequence[int]``, ``Sequence[float]`` and unions thereof, may include single ``int`` and ``float``,
-       may be optional.
-    """
-    BOOL = 9
-    """A boolean flag.
-
-       Annotation : ``bool``, may be optional.
-    """
-    DICT = 10
-    """A dictionary.
-
-       Annotation : ``dict`` or ``dict | None``, may be optional.
-    """
-    KWARGS = 50
-    """A mapping from argument name to value.
-
-       Developers : maps the ``**kwargs``. Please use as little as possible.
-    """
-    DATASET = 70
-    """An xarray dataset.
-
-       Developers : as indices only accept DataArrays, this should only be added on the indicator's constructor.
-    """
-    OTHER_PARAMETER = 99
-    """An object that fits None of the previous kinds.
-
-       Developers : This is the fallback kind, it will raise an error in xclim's unit tests if used.
-    """
-
-
-# XC
-def copy_all_attrs(ds: xr.Dataset | xr.DataArray, ref: xr.Dataset | xr.DataArray):
-    """Copy all attributes of ds to ref, including attributes of shared coordinates, and variables in the case of Datasets."""
-    ds.attrs.update(ref.attrs)
-    extras = ds.variables if isinstance(ds, xr.Dataset) else ds.coords
-    others = ref.variables if isinstance(ref, xr.Dataset) else ref.coords
-    for name, var in extras.items():
-        if name in others:
-            var.attrs.update(ref[name].attrs)
 
 
 # XC put here to avoid circular import
@@ -1020,3 +904,65 @@ def map_groups(
         return wrapper
 
     return _decorator
+
+
+def infer_kind_from_parameter(param) -> InputKind:
+    """Return the appropriate InputKind constant from an ``inspect.Parameter`` object.
+
+    Parameters
+    ----------
+    param : Parameter
+
+    Notes
+    -----
+    The correspondence between parameters and kinds is documented in :py:class:`xclim.core.utils.InputKind`.
+    """
+    if param.annotation is not _empty:
+        annot = set(
+            param.annotation.replace("xarray.", "").replace("xr.", "").split(" | ")
+        )
+    else:
+        annot = {"no_annotation"}
+
+    if "DataArray" in annot and "None" not in annot and param.default is not None:
+        return InputKind.VARIABLE
+
+    annot = annot - {"None"}
+
+    if "DataArray" in annot:
+        return InputKind.OPTIONAL_VARIABLE
+
+    if param.name == "freq":
+        return InputKind.FREQ_STR
+
+    if param.kind == param.VAR_KEYWORD:
+        return InputKind.KWARGS
+
+    if annot == {"Quantified"}:
+        return InputKind.QUANTIFIED
+
+    if "DayOfYearStr" in annot:
+        return InputKind.DAY_OF_YEAR
+
+    if annot.issubset({"int", "float"}):
+        return InputKind.NUMBER
+
+    if annot.issubset({"int", "float", "Sequence[int]", "Sequence[float]"}):
+        return InputKind.NUMBER_SEQUENCE
+
+    if annot.issuperset({"str"}):
+        return InputKind.STRING
+
+    if annot == {"DateStr"}:
+        return InputKind.DATE
+
+    if annot == {"bool"}:
+        return InputKind.BOOL
+
+    if annot == {"dict"}:
+        return InputKind.DICT
+
+    if annot == {"Dataset"}:
+        return InputKind.DATASET
+
+    return InputKind.OTHER_PARAMETER

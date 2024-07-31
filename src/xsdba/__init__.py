@@ -20,7 +20,16 @@
 
 from __future__ import annotations
 
-from . import adjustment, base, detrending, processing, testing, units, utils
+from . import (
+    adjustment,
+    base,
+    detrending,
+    processing,
+    properties,
+    testing,
+    units,
+    utils,
+)
 
 # , adjustment
 # from . import adjustment, base, detrending, measures, processing, properties, utils

@@ -54,3 +54,7 @@ def raise_warn_or_log(
         warnings.warn(message, stacklevel=stacklevel + 1)
     else:  # mode == "raise"
         raise err from err_type(message)
+
+
+class MissingVariableError(ValueError):
+    """Error raised when a dataset is passed to an indicator but one of the needed variable is missing."""
