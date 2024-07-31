@@ -1,5 +1,5 @@
 # pylint: disable=missing-kwoa
-"""
+"""# noqa: SS01
 Properties Submodule
 ====================
 SDBA diagnostic tests are made up of statistical properties and measures. Properties are calculated on both simulation
@@ -7,7 +7,6 @@ and reference datasets. They collapse the time dimension to one value.
 
 This framework for the diagnostic tests was inspired by the `VALUE <http://www.value-cost.eu/>`_ project.
 Statistical Properties is the xclim term for 'indices' in the VALUE project.
-
 """
 from __future__ import annotations
 
@@ -50,7 +49,6 @@ class StatisticalProperty(Indicator):
 
     Statistical properties may restrict the sampling frequency of the input, they usually take in a
     single variable (named "da" in unit-generic instances).
-
     """
 
     aspect = None
@@ -328,7 +326,7 @@ def _spell_length_distribution(
         Float of the quantile if the method is "quantile".
     window : int
         Number of consecutive days respecting the constraint in order to begin a spell.
-        Default is 1, which is equivalent to `_threshold_count`
+        Default is 1, which is equivalent to `_threshold_count`.
     stat : {'mean', 'sum', 'max','min'}
         Statistics to apply to the remaining time dimension after resampling (e.g. Jan 1980-2010)
     stat_resample : {'mean', 'sum', 'max','min'}, optional
@@ -517,7 +515,7 @@ def _acf(
     """
 
     def acf_last(x, nlags):
-        """Statsmodels acf calculates acf for lag 0 to nlags, this return only the last one."""
+        """Calculates, like Statsmodels, acf for lag 0 to nlags, but returns only the last one."""
         # As we resample + group, timeseries are quite short and fft=False seems more performant
         out_last = stattools.acf(x, nlags=nlags, fft=False)
         return out_last[-1]
@@ -787,7 +785,7 @@ def _corr_btw_var(
     Returns
     -------
     xr.DataArray, [dimensionless]
-        {corr_type} correlation coefficient
+        {corr_type} correlation coefficient.
     """
     if corr_type.lower() not in {"pearson", "spearman"}:
         raise ValueError(
@@ -883,7 +881,7 @@ def _bivariate_spell_length_distribution(
         Float of the quantile if the method is "quantile".
     window : int
         Number of consecutive days respecting the constraint in order to begin a spell.
-        Default is 1, which is equivalent to `_bivariate_threshold_count`
+        Default is 1, which is equivalent to `_bivariate_threshold_count`.
     stat : {'mean', 'sum', 'max','min'}
         Statistics to apply to the remaining time dimension after resampling (e.g. Jan 1980-2010)
     stat_resample : {'mean', 'sum', 'max','min'}, optional
@@ -1210,6 +1208,8 @@ def _trend(
     ----------
     da : xr.DataArray
         Variable on which to calculate the diagnostic.
+    group : {'time', 'time.season', 'time.month'}
+        Grouping on the output.
     output : {'slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr'}
         The attributes of the linear regression to return, as defined in scipy.stats.linregress:
         'slope' is the slope of the regression line.
@@ -1220,8 +1220,6 @@ def _trend(
         using Wald Test with t-distribution of the test statistic.
         'stderr' is the standard error of the estimated slope (gradient), under the assumption of residual normality.
         'intercept_stderr' is the standard error of the estimated intercept, under the assumption of residual normality.
-    group : {'time', 'time.season', 'time.month'}
-        Grouping on the output.
 
     Returns
     -------
