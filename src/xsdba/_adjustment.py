@@ -22,7 +22,6 @@ from .detrending import PolyDetrend
 from .options import set_options
 from .processing import escore, jitter_under_thresh, reordering, standardize
 from .units import convert_units_to, units
-
 from .xclim_submodules.stats import _fitfunc_1d
 
 
@@ -716,7 +715,7 @@ def npdf_transform(ds: xr.Dataset, **kwargs) -> xr.Dataset:
     Notes
     -----
     If `n_escore` is negative, `escores` will be filled with NaNs.
-    
+
     """
     ref = ds.ref.rename(time_hist="time")
     hist = ds.hist.rename(time_hist="time")

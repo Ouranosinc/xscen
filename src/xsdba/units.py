@@ -222,7 +222,6 @@ DELTA_ABSOLUTE_TEMP = {
 }
 
 
-
 def ensure_absolute_temperature(units: str):
     """Convert temperature units to their absolute counterpart, assuming they represented a difference (delta).
 

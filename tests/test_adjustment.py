@@ -8,10 +8,10 @@ from scipy.stats import genpareto, norm, uniform
 
 from xsdba import adjustment
 from xsdba.adjustment import (
-    ExtremeValues,
     LOCI,
     DetrendedQuantileMapping,
     EmpiricalQuantileMapping,
+    ExtremeValues,
     PrincipalComponents,
     QuantileDeltaMapping,
     Scaling,
@@ -765,14 +765,14 @@ class TestExtremeValues:
 
     @pytest.mark.slow
     def test_real_data(self, open_dataset):
-        dsim = open_dataset("sdba/CanESM2_1950-2100.nc")#.chunk()
-        dref = open_dataset("sdba/ahccd_1950-2013.nc")#.chunk()
+        dsim = open_dataset("sdba/CanESM2_1950-2100.nc")  # .chunk()
+        dref = open_dataset("sdba/ahccd_1950-2013.nc")  # .chunk()
         ref = dref.sel(time=slice("1950", "2009")).pr
         hist = dsim.sel(time=slice("1950", "2009")).pr
         # TODO: Do we want to include standard conversions in xsdba tests?
         # this is just convenient for now to keep those tests
         hist = pint_multiply(hist, "1e-03 m^3/kg")
-        hist = convert_units_to(hist,ref)
+        hist = convert_units_to(hist, ref)
 
         quantiles = np.linspace(0.01, 0.99, num=50)
 

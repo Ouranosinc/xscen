@@ -15,7 +15,7 @@ def test_ecdf(timeseries, random):
     r = dist.rvs(10000, random_state=random)
     q = [0.01, 0.5, 0.99]
     x = xr.DataArray(dist.ppf(q), dims=("q",))
-    np.testing.assert_allclose(u.ecdf(timeseries(r, units="K" ), x), q, 3)
+    np.testing.assert_allclose(u.ecdf(timeseries(r, units="K"), x), q, 3)
 
     # With NaNs
     r[:2000] = np.nan
@@ -31,8 +31,8 @@ def test_map_cdf(timeseries, random):
     x_value = u.map_cdf(
         xr.Dataset(
             dict(
-                x=timeseries(xd.rvs(n, random_state=random), units = "kg / m^2 / s"),
-                y=timeseries(yd.rvs(n, random_state=random), units = "kg / m^2 / s"),
+                x=timeseries(xd.rvs(n, random_state=random), units="kg / m^2 / s"),
+                y=timeseries(yd.rvs(n, random_state=random), units="kg / m^2 / s"),
             )
         ),
         y_value=yd.ppf(q),

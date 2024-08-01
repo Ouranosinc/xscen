@@ -20,11 +20,11 @@ from xsdba.units import convert_units_to
 from xsdba.utils import uses_dask
 
 from ._adjustment import (
-    extremes_adjust, 
-    extremes_train,
     dqm_adjust,
     dqm_train,
     eqm_train,
+    extremes_adjust,
+    extremes_train,
     loci_adjust,
     loci_train,
     mbcn_adjust,
@@ -45,9 +45,7 @@ from .utils import (
     pc_matrix,
     rand_rot_matrix,
 )
-
 from .xclim_submodules import stats
-
 
 __all__ = [
     "LOCI",
