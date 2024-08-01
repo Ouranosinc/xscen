@@ -186,10 +186,41 @@ def pint2str(value: units.Quantity | units.Unit) -> str:
         return f"{value:cf}".replace("dimensionless", "")
 
 
+def pint_multiply(
+    da: xr.DataArray, q: pint.Quantity | str, out_units: str | None = None
+) -> xr.DataArray:
+    """Multiply xarray.DataArray by pint.Quantity.
+
+    Parameters
+    ----------
+    da : xr.DataArray
+        Input array.
+    q : pint.Quantity or str
+        Multiplicative factor.
+    out_units : str, optional
+        Units the output array should be converted into.
+
+    Returns
+    -------
+    xr.DataArray
+    """
+    q = q if isinstance(q, pint.Quantity) else str2pint(q)
+    a = 1 * units2pint(da)  # noqa
+    f = a * q.to_base_units()
+    if out_units:
+        f = f.to(out_units)
+    else:
+        f = f.to_reduced_units()
+    out: xr.DataArray = da * f.magnitude
+    out = out.assign_attrs(units=pint2str(f.units))
+    return out
+
+
 DELTA_ABSOLUTE_TEMP = {
     units.delta_degC: units.kelvin,
     units.delta_degF: units.rankine,
 }
+
 
 
 def ensure_absolute_temperature(units: str):

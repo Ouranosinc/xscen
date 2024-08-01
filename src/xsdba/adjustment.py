@@ -19,7 +19,9 @@ from xsdba.options import OPTIONS, SDBA_EXTRA_OUTPUT, set_options
 from xsdba.units import convert_units_to
 from xsdba.utils import uses_dask
 
-from ._adjustment import (  # extremes_adjust,; extremes_train,
+from ._adjustment import (
+    extremes_adjust, 
+    extremes_train,
     dqm_adjust,
     dqm_train,
     eqm_train,
@@ -44,7 +46,7 @@ from .utils import (
     rand_rot_matrix,
 )
 
-# from xclim.indices import stats
+from .xclim_submodules import stats
 
 
 __all__ = [
@@ -52,7 +54,7 @@ __all__ = [
     "BaseAdjustment",
     "DetrendedQuantileMapping",
     "EmpiricalQuantileMapping",
-    # "ExtremeValues",
+    "ExtremeValues",
     "MBCn",
     "NpdfTransform",
     "PrincipalComponents",
@@ -636,162 +638,162 @@ class QuantileDeltaMapping(EmpiricalQuantileMapping):
         return out.scen
 
 
-# class ExtremeValues(TrainAdjust):
-#     r"""Adjustment correction for extreme values.
+class ExtremeValues(TrainAdjust):
+    r"""Adjustment correction for extreme values.
 
-#     The tail of the distribution of adjusted data is corrected according to the bias between the parametric Generalized
-#     Pareto distributions of the simulated and reference data :cite:p:`sdba-roy_extremeprecip_2023`. The distributions are composed of the
-#     maximal values of clusters of "large" values.  With "large" values being those above `cluster_thresh`. Only extreme
-#     values, whose quantile within the pool of large values are above `q_thresh`, are re-adjusted. See `Notes`.
+    The tail of the distribution of adjusted data is corrected according to the bias between the parametric Generalized
+    Pareto distributions of the simulated and reference data :cite:p:`sdba-roy_extremeprecip_2023`. The distributions are composed of the
+    maximal values of clusters of "large" values.  With "large" values being those above `cluster_thresh`. Only extreme
+    values, whose quantile within the pool of large values are above `q_thresh`, are re-adjusted. See `Notes`.
 
-#     This adjustment method should be considered experimental and used with care.
+    This adjustment method should be considered experimental and used with care.
 
-#     Parameters
-#     ----------
-#     Train step :
+    Parameters
+    ----------
+    Train step :
 
-#     cluster_thresh : Quantity (str with units)
-#         The threshold value for defining clusters.
-#     q_thresh : float
-#         The quantile of "extreme" values, [0, 1[. Defaults to 0.95.
-#     ref_params :  xr.DataArray, optional
-#         Distribution parameters to use instead of fitting a GenPareto distribution on `ref`.
+    cluster_thresh : Quantity (str with units)
+        The threshold value for defining clusters.
+    q_thresh : float
+        The quantile of "extreme" values, [0, 1[. Defaults to 0.95.
+    ref_params :  xr.DataArray, optional
+        Distribution parameters to use instead of fitting a GenPareto distribution on `ref`.
 
-#     Adjust step:
+    Adjust step:
 
-#     scen : DataArray
-#         This is a second-order adjustment, so the adjust method needs the first-order
-#         adjusted timeseries in addition to the raw "sim".
-#     interp : {'nearest', 'linear', 'cubic'}
-#         The interpolation method to use when interpolating the adjustment factors. Defaults to "linear".
-#     extrapolation : {'constant', 'nan'}
-#         The type of extrapolation to use. See :py:func:`~xclim.sdba.utils.extrapolate_qm` for details. Defaults to "constant".
-#     frac : float
-#         Fraction where the cutoff happens between the original scen and the corrected one.
-#         See Notes, ]0, 1]. Defaults to 0.25.
-#     power : float
-#         Shape of the correction strength, see Notes. Defaults to 1.0.
+    scen : DataArray
+        This is a second-order adjustment, so the adjust method needs the first-order
+        adjusted timeseries in addition to the raw "sim".
+    interp : {'nearest', 'linear', 'cubic'}
+        The interpolation method to use when interpolating the adjustment factors. Defaults to "linear".
+    extrapolation : {'constant', 'nan'}
+        The type of extrapolation to use. See :py:func:`~xclim.sdba.utils.extrapolate_qm` for details. Defaults to "constant".
+    frac : float
+        Fraction where the cutoff happens between the original scen and the corrected one.
+        See Notes, ]0, 1]. Defaults to 0.25.
+    power : float
+        Shape of the correction strength, see Notes. Defaults to 1.0.
 
-#     Notes
-#     -----
-#     Extreme values are extracted from `ref`, `hist` and `sim` by finding all "clusters", i.e. runs of consecutive values
-#     above `cluster_thresh`. The `q_thresh`th percentile of these values is taken on `ref` and `hist` and becomes
-#     `thresh`, the extreme value threshold. The maximal value of each cluster, if it exceeds that new threshold, is taken
-#     and Generalized Pareto distributions are fitted to them, for both `ref` and `hist`. The probabilities associated
-#     with each of these extremes in `hist` is used to find the corresponding value according to `ref`'s distribution.
-#     Adjustment factors are computed as the bias between those new extremes and the original ones.
+    Notes
+    -----
+    Extreme values are extracted from `ref`, `hist` and `sim` by finding all "clusters", i.e. runs of consecutive values
+    above `cluster_thresh`. The `q_thresh`th percentile of these values is taken on `ref` and `hist` and becomes
+    `thresh`, the extreme value threshold. The maximal value of each cluster, if it exceeds that new threshold, is taken
+    and Generalized Pareto distributions are fitted to them, for both `ref` and `hist`. The probabilities associated
+    with each of these extremes in `hist` is used to find the corresponding value according to `ref`'s distribution.
+    Adjustment factors are computed as the bias between those new extremes and the original ones.
 
-#     In the adjust step, a Generalized Pareto distributions is fitted on the cluster-maximums of `sim` and it is used to
-#     associate a probability to each extreme, values over the `thresh` compute in the training, without the clustering.
-#     The adjustment factors are computed by interpolating the trained ones using these probabilities and the
-#     probabilities computed from `hist`.
+    In the adjust step, a Generalized Pareto distributions is fitted on the cluster-maximums of `sim` and it is used to
+    associate a probability to each extreme, values over the `thresh` compute in the training, without the clustering.
+    The adjustment factors are computed by interpolating the trained ones using these probabilities and the
+    probabilities computed from `hist`.
 
-#     Finally, the adjusted values (:math:`C_i`) are mixed with the pre-adjusted ones (`scen`, :math:`D_i`) using the
-#     following transition function:
+    Finally, the adjusted values (:math:`C_i`) are mixed with the pre-adjusted ones (`scen`, :math:`D_i`) using the
+    following transition function:
 
-#     .. math::
+    .. math::
 
-#         V_i = C_i * \tau + D_i * (1 - \tau)
+        V_i = C_i * \tau + D_i * (1 - \tau)
 
-#     Where :math:`\tau` is a function of sim's extreme values (unadjusted, :math:`S_i`)
-#     and of arguments ``frac`` (:math:`f`) and ``power`` (:math:`p`):
+    Where :math:`\tau` is a function of sim's extreme values (unadjusted, :math:`S_i`)
+    and of arguments ``frac`` (:math:`f`) and ``power`` (:math:`p`):
 
-#     .. math::
+    .. math::
 
-#         \tau = \left(\frac{1}{f}\frac{S - min(S)}{max(S) - min(S)}\right)^p
+        \tau = \left(\frac{1}{f}\frac{S - min(S)}{max(S) - min(S)}\right)^p
 
-#     Code based on an internal Matlab source and partly ib the `biascorrect_extremes` function of the julia package
-#     "ClimateTools.jl" :cite:p:`sdba-roy_juliaclimateclimatetoolsjl_2021`.
+    Code based on an internal Matlab source and partly ib the `biascorrect_extremes` function of the julia package
+    "ClimateTools.jl" :cite:p:`sdba-roy_juliaclimateclimatetoolsjl_2021`.
 
-#     Because of limitations imposed by the lazy computing nature of the dask backend, it
-#     is not possible to know the number of cluster extremes in `ref` and `hist` at the
-#     moment the output data structure is created. This is why the code tries to estimate
-#     that number and usually overestimates it. In the training dataset, this translated
-#     into a `quantile` dimension that is too large and variables `af` and `px_hist` are
-#     assigned NaNs on extra elements. This has no incidence on the calculations
-#     themselves but requires more memory than is useful.
+    Because of limitations imposed by the lazy computing nature of the dask backend, it
+    is not possible to know the number of cluster extremes in `ref` and `hist` at the
+    moment the output data structure is created. This is why the code tries to estimate
+    that number and usually overestimates it. In the training dataset, this translated
+    into a `quantile` dimension that is too large and variables `af` and `px_hist` are
+    assigned NaNs on extra elements. This has no incidence on the calculations
+    themselves but requires more memory than is useful.
 
-#     References
-#     ----------
-#     :cite:cts:`sdba-roy_juliaclimateclimatetoolsjl_2021`
-#     :cite:cts:`sdba-roy_extremeprecip_2023`
-#     """
+    References
+    ----------
+    :cite:cts:`sdba-roy_juliaclimateclimatetoolsjl_2021`
+    :cite:cts:`sdba-roy_extremeprecip_2023`
+    """
 
-#     @classmethod
-#     def _train(
-#         cls,
-#         ref: xr.DataArray,
-#         hist: xr.DataArray,
-#         *,
-#         cluster_thresh: str,
-#         ref_params: xr.Dataset | None = None,
-#         q_thresh: float = 0.95,
-#     ):
-#         cluster_thresh = convert_units_to(cluster_thresh, ref, context="infer")
+    @classmethod
+    def _train(
+        cls,
+        ref: xr.DataArray,
+        hist: xr.DataArray,
+        *,
+        cluster_thresh: str,
+        ref_params: xr.Dataset | None = None,
+        q_thresh: float = 0.95,
+    ):
+        cluster_thresh = convert_units_to(cluster_thresh, ref)
 
-#         # Approximation of how many "quantiles" values we will get:
-#         N = (1 - q_thresh) * ref.time.size * 1.05  # extra padding for safety
+        # Approximation of how many "quantiles" values we will get:
+        N = (1 - q_thresh) * ref.time.size * 1.05  # extra padding for safety
 
-#         # ref_params: cast nan to f32 not to interfere with map_blocks dtype parsing
-#         #   ref and hist are f32, we want to have f32 in the output.
-#         ds = extremes_train(
-#             xr.Dataset(
-#                 {
-#                     "ref": ref,
-#                     "hist": hist,
-#                     "ref_params": ref_params or np.float32(np.NaN),
-#                 }
-#             ),
-#             q_thresh=q_thresh,
-#             cluster_thresh=cluster_thresh,
-#             dist=stats.get_dist("genpareto"),
-#             quantiles=np.arange(int(N)),
-#             group="time",
-#         )
+        # ref_params: cast nan to f32 not to interfere with map_blocks dtype parsing
+        #   ref and hist are f32, we want to have f32 in the output.
+        ds = extremes_train(
+            xr.Dataset(
+                {
+                    "ref": ref,
+                    "hist": hist,
+                    "ref_params": ref_params or np.float32(np.NaN),
+                }
+            ),
+            q_thresh=q_thresh,
+            cluster_thresh=cluster_thresh,
+            dist=stats.get_dist("genpareto"),
+            quantiles=np.arange(int(N)),
+            group="time",
+        )
 
-#         ds.px_hist.attrs.update(
-#             long_name="Probability of extremes in hist",
-#             description="Parametric probabilities of extremes in the common domain of hist and ref.",
-#         )
-#         ds.af.attrs.update(
-#             long_name="Extremes adjustment factor",
-#             description="Multiplicative adjustment factor of extremes from hist to ref.",
-#         )
-#         ds.thresh.attrs.update(
-#             long_name=f"{q_thresh * 100}th percentile extreme value threshold",
-#             description=f"Mean of the {q_thresh * 100}th percentile of large values (x > {cluster_thresh}) of ref and hist.",
-#         )
+        ds.px_hist.attrs.update(
+            long_name="Probability of extremes in hist",
+            description="Parametric probabilities of extremes in the common domain of hist and ref.",
+        )
+        ds.af.attrs.update(
+            long_name="Extremes adjustment factor",
+            description="Multiplicative adjustment factor of extremes from hist to ref.",
+        )
+        ds.thresh.attrs.update(
+            long_name=f"{q_thresh * 100}th percentile extreme value threshold",
+            description=f"Mean of the {q_thresh * 100}th percentile of large values (x > {cluster_thresh}) of ref and hist.",
+        )
 
-#         return ds.drop_vars(["quantiles"]), {"cluster_thresh": cluster_thresh}
+        return ds.drop_vars(["quantiles"]), {"cluster_thresh": cluster_thresh}
 
-#     def _adjust(
-#         self,
-#         sim: xr.DataArray,
-#         scen: xr.DataArray,
-#         *,
-#         frac: float = 0.25,
-#         power: float = 1.0,
-#         interp: str = "linear",
-#         extrapolation: str = "constant",
-#     ):
-#         # Quantiles coord : cheat and assign 0 - 1, so we can use `extrapolate_qm`.
-#         ds = self.ds.assign(
-#             quantiles=(np.arange(self.ds.quantiles.size) + 1)
-#             / (self.ds.quantiles.size + 1)
-#         )
+    def _adjust(
+        self,
+        sim: xr.DataArray,
+        scen: xr.DataArray,
+        *,
+        frac: float = 0.25,
+        power: float = 1.0,
+        interp: str = "linear",
+        extrapolation: str = "constant",
+    ):
+        # Quantiles coord : cheat and assign 0 - 1, so we can use `extrapolate_qm`.
+        ds = self.ds.assign(
+            quantiles=(np.arange(self.ds.quantiles.size) + 1)
+            / (self.ds.quantiles.size + 1)
+        )
 
-#         scen = extremes_adjust(
-#             ds.assign(sim=sim, scen=scen),
-#             cluster_thresh=self.cluster_thresh,
-#             dist=stats.get_dist("genpareto"),
-#             frac=frac,
-#             power=power,
-#             interp=interp,
-#             extrapolation=extrapolation,
-#             group="time",
-#         )
+        scen = extremes_adjust(
+            ds.assign(sim=sim, scen=scen),
+            cluster_thresh=self.cluster_thresh,
+            dist=stats.get_dist("genpareto"),
+            frac=frac,
+            power=power,
+            interp=interp,
+            extrapolation=extrapolation,
+            group="time",
+        )
 
-#         return scen
+        return scen
 
 
 class LOCI(TrainAdjust):

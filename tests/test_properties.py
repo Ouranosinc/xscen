@@ -373,7 +373,7 @@ class TestProperties:
                 -0.2090292,
             ],
         )
-        assert pc.long_name == "Pearson correlation coefficient"
+        assert pc.long_name == "Pearson correlation coefficient."
         assert pc.units == ""
 
         with pytest.raises(

@@ -7,7 +7,6 @@ import pint.errors
 import pytest
 import xarray as xr
 from dask import array as dsk
-from xclim import indices, set_options
 
 from xsdba.logging import ValidationError
 from xsdba.typing import Quantified
@@ -90,8 +89,14 @@ class TestUnitConversion:
         ("", "sum", "count", 365, "d"),
         ("", "sum", "count", 365, "d"),
         ("kg m-2", "var", "var", 0, "kg2 m-4"),
-        ("°C", "argmax", "doymax", 0, ""),
-        ("°C", "sum", "integral", 365, "K d"),
+        ("°C", "argmax", "doymax", 0, ("", "1")),  # dependent on numpy/pint version
+        (
+            "°C",
+            "sum",
+            "integral",
+            365,
+            ("K d", "d K"),
+        ),  # dependent on numpy/pint version
         ("°F", "sum", "integral", 365, "d °R"),  # not sure why the order is different
     ],
 )
@@ -105,7 +110,14 @@ def test_to_agg_units(in_u, opfunc, op, exp, exp_u):
 
     out = to_agg_units(getattr(da, opfunc)(), da, op)
     np.testing.assert_allclose(out, exp)
-    assert out.attrs["units"] == exp_u
+
+    if isinstance(exp_u, tuple):
+        if Version(__cfxr_version__) < Version("0.9.3"):
+            assert out.attrs["units"] == exp_u[0]
+        else:
+            assert out.attrs["units"] == exp_u[1]
+    else:
+        assert out.attrs["units"] == exp_u
 
 
 class TestHarmonizeUnits:

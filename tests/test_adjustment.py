@@ -7,7 +7,8 @@ import xarray as xr
 from scipy.stats import genpareto, norm, uniform
 
 from xsdba import adjustment
-from xsdba.adjustment import (  # ExtremeValues,
+from xsdba.adjustment import (
+    ExtremeValues,
     LOCI,
     DetrendedQuantileMapping,
     EmpiricalQuantileMapping,
@@ -24,7 +25,7 @@ from xsdba.processing import (
     unstack_variables,
 )
 from xsdba.testing import nancov
-from xsdba.units import convert_units_to
+from xsdba.units import convert_units_to, pint_multiply
 from xsdba.utils import (
     ADDITIVE,
     MULTIPLICATIVE,
@@ -710,85 +711,84 @@ class TestPrincipalComponents:
     #     assert (ref - scen).mean().tasmin < 5e-3
 
 
-# class TestExtremeValues:
-#     @pytest.mark.parametrize(
-#         "c_thresh,q_thresh,frac,power",
-#         [
-#             ["1 mm/d", 0.95, 0.25, 1],
-#             ["1 mm/d", 0.90, 1e-6, 1],
-#             ["0.007 m/week", 0.95, 0.25, 2],
-#         ],
-#     )
-#     def test_simple(self, c_thresh, q_thresh, frac, power, random):
-#         n = 45 * 365
+class TestExtremeValues:
+    @pytest.mark.parametrize(
+        "c_thresh,q_thresh,frac,power",
+        [
+            ["1 mm/d", 0.95, 0.25, 1],
+            ["1 mm/d", 0.90, 1e-6, 1],
+            ["0.007 m/week", 0.95, 0.25, 2],
+        ],
+    )
+    def test_simple(self, c_thresh, q_thresh, frac, power, random):
+        n = 45 * 365
 
-#         def gen_testdata(c, s):
-#             base = np.clip(
-#                 norm.rvs(loc=0, scale=s, size=(n,), random_state=random), 0, None
-#             )
-#             qv = np.quantile(base[base > 1], q_thresh)
-#             base[base > qv] = genpareto.rvs(
-#                 c, loc=qv, scale=s, size=base[base > qv].shape, random_state=random
-#             )
-#             return xr.DataArray(
-#                 base,
-#                 dims=("time",),
-#                 coords={
-#                     "time": xr.cftime_range("1990-01-01", periods=n, calendar="noleap")
-#                 },
-#                 attrs={"units": "mm/day", "thresh": qv},
-#             )
+        def gen_testdata(c, s):
+            base = np.clip(
+                norm.rvs(loc=0, scale=s, size=(n,), random_state=random), 0, None
+            )
+            qv = np.quantile(base[base > 1], q_thresh)
+            base[base > qv] = genpareto.rvs(
+                c, loc=qv, scale=s, size=base[base > qv].shape, random_state=random
+            )
+            return xr.DataArray(
+                base,
+                dims=("time",),
+                coords={
+                    "time": xr.cftime_range("1990-01-01", periods=n, calendar="noleap")
+                },
+                attrs={"units": "mm/day", "thresh": qv},
+            )
 
-#         ref = jitter_under_thresh(gen_testdata(-0.1, 2), "1e-3 mm/d")
-#         hist = jitter_under_thresh(gen_testdata(-0.1, 2), "1e-3 mm/d")
-#         sim = gen_testdata(-0.15, 2.5)
+        ref = jitter_under_thresh(gen_testdata(-0.1, 2), "1e-3 mm/d")
+        hist = jitter_under_thresh(gen_testdata(-0.1, 2), "1e-3 mm/d")
+        sim = gen_testdata(-0.15, 2.5)
 
-#         EQM = EmpiricalQuantileMapping.train(
-#             ref, hist, group="time.dayofyear", nquantiles=15, kind="*"
-#         )
+        EQM = EmpiricalQuantileMapping.train(
+            ref, hist, group="time.dayofyear", nquantiles=15, kind="*"
+        )
 
-#         scen = EQM.adjust(sim)
+        scen = EQM.adjust(sim)
 
-#         EX = ExtremeValues.train(ref, hist, cluster_thresh=c_thresh, q_thresh=q_thresh)
-#         qv = (ref.thresh + hist.thresh) / 2
-#         np.testing.assert_allclose(EX.ds.thresh, qv, atol=0.15, rtol=0.01)
+        EX = ExtremeValues.train(ref, hist, cluster_thresh=c_thresh, q_thresh=q_thresh)
+        qv = (ref.thresh + hist.thresh) / 2
+        np.testing.assert_allclose(EX.ds.thresh, qv, atol=0.15, rtol=0.01)
 
-#         scen2 = EX.adjust(scen, sim, frac=frac, power=power)
+        scen2 = EX.adjust(scen, sim, frac=frac, power=power)
 
-#         # What to test???
-#         # Test if extreme values of sim are still extreme
-#         exval = sim > EX.ds.thresh
-#         assert (scen2.where(exval) > EX.ds.thresh).sum() > (
-#             scen.where(exval) > EX.ds.thresh
-#         ).sum()
+        # What to test???
+        # Test if extreme values of sim are still extreme
+        exval = sim > EX.ds.thresh
+        assert (scen2.where(exval) > EX.ds.thresh).sum() > (
+            scen.where(exval) > EX.ds.thresh
+        ).sum()
 
-# @pytest.mark.slow
-# def test_real_data(self, open_dataset):
-#     dsim = open_dataset("sdba/CanESM2_1950-2100.nc").chunk()
-#     dref = open_dataset("sdba/ahccd_1950-2013.nc").chunk()
+    @pytest.mark.slow
+    def test_real_data(self, open_dataset):
+        dsim = open_dataset("sdba/CanESM2_1950-2100.nc")#.chunk()
+        dref = open_dataset("sdba/ahccd_1950-2013.nc")#.chunk()
+        ref = dref.sel(time=slice("1950", "2009")).pr
+        hist = dsim.sel(time=slice("1950", "2009")).pr
+        # TODO: Do we want to include standard conversions in xsdba tests?
+        # this is just convenient for now to keep those tests
+        hist = pint_multiply(hist, "1e-03 m^3/kg")
+        hist = convert_units_to(hist,ref)
 
-#     ref = convert_units_to(
-#         dref.sel(time=slice("1950", "2009")).pr, "mm/d", context="hydro"
-#     )
-#     hist = convert_units_to(
-#         dsim.sel(time=slice("1950", "2009")).pr, "mm/d", context="hydro"
-#     )
+        quantiles = np.linspace(0.01, 0.99, num=50)
 
-#     quantiles = np.linspace(0.01, 0.99, num=50)
+        with xr.set_options(keep_attrs=True):
+            ref = ref + uniform_noise_like(ref, low=1e-6, high=1e-3)
+            hist = hist + uniform_noise_like(hist, low=1e-6, high=1e-3)
 
-#     with xr.set_options(keep_attrs=True):
-#         ref = ref + uniform_noise_like(ref, low=1e-6, high=1e-3)
-#         hist = hist + uniform_noise_like(hist, low=1e-6, high=1e-3)
+        EQM = EmpiricalQuantileMapping.train(
+            ref, hist, group=Grouper("time.dayofyear", window=31), nquantiles=quantiles
+        )
 
-#     EQM = EmpiricalQuantileMapping.train(
-#         ref, hist, group=Grouper("time.dayofyear", window=31), nquantiles=quantiles
-#     )
+        scen = EQM.adjust(hist, interp="linear", extrapolation="constant")
 
-#     scen = EQM.adjust(hist, interp="linear", extrapolation="constant")
-
-#     EX = ExtremeValues.train(ref, hist, cluster_thresh="1 mm/day", q_thresh=0.97)
-#     new_scen = EX.adjust(scen, hist, frac=0.000000001)
-#     new_scen.load()
+        EX = ExtremeValues.train(ref, hist, cluster_thresh="1 mm/day", q_thresh=0.97)
+        new_scen = EX.adjust(scen, hist, frac=0.000000001)
+        new_scen.load()
 
 
 def test_raise_on_multiple_chunks(timelonlatseries):
@@ -807,78 +807,78 @@ def test_default_grouper_understood(timelonlatseries):
     assert EQM.group.dim == "time"
 
 
-class TestSBCKutils:
-    @pytest.mark.slow
-    @pytest.mark.parametrize(
-        "method",
-        [m for m in dir(adjustment) if m.startswith("SBCK_")],
-    )
-    @pytest.mark.parametrize("use_dask", [True])  # do we gain testing both?
-    def test_sbck(self, method, use_dask, random):
-        SBCK = pytest.importorskip("SBCK", minversion="0.4.0")
+# class TestSBCKutils:
+#     @pytest.mark.slow
+#     @pytest.mark.parametrize(
+#         "method",
+#         [m for m in dir(adjustment) if m.startswith("SBCK_")],
+#     )
+#     @pytest.mark.parametrize("use_dask", [True])  # do we gain testing both?
+#     def test_sbck(self, method, use_dask, random):
+#         SBCK = pytest.importorskip("SBCK", minversion="0.4.0")
 
-        n = 10 * 365
-        m = 2  # A dummy dimension to test vectorization.
-        ref_y = norm.rvs(loc=10, scale=1, size=(m, n), random_state=random)
-        ref_x = norm.rvs(loc=3, scale=2, size=(m, n), random_state=random)
-        hist_x = norm.rvs(loc=11, scale=1.2, size=(m, n), random_state=random)
-        hist_y = norm.rvs(loc=4, scale=2.2, size=(m, n), random_state=random)
-        sim_x = norm.rvs(loc=12, scale=2, size=(m, n), random_state=random)
-        sim_y = norm.rvs(loc=3, scale=1.8, size=(m, n), random_state=random)
+#         n = 10 * 365
+#         m = 2  # A dummy dimension to test vectorization.
+#         ref_y = norm.rvs(loc=10, scale=1, size=(m, n), random_state=random)
+#         ref_x = norm.rvs(loc=3, scale=2, size=(m, n), random_state=random)
+#         hist_x = norm.rvs(loc=11, scale=1.2, size=(m, n), random_state=random)
+#         hist_y = norm.rvs(loc=4, scale=2.2, size=(m, n), random_state=random)
+#         sim_x = norm.rvs(loc=12, scale=2, size=(m, n), random_state=random)
+#         sim_y = norm.rvs(loc=3, scale=1.8, size=(m, n), random_state=random)
 
-        ref = xr.Dataset(
-            {
-                "tasmin": xr.DataArray(
-                    ref_x, dims=("lon", "time"), attrs={"units": "degC"}
-                ),
-                "tasmax": xr.DataArray(
-                    ref_y, dims=("lon", "time"), attrs={"units": "degC"}
-                ),
-            }
-        )
-        ref["time"] = xr.cftime_range("1990-01-01", periods=n, calendar="noleap")
+#         ref = xr.Dataset(
+#             {
+#                 "tasmin": xr.DataArray(
+#                     ref_x, dims=("lon", "time"), attrs={"units": "degC"}
+#                 ),
+#                 "tasmax": xr.DataArray(
+#                     ref_y, dims=("lon", "time"), attrs={"units": "degC"}
+#                 ),
+#             }
+#         )
+#         ref["time"] = xr.cftime_range("1990-01-01", periods=n, calendar="noleap")
 
-        hist = xr.Dataset(
-            {
-                "tasmin": xr.DataArray(
-                    hist_x, dims=("lon", "time"), attrs={"units": "degC"}
-                ),
-                "tasmax": xr.DataArray(
-                    hist_y, dims=("lon", "time"), attrs={"units": "degC"}
-                ),
-            }
-        )
-        hist["time"] = ref["time"]
+#         hist = xr.Dataset(
+#             {
+#                 "tasmin": xr.DataArray(
+#                     hist_x, dims=("lon", "time"), attrs={"units": "degC"}
+#                 ),
+#                 "tasmax": xr.DataArray(
+#                     hist_y, dims=("lon", "time"), attrs={"units": "degC"}
+#                 ),
+#             }
+#         )
+#         hist["time"] = ref["time"]
 
-        sim = xr.Dataset(
-            {
-                "tasmin": xr.DataArray(
-                    sim_x, dims=("lon", "time"), attrs={"units": "degC"}
-                ),
-                "tasmax": xr.DataArray(
-                    sim_y, dims=("lon", "time"), attrs={"units": "degC"}
-                ),
-            }
-        )
-        sim["time"] = xr.cftime_range("2090-01-01", periods=n, calendar="noleap")
+#         sim = xr.Dataset(
+#             {
+#                 "tasmin": xr.DataArray(
+#                     sim_x, dims=("lon", "time"), attrs={"units": "degC"}
+#                 ),
+#                 "tasmax": xr.DataArray(
+#                     sim_y, dims=("lon", "time"), attrs={"units": "degC"}
+#                 ),
+#             }
+#         )
+#         sim["time"] = xr.cftime_range("2090-01-01", periods=n, calendar="noleap")
 
-        if use_dask:
-            ref = ref.chunk({"lon": 1})
-            hist = hist.chunk({"lon": 1})
-            sim = sim.chunk({"lon": 1})
+#         if use_dask:
+#             ref = ref.chunk({"lon": 1})
+#             hist = hist.chunk({"lon": 1})
+#             sim = sim.chunk({"lon": 1})
 
-        if "TSMBC" in method:
-            kws = {"lag": 1}
-        elif "MBCn" in method:
-            kws = {"metric": SBCK.metrics.energy}
-        else:
-            kws = {}
+#         if "TSMBC" in method:
+#             kws = {"lag": 1}
+#         elif "MBCn" in method:
+#             kws = {"metric": SBCK.metrics.energy}
+#         else:
+#             kws = {}
 
-        scen = getattr(adjustment, method).adjust(
-            stack_variables(ref),
-            stack_variables(hist),
-            stack_variables(sim),
-            multi_dim="multivar",
-            **kws,
-        )
-        unstack_variables(scen).load()
+#         scen = getattr(adjustment, method).adjust(
+#             stack_variables(ref),
+#             stack_variables(hist),
+#             stack_variables(sim),
+#             multi_dim="multivar",
+#             **kws,
+#         )
+#         unstack_variables(scen).load()

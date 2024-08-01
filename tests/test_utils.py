@@ -10,19 +10,19 @@ from xsdba import utils as u
 from xsdba.base import Grouper
 
 
-def test_ecdf(timelonlatseries, random):
+def test_ecdf(timeseries, random):
     dist = norm(5, 2)
     r = dist.rvs(10000, random_state=random)
     q = [0.01, 0.5, 0.99]
     x = xr.DataArray(dist.ppf(q), dims=("q",))
-    np.testing.assert_allclose(u.ecdf(timelonlatseries(r, "tas"), x), q, 3)
+    np.testing.assert_allclose(u.ecdf(timeseries(r, units="K" ), x), q, 3)
 
     # With NaNs
     r[:2000] = np.nan
-    np.testing.assert_allclose(u.ecdf(timelonlatseries(r, "tas"), x), q, 3)
+    np.testing.assert_allclose(u.ecdf(timeseries(r, units="K"), x), q, 3)
 
 
-def test_map_cdf(timelonlatseries, random):
+def test_map_cdf(timeseries, random):
     n = 10000
     xd = norm(5, 2)
     yd = norm(7, 3)
@@ -31,8 +31,8 @@ def test_map_cdf(timelonlatseries, random):
     x_value = u.map_cdf(
         xr.Dataset(
             dict(
-                x=timelonlatseries(xd.rvs(n, random_state=random), "pr"),
-                y=timelonlatseries(yd.rvs(n, random_state=random), "pr"),
+                x=timeseries(xd.rvs(n, random_state=random), units = "kg / m^2 / s"),
+                y=timeseries(yd.rvs(n, random_state=random), units = "kg / m^2 / s"),
             )
         ),
         y_value=yd.ppf(q),
@@ -45,8 +45,8 @@ def test_map_cdf(timelonlatseries, random):
     x_value = u.map_cdf(
         xr.Dataset(
             dict(
-                x=timelonlatseries(xd.rvs(n, random_state=random), "pr"),
-                y=timelonlatseries(yd.rvs(n, random_state=random), "pr"),
+                x=timeseries(xd.rvs(n, random_state=random), units="kg / m^2 / s"),
+                y=timeseries(yd.rvs(n, random_state=random), units="kg / m^2 / s"),
             )
         ),
         y_value=yd.ppf(q),

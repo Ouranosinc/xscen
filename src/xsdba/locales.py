@@ -148,7 +148,7 @@ def get_local_attrs(
     Parameters
     ----------
     indicator : str or sequence of strings
-        Indicator's class name, usually the same as in `xc.core.indicator.registry`.
+        Indicator's class name, usually the same as in `xsdba.indicator.registry`.
         If multiple names are passed, the attrs from each indicator are merged,
         with the highest priority set to the first name.
     locales : str or tuple of str

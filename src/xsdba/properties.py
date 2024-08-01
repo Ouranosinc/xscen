@@ -387,7 +387,7 @@ def _spell_length_distribution(
 
     # threshold is an amount that will be converted to the right units
     if method == "amount":
-        thresh = convert_units_to(thresh, da)  # , context="infer")
+        thresh = convert_units_to(thresh, da)
     elif method != "quantile":
         raise ValueError(
             f"{method} is not a valid method. Choose 'amount' or 'quantile'."

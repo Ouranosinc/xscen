@@ -33,7 +33,7 @@ from . import (
 
 # , adjustment
 # from . import adjustment, base, detrending, measures, processing, properties, utils
-# from .adjustment import *
+from .adjustment import *
 from .base import Grouper
 from .options import set_options
 
