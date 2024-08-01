@@ -131,7 +131,7 @@ def multioptvar_compute(
     return tas
 
 
-multiOptVar = Indicator(
+MultiOptVar = Indicator(
     src_freq="D",
     realm="atmos",
     identifier="multiopt",
@@ -188,7 +188,7 @@ def test_keep_attrs(timelonlatseries, xcopt, xropt, exp):
     tn.attrs.update(something="blabla", bing="bong")
     with set_options(keep_attrs=xcopt):
         with xr.set_options(keep_attrs=xropt):
-            tg = multiOptVar(tasmin=tn, tasmax=tx)
+            tg = MultiOptVar(tasmin=tn, tasmax=tx)
     assert (tg.attrs.get("something") == "blabla") is exp
     assert (tg.attrs.get("foo") == "bar") is exp
     assert "bing" not in tg.attrs
@@ -201,7 +201,7 @@ def test_as_dataset(timelonlatseries):
     tn.attrs.update(something="blabla", bing="bong")
     dsin = xr.Dataset({"tasmax": tx, "tasmin": tn}, attrs={"fou": "barre"})
     with set_options(keep_attrs=True, as_dataset=True):
-        dsout = multiOptVar(ds=dsin)
+        dsout = MultiOptVar(ds=dsin)
     assert isinstance(dsout, xr.Dataset)
     assert dsout.attrs["fou"] == "barre"
     assert dsout.multiopt.attrs.get("something") == "blabla"
@@ -220,8 +220,8 @@ def test_opt_vars(timelonlatseries):
     tn = timelonlatseries(np.zeros(365), attrs={"units": "K"})
     tx = timelonlatseries(np.zeros(365), attrs={"units": "K"})
 
-    multiOptVar(tasmin=tn, tasmax=tx)
-    assert multiOptVar.parameters["tasmin"].kind == InputKind.OPTIONAL_VARIABLE
+    MultiOptVar(tasmin=tn, tasmax=tx)
+    assert MultiOptVar.parameters["tasmin"].kind == InputKind.OPTIONAL_VARIABLE
 
 
 # def test_registering():
@@ -608,7 +608,7 @@ def test_default_formatter():
     assert default_formatter.format("{month}", month="m3") == "march"
 
 
-def test_AttrFormatter():
+def test_attr_formatter():
     fmt = AttrFormatter(
         mapping={"evil": ["méchant", "méchante"], "nice": ["beau", "belle"]},
         modifiers=["m", "f"],
@@ -671,7 +671,7 @@ def test_update_history():
 #     # Inexistent variable:
 #     dsx = ds.drop_vars("tasmin")
 #     with pytest.raises(MissingVariableError):
-#         out = xclim.atmos.daily_temperature_range(freq="YS", ds=dsx)  # noqa
+#         out = xclim.atmos.daily_temperature_range(freq="YS", ds=dsx)
 
 #     # dataset not given
 #     with pytest.raises(ValueError):
@@ -715,7 +715,7 @@ def test_update_history():
 
 
 # def test_indicator_errors():
-#     def func(data: xr.DataArray, thresh: str = "0 degC", freq: str = "YS"):  # noqa
+#     def func(data: xr.DataArray, thresh: str = "0 degC", freq: str = "YS"):
 #         return data
 
 #     doc = [

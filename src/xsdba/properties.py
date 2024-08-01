@@ -14,7 +14,6 @@ from collections.abc import Sequence
 
 import numpy as np
 import xarray as xr
-import xclim as xc
 from scipy import stats
 from statsmodels.tsa import stattools
 
@@ -596,7 +595,7 @@ def _annual_cycle(
     # TODO: In April 2024, use a match-case.
     if stat == "absamp":
         out = ac.max("dayofyear") - ac.min("dayofyear")
-        out.attrs["units"] = xc.core.units.ensure_delta(units)
+        out.attrs["units"] = ensure_delta(units)
     elif stat == "relamp":
         out = (ac.max("dayofyear") - ac.min("dayofyear")) * 100 / ac.mean("dayofyear")
         out.attrs["units"] = "%"

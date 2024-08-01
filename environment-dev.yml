@@ -1,6 +1,7 @@
 name: xsdba
 channels:
   - conda-forge
+  - defaults
 dependencies:
   - python >=3.9,<3.13
   # - xarray >=2022.05.0.dev0
@@ -12,7 +13,10 @@ dependencies:
   - scipy
   - numba
   - numpy<2.0 # to accomodate numba
-  - cf-xarray # to accomodate numba
+  - cf_xarray # to accomodate numba
+  - pint
+  - statsmodels
+  - yamale
 
   # Dev tools and testing
   - pip >=24.0
