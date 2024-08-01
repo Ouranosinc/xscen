@@ -288,7 +288,7 @@ def generate_local_dict(locale: str, init_english: bool = False) -> dict:
         If True, fills the initial dictionary with the english versions of the attributes.
         Defaults to False.
     """
-    from ..core.indicator import registry  # pylint: disable=import-outside-toplevel
+    from .indicator import registry  # pylint: disable=import-outside-toplevel
 
     if locale in _LOCALES:
         _, attrs = get_local_dict(locale)

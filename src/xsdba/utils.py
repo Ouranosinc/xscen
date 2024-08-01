@@ -9,15 +9,16 @@ import itertools
 from typing import Callable
 from warnings import warn
 
+import bottleneck as bn
 import numpy as np
 import xarray as xr
-from boltons.funcutils import wraps
 from dask import array as dsk
 from scipy.interpolate import griddata, interp1d
 from scipy.stats import spearmanr
 from xarray.core.utils import get_temp_dimname
 
 from .base import Grouper, parse_group, uses_dask
+from .calendar import ensure_longest_doy
 from .nbutils import _extrapolate_on_quantiles
 
 MULTIPLICATIVE = "*"
@@ -49,18 +50,17 @@ def map_cdf(
     Parameters
     ----------
     ds : xr.Dataset
-        Variables:
-            x : Values from which to pick.
-            y : Reference values giving the ranking.
+      Variables: x, Values from which to pick,
+      y, Reference values giving the ranking
     y_value : float, array
-        Value within the support of `y`.
+      Value within the support of `y`.
     dim : str
-        Dimension along which to compute quantile.
+      Dimension along which to compute quantile.
 
     Returns
     -------
     array
-        Quantile of `x` with the same CDF as `y_value` in `y`.
+      Quantile of `x` with the same CDF as `y_value` in `y`.
     """
     return xr.apply_ufunc(
         map_cdf_1d,
@@ -93,135 +93,6 @@ def ecdf(x: xr.DataArray, value: float, dim: str = "time") -> xr.DataArray:
       Empirical CDF.
     """
     return (x <= value).sum(dim) / x.notnull().sum(dim)
-
-
-# XC
-def ensure_chunk_size(da: xr.DataArray, **minchunks: int) -> xr.DataArray:
-    r"""Ensure that the input DataArray has chunks of at least the given size.
-
-    If only one chunk is too small, it is merged with an adjacent chunk.
-    If many chunks are too small, they are grouped together by merging adjacent chunks.
-
-    Parameters
-    ----------
-    da : xr.DataArray
-        The input DataArray, with or without the dask backend. Does nothing when passed a non-dask array.
-    \*\*minchunks : dict[str, int]
-        A kwarg mapping from dimension name to minimum chunk size.
-        Pass -1 to force a single chunk along that dimension.
-
-    Returns
-    -------
-    xr.DataArray
-    """
-    if not uses_dask(da):
-        return da
-
-    all_chunks = dict(zip(da.dims, da.chunks))
-    chunking = {}
-    for dim, minchunk in minchunks.items():
-        chunks = all_chunks[dim]
-        if minchunk == -1 and len(chunks) > 1:
-            # Rechunk to single chunk only if it's not already one
-            chunking[dim] = -1
-
-        toosmall = np.array(chunks) < minchunk  # Chunks that are too small
-        if toosmall.sum() > 1:
-            # Many chunks are too small, merge them by groups
-            fac = np.ceil(minchunk / min(chunks)).astype(int)
-            chunking[dim] = tuple(
-                sum(chunks[i : i + fac]) for i in range(0, len(chunks), fac)
-            )
-            # Reset counter is case the last chunks are still too small
-            chunks = chunking[dim]
-            toosmall = np.array(chunks) < minchunk
-        if toosmall.sum() == 1:
-            # Only one, merge it with adjacent chunk
-            ind = np.where(toosmall)[0][0]
-            new_chunks = list(chunks)
-            sml = new_chunks.pop(ind)
-            new_chunks[max(ind - 1, 0)] += sml
-            chunking[dim] = tuple(new_chunks)
-
-    if chunking:
-        return da.chunk(chunks=chunking)
-    return da
-
-
-# XC
-def _interpolate_doy_calendar(
-    source: xr.DataArray, doy_max: int, doy_min: int = 1
-) -> xr.DataArray:
-    """Interpolate from one set of dayofyear range to another.
-
-    Interpolate an array defined over a `dayofyear` range (say 1 to 360) to another `dayofyear` range (say 1
-    to 365).
-
-    Parameters
-    ----------
-    source : xr.DataArray
-        Array with `dayofyear` coordinates.
-    doy_max : int
-        The largest day of the year allowed by calendar.
-    doy_min : int
-        The smallest day of the year in the output.
-        This parameter is necessary when the target time series does not span over a full year (e.g. JJA season).
-        Default is 1.
-
-    Returns
-    -------
-    xr.DataArray
-        Interpolated source array over coordinates spanning the target `dayofyear` range.
-    """
-    if "dayofyear" not in source.coords.keys():
-        raise AttributeError("Source should have `dayofyear` coordinates.")
-
-    # Interpolate to fill na values
-    da = source
-    if uses_dask(source):
-        # interpolate_na cannot run on chunked dayofyear.
-        da = source.chunk(dict(dayofyear=-1))
-    filled_na = da.interpolate_na(dim="dayofyear")
-
-    # Interpolate to target dayofyear range
-    filled_na.coords["dayofyear"] = np.linspace(
-        start=doy_min, stop=doy_max, num=len(filled_na.coords["dayofyear"])
-    )
-
-    return filled_na.interp(dayofyear=range(doy_min, doy_max + 1))
-
-
-# XC
-def ensure_longest_doy(func: Callable) -> Callable:
-    """Ensure that selected day is the longest day of year for x and y dims."""
-
-    @wraps(func)
-    def _ensure_longest_doy(x, y, *args, **kwargs):
-        if (
-            hasattr(x, "dims")
-            and hasattr(y, "dims")
-            and "dayofyear" in x.dims
-            and "dayofyear" in y.dims
-            and x.dayofyear.max() != y.dayofyear.max()
-        ):
-            warn(
-                (
-                    "get_correction received inputs defined on different dayofyear ranges. "
-                    "Interpolating to the longest range. Results could be strange."
-                ),
-                stacklevel=4,
-            )
-            if x.dayofyear.max() < y.dayofyear.max():
-                x = _interpolate_doy_calendar(
-                    x, int(y.dayofyear.max()), int(y.dayofyear.min())
-                )
-            else:
-                y = _interpolate_doy_calendar(
-                    y, int(x.dayofyear.max()), int(x.dayofyear.min())
-                )
-        return func(x, y, *args, **kwargs)
-
-    return _ensure_longest_doy
 
 
 @ensure_longest_doy
@@ -403,6 +274,39 @@ def add_cyclic_bounds(
         qmf = qmf.assign_coords({att: vals})
         qmf[att].attrs.update(da.coords[att].attrs)
     return ensure_chunk_size(qmf, **{att: -1})
+
+
+def _interp_on_quantiles_1D_multi(newxs, oldx, oldy, method, extrap):  # noqa: N802
+    # Perform multiple interpolations with a single call of interp1d.
+    # This should be used when `oldx` is common for many data arrays (`newxs`)
+    # that we want to interpolate on. For instance, with QuantileDeltaMapping, we simply
+    # interpolate on quantiles that always remain the same.
+    if len(newxs.shape) == 1:
+        return _interp_on_quantiles_1D(newxs, oldx, oldy, method, extrap)
+    mask_old = np.isnan(oldy) | np.isnan(oldx)
+    if extrap == "constant":
+        fill_value = (
+            oldy[~np.isnan(oldy)][0],
+            oldy[~np.isnan(oldy)][-1],
+        )
+    else:  # extrap == 'nan'
+        fill_value = np.NaN
+
+    finterp1d = interp1d(
+        oldx[~mask_old],
+        oldy[~mask_old],
+        kind=method,
+        bounds_error=False,
+        fill_value=fill_value,
+    )
+
+    out = np.zeros_like(newxs)
+    for ii in range(newxs.shape[0]):
+        mask_new = np.isnan(newxs[ii, :])
+        y1 = newxs[ii, :].copy() * np.NaN
+        y1[~mask_new] = finterp1d(newxs[ii, ~mask_new])
+        out[ii, :] = y1.flatten()
+    return out
 
 
 def _interp_on_quantiles_1D(newx, oldx, oldy, method, extrap):  # noqa: N802
@@ -627,6 +531,14 @@ def rank(
     return rnk
 
 
+def _rank_bn(arr, axis=None):
+    """Ranking on a specific axis"""
+    rnk = bn.nanrankdata(arr, axis=axis)
+    rnk = rnk / np.nanmax(rnk, axis=axis, keepdims=True)
+    mx, mn = 1, np.nanmin(rnk, axis=axis, keepdims=True)
+    return mx * (rnk - mn) / (mx - mn)
+
+
 def pc_matrix(arr: np.ndarray | dsk.Array) -> np.ndarray | dsk.Array:
     """Construct a Principal Component matrix.
 
@@ -678,17 +590,17 @@ def best_pc_orientation_simple(
     Parameters
     ----------
     R : np.ndarray
-        MxM Matrix defining the final transformation.
+      MxM Matrix defining the final transformation.
     Hinv : np.ndarray
-        MxM Matrix defining the (inverse) first transformation.
+      MxM Matrix defining the (inverse) first transformation.
     val : float
-        The coordinate of the test point (same for all axes). It should be much
-        greater than the largest furthest point in the array used to define B.
+      The coordinate of the test point (same for all axes). It should be much
+      greater than the largest furthest point in the array used to define B.
 
     Returns
     -------
     np.ndarray
-        Mx1 vector of orientation correction (1 or -1).
+      Mx1 vector of orientation correction (1 or -1).
 
     See Also
     --------
@@ -728,20 +640,20 @@ def best_pc_orientation_full(
     Parameters
     ----------
     R : np.ndarray
-        MxM Matrix defining the final transformation.
+      MxM Matrix defining the final transformation.
     Hinv : np.ndarray
-        MxM Matrix defining the (inverse) first transformation.
+      MxM Matrix defining the (inverse) first transformation.
     Rmean : np.ndarray
-        M vector defining the target distribution center point.
+      M vector defining the target distribution center point.
     Hmean : np.ndarray
-        M vector defining the original distribution center point.
+      M vector defining the original distribution center point.
     hist : np.ndarray
-        MxN matrix of all training observations of the M variables/sites.
+      MxN matrix of all training observations of the M variables/sites.
 
     Returns
     -------
     np.ndarray
-        M vector of orientation correction (1 or -1).
+      M vector of orientation correction (1 or -1).
 
     References
     ----------
@@ -830,27 +742,27 @@ def get_clusters(data: xr.DataArray, u1, u2, dim: str = "time") -> xr.Dataset:
 
     Parameters
     ----------
-    data : 1D ndarray
-        Values to get clusters from.
+    data: 1D ndarray
+      Values to get clusters from.
     u1 : float
-        Extreme value threshold, at least one value in the cluster must exceed this.
+      Extreme value threshold, at least one value in the cluster must exceed this.
     u2 : float
-        Cluster threshold, values above this can be part of a cluster.
+      Cluster threshold, values above this can be part of a cluster.
     dim : str
-        Dimension name.
+      Dimension name.
 
     Returns
     -------
     xr.Dataset
-        With variables,
-            - `nclusters` : Number of clusters for each point (with `dim` reduced), int
-            - `start` : First index in the cluster (`dim` reduced, new `cluster`), int
-            - `end` : Last index in the cluster, inclusive (`dim` reduced, new `cluster`), int
-            - `maxpos` : Index of the maximal value within the cluster (`dim` reduced, new `cluster`), int
-            - `maximum` : Maximal value within the cluster (`dim` reduced, new `cluster`), same dtype as data.
+      With variables,
+        - `nclusters` : Number of clusters for each point (with `dim` reduced), int
+        - `start` : First index in the cluster (`dim` reduced, new `cluster`), int
+        - `end` : Last index in the cluster, inclusive (`dim` reduced, new `cluster`), int
+        - `maxpos` : Index of the maximal value within the cluster (`dim` reduced, new `cluster`), int
+        - `maximum` : Maximal value within the cluster (`dim` reduced, new `cluster`), same dtype as data.
 
-        For `start`, `end` and `maxpos`, -1 means NaN and should always correspond to a `NaN` in `maximum`.
-        The length along `cluster` is half the size of "dim", the maximal theoretical number of clusters.
+      For `start`, `end` and `maxpos`, -1 means NaN and should always correspond to a `NaN` in `maximum`.
+      The length along `cluster` is half the size of "dim", the maximal theoretical number of clusters.
     """
 
     def _get_clusters(arr, u1, u2, N):
@@ -914,19 +826,19 @@ def rand_rot_matrix(
 
     Parameters
     ----------
-    crd : xr.DataArray
-        1D coordinate DataArray along which the rotation occurs.
-        The output will be square with the same coordinate replicated,
-        the second renamed to `new_dim`.
+    crd: xr.DataArray
+      1D coordinate DataArray along which the rotation occurs.
+      The output will be square with the same coordinate replicated,
+      the second renamed to `new_dim`.
     num : int
-        If larger than 1 (default), the number of matrices to generate, stacked along a "matrices" dimension.
+      If larger than 1 (default), the number of matrices to generate, stacked along a "matrices" dimension.
     new_dim : str
-        Name of the new "prime" dimension, defaults to the same name as `crd` + "_prime".
+      Name of the new "prime" dimension, defaults to the same name as `crd` + "_prime".
 
     Returns
     -------
     xr.DataArray
-        Data of type float, NxN if num = 1, numxNxN otherwise, where N is the length of crd.
+      float, NxN if num = 1, numxNxN otherwise, where N is the length of crd.
 
     References
     ----------
@@ -950,9 +862,11 @@ def rand_rot_matrix(
     num = np.diag(R)
     denum = np.abs(num)
     lam = np.diag(num / denum)  # "lambda"
-    return xr.DataArray(
-        Q @ lam, dims=(dim, new_dim), coords={dim: crd, new_dim: crd2}
-    ).astype("float32")
+    return (
+        xr.DataArray(Q @ lam, dims=(dim, new_dim), coords={dim: crd, new_dim: crd2})
+        .astype("float32")
+        .assign_attrs({"crd_dim": dim, "new_dim": new_dim})
+    )
 
 
 def _pairwise_spearman(da, dims):

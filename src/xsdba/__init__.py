@@ -36,6 +36,7 @@ from . import (
 from .adjustment import *
 from .base import Grouper
 from .options import set_options
+from .processing import stack_variables, unstack_variables
 
 # from .processing import stack_variables, unstack_variables
 

@@ -26,11 +26,10 @@ except ImportError:
     nogil=True,
     cache=False,
 )
-def _get_indexes(  # noqa: PR07
+def _get_indexes(
     arr: np.array, virtual_indexes: np.array, valid_values_count: np.array
 ) -> tuple[np.array, np.array]:
-    """
-    Get the valid indexes of arr neighbouring virtual_indexes.
+    """Get the valid indexes of arr neighbouring virtual_indexes.
 
     Parameters
     ----------
@@ -41,7 +40,7 @@ def _get_indexes(  # noqa: PR07
     Returns
     -------
     array-like, array-like
-        A tuple of virtual_indexes neighbouring indexes (previous and next).
+        A tuple of virtual_indexes neighbouring indexes (previous and next)
 
     Notes
     -----
@@ -210,7 +209,8 @@ def _wrapper_quantile1d(arr, q):
     return out
 
 
-def _quantile(arr, q, nreduce):
+def _quantile(arr, q, nreduce=None):
+    nreduce = nreduce or arr.ndim
     if arr.ndim == nreduce:
         out = _nan_quantile_1d(arr.flatten(), q)
     else:
@@ -277,7 +277,7 @@ def quantile(da: DataArray, q: np.ndarray, dim: str | Sequence[Hashable]) -> Dat
     nogil=True,
     cache=False,
 )
-def remove_NaNs(x):  # noqa: N802
+def remove_NaNs(x):  # noqa
     """Remove NaN values from series."""
     remove = np.zeros_like(x[0, :], dtype=boolean)
     for i in range(x.shape[0]):
@@ -386,7 +386,9 @@ def _first_and_last_nonnull(arr):
     nogil=True,
     cache=False,
 )
-def _extrapolate_on_quantiles(interp, oldx, oldg, oldy, newx, newg, method="constant"):
+def _extrapolate_on_quantiles(
+    interp, oldx, oldg, oldy, newx, newg, method="constant"
+):  # noqa
     """Apply extrapolation to the output of interpolation on quantiles with a given grouping.
 
     Arguments are the same as _interp_on_quantiles_2D.

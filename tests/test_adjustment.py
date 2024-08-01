@@ -12,11 +12,13 @@ from xsdba.adjustment import (
     DetrendedQuantileMapping,
     EmpiricalQuantileMapping,
     ExtremeValues,
+    MBCn,
     PrincipalComponents,
     QuantileDeltaMapping,
     Scaling,
 )
 from xsdba.base import Grouper
+from xsdba.calendar import stack_periods
 from xsdba.options import set_options
 from xsdba.processing import (
     jitter_under_thresh,
@@ -582,44 +584,44 @@ class TestQM:
         # Test predict
         np.testing.assert_array_almost_equal(p, ref, 2)
 
-    # @pytest.mark.parametrize("use_dask", [True, False])
-    # @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-    # def test_add_dims(self, use_dask, open_dataset):
-    #     with set_options(sdba_encode_cf=use_dask):
-    #         if use_dask:
-    #             chunks = {"location": -1}
-    #         else:
-    #             chunks = None
-    #         ref = (
-    #             open_dataset(
-    #                 "sdba/ahccd_1950-2013.nc",
-    #                 chunks=chunks,
-    #                 drop_variables=["lat", "lon"],
-    #             )
-    #             .sel(time=slice("1981", "2010"))
-    #             .tasmax
-    #         )
-    #         ref = convert_units_to(ref, "K")
-    #         ref = ref.isel(location=1, drop=True).expand_dims(location=["Amos"])
+    @pytest.mark.parametrize("use_dask", [True, False])
+    @pytest.mark.filterwarnings("ignore::RuntimeWarning")
+    def test_add_dims(self, use_dask, open_dataset):
+        with set_options(sdba_encode_cf=use_dask):
+            if use_dask:
+                chunks = {"location": -1}
+            else:
+                chunks = None
+            ref = (
+                open_dataset(
+                    "sdba/ahccd_1950-2013.nc",
+                    chunks=chunks,
+                    drop_variables=["lat", "lon"],
+                )
+                .sel(time=slice("1981", "2010"))
+                .tasmax
+            )
+            ref = convert_units_to(ref, "K")
+            ref = ref.isel(location=1, drop=True).expand_dims(location=["Amos"])
 
-    #         dsim = open_dataset(
-    #             "sdba/CanESM2_1950-2100.nc",
-    #             chunks=chunks,
-    #             drop_variables=["lat", "lon"],
-    #         ).tasmax
-    #         hist = dsim.sel(time=slice("1981", "2010"))
-    #         sim = dsim.sel(time=slice("2041", "2070"))
+            dsim = open_dataset(
+                "sdba/CanESM2_1950-2100.nc",
+                chunks=chunks,
+                drop_variables=["lat", "lon"],
+            ).tasmax
+            hist = dsim.sel(time=slice("1981", "2010"))
+            sim = dsim.sel(time=slice("2041", "2070"))
 
-    #         # With add_dims, "does it run" test
-    #         group = Grouper("time.dayofyear", window=5, add_dims=["location"])
-    #         EQM = EmpiricalQuantileMapping.train(ref, hist, group=group)
-    #         EQM.adjust(sim).load()
+            # With add_dims, "does it run" test
+            group = Grouper("time.dayofyear", window=5, add_dims=["location"])
+            EQM = EmpiricalQuantileMapping.train(ref, hist, group=group)
+            EQM.adjust(sim).load()
 
-    #         # Without, sanity test.
-    #         group = Grouper("time.dayofyear", window=5)
-    #         EQM2 = EmpiricalQuantileMapping.train(ref, hist, group=group)
-    #         scen2 = EQM2.adjust(sim).load()
-    #         assert scen2.sel(location=["Kugluktuk", "Vancouver"]).isnull().all()
+            # Without, sanity test.
+            group = Grouper("time.dayofyear", window=5)
+            EQM2 = EmpiricalQuantileMapping.train(ref, hist, group=group)
+            scen2 = EQM2.adjust(sim).load()
+            assert scen2.sel(location=["Kugluktuk", "Vancouver"]).isnull().all()
 
 
 class TestPrincipalComponents:
@@ -666,49 +668,49 @@ class TestPrincipalComponents:
 
         group.apply(_group_assert, {"ref": ref, "sim": sim, "scen": scen})
 
-    # @pytest.mark.parametrize("use_dask", [True, False])
-    # @pytest.mark.parametrize("pcorient", ["full", "simple"])
-    # def test_real_data(self, atmosds, use_dask, pcorient):
-    #     ref = stack_variables(
-    #         xr.Dataset(
-    #             {"tasmax": atmosds.tasmax, "tasmin": atmosds.tasmin, "tas": atmosds.tas}
-    #         )
-    #     ).isel(location=3)
-    #     hist = stack_variables(
-    #         xr.Dataset(
-    #             {
-    #                 "tasmax": 1.001 * atmosds.tasmax,
-    #                 "tasmin": atmosds.tasmin - 0.25,
-    #                 "tas": atmosds.tas + 1,
-    #             }
-    #         )
-    #     ).isel(location=3)
-    #     with xr.set_options(keep_attrs=True):
-    #         sim = hist + 5
-    #         sim["time"] = sim.time + np.timedelta64(10, "Y").astype("<m8[ns]")
+    @pytest.mark.parametrize("use_dask", [True, False])
+    @pytest.mark.parametrize("pcorient", ["full", "simple"])
+    def test_real_data(self, atmosds, use_dask, pcorient):
+        ref = stack_variables(
+            xr.Dataset(
+                {"tasmax": atmosds.tasmax, "tasmin": atmosds.tasmin, "tas": atmosds.tas}
+            )
+        ).isel(location=3)
+        hist = stack_variables(
+            xr.Dataset(
+                {
+                    "tasmax": 1.001 * atmosds.tasmax,
+                    "tasmin": atmosds.tasmin - 0.25,
+                    "tas": atmosds.tas + 1,
+                }
+            )
+        ).isel(location=3)
+        with xr.set_options(keep_attrs=True):
+            sim = hist + 5
+            sim["time"] = sim.time + np.timedelta64(10, "Y").astype("<m8[ns]")
 
-    #     if use_dask:
-    #         ref = ref.chunk()
-    #         hist = hist.chunk()
-    #         sim = sim.chunk()
+        if use_dask:
+            ref = ref.chunk()
+            hist = hist.chunk()
+            sim = sim.chunk()
 
-    #     PCA = PrincipalComponents.train(
-    #         ref, hist, crd_dim="multivar", best_orientation=pcorient
-    #     )
-    #     scen = PCA.adjust(sim)
+        PCA = PrincipalComponents.train(
+            ref, hist, crd_dim="multivar", best_orientation=pcorient
+        )
+        scen = PCA.adjust(sim)
 
-    #     def dist(ref, sim):
-    #         """Pointwise distance between ref and sim in the PC space."""
-    #         sim["time"] = ref.time
-    #         return np.sqrt(((ref - sim) ** 2).sum("multivar"))
+        def dist(ref, sim):
+            """Pointwise distance between ref and sim in the PC space."""
+            sim["time"] = ref.time
+            return np.sqrt(((ref - sim) ** 2).sum("multivar"))
 
-    #     # Most points are closer after transform.
-    #     assert (dist(ref, sim) < dist(ref, scen)).mean() < 0.01
+        # Most points are closer after transform.
+        assert (dist(ref, sim) < dist(ref, scen)).mean() < 0.01
 
-    #     ref = unstack_variables(ref)
-    #     scen = unstack_variables(scen)
-    #     # "Error" is very small
-    #     assert (ref - scen).mean().tasmin < 5e-3
+        ref = unstack_variables(ref)
+        scen = unstack_variables(scen)
+        # "Error" is very small
+        assert (ref - scen).mean().tasmin < 5e-3
 
 
 class TestExtremeValues:
@@ -797,14 +799,61 @@ def test_raise_on_multiple_chunks(timelonlatseries):
         EmpiricalQuantileMapping.train(ref, ref, group=Grouper("time.month"))
 
 
-def test_default_grouper_understood(timelonlatseries):
+def test_default_grouper_understood(timeseries):
     attrs = {"units": "K", "kind": ADDITIVE}
 
-    ref = timelonlatseries(np.arange(730).astype(float), attrs={"units": "K"})
+    ref = timeseries(np.arange(730).astype(float), units="K")
 
     EQM = EmpiricalQuantileMapping.train(ref, ref)
     EQM.adjust(ref)
     assert EQM.group.dim == "time"
+
+
+@pytest.mark.slow
+class TestMBCn:
+    @pytest.mark.parametrize("use_dask", [True, False])
+    @pytest.mark.parametrize("group, window", [["time", 1], ["time.dayofyear", 31]])
+    @pytest.mark.parametrize("period_dim", [None, "period"])
+    # TODO: Add test_simple ?
+    def test_real_data(self, open_dataset, use_dask, group, window, period_dim):
+        group, window, period_dim, use_dask = "time", 1, None, False
+        with set_options(sdba_encode_cf=use_dask):
+            if use_dask:
+                chunks = {"location": -1}
+            else:
+                chunks = None
+            ref, dsim = (
+                open_dataset(
+                    f"sdba/{file}",
+                    chunks=chunks,
+                    drop_variables=["lat", "lon"],
+                )
+                .isel(location=1, drop=True)
+                .expand_dims(location=["Amos"])
+                for file in ["ahccd_1950-2013.nc", "CanESM2_1950-2100.nc"]
+            )
+            ref, hist = (
+                ds.sel(time=slice("1981", "2010")).isel(time=slice(365 * 4))
+                for ds in [ref, dsim]
+            )
+            # mm d-1 -> kg m-2 d-1
+            ref["pr"] = pint_multiply(ref["pr"], "1000 kg/m^3")
+            dsim = dsim.sel(time=slice("1981", None))
+            sim = (stack_periods(dsim).isel(period=slice(1, 2))).isel(
+                time=slice(365 * 4)
+            )
+
+            ref, hist, sim = (stack_variables(ds) for ds in [ref, hist, sim])
+
+        MBCN = MBCn.train(
+            ref,
+            hist,
+            base_kws=dict(nquantiles=50, group=Grouper(group, window)),
+            adj_kws=dict(interp="linear"),
+        )
+        p = MBCN.adjust(sim=sim, ref=ref, hist=hist, period_dim=period_dim)
+        # 'does it run' test
+        p.load()
 
 
 # class TestSBCKutils:

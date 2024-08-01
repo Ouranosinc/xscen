@@ -16,6 +16,7 @@ import cftime
 import numpy as np
 import pandas as pd
 import xarray as xr
+from boltons.funcutils import wraps
 from xarray.coding.cftime_offsets import to_cftime_datetime
 from xarray.coding.cftimeindex import CFTimeIndex
 from xarray.core import dtypes
@@ -43,6 +44,7 @@ __all__ = [
     "doy_from_string",
     "doy_to_days_since",
     "ensure_cftime_array",
+    "ensure_longest_doy",
     "get_calendar",
     "interp_calendar",
     "is_offset_divisor",
@@ -554,7 +556,9 @@ def compare_offsets(freqA: str, op: str, freqB: str) -> bool:
     bool
         freqA op freqB
     """
-    from ..indices.generic import get_op  # pylint: disable=import-outside-toplevel
+    from .xclim_submodules.generic import (  # pylint: disable=import-outside-toplevel
+        get_op,
+    )
 
     # Get multiplier and base frequency
     t_a, b_a, _, _ = parse_offset(freqA)
@@ -702,6 +706,38 @@ def is_offset_divisor(divisor: str, offset: str):
     # if N=13 is True, then it is always True
     # As divisor <= offset, this means divisor is a "divisor" of offset.
     return all(offAs.is_on_offset(d) for d in tB)
+
+
+def ensure_longest_doy(func: Callable) -> Callable:
+    """Ensure that selected day is the longest day of year for x and y dims."""
+
+    @wraps(func)
+    def _ensure_longest_doy(x, y, *args, **kwargs):
+        if (
+            hasattr(x, "dims")
+            and hasattr(y, "dims")
+            and "dayofyear" in x.dims
+            and "dayofyear" in y.dims
+            and x.dayofyear.max() != y.dayofyear.max()
+        ):
+            warn(
+                (
+                    "get_correction received inputs defined on different dayofyear ranges. "
+                    "Interpolating to the longest range. Results could be strange."
+                ),
+                stacklevel=4,
+            )
+            if x.dayofyear.max() < y.dayofyear.max():
+                x = _interpolate_doy_calendar(
+                    x, int(y.dayofyear.max()), int(y.dayofyear.min())
+                )
+            else:
+                y = _interpolate_doy_calendar(
+                    y, int(x.dayofyear.max()), int(x.dayofyear.min())
+                )
+        return func(x, y, *args, **kwargs)
+
+    return _ensure_longest_doy
 
 
 def _interpolate_doy_calendar(
