@@ -2,12 +2,12 @@
 # Tests for the Indicator objects
 from __future__ import annotations
 
-import gc
+# import gc # test_registering
+# import dask
 import json
 from inspect import signature
 from typing import Union
 
-import dask
 import numpy as np
 import pytest
 import xarray as xr
@@ -224,6 +224,7 @@ def test_opt_vars(timelonlatseries):
     assert MultiOptVar.parameters["tasmin"].kind == InputKind.OPTIONAL_VARIABLE
 
 
+# FIXME
 # def test_registering():
 #     assert "test.TMIN" in registry
 

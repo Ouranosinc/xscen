@@ -34,6 +34,8 @@ from .base import Grouper, map_groups, parse_group, parse_offset
 from .nbutils import _pairwise_haversine_and_bins
 from .utils import _pairwise_spearman, copy_all_attrs
 
+# TODO: Reduce redundancy between this submodule and generic
+
 
 class StatisticalProperty(Indicator):
     """Base indicator class for statistical properties used for validating bias-adjusted outputs.
@@ -345,8 +347,6 @@ def _spell_length_distribution(
     """
     group = group if isinstance(group, Grouper) else Grouper(group)
 
-    ops = {">": np.greater, "<": np.less, ">=": np.greater_equal, "<=": np.less_equal}
-
     @map_groups(out=[Grouper.PROP], main_only=True)
     def _spell_stats(
         ds,
@@ -371,7 +371,7 @@ def _spell_length_distribution(
         if method == "quantile":
             thresh = da.quantile(thresh, dim=dim).drop_vars("quantile")
 
-        cond = op(da, thresh)
+        cond = compare(da, op, thresh)
         out = rl.resample_and_rl(
             cond,
             resample_before_rl,
@@ -399,7 +399,7 @@ def _spell_length_distribution(
         method=method,
         thresh=thresh,
         window=window,
-        op=ops[op],
+        op=op,
         freq=group.freq,
         resample_before_rl=resample_before_rl,
         stat=stat,
@@ -899,12 +899,11 @@ def _bivariate_spell_length_distribution(
         and the second variable is {op2} the {method2} {thresh2} for {window} consecutive day(s).
     """
     group = group if isinstance(group, Grouper) else Grouper(group)
-    ops = {
-        ">": np.greater,
-        "<": np.less,
-        ">=": np.greater_equal,
-        "<=": np.less_equal,
-    }
+    allowed_ops = [">", "<", ">=", "<="]
+    if op1 not in allowed_ops or op2 not in allowed_ops:
+        raise ValueError(
+            f"`op1` and `op2` must be in {allowed_ops}, but {op1} and {op2} were given."
+        )
 
     @map_groups(out=[Grouper.PROP], main_only=True)
     def _bivariate_spell_stats(
@@ -913,7 +912,7 @@ def _bivariate_spell_length_distribution(
         dim,
         methods,
         threshs,
-        opss,
+        ops,
         freq,
         window,
         resample_before_rl,
@@ -925,13 +924,13 @@ def _bivariate_spell_length_distribution(
 
         conds = []
         masks = []
-        for da, thresh, op, method in zip([ds.da1, ds.da2], threshs, opss, methods):
+        for da, thresh, op, method in zip([ds.da1, ds.da2], threshs, ops, methods):
             masks.append(
                 ~(da.isel({dim: 0}).isnull()).drop_vars(dim)
             )  # mask of the ocean with NaNs
             if method == "quantile":
                 thresh = da.quantile(thresh, dim=dim).drop_vars("quantile")
-            conds.append(op(da, thresh))
+            conds.append(compare(da, op, thresh))
         mask = masks[0] & masks[1]
         cond = conds[0] & conds[1]
         out = rl.resample_and_rl(
@@ -964,7 +963,7 @@ def _bivariate_spell_length_distribution(
         group=group,
         threshs=threshs,
         methods=methods,
-        opss=[ops[op1], ops[op2]],
+        opss=[op1, op2],
         window=window,
         freq=group.freq,
         resample_before_rl=resample_before_rl,
@@ -1106,15 +1105,13 @@ def _relative_frequency(
     """
     # mask of the ocean with NaNs
     mask = ~(da.isel({group.dim: 0}).isnull()).drop_vars(group.dim)
-    ops: dict[str, np.ufunc] = {
-        ">": np.greater,
-        "<": np.less,
-        ">=": np.greater_equal,
-        "<=": np.less_equal,
-    }
+    allowed_ops = [">", "<", ">=", "<="]
+    if op not in allowed_ops:
+        raise ValueError(f"`op` must be in {allowed_ops}, but {op} was given.")
+
     t = convert_units_to(thresh, da)  # , context="infer")
     length = da.sizes[group.dim]
-    cond = ops[op](da, t)
+    cond = compare(da, op, t)
     if group.prop != "group":  # change the time resolution if necessary
         cond = cond.groupby(group.name)
         # length of the groupBy groups

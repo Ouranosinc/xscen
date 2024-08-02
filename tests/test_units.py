@@ -11,7 +11,6 @@ from dask import array as dsk
 from xsdba.logging import ValidationError
 from xsdba.typing import Quantified
 from xsdba.units import (
-    compare_units,
     convert_units_to,
     harmonize_units,
     pint2str,
@@ -24,7 +23,7 @@ from xsdba.units import (
 class TestUnits:
     def test_temperature(self):
         assert 4 * units.d == 4 * units.day
-        Q_ = units.Quantity  # noqa
+        Q_ = units.Quantity
         assert Q_(1, units.C) == Q_(1, units.degC)
 
     def test_lat_lon(self):
@@ -73,7 +72,7 @@ class TestUnitConversion:
         assert pint2str(u) == ""
 
     def test_str2pint(self):
-        Q_ = units.Quantity  # noqa
+        Q_ = units.Quantity
         assert str2pint("-0.78 m") == Q_(-0.78, units="meter")
         assert str2pint("m kg/s") == Q_(1, units="meter kilogram/second")
         assert str2pint("11.8 degC days") == Q_(11.8, units="delta_degree_Celsius days")

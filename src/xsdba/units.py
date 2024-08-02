@@ -415,7 +415,6 @@ def harmonize_units(params_to_check):
             params_dict = args_dict | {k: v for k, v in kwargs.items()}
             params_dict = {k: v for k, v in params_dict.items() if k in params_to_check}
             params_dict = _add_default_kws(params_dict, params_to_check, func)
-            params_dict_keys = [k for k in params_dict.keys()]
             if set(params_dict.keys()) != set(params_to_check):
                 raise TypeError(
                     f"{params_to_check} were passed but only {params_dict.keys()} were found "

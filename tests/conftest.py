@@ -16,7 +16,8 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
-from filelock import FileLock
+
+# from filelock import FileLock
 from packaging.version import Version
 
 from xsdba.testing import TESTDATA_BRANCH
@@ -166,20 +167,6 @@ def mon_timelonlatseries(timelonlatseries, mon_triangular):
 @pytest.fixture
 def timelonlatseries():
     return test_timelonlatseries
-
-
-@pytest.fixture
-def lat_series():
-    def _lat_series(values):
-        return xr.DataArray(
-            values,
-            dims=("lat",),
-            coords={"lat": values},
-            attrs={"standard_name": "latitude", "units": "degrees_north"},
-            name="lat",
-        )
-
-    return _lat_series
 
 
 # ADAPT
