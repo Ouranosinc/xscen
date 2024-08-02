@@ -24,6 +24,7 @@ from . import (
     adjustment,
     base,
     detrending,
+    measures,
     processing,
     properties,
     testing,

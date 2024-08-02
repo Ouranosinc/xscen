@@ -53,7 +53,7 @@ class StatisticalProperty(Indicator):
     aspect = None
     """The aspect the statistical property studies: marginal, temporal, multivariate or spatial."""
 
-    measure = "xclim.sdba.measures.BIAS"
+    measure = "xsdba.measures.BIAS"
     """The default measure to use when comparing the properties of two datasets.
     This gives the registry id. See :py:meth:`get_measure`."""
 
@@ -100,7 +100,7 @@ class StatisticalProperty(Indicator):
 
     def get_measure(self):
         """Get the statistical measure indicator that is best used with this statistical property."""
-        from xclim.core.indicator import registry
+        from xsdba.indicator import registry
 
         return registry[self.measure].get_instance()
 
@@ -175,7 +175,7 @@ var = StatisticalProperty(
     aspect="marginal",
     cell_methods="time: var",
     compute=_var,
-    measure="xclim.sdba.measures.RATIO",
+    measure="xsdba.measures.RATIO",
 )
 
 
@@ -211,7 +211,7 @@ std = StatisticalProperty(
     aspect="marginal",
     cell_methods="time: std",
     compute=_std,
-    measure="xclim.sdba.measures.RATIO",
+    measure="xsdba.measures.RATIO",
 )
 
 
@@ -633,7 +633,7 @@ relative_annual_cycle_amplitude = StatisticalProperty(
     parameters={"stat": "relamp"},
     allowed_groups=["group"],
     cell_methods="time: mean time: range",
-    measure="xclim.sdba.measures.RATIO",
+    measure="xsdba.measures.RATIO",
 )
 
 annual_cycle_phase = StatisticalProperty(
@@ -644,7 +644,7 @@ annual_cycle_phase = StatisticalProperty(
     parameters={"stat": "phase"},
     cell_methods="time: range",
     allowed_groups=["group"],
-    measure="xclim.sdba.measures.CIRCULAR_BIAS",
+    measure="xsdba.measures.CIRCULAR_BIAS",
 )
 
 annual_cycle_asymmetry = StatisticalProperty(
@@ -739,7 +739,7 @@ mean_annual_relative_range = StatisticalProperty(
     parameters={"stat": "relamp"},
     allowed_groups=["group"],
     units="%",
-    measure="xclim.sdba.measures.RATIO",
+    measure="xsdba.measures.RATIO",
 )
 
 mean_annual_phase = StatisticalProperty(
@@ -749,7 +749,7 @@ mean_annual_phase = StatisticalProperty(
     parameters={"stat": "phase"},
     allowed_groups=["group"],
     units="",
-    measure="xclim.sdba.measures.CIRCULAR_BIAS",
+    measure="xsdba.measures.CIRCULAR_BIAS",
 )
 
 

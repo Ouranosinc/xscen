@@ -6,7 +6,7 @@ Units Handling Submodule
 import inspect
 from copy import deepcopy
 from functools import wraps
-from typing import Any
+from typing import Any, cast
 
 import pint
 
@@ -91,12 +91,12 @@ def infer_sampling_units(
 
 
 # XC
-def units2pint(value: xr.DataArray | str | units.Quantity) -> pint.Unit:
+def units2pint(value: xr.DataArray | str | units.Quantity | units.Unit) -> pint.Unit:
     """Return the pint Unit for the DataArray units.
 
     Parameters
     ----------
-    value : xr.DataArray or str or pint.Quantity
+    value : xr.DataArray or str or pint.Quantity or pint.Unit
         Input data array or string representing a unit (with no magnitude).
 
     Returns
@@ -111,6 +111,12 @@ def units2pint(value: xr.DataArray | str | units.Quantity) -> pint.Unit:
     elif isinstance(value, units.Quantity):
         # This is a pint.PlainUnit, which is not the same as a pint.Unit
         return cast(pint.Unit, value.units)
+    elif isinstance(value, units.Quantity):
+        # This is a pint.PlainUnit, which is not the same as a pint.Unit
+        return cast(pint.Unit, value.units)
+    elif isinstance(value, units.Unit):
+        # This is a pint.PlainUnit, which is not the same as a pint.Unit
+        return cast(pint.Unit, value)
     else:
         raise NotImplementedError(f"Value of type `{type(value)}` not supported.")
 
@@ -134,6 +140,22 @@ def units2pint(value: xr.DataArray | str | units.Quantity) -> pint.Unit:
         )
 
     return units.parse_units(unit)
+
+
+def units2str(value: xr.DataArray | str | units.Quantity | units.Unit) -> str:
+    """Return a str unit from various inputs.
+
+    Parameters
+    ----------
+    value : xr.DataArray or str or pint.Quantity or pint.Unit
+        Input data array or string representing a unit (with no magnitude).
+
+    Returns
+    -------
+    pint.Unit
+        Units of the data array.
+    """
+    return value if isinstance(value, str) else pint2str(units2pint(value))
 
 
 # XC
@@ -206,7 +228,7 @@ def pint_multiply(
     xr.DataArray
     """
     q = q if isinstance(q, pint.Quantity) else str2pint(q)
-    a = 1 * units2pint(da)  # noqa
+    a = 1 * units2pint(da)  
     f = a * q.to_base_units()
     if out_units:
         f = f.to(out_units)

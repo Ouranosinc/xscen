@@ -17,7 +17,7 @@ from scipy.interpolate import griddata, interp1d
 from scipy.stats import spearmanr
 from xarray.core.utils import get_temp_dimname
 
-from .base import Grouper, parse_group, uses_dask
+from .base import Grouper, ensure_chunk_size, parse_group, uses_dask
 from .calendar import ensure_longest_doy
 from .nbutils import _extrapolate_on_quantiles
 

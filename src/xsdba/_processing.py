@@ -30,7 +30,7 @@ def _adapt_freq(
     r"""
     Adapt frequency of values under thresh of `sim`, in order to match ref.
 
-    This is the compute function, see :py:func:`xclim.sdba.processing.adapt_freq` for the user-facing function.
+    This is the compute function, see :py:func:`xsdba.processing.adapt_freq` for the user-facing function.
 
     Parameters
     ----------
@@ -116,7 +116,7 @@ def _normalize(
         The variable `data` is normalized.
         If a `norm` variable is present, is uses this one instead of computing the norm again.
     group : Union[str, Grouper]
-        Grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+        Grouping information. See :py:class:`xsdba.base.Grouper` for details.
     dim : sequence of strings
         Dimension name(s).
     kind : {'+', '*'}

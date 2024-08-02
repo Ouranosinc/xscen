@@ -20,7 +20,7 @@ from xsdba.formatting import update_xsdba_history
 from ._processing import _adapt_freq, _normalize, _reordering
 from .base import Grouper
 from .nbutils import _escore
-from .units import compare_units, convert_units_to, harmonize_units
+from .units import compare_units, convert_units_to, harmonize_units, pint2str
 from .utils import ADDITIVE, copy_all_attrs
 
 # from xclim.core.units import convert_units_to, infer_context, units
@@ -559,7 +559,6 @@ def to_additive_space(
 
     See Also
     --------
-    Related functions
     from_additive_space : for the inverse transformation.
     jitter_under_thresh : Remove values exactly equal to the lower bound.
     jitter_over_thresh : Remove values exactly equal to the upper bound.

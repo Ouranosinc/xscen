@@ -20,7 +20,7 @@ CF_COMPLIANCE = "cf_compliance"
 CHECK_MISSING = "check_missing"
 MISSING_OPTIONS = "missing_options"
 RUN_LENGTH_UFUNC = "run_length_ufunc"
-SDBA_EXTRA_OUTPUT = "sdba_extra_output"
+XSDBA_EXTRA_OUTPUT = "xsdba_extra_output"
 SDBA_ENCODE_CF = "sdba_encode_cf"
 KEEP_ATTRS = "keep_attrs"
 AS_DATASET = "as_dataset"
@@ -34,7 +34,7 @@ OPTIONS = {
     CHECK_MISSING: "any",
     MISSING_OPTIONS: {},
     RUN_LENGTH_UFUNC: "auto",
-    SDBA_EXTRA_OUTPUT: False,
+    XSDBA_EXTRA_OUTPUT: False,
     SDBA_ENCODE_CF: False,
     KEEP_ATTRS: "xarray",
     AS_DATASET: False,
@@ -66,7 +66,7 @@ _VALIDATORS = {
     CHECK_MISSING: lambda meth: meth != "from_context" and meth in MISSING_METHODS,
     MISSING_OPTIONS: _valid_missing_options,
     RUN_LENGTH_UFUNC: _RUN_LENGTH_UFUNC_OPTIONS.__contains__,
-    SDBA_EXTRA_OUTPUT: lambda opt: isinstance(opt, bool),
+    XSDBA_EXTRA_OUTPUT: lambda opt: isinstance(opt, bool),
     SDBA_ENCODE_CF: lambda opt: isinstance(opt, bool),
     KEEP_ATTRS: _KEEP_ATTRS_OPTIONS.__contains__,
     AS_DATASET: lambda opt: isinstance(opt, bool),
@@ -166,7 +166,7 @@ class set_options:
     run_length_ufunc : str
       Whether to use the 1D ufunc version of run length algorithms or the dask-ready broadcasting version.
       Default is ``"auto"``, which means the latter is used for dask-backed and large arrays.
-    sdba_extra_output : bool
+    xsdba_extra_output : bool
         Whether to add diagnostic variables to outputs of sdba's `train`, `adjust`
         and `processing` operations. Details about these additional variables are given in the object's
         docstring. When activated, `adjust` will return a Dataset with `scen` and those extra diagnostics
@@ -199,9 +199,9 @@ class set_options:
 
     .. code-block:: python
 
-        import xclim
+        import xsdba
 
-        xclim.set_options(missing_options={"pct": {"tolerance": 0.04}})
+        xsdba.set_options(missing_options={"pct": {"tolerance": 0.04}})
     """
 
     def __init__(self, **kwargs):

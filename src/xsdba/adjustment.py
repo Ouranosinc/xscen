@@ -15,8 +15,8 @@ from xarray.core.dataarray import DataArray
 
 from xsdba.base import get_calendar
 from xsdba.formatting import gen_call_string, update_history
-from xsdba.options import OPTIONS, SDBA_EXTRA_OUTPUT, set_options
-from xsdba.units import convert_units_to
+from xsdba.options import OPTIONS, XSDBA_EXTRA_OUTPUT, set_options
+from xsdba.units import convert_units_to, pint2str, units2str
 from xsdba.utils import uses_dask
 
 from ._adjustment import (
@@ -60,6 +60,8 @@ __all__ = [
     "Scaling",
 ]
 
+# FIXME: `xsdba.utils.extrapolate_qm` mentioned in docstrings, but doesn't exist in `xclim` or `xsdba`
+
 
 class BaseAdjustment(ParametrizableWithDataset):
     """Base class for adjustment objects.
@@ -71,7 +73,7 @@ class BaseAdjustment(ParametrizableWithDataset):
     """
 
     _allow_diff_calendars = True
-    _attribute = "_xclim_adjustment"
+    _attribute = "_xsdba_adjustment"
 
     def __init__(self, *args, _trained=False, **kwargs):
         if _trained:
@@ -138,9 +140,12 @@ class BaseAdjustment(ParametrizableWithDataset):
         ):
             def _convert_units_to(inda, dim, target):
                 varss = inda[dim].values
-                input_units = {
-                    v: inda[dim].attrs["_units"][iv] for iv, v in enumerate(varss)
-                }
+                input_units = {}
+                for iv, v in enumerate(varss):
+                    # FIXME: I think we should already have strings at this point
+                    # see what deeper code must be fixed
+                    input_units[v] = units2str(inda[dim].attrs["_units"][iv])
+                    target[v] = units2str(target[v])
                 if input_units == target:
                     return inda
                 input_standard_names = {
@@ -167,7 +172,7 @@ class BaseAdjustment(ParametrizableWithDataset):
                     raise ValueError(error_msg)
 
                 target = {
-                    v: inputs[0][dim].attrs["_units"][iv]
+                    v: units2str(inputs[0][dim].attrs["_units"][iv])
                     for iv, v in enumerate(inputs[0][dim].values)
                 }
             return (
@@ -204,7 +209,7 @@ class TrainAdjust(BaseAdjustment):
     """
 
     _allow_diff_calendars = True
-    _attribute = "_xclim_adjustment"
+    _attribute = "_xsdba_adjustment"
     _repr_hide_params = ["hist_calendar", "train_units"]
 
     @classmethod
@@ -287,7 +292,7 @@ class TrainAdjust(BaseAdjustment):
         if _is_multivariate is False:
             scen.attrs["units"] = self.train_units
 
-        if OPTIONS[SDBA_EXTRA_OUTPUT]:
+        if OPTIONS[XSDBA_EXTRA_OUTPUT]:
             return out
         return scen
 
@@ -367,7 +372,7 @@ class Adjust(BaseAdjustment):
         if _is_multivariate is False:
             scen.attrs["units"] = ref.units
 
-        if OPTIONS[SDBA_EXTRA_OUTPUT]:
+        if OPTIONS[XSDBA_EXTRA_OUTPUT]:
             return out
         return scen
 
@@ -394,10 +399,10 @@ class EmpiricalQuantileMapping(TrainAdjust):
     kind : {'+', '*'}
         The adjustment kind, either additive or multiplicative. Defaults to "+".
     group : Union[str, Grouper]
-        The grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+        The grouping information. See :py:class:`xsdba.base.Grouper` for details.
         Default is "time", meaning an single adjustment group along dimension "time".
     adapt_freq_thresh : str | None
-        Threshold for frequency adaptation. See :py:class:`xclim.sdba.processing.adapt_freq` for details.
+        Threshold for frequency adaptation. See :py:class:`xsdba.processing.adapt_freq` for details.
         Default is None, meaning that frequency adaptation is not performed.
 
     Adjust step:
@@ -405,7 +410,7 @@ class EmpiricalQuantileMapping(TrainAdjust):
     interp : {'nearest', 'linear', 'cubic'}
         The interpolation method to use when interpolating the adjustment factors. Defaults to "nearest".
     extrapolation : {'constant', 'nan'}
-        The type of extrapolation to use. See :py:func:`xclim.sdba.utils.extrapolate_qm` for details. Defaults to "constant".
+        The type of extrapolation to use. See :py:func:`xsdba.utils.extrapolate_qm` for details. Defaults to "constant".
 
     References
     ----------
@@ -485,15 +490,15 @@ class DetrendedQuantileMapping(TrainAdjust):
     Train step:
 
     nquantiles : int or 1d array of floats
-        The number of quantiles to use. See :py:func:`~xclim.sdba.utils.equally_spaced_nodes`.
+        The number of quantiles to use. See :py:func:`~xsdba.utils.equally_spaced_nodes`.
         An array of quantiles [0, 1] can also be passed. Defaults to 20 quantiles.
     kind : {'+', '*'}
         The adjustment kind, either additive or multiplicative. Defaults to "+".
     group : Union[str, Grouper]
-        The grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+        The grouping information. See :py:class:`xsdba.base.Grouper` for details.
         Default is "time", meaning a single adjustment group along dimension "time".
     adapt_freq_thresh : str | None
-        Threshold for frequency adaptation. See :py:class:`xclim.sdba.processing.adapt_freq` for details.
+        Threshold for frequency adaptation. See :py:class:`xsdba.processing.adapt_freq` for details.
         Default is None, meaning that frequency adaptation is not performed.
 
     Adjust step:
@@ -504,7 +509,7 @@ class DetrendedQuantileMapping(TrainAdjust):
         The method to use when detrending. If an int is passed, it is understood as a PolyDetrend (polynomial detrending) degree.
         Defaults to 1 (linear detrending).
     extrapolation : {'constant', 'nan'}
-        The type of extrapolation to use. See :py:func:`xclim.sdba.utils.extrapolate_qm` for details. Defaults to "constant".
+        The type of extrapolation to use. See :py:func:`xsdba.utils.extrapolate_qm` for details. Defaults to "constant".
 
     References
     ----------
@@ -596,12 +601,12 @@ class QuantileDeltaMapping(EmpiricalQuantileMapping):
     Train step:
 
     nquantiles : int or 1d array of floats
-        The number of quantiles to use. See :py:func:`~xclim.sdba.utils.equally_spaced_nodes`.
+        The number of quantiles to use. See :py:func:`~xsdba.utils.equally_spaced_nodes`.
         An array of quantiles [0, 1] can also be passed. Defaults to 20 quantiles.
     kind : {'+', '*'}
         The adjustment kind, either additive or multiplicative. Defaults to "+".
     group : Union[str, Grouper]
-        The grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+        The grouping information. See :py:class:`xsdba.base.Grouper` for details.
         Default is "time", meaning a single adjustment group along dimension "time".
 
     Adjust step:
@@ -609,7 +614,7 @@ class QuantileDeltaMapping(EmpiricalQuantileMapping):
     interp : {'nearest', 'linear', 'cubic'}
         The interpolation method to use when interpolating the adjustment factors. Defaults to "nearest".
     extrapolation : {'constant', 'nan'}
-        The type of extrapolation to use. See :py:func:`xclim.sdba.utils.extrapolate_qm` for details. Defaults to "constant".
+        The type of extrapolation to use. See :py:func:`xsdba.utils.extrapolate_qm` for details. Defaults to "constant".
 
     Extra diagnostics
     -----------------
@@ -630,7 +635,7 @@ class QuantileDeltaMapping(EmpiricalQuantileMapping):
             extrapolation=extrapolation,
             kind=self.kind,
         )
-        if OPTIONS[SDBA_EXTRA_OUTPUT]:
+        if OPTIONS[XSDBA_EXTRA_OUTPUT]:
             out.sim_q.attrs.update(long_name="Group-wise quantiles of `sim`.")
             return out
         return out.scen
@@ -665,7 +670,7 @@ class ExtremeValues(TrainAdjust):
     interp : {'nearest', 'linear', 'cubic'}
         The interpolation method to use when interpolating the adjustment factors. Defaults to "linear".
     extrapolation : {'constant', 'nan'}
-        The type of extrapolation to use. See :py:func:`~xclim.sdba.utils.extrapolate_qm` for details. Defaults to "constant".
+        The type of extrapolation to use. See :py:func:`~xsdba.utils.extrapolate_qm` for details. Defaults to "constant".
     frac : float
         Fraction where the cutoff happens between the original scen and the corrected one.
         See Notes, ]0, 1]. Defaults to 0.25.
@@ -823,7 +828,7 @@ class LOCI(TrainAdjust):
     Train step:
 
     group : Union[str, Grouper]
-        The grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+        The grouping information. See :py:class:`xsdba.base.Grouper` for details.
         Default is "time", meaning a single adjustment group along dimension "time".
     thresh : str
         The threshold in `ref` above which the values are scaled.
@@ -879,7 +884,7 @@ class Scaling(TrainAdjust):
     Train step:
 
     group : Union[str, Grouper]
-        The grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+        The grouping information. See :py:class:`xsdba.base.Grouper` for details.
         Default is "time", meaning an single adjustment group along dimension "time".
     kind : {'+', '*'}
         The adjustment kind, either additive or multiplicative. Defaults to "+".
@@ -936,13 +941,13 @@ class PrincipalComponents(TrainAdjust):
     ----------
     group : Union[str, Grouper]
         The main dimension and grouping information. See Notes.
-        See :py:class:`xclim.sdba.base.Grouper` for details.
+        See :py:class:`xsdba.base.Grouper` for details.
         The adjustment will be performed on each group independently.
         Default is "time", meaning a single adjustment group along dimension "time".
     best_orientation : {'simple', 'full'}
         Which method to use when searching for the best principal component orientation.
-        See :py:func:`~xclim.sdba.utils.best_pc_orientation_simple` and
-        :py:func:`~xclim.sdba.utils.best_pc_orientation_full`.
+        See :py:func:`~xsdba.utils.best_pc_orientation_simple` and
+        :py:func:`~xsdba.utils.best_pc_orientation_full`.
         "full" is more precise, but it is much slower.
     crd_dim : str
         The data dimension along which the multiple simulation space dimensions are taken.
@@ -1108,7 +1113,7 @@ class NpdfTransform(Adjust):
     algorithm, based on a color-correction algorithm described by :cite:t:`sdba-pitie_n-dimensional_2005`.
 
     This algorithm in itself, when used with QuantileDeltaMapping, is NOT trend-preserving.
-    The full MBCn algorithm includes a reordering step provided here by :py:func:`xclim.sdba.processing.reordering`.
+    The full MBCn algorithm includes a reordering step provided here by :py:func:`xsdba.processing.reordering`.
 
     See notes for an explanation of the algorithm.
 
@@ -1126,7 +1131,7 @@ class NpdfTransform(Adjust):
         The number of iterations to perform. Defaults to 20.
     pts_dim : str
         The name of the "multivariate" dimension. Defaults to "multivar", which is the
-        normal case when using :py:func:`xclim.sdba.base.stack_variables`.
+        normal case when using :py:func:`xsdba.base.stack_variables`.
     adj_kws : dict, optional
         Dictionary of arguments to pass to the adjust method of the univariate adjustment.
     rot_matrices : xr.DataArray, optional
@@ -1169,7 +1174,7 @@ class NpdfTransform(Adjust):
     instead fix the number of iterations.
 
     As done by cite:t:`sdba-cannon_multivariate_2018`, the distance score chosen is the "Energy distance" from
-    :cite:t:`sdba-szekely_testing_2004`. (see: :py:func:`xclim.sdba.processing.escore`).
+    :cite:t:`sdba-szekely_testing_2004`. (see: :py:func:`xsdba.processing.escore`).
 
     The random matrices are generated following a method laid out by :cite:t:`sdba-mezzadri_how_2007`.
 
@@ -1251,7 +1256,7 @@ class NpdfTransform(Adjust):
             "adj_kws": adj_kws or {},
         }
 
-        with set_options(sdba_extra_output=False):
+        with set_options(xsdba_extra_output=False):
             out = ds.map_blocks(npdf_transform, template=template, kwargs=kwargs)
 
         out = out.assign(rotation_matrices=rot_matrices)
@@ -1266,7 +1271,7 @@ class MBCn(TrainAdjust):
     based on a color-correction algorithm described by :cite:t:`sdba-pitie_n-dimensional_2005`.
 
     This algorithm in itself, when used with QuantileDeltaMapping, is NOT trend-preserving.
-    The full MBCn algorithm includes a reordering step provided here by :py:func:`xclim.sdba.processing.reordering`.
+    The full MBCn algorithm includes a reordering step provided here by :py:func:`xsdba.processing.reordering`.
 
     See notes for an explanation of the algorithm.
 
@@ -1290,7 +1295,7 @@ class MBCn(TrainAdjust):
         The number of iterations to perform. Defaults to 20.
     pts_dim : str
         The name of the "multivariate" dimension. Defaults to "multivar", which is the
-        normal case when using :py:func:`xclim.sdba.base.stack_variables`.
+        normal case when using :py:func:`xsdba.base.stack_variables`.
     rot_matrices: xr.DataArray, optional
         The rotation matrices as a 3D array ('iterations', <pts_dim>, <anything>), with shape (n_iter, <N>, <N>).
         If left empty, random rotation matrices will be automatically generated.
@@ -1310,13 +1315,13 @@ class MBCn(TrainAdjust):
     adj_kws : dict, optional
         Arguments passed to the adjusting in the univariate bias correction
     period_dim : str, optional
-        Name of the period dimension used when stacking time periods of `sim`  using :py:func:`xclim.core.calendar.stack_periods`.
+        Name of the period dimension used when stacking time periods of `sim`  using :py:func:`xsdba.calendar.stack_periods`.
         If specified, the interpolation of the npdf transform is performed only once and applied on all periods simultaneously.
         This should be more performant, but also more memory intensive.
 
     Training (only npdf transform training)
 
-    1. Standardize `ref` and `hist` (see ``xclim.sdba.processing.standardize``.)
+    1. Standardize `ref` and `hist` (see ``xsdba.processing.standardize``.)
 
     2. Rotate the datasets in the N-dimensional variable space with :math:`\mathbf{R}`, a random rotation NxN matrix.
 
@@ -1357,7 +1362,7 @@ class MBCn(TrainAdjust):
     instead fix the number of iterations.
 
     As done by cite:t:`sdba-cannon_multivariate_2018`, the distance score chosen is the "Energy distance" from
-    :cite:t:`sdba-szekely_testing_2004`. (see: :py:func:`xclim.sdba.processing.escore`).
+    :cite:t:`sdba-szekely_testing_2004`. (see: :py:func:`xsdba.processing.escore`).
 
     The random matrices are generated following a method laid out by :cite:t:`sdba-mezzadri_how_2007`.
 
@@ -1611,7 +1616,7 @@ else:
                     "The adjust method accepts ref, hist, sim and all arguments listed "
                     'below in "Parameters". It also accepts a `multi_dim` argument '
                     "specifying the dimension across which to take the 'features' and "
-                    "is valid for multivariate methods only. See :py:func:`xclim.sdba.stack_variables`."
+                    "is valid for multivariate methods only. See :py:func:`xsdba.stack_variables`."
                     "In the description below, `n_features` is the size of the `multi_dim` "
                     "dimension. There is no way of specifying parameters across other "
                     "dimensions for the moment."

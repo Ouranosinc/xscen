@@ -106,6 +106,59 @@ class ParametrizableWithDataset(Parametrizable):
         self.ds.attrs[self._attribute] = jsonpickle.encode(self)
 
 
+# XC : keep in the same file as `uses_dask` below
+def ensure_chunk_size(da: xr.DataArray, **minchunks: int) -> xr.DataArray:
+    r"""Ensure that the input DataArray has chunks of at least the given size.
+
+    If only one chunk is too small, it is merged with an adjacent chunk.
+    If many chunks are too small, they are grouped together by merging adjacent chunks.
+
+    Parameters
+    ----------
+    da : xr.DataArray
+        The input DataArray, with or without the dask backend. Does nothing when passed a non-dask array.
+    \*\*minchunks : dict[str, int]
+        A kwarg mapping from dimension name to minimum chunk size.
+        Pass -1 to force a single chunk along that dimension.
+
+    Returns
+    -------
+    xr.DataArray
+    """
+    if not uses_dask(da):
+        return da
+
+    all_chunks = dict(zip(da.dims, da.chunks))
+    chunking = {}
+    for dim, minchunk in minchunks.items():
+        chunks = all_chunks[dim]
+        if minchunk == -1 and len(chunks) > 1:
+            # Rechunk to single chunk only if it's not already one
+            chunking[dim] = -1
+
+        toosmall = np.array(chunks) < minchunk  # Chunks that are too small
+        if toosmall.sum() > 1:
+            # Many chunks are too small, merge them by groups
+            fac = np.ceil(minchunk / min(chunks)).astype(int)
+            chunking[dim] = tuple(
+                sum(chunks[i : i + fac]) for i in range(0, len(chunks), fac)
+            )
+            # Reset counter is case the last chunks are still too small
+            chunks = chunking[dim]
+            toosmall = np.array(chunks) < minchunk
+        if toosmall.sum() == 1:
+            # Only one, merge it with adjacent chunk
+            ind = np.where(toosmall)[0][0]
+            new_chunks = list(chunks)
+            sml = new_chunks.pop(ind)
+            new_chunks[max(ind - 1, 0)] += sml
+            chunking[dim] = tuple(new_chunks)
+
+    if chunking:
+        return da.chunk(chunks=chunking)
+    return da
+
+
 # XC put here to avoid circular import
 def uses_dask(*das: xr.DataArray | xr.Dataset) -> bool:
     r"""Evaluate whether dask is installed and array is loaded as a dask array.
@@ -915,7 +968,7 @@ def infer_kind_from_parameter(param) -> InputKind:
 
     Notes
     -----
-    The correspondence between parameters and kinds is documented in :py:class:`xclim.core.utils.InputKind`.
+    The correspondence between parameters and kinds is documented in :py:class:`xsdba.typing.InputKind`.
     """
     if param.annotation is not _empty:
         annot = set(

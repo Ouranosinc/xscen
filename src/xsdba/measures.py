@@ -18,7 +18,6 @@ import xarray as xr
 from xsdba.indicator import Indicator, base_registry
 
 # ADAPT
-# from xclim.core.units import ensure_delta
 from .base import Grouper
 from .typing import InputKind
 from .units import convert_units_to, ensure_delta

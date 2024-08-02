@@ -73,7 +73,6 @@ max_doy = {
     "360_day": 360,
 }
 
-# Some xclim.core.utils functions made accessible here for backwards compatibility reasons.
 datetime_classes = cftime._cftime.DATE_TYPES
 
 # Names of calendars that have the same number of days for all years
@@ -1611,7 +1610,7 @@ def unstack_periods(da: xr.DataArray | xr.Dataset, dim: str = "period"):
          0   o   o   o   x   x
         === === === === === === === ===
     """
-    from xclim.core.units import infer_sampling_units
+    from xsdba.units import infer_sampling_units
 
     try:
         starts = da[dim]

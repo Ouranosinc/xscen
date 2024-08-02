@@ -466,7 +466,7 @@ class TestQDM:
         ref, hist, sim = cannon_2015_rvs(15000, random=False)
 
         # Quantile mapping
-        with set_options(sdba_extra_output=True):
+        with set_options(xsdba_extra_output=True):
             QDM = QuantileDeltaMapping.train(
                 ref, hist, kind="*", group="time", nquantiles=50
             )

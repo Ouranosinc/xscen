@@ -40,4 +40,6 @@ dependencies:
   - xdoctest
   - h5netcdf
   - netcdf4
-  - cf_xarray # to accomodate numba
+  - cf_xarray
+  - nc_time_axis # for notebooks
+  - pooch # for notebooks

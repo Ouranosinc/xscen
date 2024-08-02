@@ -388,7 +388,7 @@ def mbcn_adjust(
     adj_kws : Dict
         Options for univariate adjust for the scenario that is reordered with the output of npdf transform.
     period_dim : str, optional
-        Name of the period dimension used when stacking time periods of `sim`  using :py:func:`xclim.core.calendar.stack_periods`.
+        Name of the period dimension used when stacking time periods of `sim`  using :py:func:`xsdba.calendar.stack_periods`.
         If specified, the interpolation of the npdf transform is performed only once and applied on all periods simultaneously.
         This should be more performant, but also more memory intensive. Defaults to `None`: No optimization will be attempted.
 
@@ -426,7 +426,7 @@ def mbcn_adjust(
         scen_block = xr.zeros_like(sim[{"time": ind_gw}])
         for iv, v in enumerate(sim[pts_dims[0]].values):
             sl = {"time": ind_gw, pts_dims[0]: iv}
-            with set_options(sdba_extra_output=False):
+            with set_options(xsdba_extra_output=False):
                 ADJ = base.train(
                     ref[sl], hist[sl], **base_kws_vars[v], skip_input_checks=True
                 )
