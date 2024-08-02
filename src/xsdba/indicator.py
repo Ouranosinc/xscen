@@ -111,7 +111,7 @@ from dataclasses import asdict, dataclass
 from functools import reduce
 from inspect import Parameter as _Parameter
 from inspect import Signature
-from inspect import _empty as _empty_default  # noqa
+from inspect import _empty as _empty_default
 from inspect import signature
 from os import PathLike
 from pathlib import Path
@@ -802,7 +802,7 @@ class Indicator(IndicatorRegistrar):
         #     params : OrderedDict of parameters (var_kwargs as a single argument, if any)
 
         if self._version_deprecated:
-            self._show_deprecation_warning()  # noqa
+            self._show_deprecation_warning()
 
         das, params, dsattrs = self._parse_variables_from_call(args, kwds)
 
