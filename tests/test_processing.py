@@ -210,24 +210,23 @@ def test_reordering_with_window():
     assert out.attrs == y.attrs
 
 
-def test_to_additive(timelonlatseries):
+def test_to_additive(timeseries):
     # log
-    pr = timelonlatseries(np.array([0, 1e-5, 1, np.e**10]), attrs={"units": "mm/d"})
-    prlog = to_additive_space(pr, lower_bound="0 mm/d", trans="log")
+    pr = timeseries(np.array([0, 1e-5, 1, np.e**10]), units="kg m^-2 s^-1")
+    prlog = to_additive_space(pr, lower_bound="0 kg m^-2 s^-1", trans="log")
     np.testing.assert_allclose(prlog, [-np.Inf, -11.512925, 0, 10])
     assert prlog.attrs["sdba_transform"] == "log"
-    assert prlog.attrs["sdba_transform_units"] == "mm/d"
+    assert prlog.attrs["sdba_transform_units"] == "kg m^-2 s^-1"
 
-    # FIXME
-    # with xr.set_options(keep_attrs=True):
-    #     pr1 = pr + 1
-    # lower_bound = "1e-03 mm/s"
-    # prlog2 = to_additive_space(pr1, trans="log", lower_bound=lower_bound)
-    # np.testing.assert_allclose(prlog2, [-np.Inf, -11.512925, 0, 10])
-    # assert prlog2.attrs["sdba_transform_lower"] == 1.0
+    with xr.set_options(keep_attrs=True):
+        pr1 = pr + 1
+    lower_bound = "1 kg m^-2 s^-1"
+    prlog2 = to_additive_space(pr1, trans="log", lower_bound=lower_bound)
+    np.testing.assert_allclose(prlog2, [-np.Inf, -11.512925, 0, 10])
+    assert prlog2.attrs["sdba_transform_lower"] == 1.0
 
     # logit
-    hurs = timelonlatseries(np.array([0, 1e-3, 90, 100]), attrs={"units": "%"})
+    hurs = timeseries(np.array([0, 1e-3, 90, 100]), units="%")
 
     hurslogit = to_additive_space(
         hurs, lower_bound="0 %", trans="logit", upper_bound="100 %"
@@ -250,26 +249,26 @@ def test_to_additive(timelonlatseries):
     assert hurslogit2.attrs["sdba_transform_upper"] == 600.0
 
 
-def test_from_additive(timelonlatseries):
+def test_from_additive(timeseries):
     # log
-    pr = timelonlatseries(np.array([0, 1e-5, 1, np.e**10]), attrs={"units": "mm/d"})
+    pr = timeseries(np.array([0, 1e-5, 1, np.e**10]), units="mm/d")
     pr2 = from_additive_space(to_additive_space(pr, lower_bound="0 mm/d", trans="log"))
     np.testing.assert_allclose(pr[1:], pr2[1:])
     pr2.attrs.pop("history")
     assert pr.attrs == pr2.attrs
 
     # logit
-    hurs = timelonlatseries(np.array([0, 1e-5, 0.9, 1]), attrs={"units": "%"})
+    hurs = timeseries(np.array([0, 1e-5, 0.9, 1]), units="%")
     hurs2 = from_additive_space(
         to_additive_space(hurs, lower_bound="0 %", trans="logit", upper_bound="100 %")
     )
     np.testing.assert_allclose(hurs[1:-1], hurs2[1:-1])
 
 
-def test_normalize(timelonlatseries, random):
-    tas = timelonlatseries(
+def test_normalize(timeseries, random):
+    tas = timeseries(
         random.standard_normal((int(365.25 * 36),)) + 273.15,
-        attrs={"units": "K"},
+        units="K",
         start="2000-01-01",
     )
 
