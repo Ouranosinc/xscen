@@ -7,7 +7,7 @@ import xarray as xr
 from xarray import set_options
 
 from xsdba import properties
-from xsdba.units import convert_units_to
+from xsdba.units import convert_units_to, pint_multiply
 
 
 class TestProperties:
@@ -556,22 +556,22 @@ class TestProperties:
         )
 
     # ADAPT? The plan was not to allow mm/d -> kg m-2 s-1 in xsdba
-    # def test_get_measure(self, open_dataset):
-    #     sim = (
-    #         open_dataset("sdba/CanESM2_1950-2100.nc")
-    #         .sel(time=slice("1981", "2010"), location="Vancouver")
-    #         .pr
-    #     ).load()
+    def test_get_measure(self, open_dataset):
+        sim = (
+            open_dataset("sdba/CanESM2_1950-2100.nc")
+            .sel(time=slice("1981", "2010"), location="Vancouver")
+            .pr
+        ).load()
 
-    #     ref = (
-    #         open_dataset("sdba/ahccd_1950-2013.nc")
-    #         .sel(time=slice("1981", "2010"), location="Vancouver")
-    #         .pr
-    #     ).load()
+        ref = (
+            open_dataset("sdba/ahccd_1950-2013.nc")
+            .sel(time=slice("1981", "2010"), location="Vancouver")
+            .pr
+        ).load()
+        water_density_inverse = "1e-03 m^3/kg"
+        sim = convert_units_to(pint_multiply(sim, water_density_inverse), ref)
+        sim_var = properties.var(sim)
+        ref_var = properties.var(ref)
 
-    #     sim = convert_units_to(sim, ref)
-    #     sim_var = properties.var(sim)
-    #     ref_var = properties.var(ref)
-
-    #     meas = properties.var.get_measure()(sim_var, ref_var)
-    #     np.testing.assert_allclose(meas, [0.408327], rtol=1e-3)
+        meas = properties.var.get_measure()(sim_var, ref_var)
+        np.testing.assert_allclose(meas, [0.408327], rtol=1e-3)

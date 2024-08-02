@@ -32,6 +32,7 @@ from xsdba.utils import (
     ADDITIVE,
     MULTIPLICATIVE,
     apply_correction,
+    equally_spaced_nodes,
     get_correction,
     invert,
 )
@@ -77,12 +78,12 @@ class TestLoci:
         p2 = loci2.adjust(sim)
         np.testing.assert_array_equal(p, p2)
 
-    # @pytest.mark.requires_internet
-    # def test_reduce_dims(self, ref_hist_sim_tuto):
-    #     ref, hist, _sim = ref_hist_sim_tuto()
-    #     hist = hist.expand_dims(member=[0, 1])
-    #     ref = ref.expand_dims(member=hist.member)
-    #     LOCI.train(ref, hist, group="time", thresh="283 K", add_dims=["member"])
+    @pytest.mark.requires_internet
+    def test_reduce_dims(self, ref_hist_sim_tuto):
+        ref, hist, _sim = ref_hist_sim_tuto()
+        hist = hist.expand_dims(member=[0, 1])
+        ref = ref.expand_dims(member=hist.member)
+        LOCI.train(ref, hist, group="time", thresh="283 K", add_dims=["member"])
 
 
 @pytest.mark.slow
@@ -290,25 +291,25 @@ class TestDQM:
         np.testing.assert_array_almost_equal(mqm, int(kind == MULTIPLICATIVE), 1)
         np.testing.assert_allclose(p.transpose(..., "time"), ref_t, rtol=0.1, atol=0.5)
 
-    # def test_cannon_and_from_ds(self, cannon_2015_rvs, tmp_path, random):
-    #     ref, hist, sim = cannon_2015_rvs(15000, random=random)
+    def test_cannon_and_from_ds(self, cannon_2015_rvs, tmp_path, random):
+        ref, hist, sim = cannon_2015_rvs(15000, random=random)
 
-    #     DQM = DetrendedQuantileMapping.train(ref, hist, kind="*", group="time")
-    #     p = DQM.adjust(sim)
+        DQM = DetrendedQuantileMapping.train(ref, hist, kind="*", group="time")
+        p = DQM.adjust(sim)
 
-    #     np.testing.assert_almost_equal(p.mean(), 41.6, 0)
-    #     np.testing.assert_almost_equal(p.std(), 15.0, 0)
+        np.testing.assert_almost_equal(p.mean(), 41.6, 0)
+        np.testing.assert_almost_equal(p.std(), 15.0, 0)
 
-    #     file = tmp_path / "test_dqm.nc"
-    #     DQM.ds.to_netcdf(file)
+        file = tmp_path / "test_dqm.nc"
+        DQM.ds.to_netcdf(file)
 
-    #     ds = xr.open_dataset(file)
-    #     DQM2 = DetrendedQuantileMapping.from_dataset(ds)
+        ds = xr.open_dataset(file)
+        DQM2 = DetrendedQuantileMapping.from_dataset(ds)
 
-    #     xr.testing.assert_equal(DQM.ds, DQM2.ds)
+        xr.testing.assert_equal(DQM.ds, DQM2.ds)
 
-    #     p2 = DQM2.adjust(sim)
-    #     np.testing.assert_array_equal(p, p2)
+        p2 = DQM2.adjust(sim)
+        np.testing.assert_array_equal(p, p2)
 
 
 @pytest.mark.slow
@@ -475,16 +476,16 @@ class TestQDM:
         assert isinstance(scends, xr.Dataset)
 
         # Theoretical results
-        # ref, hist, sim = cannon_2015_dist
-        # u1 = equally_spaced_nodes(1001, None)
-        # u = np.convolve(u1, [0.5, 0.5], mode="valid")
-        # pu = ref.ppf(u) * sim.ppf(u) / hist.ppf(u)
-        # pu1 = ref.ppf(u1) * sim.ppf(u1) / hist.ppf(u1)
-        # pdf = np.diff(u1) / np.diff(pu1)
+        ref, hist, sim = cannon_2015_dist()
+        u1 = equally_spaced_nodes(1001, None)
+        u = np.convolve(u1, [0.5, 0.5], mode="valid")
+        pu = ref.ppf(u) * sim.ppf(u) / hist.ppf(u)
+        pu1 = ref.ppf(u1) * sim.ppf(u1) / hist.ppf(u1)
+        pdf = np.diff(u1) / np.diff(pu1)
 
-        # mean = np.trapz(pdf * pu, pu)
-        # mom2 = np.trapz(pdf * pu ** 2, pu)
-        # std = np.sqrt(mom2 - mean ** 2)
+        mean = np.trapz(pdf * pu, pu)
+        mom2 = np.trapz(pdf * pu**2, pu)
+        std = np.sqrt(mom2 - mean**2)
         bc_sim = scends.scen
         np.testing.assert_almost_equal(bc_sim.mean(), 41.5, 1)
         np.testing.assert_almost_equal(bc_sim.std(), 16.7, 0)

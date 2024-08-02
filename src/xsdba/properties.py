@@ -34,9 +34,8 @@ from .base import Grouper, map_groups, parse_group, parse_offset
 from .nbutils import _pairwise_haversine_and_bins
 from .utils import _pairwise_spearman, copy_all_attrs
 
+
 # TODO: Reduce redundancy between this submodule and generic
-
-
 class StatisticalProperty(Indicator):
     """Base indicator class for statistical properties used for validating bias-adjusted outputs.
 

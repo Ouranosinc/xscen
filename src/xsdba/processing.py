@@ -20,7 +20,7 @@ from xsdba.formatting import update_xsdba_history
 from ._processing import _adapt_freq, _normalize, _reordering
 from .base import Grouper
 from .nbutils import _escore
-from .units import compare_units, convert_units_to, harmonize_units, pint2str
+from .units import convert_units_to, harmonize_units, pint2str
 from .utils import ADDITIVE, copy_all_attrs
 
 __all__ = [

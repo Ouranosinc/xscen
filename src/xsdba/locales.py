@@ -42,7 +42,7 @@ For user-provided internationalization dictionaries, only the "attrs_mapping" an
 all other entries (translations of frequent parameters and all indicator entries) are optional.
 For xsdba-provided translations (for now only French), all indicators must have en entry and the "attrs_mapping"
 entries must match exactly the default formatter.
-# TODO : Add such folder
+# TODO : Add such folder ... or forget about locales ... ?
 Those default translations are found in the `xsdba/locales` folder.
 """
 

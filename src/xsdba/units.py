@@ -300,7 +300,7 @@ def extract_units(arg):
     return ustr if ustr is None else pint.Quantity(1, ustr).units
 
 
-# TODO: Think, is this really needed?
+# TODO: Is this really needed?
 def compare_units(args_to_check):
     """Decorator to check that all arguments have the same units (or no units)."""
 

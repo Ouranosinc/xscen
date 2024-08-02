@@ -22,7 +22,7 @@ from xsdba.processing import (
     unstack_variables,
     unstandardize,
 )
-from xsdba.units import units
+from xsdba.units import convert_units_to, pint_multiply, units
 
 
 def test_jitter_both():
@@ -218,10 +218,11 @@ def test_to_additive(timelonlatseries):
     assert prlog.attrs["sdba_transform"] == "log"
     assert prlog.attrs["sdba_transform_units"] == "mm/d"
 
+    # FIXME
     # with xr.set_options(keep_attrs=True):
     #     pr1 = pr + 1
-    # with units.context("hydro"):
-    #     prlog2 = to_additive_space(pr1, trans="log", lower_bound="1.0 kg m-2 s-1")
+    # lower_bound = "1e-03 mm/s"
+    # prlog2 = to_additive_space(pr1, trans="log", lower_bound=lower_bound)
     # np.testing.assert_allclose(prlog2, [-np.Inf, -11.512925, 0, 10])
     # assert prlog2.attrs["sdba_transform_lower"] == 1.0
 
