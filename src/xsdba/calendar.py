@@ -91,7 +91,7 @@ def _get_usecf_and_warn(calendar: str, xcfunc: str, xrfunc: str):
         use_cftime = None
         msg = ""
     warn(
-        f"`xclim` function {xcfunc} is deprecated in favour of {xrfunc} and will be removed in v0.51.0. Please adjust your script{msg}.",
+        f"`xsdba` function {xcfunc} is deprecated in favour of {xrfunc} and will be removed in v0.51.0. Please adjust your script{msg}.",
         FutureWarning,
     )
     return calendar, use_cftime
@@ -325,10 +325,9 @@ def convert_doy(
 
 def convert_calendar(
     source: xr.DataArray | xr.Dataset,
-    target: xr.DataArray | str,
+    target: str,
     align_on: str | None = None,
     missing: Any | None = None,
-    doy: bool | str = False,
     dim: str = "time",
 ) -> DataType:
     """Deprecated : use :py:meth:`xarray.Dataset.convert_calendar` or :py:meth:`xarray.DataArray.convert_calendar`
@@ -336,16 +335,6 @@ def convert_calendar(
 
     Convert a DataArray/Dataset to another calendar using the specified method.
     """
-    if isinstance(target, xr.DataArray):
-        raise NotImplementedError(
-            "In `xclim` v0.50.0, `convert_calendar` is a direct copy of `xarray.coding.calendar_ops.convert_calendar`. "
-            "To retrieve the previous behaviour with target as a DataArray, convert the source first then reindex to the target."
-        )
-    if doy is not False:
-        raise NotImplementedError(
-            "In `xclim` v0.50.0, `convert_calendar` is a direct copy of `xarray.coding.calendar_ops.convert_calendar`. "
-            "To retrieve the previous behaviour of doy=True, do convert_doy(obj, target_cal).convert_cal(target_cal)."
-        )
     target, _usecf = _get_usecf_and_warn(
         target,
         "convert_calendar",
@@ -354,6 +343,14 @@ def convert_calendar(
     return xr.coding.calendar_ops.convert_calendar(
         source, target, dim=dim, align_on=align_on, missing=missing
     )
+
+
+# TODO: Let's not keep this very contextual error message, but maybe put the suggestion in a tutorial somewhere
+# if doy is not False:
+#     raise NotImplementedError(
+#         "In `xsdba` v0.50.0, `convert_calendar` is a direct copy of `xarray.coding.calendar_ops.convert_calendar`. "
+#         "To retrieve the previous behaviour of doy=True, do convert_doy(obj, target_cal).convert_cal(target_cal)."
+#     )
 
 
 def interp_calendar(
@@ -593,11 +590,11 @@ def parse_offset(freq: str) -> tuple[int, str, bool, str | None]:
         Base frequency.
     is_start_anchored : bool
         Whether coordinates of this frequency should correspond to the beginning of the period (`True`)
-        or its end (`False`). Can only be False when base is Y, Q or M; in other words, xclim assumes frequencies finer
+        or its end (`False`). Can only be False when base is Y, Q or M; in other words, xsdba assumes frequencies finer
         than monthly are all start-anchored.
     anchor : str, optional
         Anchor date for bases Y or Q. As xarray doesn't support "W",
-        neither does xclim (anchor information is lost when given).
+        neither does xsdba (anchor information is lost when given).
 
     """
     # Useful to raise on invalid freqs, convert Y to A and get default anchor (A, Q)
@@ -887,7 +884,7 @@ def time_bnds(  # noqa: C901
 
     Notes
     -----
-    xclim assumes that indexes for greater-than-day frequencies are "floored" down to a daily resolution.
+    xsdba assumes that indexes for greater-than-day frequencies are "floored" down to a daily resolution.
     For example, the coordinate "2000-01-31 00:00:00" with a "ME" frequency is assumed to mean a period
     going from "2000-01-01 00:00:00" to "2000-01-31 23:59:59.999999".
 

@@ -195,7 +195,8 @@ default_formatter = AttrFormatter(
 def parse_doc(doc: str) -> dict[str, str]:
     """Crude regex parsing reading an indice docstring and extracting information needed in indicator construction.
 
-    The appropriate docstring syntax is detailed in :ref:`notebooks/extendxclim:Defining new indices`.
+    # TODO: Add such a notebook? The focus is not on the class Indicator here
+    The appropriate docstring syntax is detailed in :ref:`notebooks/extendxsdba:Defining new indices`.
 
     Parameters
     ----------
@@ -405,7 +406,7 @@ def update_history(
 ) -> str:
     r"""Return a history string with the timestamped message and the combination of the history of all inputs.
 
-    The new history entry is formatted as "[<timestamp>] <new_name>: <hist_str> - xclim version: <xclim.__version__>."
+    The new history entry is formatted as "[<timestamp>] <new_name>: <hist_str> - xsdba version: <xsdba.__version__>."
 
     Parameters
     ----------
@@ -470,7 +471,7 @@ def update_xsdba_history(func: Callable):
 
         if not isinstance(out, (xr.DataArray, xr.Dataset)):
             raise TypeError(
-                f"Decorated `update_xclim_history` received a non-xarray output from {func.__name__}."
+                f"Decorated `update_xsdba_history` received a non-xarray output from {func.__name__}."
             )
 
         da_list = [arg for arg in args if isinstance(arg, xr.DataArray)]

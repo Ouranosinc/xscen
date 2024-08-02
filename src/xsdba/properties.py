@@ -461,7 +461,7 @@ def _threshold_count(
 
     Notes
     -----
-    This corresponds to ``xclim.sdba.properties._spell_length_distribution`` with `window=1`.
+    This corresponds to ``xsdba.properties._spell_length_distribution`` with `window=1`.
     """
     return _spell_length_distribution(
         da,
@@ -1047,7 +1047,7 @@ def _bivariate_threshold_count(
 
     Notes
     -----
-    This corresponds to ``xclim.sdba.properties._bivariate_spell_length_distribution`` with `window=1`.
+    This corresponds to ``xsdba.properties._bivariate_spell_length_distribution`` with `window=1`.
     """
     return _bivariate_spell_length_distribution(
         da1,
@@ -1427,7 +1427,7 @@ def _decorrelation_length(
 
     Distance from a grid cell where the correlation with its neighbours goes below the threshold.
     A correlogram is calculated for each grid cell following the method from
-    ``xclim.sdba.properties.spatial_correlogram``. Then, we find the first bin closest to the correlation threshold.
+    ``xsdba.properties.spatial_correlogram``. Then, we find the first bin closest to the correlation threshold.
 
     Parameters
     ----------

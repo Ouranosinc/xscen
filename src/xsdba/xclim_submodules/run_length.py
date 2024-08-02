@@ -37,7 +37,7 @@ def use_ufunc(
 ) -> bool:
     """Return whether the ufunc version of run length algorithms should be used with this DataArray or not.
 
-    If ufunc_1dim is 'from_context', the parameter is read from xclim's global (or context) options.
+    If ufunc_1dim is 'from_context', the parameter is read from xsdba's global (or context) options.
     If it is 'auto', this returns False for dask-backed array and for arrays with more than :py:const:`npts_opt`
     points per slice along `dim`.
 
@@ -1085,7 +1085,7 @@ def rle_1d(
 
     Examples
     --------
-    >>> from xclim.indices.run_length import rle_1d
+    >>> from xsdba.xclim_submodules.run_length import rle_1d
     >>> a = [1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3]
     >>> rle_1d(a)
     (array([1, 2, 3]), array([2, 4, 6]), array([0, 2, 6]))

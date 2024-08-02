@@ -46,8 +46,8 @@ details on each.
         base: <base indicator class>  # Defaults to module-wide base class
                                       # If the name startswith a '.', the base class is taken from the current module
                                       # (thus an indicator declared _above_).
-                                      # Available classes are listed in `xclim.core.indicator.registry` and
-                                      # `xclim.core.indicator.base_registry`.
+                                      # Available classes are listed in `xsdba.indicator.registry` and
+                                      # `xsdba.indicator.base_registry`.
 
         # General metadata, usually parsed from the `compute`'s docstring when possible.
         realm: <realm>  # defaults to module-wide realm. One of "atmos", "land", "seaIce", "ocean".
@@ -83,7 +83,6 @@ Parameters
             kind: <param kind> # Override the parameter kind.
                              # This is mostly useful for transforming an optional variable into a required one by passing ``kind: 0``.
         ...
-      ...  # and so on.
 
 All fields are optional. Other fields found in the yaml file will trigger errors in xclim.
 In the following, the section under `<identifier>` is referred to as `data`. When creating indicators from
@@ -280,18 +279,18 @@ class Indicator(IndicatorRegistrar):
     the value of call arguments.
 
     Instantiating a new indicator returns an instance but also creates and registers a custom subclass
-    in :py:data:`xclim.core.indicator.registry`.
+    in :py:data:`xsdba.indicator.registry`.
 
     Attributes in `Indicator.cf_attrs` will be formatted and added to the output variable(s).
     This attribute is a list of dictionaries. For convenience and retro-compatibility,
-    standard CF attributes (names listed in :py:attr:`xclim.core.indicator.Indicator._cf_names`)
+    standard CF attributes (names listed in :py:attr:`xsdba.indicator.Indicator._cf_names`)
     can be passed as strings or list of strings directly to the indicator constructor.
 
     A lot of the Indicator's metadata is parsed from the underlying `compute` function's
     docstring and signature. Input variables and parameters are listed in
-    :py:attr:`xclim.core.indicator.Indicator.parameters`, while parameters that will be
-    injected in the compute function are in  :py:attr:`xclim.core.indicator.Indicator.injected_parameters`.
-    Both are simply views of :py:attr:`xclim.core.indicator.Indicator._all_parameters`.
+    :py:attr:`xsdba.indicator.Indicator.parameters`, while parameters that will be
+    injected in the compute function are in  :py:attr:`xsdba.indicator.Indicator.injected_parameters`.
+    Both are simply views of :py:attr:`xsdba.indicator.Indicator._all_parameters`.
 
     Compared to their base `compute` function, indicators add the possibility of using dataset as input,
     with the injected argument `ds` in the call signature. All arguments that were indicated
@@ -308,7 +307,7 @@ class Indicator(IndicatorRegistrar):
         The function computing the indicators. It should return one or more DataArray.
     cf_attrs : list of dicts
         Attributes to be formatted and added to the computation's output.
-        See :py:attr:`xclim.core.indicator.Indicator.cf_attrs`.
+        See :py:attr:`xsdba.indicator.Indicator.cf_attrs`.
     title : str
         A succinct description of what is in the computed outputs. Parsed from `compute` docstring if None (first paragraph).
     abstract : str
@@ -372,7 +371,7 @@ class Indicator(IndicatorRegistrar):
 
     Keys are the arguments of the "compute" function. All parameters are listed, even
     those "injected", absent from the indicator's call signature. All are instances of
-    :py:class:`xclim.core.indicator.Parameter`.
+    :py:class:`xsdba.indicator.Parameter`.
     """
 
     # Note: typing and class types in this call signature will cause errors with sphinx-autodoc-typehints
@@ -496,7 +495,7 @@ class Indicator(IndicatorRegistrar):
             new.__module__ = f"xclim.indicators.{kwds['module']}"
         else:
             # If the module was not forced, set the module to the base class' module.
-            # Otherwise, all indicators will have module `xclim.core.indicator`.
+            # Otherwise, all indicators will have module `xsdba.indicator`.
             new.__module__ = cls.__module__
 
         #  Add the created class to the registry
@@ -691,8 +690,8 @@ class Indicator(IndicatorRegistrar):
         Most parameters are passed directly as keyword arguments to the class constructor, except:
 
         - "base" : A subclass of Indicator or a name of one listed in
-          :py:data:`xclim.core.indicator.registry` or
-          :py:data:`xclim.core.indicator.base_registry`. When passed, it acts as if
+          :py:data:`xsdba.indicator.registry` or
+          :py:data:`xsdba.indicator.base_registry`. When passed, it acts as if
           `from_dict` was called on that class instead.
         - "compute" : A string function name translates to a
           :py:mod:`xclim.indices.generic` or :py:mod:`xclim.indices` function.
@@ -1103,7 +1102,7 @@ class Indicator(IndicatorRegistrar):
     def translate_attrs(cls, locale: str | Sequence[str], fill_missing: bool = True):
         """Return a dictionary of unformatted translated translatable attributes.
 
-        Translatable attributes are defined in :py:const:`xclim.core.locales.TRANSLATABLE_ATTRS`.
+        Translatable attributes are defined in :py:const:`xsdba.locales.TRANSLATABLE_ATTRS`.
 
         Parameters
         ----------

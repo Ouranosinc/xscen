@@ -38,7 +38,7 @@ FREQ_UNITS = {
     "W": "week",
 }
 """
-Resampling frequency units for :py:func:`xclim.core.units.infer_sampling_units`.
+Resampling frequency units for :py:func:`xsdba.units.infer_sampling_units`.
 
 Mapping from offset base to CF-compliant unit. Only constant-length frequencies are included.
 """
@@ -228,7 +228,7 @@ def pint_multiply(
     xr.DataArray
     """
     q = q if isinstance(q, pint.Quantity) else str2pint(q)
-    a = 1 * units2pint(da)  
+    a = 1 * units2pint(da)
     f = a * q.to_base_units()
     if out_units:
         f = f.to(out_units)
@@ -351,7 +351,7 @@ def convert_units_to(  # noqa: C901
     """Convert a mathematical expression into a value with the same units as a DataArray.
 
     If the dimensionalities of source and target units differ, automatic CF conversions
-    will be applied when possible. See :py:func:`xclim.core.units.cf_conversion`.
+    will be applied when possible.
 
     Parameters
     ----------

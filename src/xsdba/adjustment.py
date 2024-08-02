@@ -60,8 +60,6 @@ __all__ = [
     "Scaling",
 ]
 
-# FIXME: `xsdba.utils.extrapolate_qm` mentioned in docstrings, but doesn't exist in `xclim` or `xsdba`
-
 
 class BaseAdjustment(ParametrizableWithDataset):
     """Base class for adjustment objects.
@@ -80,7 +78,7 @@ class BaseAdjustment(ParametrizableWithDataset):
             super().__init__(*args, **kwargs)
         else:
             raise ValueError(
-                "As of xclim 0.29, Adjustment object should be initialized through their `train` or `adjust` methods."
+                "Adjustment object should be initialized through their `train` or `adjust` methods."
             )
 
     @classmethod
@@ -410,7 +408,7 @@ class EmpiricalQuantileMapping(TrainAdjust):
     interp : {'nearest', 'linear', 'cubic'}
         The interpolation method to use when interpolating the adjustment factors. Defaults to "nearest".
     extrapolation : {'constant', 'nan'}
-        The type of extrapolation to use. See :py:func:`xsdba.utils.extrapolate_qm` for details. Defaults to "constant".
+        The type of extrapolation to use. Defaults to "constant".
 
     References
     ----------
@@ -509,7 +507,7 @@ class DetrendedQuantileMapping(TrainAdjust):
         The method to use when detrending. If an int is passed, it is understood as a PolyDetrend (polynomial detrending) degree.
         Defaults to 1 (linear detrending).
     extrapolation : {'constant', 'nan'}
-        The type of extrapolation to use. See :py:func:`xsdba.utils.extrapolate_qm` for details. Defaults to "constant".
+        The type of extrapolation to use. Defaults to "constant".
 
     References
     ----------
@@ -614,7 +612,7 @@ class QuantileDeltaMapping(EmpiricalQuantileMapping):
     interp : {'nearest', 'linear', 'cubic'}
         The interpolation method to use when interpolating the adjustment factors. Defaults to "nearest".
     extrapolation : {'constant', 'nan'}
-        The type of extrapolation to use. See :py:func:`xsdba.utils.extrapolate_qm` for details. Defaults to "constant".
+        The type of extrapolation to use. Defaults to "constant".
 
     Extra diagnostics
     -----------------
@@ -670,7 +668,7 @@ class ExtremeValues(TrainAdjust):
     interp : {'nearest', 'linear', 'cubic'}
         The interpolation method to use when interpolating the adjustment factors. Defaults to "linear".
     extrapolation : {'constant', 'nan'}
-        The type of extrapolation to use. See :py:func:`~xsdba.utils.extrapolate_qm` for details. Defaults to "constant".
+        The type of extrapolation to use. Defaults to "constant".
     frac : float
         Fraction where the cutoff happens between the original scen and the corrected one.
         See Notes, ]0, 1]. Defaults to 0.25.
@@ -779,6 +777,7 @@ class ExtremeValues(TrainAdjust):
         interp: str = "linear",
         extrapolation: str = "constant",
     ):
+        # TODO: `extrapolate_qm` doesn't exist anymore, is this cheat still relevant?
         # Quantiles coord : cheat and assign 0 - 1, so we can use `extrapolate_qm`.
         ds = self.ds.assign(
             quantiles=(np.arange(self.ds.quantiles.size) + 1)

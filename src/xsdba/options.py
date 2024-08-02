@@ -16,7 +16,6 @@ from .logging import ValidationError, raise_warn_or_log
 
 METADATA_LOCALES = "metadata_locales"
 DATA_VALIDATION = "data_validation"
-CF_COMPLIANCE = "cf_compliance"
 CHECK_MISSING = "check_missing"
 MISSING_OPTIONS = "missing_options"
 RUN_LENGTH_UFUNC = "run_length_ufunc"
@@ -30,7 +29,6 @@ MISSING_METHODS: dict[str, Callable] = {}
 OPTIONS = {
     METADATA_LOCALES: [],
     DATA_VALIDATION: "raise",
-    CF_COMPLIANCE: "warn",
     CHECK_MISSING: "any",
     MISSING_OPTIONS: {},
     RUN_LENGTH_UFUNC: "auto",
@@ -62,7 +60,6 @@ def _valid_missing_options(mopts):
 _VALIDATORS = {
     METADATA_LOCALES: _valid_locales,
     DATA_VALIDATION: _LOUDNESS_OPTIONS.__contains__,
-    CF_COMPLIANCE: _LOUDNESS_OPTIONS.__contains__,
     CHECK_MISSING: lambda meth: meth != "from_context" and meth in MISSING_METHODS,
     MISSING_OPTIONS: _valid_missing_options,
     RUN_LENGTH_UFUNC: _RUN_LENGTH_UFUNC_OPTIONS.__contains__,
@@ -127,19 +124,6 @@ def datacheck(func: Callable) -> Callable:
     return run_check
 
 
-def cfcheck(func: Callable) -> Callable:
-    """Decorate functions checking CF-compliance of DataArray attributes.
-
-    Functions should raise ValidationError exceptions whenever attributes are non-conformant.
-    """
-
-    @wraps(func)
-    def run_check(*args, **kwargs):
-        return _run_check(func, CF_COMPLIANCE, *args, **kwargs)
-
-    return run_check
-
-
 class set_options:
     """Set options for xclim in a controlled context.
 
@@ -151,14 +135,11 @@ class set_options:
         Default: ``[]``.
     data_validation : {"log", "raise", "error"}
         Whether to "log", "raise" an error or 'warn' the user on inputs that fail the data checks in
-        :py:func:`xclim.core.datachecks`. Default: ``"raise"``.
-    cf_compliance : {"log", "raise", "error"}
-        Whether to "log", "raise" an error or "warn" the user on inputs that fail the CF compliance checks in
-        :py:func:`xclim.core.cfchecks`. Default: ``"warn"``.
+        :py:func:`xclim.datachecks`. Default: ``"raise"``.
     check_missing : {"any", "wmo", "pct", "at_least_n", "skip"}
         How to check for missing data and flag computed indicators.
         Available methods are "any", "wmo", "pct", "at_least_n" and "skip".
-        Missing method can be registered through the `xclim.core.options.register_missing_method` decorator.
+        Missing method can be registered through the `xsdba.options.register_missing_method` decorator.
         Default: ``"any"``
     missing_options : dict
         Dictionary of options to pass to the missing method. Keys must the name of

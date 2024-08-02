@@ -163,7 +163,7 @@ def broadcast(
     x : xr.DataArray
       The array to broadcast grouped to.
     group : str or Grouper
-      Grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+      Grouping information. See :py:class:`xsdba.base.Grouper` for details.
     interp : {'nearest', 'linear', 'cubic'}
       The interpolation method to use,
     sel : dict[str, xr.DataArray]

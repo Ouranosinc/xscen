@@ -83,7 +83,7 @@ class Parametrizable(dict):
 class ParametrizableWithDataset(Parametrizable):
     """Parametrizable class that also has a `ds` attribute storing a dataset."""
 
-    _attribute = "_xclim_parameters"
+    _attribute = "_xsdba_parameters"
 
     @classmethod
     def from_dataset(cls, ds: xr.Dataset):
@@ -220,11 +220,11 @@ def parse_offset(freq: str) -> tuple[int, str, bool, str | None]:
         Base frequency.
     is_start_anchored : bool
         Whether coordinates of this frequency should correspond to the beginning of the period (`True`)
-        or its end (`False`). Can only be False when base is Y, Q or M; in other words, xclim assumes frequencies finer
+        or its end (`False`). Can only be False when base is Y, Q or M; in other words, xsdba assumes frequencies finer
         than monthly are all start-anchored.
     anchor : str, optional
         Anchor date for bases Y or Q. As xarray doesn't support "W",
-        neither does xclim (anchor information is lost when given).
+        neither does xsdba (anchor information is lost when given).
     """
     # Useful to raise on invalid freqs, convert Y to A and get default anchor (A, Q)
     offset = pd.tseries.frequencies.to_offset(freq)

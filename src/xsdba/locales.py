@@ -3,7 +3,7 @@ Internationalization
 ====================
 
 This module defines methods and object to help the internationalization of metadata for
-climate indicators computed by xclim. Go to :ref:`notebooks/customize:Adding translated metadata` to see
+climate indicators computed by xsdba. Go to :ref:`notebooks/customize:Adding translated metadata` to see
 how to use this feature.
 
 All the methods and objects in this module use localization data given in JSON files.
@@ -28,7 +28,7 @@ These files are expected to be defined as in this example for French:
         # ... and so on for other indicators...
     }
 
-Indicators are named by subclass identifier, the same as in the indicator registry (`xclim.core.indicators.registry`),
+Indicators are named by subclass identifier, the same as in the indicator registry (`xsdba.indicators.registry`),
 but which can differ from the callable name. In this case, the indicator is called through
 `atmos.daily_temperature_range_variability`, but its identifier is `DTRVAR`.
 Use the `ind.__class__.__name__` accessor to get its registry name.
@@ -36,13 +36,14 @@ Use the `ind.__class__.__name__` accessor to get its registry name.
 Here, the usual parameter passed to the formatting of "description" is "freq" and is usually translated from "YS"
 to "annual". However, in French and in this sentence, the feminine form should be used, so the "f" modifier is added
 by the translator so that the formatting function knows which translation to use. Acceptable entries for the mappings
-are limited to what is already defined in `xclim.core.indicators.utils.default_formatter`.
+are limited to what is already defined in `xsdba.indicators.utils.default_formatter`.
 
 For user-provided internationalization dictionaries, only the "attrs_mapping" and its "modifiers" key are mandatory,
 all other entries (translations of frequent parameters and all indicator entries) are optional.
-For xclim-provided translations (for now only French), all indicators must have en entry and the "attrs_mapping"
+For xsdba-provided translations (for now only French), all indicators must have en entry and the "attrs_mapping"
 entries must match exactly the default formatter.
-Those default translations are found in the `xclim/locales` folder.
+# TODO : Add such folder
+Those default translations are found in the `xsdba/locales` folder.
 """
 
 from __future__ import annotations
@@ -225,7 +226,7 @@ class UnavailableLocaleError(ValueError):
 
     def __init__(self, locale):
         super().__init__(
-            f"Locale {locale} not available. Use `xclim.core.locales.list_locales()` to see available languages."
+            f"Locale {locale} not available. Use `xsdba.locales.list_locales()` to see available languages."
         )
 
 

@@ -28,7 +28,7 @@ class StatisticalMeasure(Indicator):
     """Base indicator class for statistical measures used when validating bias-adjusted outputs.
 
     Statistical measures use input data where the time dimension was reduced, usually by the computation
-    of a :py:class:`xclim.sdba.properties.StatisticalProperty` instance.  They usually take two arrays
+    of a :py:class:`xsdba.properties.StatisticalProperty` instance.  They usually take two arrays
     as input: "sim" and "ref", "sim" being measured against "ref". The two arrays must have identical
     coordinates on their common dimensions.
 
@@ -70,8 +70,8 @@ class StatisticalPropertyMeasure(Indicator):
     """Base indicator class for statistical properties that include the comparison measure, used when validating bias-adjusted outputs.
 
     StatisticalPropertyMeasure objects combine the functionalities of
-    :py:class:`xclim.sdba.properties.StatisticalProperty` and
-    :py:class:`xclim.sdba.properties.StatisticalMeasure`.
+    :py:class:`xsdba.properties.StatisticalProperty` and
+    :py:class:`xsdba.properties.StatisticalMeasure`.
 
     Statistical properties usually reduce the time dimension and sometimes more dimensions
     (for example in spatial properties), sometimes adding a grouping dimension according to

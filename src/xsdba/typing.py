@@ -28,8 +28,8 @@ class InputKind(IntEnum):
 
     For use by external parses to determine what kind of data the indicator expects.
     On the creation of an indicator, the appropriate constant is stored in
-    :py:attr:`xclim.core.indicator.Indicator.parameters`. The integer value is what gets stored in the output
-    of :py:meth:`xclim.core.indicator.Indicator.json`.
+    :py:attr:`xsdba.indicator.Indicator.parameters`. The integer value is what gets stored in the output
+    of :py:meth:`xsdba.indicator.Indicator.json`.
 
     For developers : for each constant, the docstring specifies the annotation a parameter of an indice function
     should use in order to be picked up by the indicator constructor. Notice that we are using the annotation format
@@ -50,7 +50,7 @@ class InputKind(IntEnum):
     QUANTIFIED = 2
     """A quantity with units, either as a string (scalar), a pint.Quantity (scalar) or a DataArray (with units set).
 
-       Annotation : ``xclim.core.utils.Quantified`` and an entry in the :py:func:`xclim.core.units.declare_units`
+       Annotation : ``xsdba.typing.Quantified`` and an entry in the :py:func:`xsdba.units.declare_units`
        decorator. "Quantified" translates to ``str | xr.DataArray | pint.util.Quantity``.
     """
     FREQ_STR = 3
@@ -70,17 +70,18 @@ class InputKind(IntEnum):
 
        Annotation : ``str`` or ``str | None``. In most cases, this kind of parameter makes sense
        with choices indicated in the docstring's version of the annotation with curly braces.
+       # TOOO : what about this notebook?
        See :ref:`notebooks/extendxclim:Defining new indices`.
     """
     DAY_OF_YEAR = 6
     """A date, but without a year, in the MM-DD format.
 
-       Annotation : :py:obj:`xclim.core.utils.DayOfYearStr` (may be optional).
+       Annotation : :py:obj:`xsdba.typing.DayOfYearStr` (may be optional).
     """
     DATE = 7
     """A date in the YYYY-MM-DD format, may include a time.
 
-       Annotation : :py:obj:`xclim.core.utils.DateStr` (may be optional).
+       Annotation : :py:obj:`xsdba.typing.DateStr` (may be optional).
     """
     NUMBER_SEQUENCE = 8
     """A sequence of numbers
@@ -111,7 +112,7 @@ class InputKind(IntEnum):
     OTHER_PARAMETER = 99
     """An object that fits None of the previous kinds.
 
-       Developers : This is the fallback kind, it will raise an error in xclim's unit tests if used.
+       Developers : This is the fallback kind, it will raise an error in xsdba's unit tests if used.
     """
 
 

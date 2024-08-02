@@ -75,7 +75,7 @@ def select_resample_op(
     freq : str
         Resampling frequency defining the periods as defined in :ref:`timeseries.resampling`.
     out_units : str, optional
-        Output units to assign. Only necessary if `op` is function not supported by :py:func:`xclim.core.units.to_agg_units`.
+        Output units to assign. Only necessary if `op` is function not supported by :py:func:`xsdba.units.to_agg_units`.
     indexer : {dim: indexer, }, optional
         Time attribute and values over which to subset the array. For example, use season='DJF' to select winter values,
         month=1 to select January, or month=[6,7,8] to select summer months. If not indexer is given, all values are
@@ -128,7 +128,7 @@ def select_rolling_resample_op(
     freq : str
         Resampling frequency defining the periods as defined in :ref:`timeseries.resampling`. Applied after the rolling window.
     out_units : str, optional
-        Output units to assign. Only necessary if `op` is function not supported by :py:func:`xclim.core.units.to_agg_units`.
+        Output units to assign. Only necessary if `op` is function not supported by :py:func:`xsdba.units.to_agg_units`.
     indexer : {dim: indexer, }, optional
         Time attribute and values over which to subset the array. For example, use season='DJF' to select winter values,
         month=1 to select January, or month=[6,7,8] to select summer months. If not indexer is given, all values are
@@ -186,7 +186,7 @@ def default_freq(**indexer) -> str:
 def get_op(op: str, constrain: Sequence[str] | None = None) -> Callable:
     """Get python's comparing function according to its name of representation and validate allowed usage.
 
-    Accepted op string are keys and values of xclim.indices.generic.binary_ops.
+    Accepted op string are keys and values of xsdba.xclim_submodules.generic.binary_ops.
 
     Parameters
     ----------

@@ -45,7 +45,7 @@ def check_freq(var: xr.DataArray, freq: str | Sequence[str], strict: bool = True
     if v_freq is None:
         raise ValidationError(
             "Unable to infer the frequency of the time series. "
-            "To mute this, set xclim's option data_validation='log'."
+            "To mute this, set xsdba's option data_validation='log'."
         )
     v_base = parse_offset(v_freq)[1]
     if v_base not in exp_base or (
@@ -53,7 +53,7 @@ def check_freq(var: xr.DataArray, freq: str | Sequence[str], strict: bool = True
     ):
         raise ValidationError(
             f"Frequency of time series not {'strictly' if strict else ''} in {freq}. "
-            "To mute this, set xclim's option data_validation='log'."
+            "To mute this, set xsdba's option data_validation='log'."
         )
 
 
@@ -88,12 +88,12 @@ def check_common_time(inputs: Sequence[xr.DataArray]):
     if None in freqs:
         raise ValidationError(
             "Unable to infer the frequency of the time series. "
-            "To mute this, set xclim's option data_validation='log'."
+            "To mute this, set xsdba's option data_validation='log'."
         )
     if len(set(freqs)) != 1:
         raise ValidationError(
             f"Inputs have different frequencies. Got : {freqs}."
-            "To mute this, set xclim's option data_validation='log'."
+            "To mute this, set xsdba's option data_validation='log'."
         )
 
     # Check if anchor is the same
@@ -106,7 +106,7 @@ def check_common_time(inputs: Sequence[xr.DataArray]):
             raise ValidationError(
                 f"All inputs have the same frequency ({freq}), but they are not anchored on the same minutes (got {outs}). "
                 f"xarray's alignment would silently fail. You can try to fix this with `da.resample('{freq}').mean()`."
-                "To mute this, set xclim's option data_validation='log'."
+                "To mute this, set xsdba's option data_validation='log'."
             )
 
 

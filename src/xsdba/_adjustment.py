@@ -773,7 +773,6 @@ def npdf_transform(ds: xr.Dataset, **kwargs) -> xr.Dataset:
     )
 
 
-# TODO: incorporate xclim.stats
 def _fit_on_cluster(data, thresh, dist, cluster_thresh):
     """Extract clusters on 1D data and fit "dist" on the maximums."""
     _, _, _, maximums = u.get_clusters_1d(data, thresh, cluster_thresh)

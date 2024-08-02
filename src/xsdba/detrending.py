@@ -39,7 +39,7 @@ class BaseDetrend(ParametrizableWithDataset):
         Parameters
         ----------
         group : Union[str, Grouper]
-            The grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+            The grouping information. See :py:class:`xsdba.base.Grouper` for details.
             The fit is performed along the group's main dim.
         kind : {'*', '+'}
             The way the trend is removed or added, either additive or multiplicative.
@@ -154,7 +154,7 @@ class PolyDetrend(BaseDetrend):
     Attributes
     ----------
     group : Union[str, Grouper]
-        The grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+        The grouping information. See :py:class:`xsdba.base.Grouper` for details.
         The fit is performed along the group's main dim.
     kind : {'*', '+'}
         The way the trend is removed or added, either additive or multiplicative.
@@ -203,7 +203,7 @@ class LoessDetrend(BaseDetrend):
     Attributes
     ----------
     group : str or Grouper
-        The grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+        The grouping information. See :py:class:`xsdba.base.Grouper` for details.
         The fit is performed along the group's main dim.
     kind : {'*', '+'}
         The way the trend is removed or added, either additive or multiplicative.
@@ -284,7 +284,7 @@ class RollingMeanDetrend(BaseDetrend):
     Attributes
     ----------
     group : str or Grouper
-        The grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+        The grouping information. See :py:class:`xsdba.base.Grouper` for details.
         The fit is performed along the group's main dim.
     kind : {'*', '+'}
         The way the trend is removed or added, either additive or multiplicative.

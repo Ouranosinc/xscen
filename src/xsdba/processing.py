@@ -23,9 +23,6 @@ from .nbutils import _escore
 from .units import compare_units, convert_units_to, harmonize_units, pint2str
 from .utils import ADDITIVE, copy_all_attrs
 
-# from xclim.core.units import convert_units_to, infer_context, units
-
-
 __all__ = [
     "adapt_freq",
     "escore",
@@ -267,7 +264,7 @@ def normalize(
     norm : xr.DataArray, optional
         If present, it is used instead of computing the norm again.
     group : str or Grouper
-        Grouping information. See :py:class:`xclim.sdba.base.Grouper` for details..
+        Grouping information. See :py:class:`xsdba.base.Grouper` for details..
     kind : {'+', '*'}
         If `kind` is "+", the mean is subtracted from the mean and if it is '*', it is divided from the data.
 
@@ -363,7 +360,7 @@ def reordering(ref: xr.DataArray, sim: xr.DataArray, group: str = "time") -> xr.
     sim : xr.DataArray
         Array to reorder.
     group : str
-        Grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+        Grouping information. See :py:class:`xsdba.base.Grouper` for details.
 
     Returns
     -------
