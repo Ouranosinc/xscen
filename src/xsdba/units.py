@@ -228,7 +228,7 @@ def pint_multiply(
     xr.DataArray
     """
     q = q if isinstance(q, pint.Quantity) else str2pint(q)
-    a = 1 * units2pint(da)  
+    a = 1 * units2pint(da)
     f = a * q.to_base_units()
     if out_units:
         f = f.to(out_units)
