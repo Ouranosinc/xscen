@@ -3,6 +3,8 @@ Units Handling Submodule
 ========================
 """
 
+from __future__ import annotations
+
 import inspect
 from copy import deepcopy
 from functools import wraps
