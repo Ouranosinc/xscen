@@ -293,7 +293,7 @@ def extract_units(arg):
         )
     elif isinstance(arg, xr.DataArray):
         ustr = None if "units" not in arg.attrs else arg.attrs["units"]
-    elif isinstance(arg, pint.Unit | units.Unit):
+    elif isinstance(arg, (pint.Unit, units.Unit)):
         ustr = pint2str(arg)  # XC: from pint2str
     elif isinstance(arg, str):
         ustr = pint2str(str2pint(arg).units)
