@@ -20,7 +20,7 @@ import xarray as xr
 # from filelock import FileLock
 from packaging.version import Version
 
-from xsdba.testing import TESTDATA_BRANCH
+from xsdba.testing import TESTDATA_BRANCH, generate_atmos
 from xsdba.testing import open_dataset as _open_dataset
 from xsdba.testing import (
     test_cannon_2015_dist,
@@ -317,17 +317,20 @@ def atmosds(threadsafe_data_dir) -> xr.Dataset:
 #     )
 
 
-# @pytest.fixture(scope="session", autouse=True)
-# def gather_session_data(threadsafe_data_dir, worker_id, xdoctest_namespace):
-#     """Gather testing data on pytest run.
+@pytest.fixture(scope="session", autouse=True)
+def gather_session_data(threadsafe_data_dir):
+    """Gather testing data on pytest run.
 
-#     When running pytest with multiple workers, one worker will copy data remotely to _default_cache_dir while
-#     other workers wait using lockfile. Once the lock is released, all workers will then copy data to their local
-#     threadsafe_data_dir.As this fixture is scoped to the session, it will only run once per pytest run.
+    When running pytest with multiple workers, one worker will copy data remotely to _default_cache_dir while
+    other workers wait using lockfile. Once the lock is released, all workers will then copy data to their local
+    threadsafe_data_dir.As this fixture is scoped to the session, it will only run once per pytest run.
 
-#     Additionally, this fixture is also used to generate the `atmosds` synthetic testing dataset as well as add the
-#     example file paths to the xdoctest_namespace, used when running doctests.
-#     """
+    Additionally, this fixture is also used to generate the `atmosds` synthetic testing dataset as well as add the
+    example file paths to the xdoctest_namespace, used when running doctests.
+    """
+    generate_atmos(threadsafe_data_dir)
+
+
 #     if (
 #         not _default_cache_dir.joinpath(helpers.TESTDATA_BRANCH).exists()
 #         or helpers.PREFETCH_TESTING_DATA
@@ -353,7 +356,6 @@ def atmosds(threadsafe_data_dir) -> xr.Dataset:
 #                 if lockfile.exists():
 #                     lockfile.unlink()
 #     shutil.copytree(_default_cache_dir, threadsafe_data_dir)
-#     helpers.generate_atmos(threadsafe_data_dir)
 #     xdoctest_namespace.update(helpers.add_example_file_paths(threadsafe_data_dir))
 
 

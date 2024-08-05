@@ -19,6 +19,7 @@ from platformdirs import user_cache_dir
 from scipy.stats import gamma
 from xarray import open_dataset as _open_dataset
 
+from xsdba.calendar import percentile_doy
 from xsdba.utils import equally_spaced_nodes
 
 __all__ = ["test_timelonlatseries", "test_timeseries"]
@@ -343,3 +344,43 @@ def nancov(X):
     """Drop observations with NaNs from Numpy's cov."""
     X_na = np.isnan(X).any(axis=0)
     return np.cov(X[:, ~X_na])
+
+
+# XC
+def generate_atmos(cache_dir: Path) -> dict[str, xr.DataArray]:
+    """Create the `atmosds` synthetic testing dataset."""
+    with open_dataset(
+        "ERA5/daily_surface_cancities_1990-1993.nc",
+        cache_dir=cache_dir,
+        branch=TESTDATA_BRANCH,
+        engine="h5netcdf",
+    ) as ds:
+        tn10 = percentile_doy(ds.tasmin, per=10)
+        t10 = percentile_doy(ds.tas, per=10)
+        t90 = percentile_doy(ds.tas, per=90)
+        tx90 = percentile_doy(ds.tasmax, per=90)
+
+        # rsus = shortwave_upwelling_radiation_from_net_downwelling(ds.rss, ds.rsds)
+        # rlus = longwave_upwelling_radiation_from_net_downwelling(ds.rls, ds.rlds)
+
+        ds = ds.assign(
+            # rsus=rsus,
+            # rlus=rlus,
+            tn10=tn10,
+            t10=t10,
+            t90=t90,
+            tx90=tx90,
+        )
+
+        # Create a file in session scoped temporary directory
+        atmos_file = cache_dir.joinpath("atmosds.nc")
+        ds.to_netcdf(atmos_file, engine="h5netcdf")
+
+    # Give access to dataset variables by name in namespace
+    namespace = dict()
+    with open_dataset(
+        atmos_file, branch=TESTDATA_BRANCH, cache_dir=cache_dir, engine="h5netcdf"
+    ) as ds:
+        for variable in ds.data_vars:
+            namespace[f"{variable}_dataset"] = ds.get(variable)
+    return namespace

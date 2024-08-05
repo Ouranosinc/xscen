@@ -7,6 +7,7 @@ import pint.errors
 import pytest
 import xarray as xr
 from dask import array as dsk
+from packaging.version import Version
 
 from xsdba.logging import ValidationError
 from xsdba.typing import Quantified
