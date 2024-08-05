@@ -73,16 +73,19 @@ details on each.
           <var name in compute> : <variable official name>
           ...
 
-Parameters
-----------
-         <param name>: <param data>  # Simplest case, to inject parameters in the compute function.
-         <param name>:  # To change parameters metadata or to declare units when "compute" is a generic function.
-            units: <param units>  # Only valid if "compute" points to a generic function
-            default : <param default>
-            description: <param description>
-            kind: <param kind> # Override the parameter kind.
-                             # This is mostly useful for transforming an optional variable into a required one by passing ``kind: 0``.
-        ...
+
+.. code-block:: restructuredtext
+
+    Parameters  # noqa: D214
+    ----------  # noqa: D215
+    <param name> : <param data>  # Simplest case, to inject parameters in the compute function.
+    <param name> :  # To change parameters metadata or to declare units when "compute" is a generic function.
+    units : <param units>  # Only valid if "compute" points to a generic function
+    default : <param default>
+    description : <param description>
+    kind : <param kind> # Override the parameter kind.
+                        # This is mostly useful for transforming an optional variable into a required one by passing ``kind: 0``.
+    ...
 
 All fields are optional. Other fields found in the yaml file will trigger errors in xclim.
 In the following, the section under `<identifier>` is referred to as `data`. When creating indicators from
@@ -1147,7 +1150,6 @@ class Indicator(IndicatorRegistrar):
             )
         return attrs
 
-    @classmethod
     def json(self, args=None):
         """Return a serializable dictionary representation of the class.
 

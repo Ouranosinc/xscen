@@ -277,7 +277,7 @@ def quantile(da: DataArray, q: np.ndarray, dim: str | Sequence[Hashable]) -> Dat
     nogil=True,
     cache=False,
 )
-def remove_NaNs(x):
+def remove_NaNs(x):  # noqa: N802
     """Remove NaN values from series."""
     remove = np.zeros_like(x[0, :], dtype=boolean)
     for i in range(x.shape[0]):
