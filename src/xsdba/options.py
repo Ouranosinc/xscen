@@ -2,8 +2,9 @@
 Global or contextual options for xsdba, similar to xarray.set_options.
 """
 
-# XC remove: metadata locales, do we need them?
+from __future__ import annotations
 
+# XC remove: metadata locales, do we need them?
 from __future__ import annotations
 
 from inspect import signature
