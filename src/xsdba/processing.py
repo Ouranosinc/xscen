@@ -1,5 +1,5 @@
 # pylint: disable=missing-kwoa
-"""
+"""# noqa: SS01
 Pre- and Post-Processing Submodule
 ==================================
 """
@@ -556,7 +556,7 @@ def to_additive_space(
 
     See Also
     --------
-    from_additive_space : for the inverse transformation.
+    from_additive_space : For the inverse transformation.
     jitter_under_thresh : Remove values exactly equal to the lower bound.
     jitter_over_thresh : Remove values exactly equal to the upper bound.
 
@@ -654,12 +654,11 @@ def from_additive_space(
 
     See Also
     --------
-    to_additive_space : for the original transformation.
+    to_additive_space : For the original transformation.
 
     References
     ----------
     :cite:cts:`sdba-alavoine_distinct_2022`.
-
     """
     if trans is None and lower_bound is None and units is None:
         try:

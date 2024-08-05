@@ -1,4 +1,4 @@
-"""
+"""# noqa: SS01
 Compute Functions Submodule
 ===========================
 
@@ -35,24 +35,23 @@ def _adapt_freq(
     Parameters
     ----------
     ds : xr.Dataset
-        With variables :  "ref", Target/reference data, usually observed data and "sim", Simulated data.
+        With variables : "ref", Target/reference data, usually observed data and "sim", Simulated data.
     dim : str, or sequence of strings
-        Dimension name(s). If more than one, the probabilities and quantiles are computed within all the dimensions.
-        If `window` is in the names, it is removed before the correction
-        and the final timeseries is corrected along dim[0] only.
+        Dimension name(s).
+        If more than one, the probabilities and quantiles are computed within all the dimensions.
+        If `window` is in the names, it is removed before the correction and the final timeseries is corrected along dim[0] only.
     group : Union[str, Grouper]
-        Grouping information, see base.Grouper
+        Grouping information, see base.Grouper.
     thresh : float
         Threshold below which values are considered zero.
 
     Returns
     -------
     xr.Dataset, with the following variables:
-
       - `sim_adj`: Simulated data with the same frequency of values under threshold than ref.
         Adjustment is made group-wise.
-      - `pth` : For each group, the smallest value of sim that was not frequency-adjusted. All values smaller were
-        either left as zero values or given a random value between thresh and pth.
+      - `pth` : For each group, the smallest value of sim that was not frequency-adjusted.
+        All values smaller were either left as zero values or given a random value between thresh and pth.
         NaN where frequency adaptation wasn't needed.
       - `dP0` : For each group, the percentage of values that were corrected in sim.
     """
@@ -125,7 +124,7 @@ def _normalize(
     Returns
     -------
     xr.Dataset
-        Group-wise anomaly of x
+        Group-wise anomaly of 'x'.
 
     Notes
     -----

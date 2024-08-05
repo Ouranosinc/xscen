@@ -1,4 +1,4 @@
-"""
+"""# noqa: SS01
 Indicator Utilities
 ===================
 
@@ -9,8 +9,8 @@ missing and adds metadata attributes to the  object.
 There are many ways to construct indicators. A good place to start is
 `this notebook <notebooks/extendxclim.ipynb#Defining-new-indicators>`_.
 
-Dictionary and YAML parser
---------------------------
+Dictionary and YAML parser # noqa: GL06
+-------------------------- # noqa: GL06
 
 To construct indicators dynamically, xclim can also use dictionaries and parse them from YAML files.
 This is especially useful for generating whole indicator "submodules" from files.
@@ -73,7 +73,6 @@ details on each.
           <var name in compute> : <variable official name>
           ...
 
-
 .. code-block:: restructuredtext
 
     Parameters  # noqa: D214
@@ -99,7 +98,6 @@ Inputs
 As xclim has strict definitions of possible input variables (see :py:data:`xclim.core.utils.variables`),
 the mapping of `data.input` simply links an argument name from the function given in "compute"
 to one of those official variables.
-
 """
 
 from __future__ import annotations
@@ -515,7 +513,6 @@ class Indicator(IndicatorRegistrar):
         'passed_parameters' is only needed when compute is a generic function
         (not decorated by `declare_units`) and it takes a string parameter. In that case
         we need to check if that parameter has units (which have been passed explicitly).
-
         """
         docmeta = parse_doc(compute.__doc__)
         params_dict = docmeta.pop("parameters", {})  # override parent's parameters
@@ -951,7 +948,7 @@ class Indicator(IndicatorRegistrar):
                         )
 
     def _postprocess(self, outs, das, params):
-        """Actions to done after computing."""
+        """Run post-computation actions."""
         return outs
 
     def _bind_call(self, func, **das):
@@ -1162,7 +1159,6 @@ class Indicator(IndicatorRegistrar):
         Notes
         -----
         This is meant to be used by a third-party library wanting to wrap this class into another interface.
-
         """
         names = ["identifier", "title", "abstract", "keywords"]
         out = {key: getattr(self, key) for key in names}

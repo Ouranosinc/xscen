@@ -40,7 +40,7 @@ def _get_indexes(
     Returns
     -------
     array-like, array-like
-        A tuple of virtual_indexes neighbouring indexes (previous and next)
+        A tuple of virtual_indexes neighbouring indexes (previous and next).
 
     Notes
     -----

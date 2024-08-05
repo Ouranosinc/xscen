@@ -50,17 +50,18 @@ def map_cdf(
     Parameters
     ----------
     ds : xr.Dataset
-      Variables: x, Values from which to pick,
-      y, Reference values giving the ranking
+        Variables:
+            x, Values from which to pick,
+            y, Reference values giving the ranking.
     y_value : float, array
-      Value within the support of `y`.
+        Value within the support of `y`.
     dim : str
-      Dimension along which to compute quantile.
+        Dimension along which to compute quantile.
 
     Returns
     -------
     array
-      Quantile of `x` with the same CDF as `y_value` in `y`.
+        Quantile of `x` with the same CDF as `y_value` in `y`.
     """
     return xr.apply_ufunc(
         map_cdf_1d,
@@ -826,19 +827,18 @@ def rand_rot_matrix(
 
     Parameters
     ----------
-    crd: xr.DataArray
-      1D coordinate DataArray along which the rotation occurs.
-      The output will be square with the same coordinate replicated,
-      the second renamed to `new_dim`.
+    crd : xr.DataArray
+        1D coordinate DataArray along which the rotation occurs.
+        The output will be square with the same coordinate replicated, the second renamed to `new_dim`.
     num : int
-      If larger than 1 (default), the number of matrices to generate, stacked along a "matrices" dimension.
+        If larger than 1 (default), the number of matrices to generate, stacked along a "matrices" dimension.
     new_dim : str
-      Name of the new "prime" dimension, defaults to the same name as `crd` + "_prime".
+        Name of the new "prime" dimension, defaults to the same name as `crd` + "_prime".
 
     Returns
     -------
     xr.DataArray
-      float, NxN if num = 1, numxNxN otherwise, where N is the length of crd.
+        A float, NxN if num = 1, numxNxN otherwise, where N is the length of crd.
 
     References
     ----------

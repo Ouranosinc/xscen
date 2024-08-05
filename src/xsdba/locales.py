@@ -100,7 +100,7 @@ def get_local_dict(locale: str | Sequence[str] | tuple[str, dict]) -> tuple[str,
 
     Parameters
     ----------
-    locale: str or sequence of str
+    locale : str or sequence of str
         IETF language tag or a tuple of the language tag and a translation dict, or a tuple of the language
         tag and a path to a json file defining translation of attributes.
 
@@ -112,7 +112,7 @@ def get_local_dict(locale: str | Sequence[str] | tuple[str, dict]) -> tuple[str,
     Returns
     -------
     str
-        The best fitting locale string
+        The best fitting locale string.
     dict
         The available translations in this locale.
     """
@@ -284,7 +284,7 @@ def generate_local_dict(locale: str, init_english: bool = False) -> dict:
     Parameters
     ----------
     locale : str
-        Locale in the IETF format
+        Locale in the IETF format.
     init_english : bool
         If True, fills the initial dictionary with the english versions of the attributes.
         Defaults to False.

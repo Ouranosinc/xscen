@@ -693,29 +693,28 @@ def npdf_transform(ds: xr.Dataset, **kwargs) -> xr.Dataset:
     ----------
     ds : xr.Dataset
         Dataset variables:
-            ref : Reference multivariate timeseries
-            hist : simulated timeseries on the reference period
+            ref : Reference multivariate timeseries.
+            hist : simulated timeseries on the reference period.
             sim : Simulated timeseries on the projected period.
             rot_matrices : Random rotation matrices.
     \*\*kwargs
-        pts_dim : multivariate dimension name
-        base : Adjustment class
-        base_kws : Kwargs for initialising the adjustment object
-        adj_kws : Kwargs of the `adjust` call
+        pts_dim : multivariate dimension name.
+        base : Adjustment class.
+        base_kws : Kwargs for initialising the adjustment object.
+        adj_kws : Kwargs of the `adjust` call.
         n_escore : Number of elements to include in the e_score test (0 for all, < 0 to skip).
 
     Returns
     -------
     xr.Dataset
         Dataset variables:
-            scenh : Scenario in the reference period (source `hist` transferred to target `ref` inside training)
-            scens : Scenario in the projected period (source `sim` transferred to target `ref` outside training)
+            scenh : Scenario in the reference period (source `hist` transferred to target `ref` inside training).
+            scens : Scenario in the projected period (source `sim` transferred to target `ref` outside training).
             escores : Index estimating the dissimilarity between `scenh` and `hist`.
 
     Notes
     -----
     If `n_escore` is negative, `escores` will be filled with NaNs.
-
     """
     ref = ds.ref.rename(time_hist="time")
     hist = ds.hist.rename(time_hist="time")

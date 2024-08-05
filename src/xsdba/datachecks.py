@@ -1,4 +1,4 @@
-"""
+"""# noqa: SS01
 Data Checks
 ===========
 

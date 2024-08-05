@@ -1,4 +1,4 @@
-"""
+"""# noqa: SS01
 Calendar Handling Utilities
 ===========================
 
@@ -435,11 +435,11 @@ def percentile_doy(
     Parameters
     ----------
     arr : xr.DataArray
-      Input data, a daily frequency (or coarser) is required.
+        Input data, a daily frequency (or coarser) is required.
     window : int
-      Number of time-steps around each day of the year to include in the calculation.
+        Number of time-steps around each day of the year to include in the calculation.
     per : float or sequence of floats
-      Percentile(s) between [0, 100]
+        Percentile(s) between [0, 100].
     alpha : float
         Plotting position parameter.
     beta : float
@@ -541,16 +541,16 @@ def compare_offsets(freqA: str, op: str, freqB: str) -> bool:
     Parameters
     ----------
     freqA : str
-        RHS Date offset string ('YS', '1D', 'QS-DEC', ...)
+        RHS Date offset string ('YS', '1D', 'QS-DEC', ...).
     op : {'<', '<=', '==', '>', '>=', '!='}
         Operator to use.
     freqB : str
-        LHS Date offset string ('YS', '1D', 'QS-DEC', ...)
+        LHS Date offset string ('YS', '1D', 'QS-DEC', ...).
 
     Returns
     -------
     bool
-        freqA op freqB
+        Either freqA op freqB.
     """
     from .xclim_submodules.generic import (  # pylint: disable=import-outside-toplevel
         get_op,
@@ -579,23 +579,20 @@ def parse_offset(freq: str) -> tuple[int, str, bool, str | None]:
     Parameters
     ----------
     freq : str
-      Frequency offset.
+        Frequency offset.
 
     Returns
     -------
     multiplier : int
-        Multiplier of the base frequency. "[n]W" is always replaced with "[7n]D",
-        as xarray doesn't support "W" for cftime indexes.
+        Multiplier of the base frequency.
+        "[n]W" is always replaced with "[7n]D", as xarray doesn't support "W" for cftime indexes.
     offset_base : str
         Base frequency.
     is_start_anchored : bool
-        Whether coordinates of this frequency should correspond to the beginning of the period (`True`)
-        or its end (`False`). Can only be False when base is Y, Q or M; in other words, xsdba assumes frequencies finer
-        than monthly are all start-anchored.
+        Whether coordinates of this frequency should correspond to the beginning of the period (`True`) or its end (`False`).
+        Can only be False when base is Y, Q or M; in other words, xsdba assumes frequencies finer than monthly are all start-anchored.
     anchor : str, optional
-        Anchor date for bases Y or Q. As xarray doesn't support "W",
-        neither does xsdba (anchor information is lost when given).
-
+        Anchor date for bases Y or Q. As xarray doesn't support "W", neither does xsdba (anchor information is lost when given).
     """
     # Useful to raise on invalid freqs, convert Y to A and get default anchor (A, Q)
     offset = pd.tseries.frequencies.to_offset(freq)
@@ -1236,17 +1233,17 @@ def select_time(
         Input data.
     drop : bool
         Whether to drop elements outside the period of interest or to simply mask them (default).
-    season : string or sequence of strings, optional
+    season : str or sequence of str, optional
         One or more of 'DJF', 'MAM', 'JJA' and 'SON'.
-    month : integer or sequence of integers, optional
-        Sequence of month numbers (January = 1 ... December = 12)
-    doy_bounds : 2-tuple of integers, optional
+    month : int or sequence of int, optional
+        Sequence of month numbers (January = 1 ... December = 12).
+    doy_bounds : 2-tuple of int, optional
         The bounds as (start, end) of the period of interest expressed in day-of-year, integers going from
         1 (January 1st) to 365 or 366 (December 31st).
         If calendar awareness is needed, consider using ``date_bounds`` instead.
-    date_bounds : 2-tuple of strings, optional
+    date_bounds : 2-tuple of str, optional
         The bounds as (start, end) of the period of interest expressed as dates in the month-day (%m-%d) format.
-    include_bounds : bool or 2-tuple of booleans
+    include_bounds : bool or 2-tuple of bool
         Whether the bounds of `doy_bounds` or `date_bounds` should be inclusive or not.
         Either one value for both or a tuple. Default is True, meaning bounds are inclusive.
 
@@ -1343,7 +1340,7 @@ def select_time(
 
 
 def _month_is_first_period_month(time, freq):
-    """Returns True if the given time is from the first month of freq."""
+    """Return True if the given time is from the first month of freq."""
     if isinstance(time, cftime.datetime):
         frq_monthly = xr.coding.cftime_offsets.to_offset("MS")
         frq = xr.coding.cftime_offsets.to_offset(freq)

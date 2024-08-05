@@ -627,8 +627,8 @@ def generate_indicator_docstring(ind) -> str:
 
     Parameters
     ----------
-    ind
-        Indicator instance
+    ind : Indicator
+        An Indicator instance.
 
     Returns
     -------
