@@ -6,6 +6,10 @@ v0.9.2 (unreleased)
 -------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`).
 
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* New ``xscen.catutils.patterns_from_schema`` to generate all possible patterns from a given schema (or one of xscen's default), to use with :py:func:`parse_directory`.
+
 Bug fixes
 ^^^^^^^^^
 * Fixed bug with reusing weights. (:issue:`411`, :pull:`414`).

@@ -36,7 +36,13 @@ from .utils import CV, date_parser, ensure_new_xrfreq, get_cat_attrs
 logger = logging.getLogger(__name__)
 
 
-__all__ = ["build_path", "parse_directory", "parse_from_ds", "register_parse_type"]
+__all__ = [
+    "build_path",
+    "parse_directory",
+    "parse_from_ds",
+    "patterns_from_schema",
+    "register_parse_type",
+]
 # ## File finding and path parsing ## #
 
 
