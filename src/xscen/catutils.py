@@ -12,6 +12,7 @@ from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from fnmatch import fnmatch
 from functools import partial, reduce
+from itertools import chain, combinations, product
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, Optional, Union
@@ -1175,3 +1176,114 @@ def build_path(
             df["new_path_type"] = paths[1]
         return df
     return _build_path(data, schemas=schemas, root=root, get_type=False, **extra_facets)
+
+
+def _as_template(a):
+    return "{" + a + "}"
+
+
+def partial_format(template, **fmtargs):
+    """Format a template only partially, leaving un-formatted templates intact."""
+
+    class PartialFormatDict(dict):
+        def __missing__(self, key):
+            return _as_template(key)
+
+    return template.format_map(PartialFormatDict(**fmtargs))
+
+
+def patterns_from_schema(
+    schema: Union[str, dict], exts: Optional[Sequence[str]] = None
+):
+    """Generate all valid patterns for a given schema.
+
+    Generated patterns are meant for use with :py:func:`parse_directory`.
+    This hardcodes the rule that facet can never contain a underscore ("_") except "variable".
+    File names are not strict except for the date bounds element which must be at the end if present.
+
+    Parameters
+    ----------
+    schema: dict or str
+        A dict with keys "with" (optional), "folders" and "filename", constructed as described
+        in the `xscen/data/file_schema.yml` file.
+        Or the name of a pattern group from that file.
+    exts: sequence of strings, optional
+        A list of file extensions to consider, with the leading dot.
+        Defaults to ``[".nc", ".zarr", ".zarr.zip"]``.
+
+    Returns
+    -------
+    list of patterns compatible with :py:func:`parse_directory`.
+    """
+    if isinstance(schema, str):
+        schemas = Path(__file__).parent / "data" / "file_schema.yml"
+        with open(schemas) as f:
+            schema = yaml.safe_load(f)[schema]
+
+    # # Base folder patterns
+
+    # Index of optional folder parts
+    opt_idx = [
+        i
+        for i, k in enumerate(schema["folders"])
+        if isinstance(k, str) and k.startswith("(")
+    ]
+
+    raw_folders = []
+    for skip in chain.from_iterable(
+        combinations(opt_idx, r) for r in range(len(opt_idx) + 1)
+    ):
+        # skip contains index of levels to skip
+        # we go through every possible missing levels combinations
+        parts = []
+        for i, part in enumerate(schema["folders"]):
+            if i in skip:
+                continue
+            if isinstance(part, str):
+                if part.startswith("("):
+                    part = part[1:-1]
+                parts.append(_as_template(part))
+            elif isinstance(part, dict):
+                parts.append(part["text"])
+            else:
+                parts.append("_".join(map(_as_template, part)))
+        raw_folders.append("/".join(parts))
+
+    # # Inject conditions
+    folders = raw_folders
+    for conditions in schema["with"]:
+        if "value" not in conditions:
+            # This means that the facet must be set.
+            # Not useful when parsing. Implicit with the facet in the pattern.
+            continue
+
+        # Ensure a list
+        if isinstance(conditions["value"], str):
+            value = [conditions["value"]]
+        else:
+            value = conditions["value"]
+
+        patterns = []
+        for patt in folders:
+            for val in value:
+                patterns.append(partial_format(patt, **{conditions["facet"]: val}))
+        folders = patterns
+
+    # # Inject parsing requirements (hardcoded :( )
+    folders = [folder.replace("{variable}", "{variable:_}") for folder in folders]
+
+    # # Filenames
+    if "DATES" in schema["filename"]:
+        if schema["filename"][-1] != "DATES":
+            raise ValueError(
+                "Reverse pattern generation is not supported for filenames with date bounds not at the end."
+            )
+        filename = "{?:_}_{DATES}"
+    else:
+        filename = "{?:_}"
+
+    exts = exts or [".nc", ".zarr", ".zarr.zip"]
+
+    patterns = [f"{fold}/{filename}{ext}" for fold, ext in product(folders, exts)]
+
+    return patterns
