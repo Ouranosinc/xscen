@@ -855,7 +855,9 @@ def clean_up(  # noqa: C901
                 logging.info(f"Filling missing {var} with {missing}")
                 if missing == "interpolate":
                     ds_with_nan = ds[var].where(ds[var] != -9999)
-                    converted_var = ds_with_nan.interpolate_na("time", method="linear")
+                    converted_var = ds_with_nan.chunk({"time": -1}).interpolate_na(
+                        "time", method="linear"
+                    )
                 else:
                     var_attrs = ds[var].attrs
                     converted_var = xr.where(ds[var] == -9999, missing, ds[var])
