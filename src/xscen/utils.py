@@ -1273,9 +1273,9 @@ def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
                 "Dataset is labelled as having a sampling frequency of "
                 f"{xrfreq}, but some periods have more than one data point."
             )
-        if (counts.isnull()).any().item():
+        if (counts.isnull() | (counts == 0)).any().item():
             raise ValueError(
-                "The resampling count contains nans. There might be some missing data."
+                "The resampling count contains NaNs or 0s. There might be some missing data."
             )
         ds["time"] = counts.time
     return ds
