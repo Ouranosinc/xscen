@@ -6,7 +6,7 @@ dependencies:
   # Don't forget to sync changes between environment.yml, environment-dev.yml, and setup.py!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
-  - cartopy >=0.23.0
+  - cartopy
   - cftime
   - cf_xarray >=0.7.6
   - clisops >=0.10
