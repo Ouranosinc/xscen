@@ -6,6 +6,7 @@ v0.9.2 (unreleased)
 -------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`).
 
+
 Bug fixes
 ^^^^^^^^^
 * Fixed bug with reusing weights. (:issue:`411`, :pull:`414`).
@@ -18,6 +19,7 @@ Internal changes
 * Added pins to `xarray`, `xclim`, `h5py`, and `netcdf4`. (:pull:`414`).
 * Add ``.zip`` and ``.zarr.zip`` as possible file extensions for Zarr datasets. (:pull:`426`).
 * Explicitly assign coords of multiindex in `xs.unstack_fill_nan`. (:pull:`427`).
+* Include CF convention for temperature differences and on scale (:pull:`428`, :issue:`428`).
 
 v0.9.1 (2024-06-04)
 -------------------
