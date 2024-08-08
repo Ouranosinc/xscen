@@ -362,19 +362,22 @@ def _subset_shape(
         # The buffer argument needs to be in the same units as the shapefile, so it's simpler to always project the shapefile to WGS84.
         if isinstance(shape, (str, Path)):
             shape = gpd.read_file(shape)
+
         try:
             shape_crs = shape.crs
-            if (shape_crs is not None) and (shape_crs != CRS(4326)):  # WGS84
-                warnings.warn(
-                    "Shapefile is not in EPSG:4326. Reprojecting to this CRS.",
-                    UserWarning,
-                )
-                shape = shape.to_crs(4326)
         except AttributeError:
+            shape_crs = None
+        if shape_crs is None:
             warnings.warn(
-                "Shapefile does not have a CRS. Compatability with the dataset is not guaranteed.",
+                "Shapefile does not have a CRS. Compatibility with the dataset is not guaranteed.",
+                category=UserWarning,
+            )
+        elif shape_crs != CRS(4326):  # WGS84
+            warnings.warn(
+                "Shapefile is not in EPSG:4326. Reprojecting to this CRS.",
                 UserWarning,
             )
+            shape = shape.to_crs(4326)
 
         kwargs["buffer"] = np.max([lon_res, lat_res]) * tile_buffer
 

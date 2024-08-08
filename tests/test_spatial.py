@@ -241,6 +241,29 @@ class TestSubset:
                 np.testing.assert_array_equal(out["lon"], np.arange(-63, -59))
                 np.testing.assert_array_equal(out["lat"], np.arange(47, 51))
 
+    @pytest.mark.parametrize("crs", ["bad", "EPSG:3857", "EPSG:4326"])
+    def test_shape_crs(self, crs):
+        gdf = gpd.GeoDataFrame(
+            {"geometry": [Polygon([(-63, 47), (-63, 50), (-60, 50), (-60, 47)])]}
+        )
+        if crs != "bad":
+            gdf.crs = crs
+            if crs != "EPSG:4326":
+                with pytest.warns(UserWarning, match="Reprojecting to this CRS"):
+                    with pytest.raises(
+                        ValueError, match="No grid cell centroids"
+                    ):  # This is from clisops, this is not our warning
+                        xs.spatial.subset(self.ds, "shape", shape=gdf, tile_buffer=5)
+            else:
+                # Make sure there is no warning about reprojection
+                with pytest.warns() as record:
+                    xs.spatial.subset(self.ds, "shape", shape=gdf, tile_buffer=5)
+                assert not any("Reprojecting to this CRS" in str(w) for w in record)
+
+        else:
+            with pytest.warns(UserWarning, match="does not have a CRS"):
+                xs.spatial.subset(self.ds, "shape", shape=gdf, tile_buffer=5)
+
     def test_subset_sel(self):
         ds = datablock_3d(
             np.ones((3, 50, 50)),
