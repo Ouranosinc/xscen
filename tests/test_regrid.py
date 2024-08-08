@@ -42,7 +42,7 @@ class TestRegridDataset:
             "2000-01-01",
             as_dataset=True,
         )
-        dsout.attrs["cat:domain"] = "Région d'essai"
+        dsout.attrs["cat:domain"] = "RegionEssai"
 
         dsin = datablock_3d(
             np.zeros((10, 6, 6)),
@@ -69,7 +69,7 @@ class TestRegridDataset:
             },
         )
 
-        assert (tmp_path / "weights" / "weights_regrid0patch.nc").is_file()
+        assert (tmp_path / "weights" / "weights_RegionEssai_regrid0patch.nc").is_file()
         assert out.tas.attrs["grid_mapping"] == "rotated_pole"
         assert out.rotated_pole.attrs == dsout.rotated_pole.attrs
         assert "patch" in out.attrs["history"]

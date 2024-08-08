@@ -797,7 +797,7 @@ class ProjectCatalog(DataCatalog):
         if info_kwargs:
             d.update(info_kwargs)
 
-        if "time" in ds:
+        if "time" in ds.dims:
             d["date_start"] = str(
                 ds.isel(time=0).time.dt.strftime("%4Y-%m-%d %H:%M:%S").values
             )

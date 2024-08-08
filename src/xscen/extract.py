@@ -634,6 +634,27 @@ def search_data_catalogs(  # noqa: C901
     --------
     intake_esm.core.esm_datastore.search
     """
+    # Cast single items to a list
+    if isinstance(data_catalogs, (str, os.PathLike, DataCatalog)):
+        data_catalogs = [data_catalogs]
+
+    # Open the catalogs given as paths
+    data_catalogs = [
+        (
+            dc
+            if not isinstance(dc, (str, os.PathLike))
+            else (
+                DataCatalog(dc)
+                if Path(dc).suffix == ".json"
+                else DataCatalog.from_df(dc)
+            )
+        )
+        for dc in data_catalogs
+    ]
+
+    if not all(isinstance(dc, DataCatalog) for dc in data_catalogs):
+        raise ValueError("Catalogs type not recognized.")
+
     cat_kwargs = {}
     if allow_conversion:
         if conversion_yaml is None:
@@ -641,23 +662,6 @@ def search_data_catalogs(  # noqa: C901
         cat_kwargs = {
             "registry": registry_from_module(load_xclim_module(conversion_yaml))
         }
-
-    # Cast single items to a list
-    if isinstance(data_catalogs, (str, os.PathLike, DataCatalog)):
-        data_catalogs = [data_catalogs]
-    # Open the catalogs given as paths
-    for i, dc in enumerate(data_catalogs):
-        if isinstance(dc, (str, os.PathLike)):
-            data_catalogs[i] = (
-                DataCatalog(dc, **cat_kwargs)
-                if Path(dc).suffix == ".json"
-                else DataCatalog.from_df(dc)
-            )
-
-    if not isinstance(data_catalogs, list) or not all(
-        isinstance(dc, DataCatalog) for dc in data_catalogs
-    ):
-        raise ValueError("Catalogs type not recognized.")
 
     # Prepare a unique catalog to search from, with the DerivedCat added if required
     catalog = DataCatalog(

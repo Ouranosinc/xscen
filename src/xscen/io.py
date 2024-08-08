@@ -47,7 +47,10 @@ __all__ = [
 
 
 def get_engine(file: Union[str, os.PathLike]) -> str:
-    """Use functionality of h5py to determine if a NetCDF file is compatible with h5netcdf.
+    """Determine which Xarray engine should be used to open the given file.
+
+    The .zarr, .zarr.zip and .zip extensions are recognized as Zarr datasets,
+    the rest is seen as a netCDF. If the file is HDF5, the h5netcdf engine is used.
 
     Parameters
     ----------
@@ -60,7 +63,7 @@ def get_engine(file: Union[str, os.PathLike]) -> str:
         Engine to use with xarray
     """
     # find the ideal engine for xr.open_mfdataset
-    if Path(file).suffix == ".zarr":
+    if Path(file).suffix in [".zarr", ".zip", ".zarr.zip"]:
         engine = "zarr"
     elif h5py.is_hdf5(file):
         engine = "h5netcdf"
