@@ -364,7 +364,7 @@ def _subset_shape(
             shape = gpd.read_file(shape)
         try:
             shape_crs = shape.crs
-            if shape_crs != CRS(4326):  # WGS84
+            if (shape_crs is not None) and (shape_crs != CRS(4326)):  # WGS84
                 warnings.warn(
                     "Shapefile is not in EPSG:4326. Reprojecting to this CRS.",
                     UserWarning,
