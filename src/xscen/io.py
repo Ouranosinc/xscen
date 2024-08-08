@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from inspect import signature
 from pathlib import Path
 from typing import Optional, Union
+from zipfile import ZipFile
 
 import h5py
 import netCDF4
@@ -43,6 +44,8 @@ __all__ = [
     "save_to_zarr",
     "subset_maxsize",
     "to_table",
+    "unzip_directory",
+    "zip_directory",
 ]
 
 
@@ -994,3 +997,52 @@ def rechunk(
 
     if temp_store is not None:
         sh.rmtree(temp_store)
+
+
+def zip_directory(
+    root: Union[str, os.PathLike], zipfile: Union[str, os.PathLike], **zip_args
+):
+    r"""Make a zip archive of the content of a directory.
+
+    Parameters
+    ----------
+    root : path
+        The directory with the content to archive.
+    zipfile : path
+        The zip file to create.
+    \*\*zip_args
+        Any other arguments to pass to :py:mod:`zipfile.ZipFile`, such as "compression".
+        The default is to make no compression (``compression=ZIP_STORED``).
+    """
+    root = Path(root)
+
+    def _add_to_zip(zf, path, root):
+        zf.write(path, path.relative_to(root))
+        if path.is_dir():
+            for subpath in path.iterdir():
+                _add_to_zip(zf, subpath, root)
+
+    with ZipFile(zipfile, "w", **zip_args) as zf:
+        for file in root.iterdir():
+            _add_to_zip(zf, file, root)
+
+
+def unzip_directory(zipfile: Union[str, os.PathLike], root: Union[str, os.PathLike]):
+    r"""Unzip an archive to a directory.
+
+    This function is the exact opposite of :py:func:`xscen.io.zip_directory`.
+
+    Parameters
+    ----------
+    zipfile : path
+        The zip file to read.
+    root : path
+        The directory where to put the content to archive.
+        If doesn't exist, it will be created (and all its parents).
+        If it exists, should be empty.
+    """
+    root = Path(root)
+    root.mkdir(parents=True, exist_ok=True)
+
+    with ZipFile(zipfile, "r") as zf:
+        zf.extractall(root)

@@ -440,7 +440,7 @@ def _parse_first_ds(
 
 @parse_config
 def parse_directory(  # noqa: C901
-    directories: list[Union[str, os.PathLike]],
+    directories: Union[str, list[Union[str, os.PathLike]]],
     patterns: list[str],
     *,
     id_columns: Optional[list[str]] = None,
@@ -543,6 +543,8 @@ def parse_directory(  # noqa: C901
     pd.DataFrame
         Parsed directory files
     """
+    if isinstance(directories, (str, Path)):
+        directories = [directories]
     homogenous_info = homogenous_info or {}
     xr_open_kwargs = xr_open_kwargs or {}
     if only_official_columns:
