@@ -350,7 +350,7 @@ def _regridder(
         unmapped_to_nan=unmapped_to_nan,
         **kwargs,
     )
-    if ~os.path.isfile(filename):
+    if not os.path.isfile(filename):
         regridder.to_netcdf(filename)
 
     return regridder
