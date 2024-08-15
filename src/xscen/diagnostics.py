@@ -520,6 +520,7 @@ def measures_heatmap(
     ds_hmap.attrs["cat:processing_level"] = to_level
     ds_hmap.attrs.pop("cat:variable", None)
     add_attr(ds_hmap["heatmap"], "long_name", _("Ranking of measure performance"))
+    add_attr(ds_hmap["heatmap"], "long_name", _("Measure performance ranking"))
 
     return ds_hmap
 
