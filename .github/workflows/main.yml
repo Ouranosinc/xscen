@@ -9,8 +9,6 @@ on:
       - CHANGELOG.rst
       - README.rst
       - pyproject.toml
-      - setup.cfg
-      - setup.py
       - xscen/__init__.py
   pull_request:
 

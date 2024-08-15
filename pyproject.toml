@@ -285,8 +285,6 @@ include = ["xscen"]
 # "docs/notebooks/samples/*.yml",
 # "environment.yml",
 # "environment-dev.yml",
-# "setup.cfg",
-# "setup.py",
 # "src/xscen/**/*.py",
 # "src/xscen/**/*.yml",
 # "src/xscen/CVs/*.json",

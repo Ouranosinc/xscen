@@ -8,8 +8,6 @@ on:
       - CHANGELOG.rst
       - README.rst
       - pyproject.toml
-      - setup.cfg
-      - setup.py
       - xscen/__init__.py
   schedule:
     - cron: "0 0 * * *" # Daily “At 00:00” UTC
