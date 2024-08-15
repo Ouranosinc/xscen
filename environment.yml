@@ -33,8 +33,7 @@ dependencies:
   - xclim >=0.50, <0.51
   - xesmf >=0.7
   - zarr
-  # To install from source and get translations
-  - babel
+  # To install from source
   - setuptools >=65.0.0
   - setuptools-scm >=8.0.0
   # Opt
