@@ -11,9 +11,7 @@ repos:
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
-        exclude: setup.cfg
       - id: end-of-file-fixer
-        exclude: setup.cfg
       - id: debug-statements
       - id: mixed-line-ending
       - id: check-json

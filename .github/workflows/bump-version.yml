@@ -32,7 +32,6 @@ on:
       - environment-dev.yml
       - environment.yml
       - pyproject.toml
-      - setup.py
       - src/xscen/__init__.py
       - templates
       - tests/*.py
