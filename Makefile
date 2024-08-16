@@ -110,8 +110,15 @@ dev: clean ## install the package in editable mode with all development dependen
 	pre-commit install
 
 findfrench:  ## Extract phrases and update the French translation catalog (this doesn't translate)
-	python setup.py extract_messages
-	python setup.py update_catalog -l fr
+	pybabel extract -o src/xscen/data/messages.pot --omit-header --input-dirs=src/xscen/
+	pybabel update -l fr -D xscen -i src/xscen/data/messages.pot -d src/xscen/data/ --omit-header
 
 translate:   ## Compile the translation catalogs.
-	python setup.py compile_catalog
+	pybabel compile -f -D xscen -d src/xscen/data/
+
+checkfrench:  ## Error if the catalog could be update or if the compilation is older than the catalog.
+	rm -f .check_messages.pot
+	pybabel extract -o .check_messages.pot --omit-header --input-dirs=src/xscen/
+	pybabel update -l fr -D xscen -i .check_messages.pot -d src/xscen/data/ --omit-header --check
+	rm -f .check_messages.pot
+	if [ src/xscen/data/fr/LC_MESSAGES/xscen.mo -ot src/xscen/data/fr/LC_MESSAGES/xscen.po ]; then echo "Compilation is older than translations. Please compile with 'make translate'."; exit 1; fi
