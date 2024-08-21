@@ -32,7 +32,7 @@ repos:
       - id: python-use-type-annotations
       - id: rst-inline-touching-normal
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.4.2
+    rev: 24.8.0
     hooks:
       - id: black
         exclude: ^docs/
@@ -42,7 +42,7 @@ repos:
       - id: isort
         exclude: ^docs/
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.6
+    rev: v0.5.7
     hooks:
       - id: ruff
         args: [ '--fix' ]
@@ -64,7 +64,7 @@ repos:
       - id: yamllint
         args: [ '--config-file=.yamllint.yaml' ]
   - repo: https://github.com/numpy/numpydoc
-    rev: v1.8.0rc2
+    rev: v1.8.0
     hooks:
       - id: numpydoc-validation
         exclude: ^docs/|^tests/
