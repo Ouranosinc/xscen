@@ -213,13 +213,14 @@ To run specific code style checks:
 
 .. code-block:: console
 
-    python -m black --check xsdba tests
-    python -m isort --check xsdba tests
-    python -m blackdoc --check xsdba docs
-    python -m ruff check xsdba tests
-    python -m flake8 xsdba tests
+    python -m black --check src/xsdba tests
+    python -m isort --check src/xsdba tests
+    python -m blackdoc --check src/xsdba docs
+    python -m ruff check src/xsdba tests
+    python -m flake8 src/xsdba tests
+    validate-docstrings src/xsdba/**.py
 
-To get ``black``, ``isort``, ``blackdoc``, ``ruff``, and ``flake8`` (with the ``flake8-rst-docstrings`` plugin) simply install them with ``pip`` (or ``conda``) into your environment.
+To get ``black``, ``isort``, ``blackdoc``, ``ruff``, ``flake8`` (with the ``flake8-rst-docstrings`` plugin), and ``numpydoc`` (for ``validate-docstrings``), simply install them with ``pip`` (or ``conda``) into your environment.
 
 Translations
 ------------

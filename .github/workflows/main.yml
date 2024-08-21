@@ -53,17 +53,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include:
-          - tox-env: "py38-coveralls"
-            python-version: "3.8"
-          - tox-env: "py39-coveralls"
-            python-version: "3.9"
-          - tox-env: "py310-coveralls"
-            python-version: "3.10"
-          - tox-env: "py311-coveralls"
-            python-version: "3.11"
-          - tox-env: "py312-coveralls"
-            python-version: "3.12"
+        python-version:
+          - "3.8"
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@0d381219ddf674d61a7572ddd19d7941e271515c # v2.9.0
@@ -80,10 +75,10 @@ jobs:
           python -m pip install --require-hashes -r CI/requirements_ci.txt
       - name: Test with tox
         run: |
-          python -m tox -e ${{ matrix.tox-env }}
+          python -m tox
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: run-${{ matrix.tox-env }}
+          COVERALLS_FLAG_NAME: run-${{ matrix.python-version }}
           COVERALLS_PARALLEL: true
           COVERALLS_SERVICE_NAME: github
 
