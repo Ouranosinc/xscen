@@ -396,13 +396,21 @@ tomlkit==0.13.0 \
 tox==4.17.1 \
     --hash=sha256:2974597c0353577126ab014f52d1a399fb761049e165ff34427f84e8cfe6c990 \
     --hash=sha256:2c41565a571e34480bd401d668a4899806169a4633e972ac296c54406d2ded8a
+    # via
+    #   -r CI/requirements_ci.in
+    #   tox-gh
+tox-gh==1.3.2 \
+    --hash=sha256:beb8d277d5d7c1a1f09c107e4ef80bd7dd2f8f5d020edfaf4c1e3ae8fd45bf6f \
+    --hash=sha256:c2d6e977f66712e7cd5e5d1b655a1bd4c91ebaf3be104befdb53c81587292d7e
     # via -r CI/requirements_ci.in
 typing-extensions==4.12.2 \
     --hash=sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d \
     --hash=sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8
     # via
+    #   annotated-types
     #   pydantic
     #   pydantic-core
+    #   rich
     #   rich-click
 urllib3==2.2.2 \
     --hash=sha256:a448b2f64d686155468037e1ace9f2d2199776e17f0a46610480d311f73e3472 \
