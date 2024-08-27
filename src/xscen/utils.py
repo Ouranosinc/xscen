@@ -855,7 +855,9 @@ def clean_up(  # noqa: C901
                 logging.info(f"Filling missing {var} with {missing}")
                 if missing == "interpolate":
                     ds_with_nan = ds[var].where(ds[var] != -9999)
-                    converted_var = ds_with_nan.interpolate_na("time", method="linear")
+                    converted_var = ds_with_nan.chunk({"time": -1}).interpolate_na(
+                        "time", method="linear"
+                    )
                 else:
                     var_attrs = ds[var].attrs
                     converted_var = xr.where(ds[var] == -9999, missing, ds[var])
@@ -1273,9 +1275,9 @@ def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
                 "Dataset is labelled as having a sampling frequency of "
                 f"{xrfreq}, but some periods have more than one data point."
             )
-        if (counts.isnull()).any().item():
+        if (counts.isnull() | (counts == 0)).any().item():
             raise ValueError(
-                "The resampling count contains nans. There might be some missing data."
+                "The resampling count contains NaNs or 0s. There might be some missing data."
             )
         ds["time"] = counts.time
     return ds
