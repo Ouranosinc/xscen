@@ -16,6 +16,7 @@ Bug fixes
 
 Internal changes
 ^^^^^^^^^^^^^^^^
+* ``DataCatalog.to_dataset`` can now accept a ``preprocess`` argument even if ``create_ensemble_on`` is given. The user assumes calendar handling.
 * Include domain in `weight_location` in ``regrid_dataset``. (:pull:`414`).
 * Added pins to `xarray`, `xclim`, `h5py`, and `netcdf4`. (:pull:`414`).
 * Add ``.zip`` and ``.zarr.zip`` as possible file extensions for Zarr datasets. (:pull:`426`).
