@@ -29,7 +29,7 @@ dependencies:
   - shapely >=2.0
   - sparse
   - toolz
-  - xarray >=2023.11.0, <2024.6.0
+  - xarray >=2023.11.0, !=2024.6.0
   - xclim >=0.50, <0.51
   - xesmf >=0.7
   - zarr
