@@ -203,7 +203,7 @@ Once the code is implemented and translatable strings are marked as such, we nee
 
     $ make findfrench
 
-Then go edit ``xscen/xscen/data/fr/LC_MESSAGES/xscen.po`` with the correct French translations. Finally, running::
+Then go edit ``xscen/xscen/data/fr/LC_MESSAGES/xscen.po`` with the correct French translations. Finally, run::
 
     $ make translate
 

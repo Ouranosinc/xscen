@@ -9,8 +9,6 @@ on:
       - CHANGELOG.rst
       - README.rst
       - pyproject.toml
-      - setup.cfg
-      - setup.py
       - xscen/__init__.py
   pull_request:
 
@@ -91,11 +89,7 @@ jobs:
             esmf=${{ env.esmf-version }}
             mamba
             python=${{ matrix.python-version }}
-            babel
             tox
-      - name: Compile catalogs
-        run: |
-          make translate
       - name: Test with tox
         run: |
           python -m tox -e ${{ matrix.tox-build }}
@@ -104,9 +98,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
 
-  #      - name: Compile language catalogs
-#        run: |
-#          make translate
 #      - name: Install esmpy
 #        run: |
 #          pip install git+https://github.com/esmf-org/esmf.git@v${{ matrix.esmf-version }}#subdirectory=src/addon/esmpy

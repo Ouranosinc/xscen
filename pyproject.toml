@@ -2,7 +2,6 @@
 requires = [
   "setuptools >=65.0.0",
   "setuptools-scm >=8.0",
-  "babel",
   "wheel"
 ]
 build-backend = "setuptools.build_meta"
@@ -35,8 +34,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-  "babel",
-  "cartopy",
+  "cartopy >=0.23.0",
   "cftime",
   "cf_xarray >=0.7.6",
   "clisops >=0.10",
@@ -71,6 +69,7 @@ dependencies = [
 dev = [
   # Dev tools and testing
   "pip >=23.3.0",
+  "babel",
   "black[jupyter] ==24.4.2",
   "blackdoc ==0.3.9",
   "bump-my-version >=0.18.3",
@@ -129,7 +128,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.9.2-dev.5"
+current_version = "0.9.2-dev.7"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -286,8 +285,6 @@ include = ["xscen"]
 # "docs/notebooks/samples/*.yml",
 # "environment.yml",
 # "environment-dev.yml",
-# "setup.cfg",
-# "setup.py",
 # "src/xscen/**/*.py",
 # "src/xscen/**/*.yml",
 # "src/xscen/CVs/*.json",
