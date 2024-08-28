@@ -7,7 +7,6 @@ import logging
 import os
 import re
 import shutil as sh
-import warnings
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from functools import reduce
@@ -437,12 +436,12 @@ class DataCatalog(intake_esm.esm_datastore):
           If None, this will be the same as `create_ensemble_on`.
           The resulting coordinate must be unique.
         calendar : str, optional
-          If `create_ensemble_on` is given, all datasets are converted to this calendar before concatenation.
-          Ignored otherwise (default). If None, no conversion is done.
-          `align_on` is always "date".
+          If `create_ensemble_on` is given but not `preprocess`, all datasets are converted to this calendar before concatenation.
+          Ignored otherwise (default). If None, no conversion is done. `align_on` is always "date".
+          If `preprocess` is given, it must do the needed calendar handling.
         kwargs:
           Any other arguments are passed to :py:meth:`~intake_esm.core.esm_datastore.to_dataset_dict`.
-          The `preprocess` argument cannot be used if `create_ensemble_on` is given.
+          The `preprocess` argument must convert calendars as needed if `create_ensemble_on` is given.
 
         Returns
         -------
@@ -494,10 +493,6 @@ class DataCatalog(intake_esm.esm_datastore):
             )
 
         if create_ensemble_on:
-            if kwargs.get("preprocess") is not None:
-                warnings.warn(
-                    "Using `create_ensemble_on` will override the given `preprocess` function."
-                )
             cat.df["realization"] = generate_id(cat.df, ensemble_name)
             cat.esmcat.aggregation_control.aggregations.append(
                 intake_esm.cat.Aggregation(
@@ -507,15 +502,19 @@ class DataCatalog(intake_esm.esm_datastore):
             )
             xrfreq = cat.df["xrfreq"].unique()[0]
 
-            def preprocess(ds):
-                ds = ensure_correct_time(ds, xrfreq)
-                if calendar is not None:
-                    ds = ds.convert_calendar(
-                        calendar, use_cftime=(calendar != "default"), align_on="date"
-                    )
-                return ds
+            if kwargs.get("preprocess") is None:
 
-            kwargs["preprocess"] = preprocess
+                def preprocess(ds):
+                    ds = ensure_correct_time(ds, xrfreq)
+                    if calendar is not None:
+                        ds = ds.convert_calendar(
+                            calendar,
+                            use_cftime=(calendar != "default"),
+                            align_on="date",
+                        )
+                    return ds
+
+                kwargs["preprocess"] = preprocess
 
         if len(rm_from_id) > 1:
             # Guess what the ID was and rebuild a new one, omitting the columns part of the aggregation
