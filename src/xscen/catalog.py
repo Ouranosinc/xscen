@@ -931,17 +931,20 @@ def concat_data_catalogs(*dcs):
         registry.update(dc.derivedcat._registry)
         catalogs.append(dc.df)
         requested_variables.extend(dc._requested_variables)
-        requested_variables_true.extend(dc._requested_variables_true)
-        dependent_variables.extend(dc._dependent_variables)
-        requested_variable_freqs.extend(dc._requested_variable_freqs)
+        requested_variables_true.extend(getattr(dc, "_requested_variables_true", []))
+        dependent_variables.extend(getattr(dc, "_dependent_variables", []))
+        requested_variable_freqs.extend(getattr(dc, "_requested_variable_freqs", []))
     df = pd.concat(catalogs, axis=0).drop_duplicates(ignore_index=True)
     dvr = intake_esm.DerivedVariableRegistry()
     dvr._registry.update(registry)
     newcat = DataCatalog({"esmcat": dcs[0].esmcat.dict(), "df": df}, registry=dvr)
     newcat._requested_variables = requested_variables
-    newcat._requested_variables_true = requested_variables_true
-    newcat._dependent_variables = dependent_variables
-    newcat._requested_variable_freqs = requested_variable_freqs
+    if requested_variables_true:
+        newcat._requested_variables_true = requested_variables_true
+    if dependent_variables:
+        newcat._dependent_variables = dependent_variables
+    if requested_variable_freqs:
+        newcat._requested_variable_freqs = requested_variable_freqs
     return newcat
 
 
