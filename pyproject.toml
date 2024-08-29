@@ -57,14 +57,15 @@ dependencies = [
   "coverage >=7.5.0",
   "coveralls >=4.0.1",
   "typer >=0.12.3",
-  "pytest >=8.3.2",
+  "pytest <8.0.0",
   "pytest-cov >=5.0.0",
   "black ==24.8.0",
   "blackdoc ==0.3.9",
   "isort ==5.13.2",
   "numpydoc >=1.8.0",
   "pre-commit >=3.5.0",
-  "ruff >=0.5.7"
+  "ruff >=0.5.7",
+  "xdoctest>=1.1.5"
 ]
 
 [project.optional-dependencies]
