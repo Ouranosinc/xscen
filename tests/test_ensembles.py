@@ -10,10 +10,16 @@ try:
     import xesmf as xe
 except ImportError:
     xe = None
+# temp fix for changes to xclim-testdata
+from functools import partial
+
 from xclim.testing import open_dataset
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
+
+open_dataset = partial(open_dataset, branch="v2023.12.14")
+
 
 LOGGER = logging.getLogger(__name__)
 
