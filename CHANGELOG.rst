@@ -9,6 +9,10 @@ Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal B
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New ``xscen.catutils.patterns_from_schema`` to generate all possible patterns from a given schema (or one of xscen's default), to use with :py:func:`parse_directory`.
+* New ``DataCatalog.copy_files`` to copy all files of catalog to a new destination, unzipping if needed and returning a new catalog.
+* Convenience functions ``xs.io.zip_directory`` and ``xs.io.unzip_directory`` (for zarrs).
+* New argument ``compute_indicators``: ``rechunk_input`` to rechunk the inputs to resample-appropriate chunks before calling xclim.
+* New ``xs.indicators.get_indicator_outputs`` to retrieve what variable name(s) and frequency to expect from an xclim indicator.
 
 Bug fixes
 ^^^^^^^^^
@@ -17,6 +21,8 @@ Bug fixes
 * Avoid modification of mutable arguments in ``search_data_catalogs`` (:pull:`413`).
 * ``ensure_correct_time`` now correctly handles cases where timesteps are missing. (:pull:`440`).
 * If using the argument `tile_buffer` with a `shape` method in ``spatial.subset``, the shapefile will now be reprojected to a WGS84 grid before the buffer is applied. (:pull:`440`).
+* Fix ``xs.catalog.condat_data_catalogs`` for catalogs that have not been search yet.
+* Fix indicator computation using ``freq=2Q*`` by assuming this means a semiannual frequency anchored at the given month (pandas assumes 2 quarter steps, any of them anchored at the given month).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
