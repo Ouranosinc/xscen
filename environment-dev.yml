@@ -71,7 +71,7 @@ dependencies:
   # Testing
   - tox >=4.5.1
   # packaging
-  - build
+  - conda-build
   - wheel
   - pip >=23.3.0
   - pip:
