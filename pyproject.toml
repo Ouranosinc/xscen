@@ -61,7 +61,7 @@ dependencies = [
   "sparse",
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0",
-  "xclim >=0.50, <0.51",
+  "xclim >=0.50, <0.53",
   "zarr"
 ]
 
