@@ -279,7 +279,17 @@ def minimum_calendar(*calendars) -> str:
 
     # Raise an error if the calendars are not recognized
     unknowns = set(calendars).difference(
-        ["360_day", "365_day", "noleap", "standard", "default", "all_leap", "366_day"]
+        [
+            "360_day",
+            "365_day",
+            "noleap",
+            "standard",
+            "default",
+            "all_leap",
+            "366_day",
+            "gregorian",
+            "proleptic_gregorian",
+        ]
     )
     if unknowns:
         warnings.warn(
