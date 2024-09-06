@@ -229,9 +229,9 @@ def test_build_path(samplecat):
 
 
 def test_pattern_from_schema(samplecat):
-    df = cu.build_path(samplecat, root="/test", mip_era="CMIP5")
+    df = cu.build_path(samplecat, mip_era="CMIP5")
     patts = cu.patterns_from_schema("original-sims-raw")
-    for p in df.path.values:
+    for p in df.new_path.values:
         res = [cu._compile_pattern(patt).parse(p) for patt in patts]
         assert any(res)
 
