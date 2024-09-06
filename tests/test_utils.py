@@ -784,7 +784,9 @@ class TestPublish:
         with pytest.raises(FileNotFoundError):
             xs.utils.publish_release_notes("md", changes="foo")
         with pytest.raises(NotImplementedError):
-            xs.utils.publish_release_notes("foo")
+            xs.utils.publish_release_notes(
+                "foo", changes=Path(__file__).parent.parent.joinpath("CHANGELOG.rst")
+            )
 
     @pytest.mark.requires_netcdf
     def test_file(self, tmpdir):
