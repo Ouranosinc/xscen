@@ -294,7 +294,6 @@ def minimum_calendar(*calendars) -> str:
     if unknowns:
         warnings.warn(
             f"These calendars are not recognized: {unknowns}. Results may be incorrect.",
-            UserWarning,
         )
 
     if "360_day" in calendars:

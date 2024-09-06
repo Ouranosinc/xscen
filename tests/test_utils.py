@@ -770,7 +770,9 @@ class TestPublish:
     @pytest.mark.requires_netcdf
     @pytest.mark.parametrize("fmt", ["md", "rst"])
     def test_normal(self, fmt):
-        out = xs.utils.publish_release_notes(fmt)
+        out = xs.utils.publish_release_notes(
+            fmt, changes=Path(__file__).parent.parent.joinpath("CHANGELOG.rst")
+        )
         if fmt == "md":
             assert out.startswith("# Changelog\n\n")
             assert "[PR/413](https://github.com/Ouranosinc/xscen/pull/413)" in out
@@ -786,7 +788,11 @@ class TestPublish:
 
     @pytest.mark.requires_netcdf
     def test_file(self, tmpdir):
-        xs.utils.publish_release_notes("md", file=tmpdir / "foo.md")
+        xs.utils.publish_release_notes(
+            "md",
+            file=tmpdir / "foo.md",
+            changes=Path(__file__).parent.parent.joinpath("CHANGELOG.rst"),
+        )
         with open(tmpdir / "foo.md") as f:
             assert f.read().startswith("# Changelog\n\n")
 
