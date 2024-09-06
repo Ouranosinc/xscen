@@ -86,7 +86,7 @@ def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str):
     """
     if isinstance(ind, xc.core.indicator.ReducingIndicator):
         frq = "fx"
-    if not isinstance(ind, xc.core.indicator.ResamplingIndicator):
+    elif not isinstance(ind, xc.core.indicator.ResamplingIndicator):
         frq = in_freq
     else:
         frq = (
@@ -237,7 +237,6 @@ def compute_indicators(  # noqa: C901
                 # In order to concatenate time periods, the indicator still needs a time dimension
                 if freq == "fx":
                     tmp = tmp.assign_coords({"time": ds_subset.time[0]})
-
                 concats.append(tmp)
             out = xr.concat(concats, dim="time")
 
