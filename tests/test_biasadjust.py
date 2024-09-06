@@ -47,9 +47,7 @@ class TestTrain:
 
     def test_preprocess(self):
 
-        dref360 = xc.core.calendar.convert_calendar(
-            self.dref, "360_day", align_on="year"
-        )
+        dref360 = self.dref.convert_calendar("360_day", align_on="year")
 
         out = xs.train(
             dref360,
@@ -291,15 +289,9 @@ class TestAdjust:
         with xc.set_options(sdba_extra_output=True):
             group = xc.sdba.Grouper(group="time.dayofyear", window=31)
 
-            drefx = xc.core.calendar.convert_calendar(
-                dref.sel(time=slice("2001", "2003")), "noleap"
-            )
-            dhistx = xc.core.calendar.convert_calendar(
-                dhist.sel(time=slice("2001", "2003")), "noleap"
-            )
-            dsimx = xc.core.calendar.convert_calendar(
-                dsim.sel(time=slice("2001", "2006")), "noleap"
-            )
+            drefx = dref.sel(time=slice("2001", "2003")).convert_calendar("noleap")
+            dhistx = dhist.sel(time=slice("2001", "2003")).convert_calendar("noleap")
+            dsimx = dsim.sel(time=slice("2001", "2006")).convert_calendar("noleap")
 
             dhist_ad, pth, dP0 = xc.sdba.processing.adapt_freq(
                 drefx["pr"], dhistx["pr"], group=group, thresh="1 mm d-1"

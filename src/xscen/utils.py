@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import warnings
 from collections import defaultdict
 from collections.abc import Sequence
 from datetime import datetime
@@ -281,9 +282,11 @@ def minimum_calendar(*calendars) -> str:
         ["360_day", "365_day", "noleap", "standard", "default", "all_leap", "366_day"]
     )
     if unknowns:
-        raise ValueError(f"These calendars are not recognized: {unknowns}.")
+        warnings.warn(
+            f"These calendars are not recognized: {unknowns}. Results may be incorrect.",
+            UserWarning,
+        )
 
-    out = None
     if "360_day" in calendars:
         out = "360_day"
     elif "noleap" in calendars or "365_day" in calendars:

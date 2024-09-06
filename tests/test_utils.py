@@ -134,7 +134,7 @@ class TestMinCal:
             assert out == "all_leap"
 
     def test_error(self):
-        with pytest.raises(ValueError):
+        with pytest.warns(UserWarning, match="These calendars are not recognized"):
             xs.utils.minimum_calendar(["366_day", "foo"])
 
 
@@ -767,6 +767,7 @@ class TestAttrs:
 
 
 class TestPublish:
+    @pytest.mark.requires_netcdf
     @pytest.mark.parametrize("fmt", ["md", "rst"])
     def test_normal(self, fmt):
         out = xs.utils.publish_release_notes(fmt)
@@ -783,6 +784,7 @@ class TestPublish:
         with pytest.raises(NotImplementedError):
             xs.utils.publish_release_notes("foo")
 
+    @pytest.mark.requires_netcdf
     def test_file(self, tmpdir):
         xs.utils.publish_release_notes("md", file=tmpdir / "foo.md")
         with open(tmpdir / "foo.md") as f:
