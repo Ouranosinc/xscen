@@ -1425,7 +1425,7 @@ def _xarray_defaults(**kwargs):
     return kwargs
 
 
-def rechunk_for_resample(obj: xr.DataArray | xr.Dataset, **resample_kwargs):
+def rechunk_for_resample(obj: Union[xr.DataArray, xr.Dataset], **resample_kwargs):
     if not uses_dask(obj):
         return obj
 
