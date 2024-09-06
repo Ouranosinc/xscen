@@ -70,7 +70,7 @@ dev = [
   # Dev tools and testing
   "pip >=23.3.0",
   "babel",
-  "black[jupyter] ==24.4.2",
+  "black[jupyter] ==24.8.0",
   "blackdoc ==0.3.9",
   "bump-my-version >=0.18.3",
   "coverage >=7.0.0",
@@ -128,7 +128,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.9.2-dev.7"
+current_version = "0.9.2-dev.8"
 commit = true
 commit_args = "--no-verify"
 tag = false
