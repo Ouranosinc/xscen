@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python >=3.9,<3.13
-  # Don't forget to sync changes between environment.yml, environment-dev.yml, and setup.py!
+  # Don't forget to sync changes between environment.yml, environment-dev.yml, and pyproject.toml!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
   - cartopy >=0.23.0
@@ -29,12 +29,11 @@ dependencies:
   - shapely >=2.0
   - sparse
   - toolz
-  - xarray >=2023.11.0, <2024.6.0
+  - xarray >=2023.11.0, !=2024.6.0
   - xclim >=0.50, <0.51
   - xesmf >=0.7
   - zarr
-  # To install from source and get translations
-  - babel
+  # To install from source
   - setuptools >=65.0.0
   - setuptools-scm >=8.0.0
   # Opt

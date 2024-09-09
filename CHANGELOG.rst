@@ -4,14 +4,15 @@ Changelog
 
 v0.9.2 (unreleased)
 -------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`).
-
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
 Bug fixes
 ^^^^^^^^^
 * Fixed bug with reusing weights. (:issue:`411`, :pull:`414`).
 * Fixed bug in `update_from_ds` when "time" is a coordinate, but not a dimension. (:pull: `417`).
 * Avoid modification of mutable arguments in ``search_data_catalogs`` (:pull:`413`).
+* ``ensure_correct_time`` now correctly handles cases where timesteps are missing. (:pull:`440`).
+* If using the argument `tile_buffer` with a `shape` method in ``spatial.subset``, the shapefile will now be reprojected to a WGS84 grid before the buffer is applied. (:pull:`440`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -20,6 +21,7 @@ Internal changes
 * Add ``.zip`` and ``.zarr.zip`` as possible file extensions for Zarr datasets. (:pull:`426`).
 * Explicitly assign coords of multiindex in `xs.unstack_fill_nan`. (:pull:`427`).
 * Include CF convention for temperature differences and on scale (:pull:`428`, :issue:`428`).
+* French translations are compiled offline. A new check ensures no PR are merged with missing messages. (:issue:`342`, :pull:`443`).
 
 v0.9.1 (2024-06-04)
 -------------------
