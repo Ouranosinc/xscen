@@ -327,7 +327,7 @@ cleanup:
       tasmin: degC
       pr: mm d-1
     convert_calendar_kwargs:
-      target: standard
+      calendar: standard
       align_on: random
     missing_by_var:
       tasmax: interpolate
