@@ -296,6 +296,58 @@ class TestStack:
         )
         assert ds_unstack.equals(ds)
 
+    @pytest.mark.parametrize("coords", ["file.nc", ["lon", "lat"], "dict", None])
+    def test_fillnan_coords(self, tmpdir, coords):
+        data = np.zeros((20, 10, 10))
+        data[:, 1, 0] = [np.nan] * 20
+        data[:, 0, :] = [np.nan] * 10
+        ds = datablock_3d(
+            data,
+            "tas",
+            "lon",
+            -5,
+            "lat",
+            80.5,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        ds.attrs["cat:domain"] = "RegionEssai"
+
+        mask = xr.where(ds.tas.isel(time=0).isnull(), False, True).drop_vars("time")
+        # Add mask as a coordinate
+        ds = ds.assign_coords(z=mask.astype(int))
+        ds.z.attrs["foo"] = "bar"
+
+        if coords == "dict":
+            coords = {"lon": ds.lon, "lat": ds.lat, "z": ds.z}
+        elif coords == "file.nc":
+            coords = str(tmpdir / "coords_{domain}_{shape}.nc")
+
+        ds_stack = xs.utils.stack_drop_nans(
+            ds, mask=mask, to_file=coords if isinstance(coords, str) else None
+        )
+        ds_unstack = xs.utils.unstack_fill_nan(
+            ds_stack,
+            coords=coords,
+        )
+
+        if isinstance(coords, list):
+            # Cannot fully recover the original dataset.
+            ds_unstack["z"] = ds_unstack["z"].fillna(0)
+            assert ds_unstack.equals(ds.isel(lat=slice(1, None)))
+        elif coords is None:
+            # 'z' gets completely assigned as a dimension.
+            assert "z" in ds_unstack.dims
+            assert (
+                ds_unstack.isel(z=0)
+                .drop_vars("z")
+                .equals(ds.isel(lat=slice(1, None)).drop_vars("z"))
+            )
+        else:
+            assert ds_unstack.equals(ds)
+
     def test_maybe(self, tmp_path):
         data = np.zeros((20, 10, 10))
         data[:, 0, 0] = [np.nan] * 20
