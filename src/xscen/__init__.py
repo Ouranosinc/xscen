@@ -51,7 +51,7 @@ from .utils import clean_up
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.9.2-dev.8"
+__version__ = "0.9.2-dev.9"
 
 
 def warning_on_one_line(
