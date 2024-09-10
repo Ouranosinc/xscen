@@ -346,6 +346,11 @@ def translate_time_chunk(chunks: dict, calendar: str, timesize: int) -> dict:
                     "all_leap": 366,
                     "366_day": 366,
                 }.get(calendar, 365.25)
+                if nt != int(nt):
+                    warnings.warn(
+                        f"The number of days in {chunks['time']} for calendar {calendar} is not an integer. "
+                        f"Chunks will not align perfectly with year ends."
+                    )
                 chunks[k] = int(nt)
             elif v == -1:
                 chunks[k] = timesize

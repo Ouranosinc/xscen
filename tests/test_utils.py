@@ -152,6 +152,12 @@ class TestTranslateTimeChunk:
         )
         assert out == {"time": ndays * 4, "lon": 50}
 
+    def test_warning(self):
+        with pytest.warns(UserWarning, match="The number of days"):
+            xs.utils.translate_time_chunk(
+                {"time": "3years", "lon": 50}, "standard", 3450
+            )
+
     def test_dict_of_dict(self):
         out = xs.utils.translate_time_chunk(
             {"tas": {"time": 10, "lon": 50}, "pr": {"time": -1, "lon": 50}},
