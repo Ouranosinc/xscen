@@ -155,7 +155,7 @@ class TestTranslateTimeChunk:
     def test_warning(self):
         with pytest.warns(UserWarning, match="The number of days"):
             xs.utils.translate_time_chunk(
-                {"time": "3years", "lon": 50}, "standard", 3450
+                {"time": "3year", "lon": 50}, "standard", 3450
             )
 
     def test_dict_of_dict(self):
