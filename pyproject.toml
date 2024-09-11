@@ -284,7 +284,13 @@ ignore = [
   "COM", # commas
   "D205", # blank-line-after-summary
   "D400", # ends-in-period
-  "D401" # non-imperative-mood
+  "D401", # non-imperative-mood
+  # The following are disabled because the codebase is not yet compliant.
+  "N801", # invalid-class-name
+  "N806", # non-lowercase-variable-in-function
+  "PERF203", # try-except-in-loop
+  "PERF401", # manual-list-comprehension
+  "S110" # try-except-pass
 ]
 preview = true
 select = [

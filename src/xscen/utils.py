@@ -424,7 +424,7 @@ def stack_drop_nans(
         domain = ds.attrs.get("cat:domain", "unknown")
         to_file = to_file.format(domain=domain, shape=original_shape)
         if not Path(to_file).parent.exists():
-            os.makedirs(Path(to_file).parent, exist_ok=True)
+            Path(to_file).parent.mkdir(exist_ok=True)
         # Add all coordinates that might have been affected by the stack
         mask = mask.assign_coords(
             {c: ds[c] for c in ds.coords if any(d in mask.dims for d in ds[c].dims)}
@@ -512,7 +512,8 @@ def unstack_fill_nan(
                 original_shape = ds[c].attrs["original_shape"]
         domain = ds.attrs.get("cat:domain", "unknown")
         coords = coords.format(domain=domain, shape=original_shape)
-        logger.info(f"Dataset unstacked using {coords}.")
+        msg = f"Dataset unstacked using {coords}."
+        logger.info(msg)
         coords = xr.open_dataset(coords)
         # separate coords that are dims or not
         coords_and_dims = {
@@ -728,7 +729,7 @@ CV = ModuleType(
 )
 
 
-def __read_CVs(cvfile):
+def __read_CVs(cvfile):  # noqa: N802
     with cvfile.open("r") as f:
         cv = json.load(f)
     is_regex = cv.pop("is_regex", False)
@@ -776,10 +777,11 @@ def __read_CVs(cvfile):
     return cvfunc
 
 
-for cvfile in (Path(__file__).parent / "CVs").glob("*.json"):
+for cvfile in Path(__file__).parent.joinpath("CVs").glob("*.json"):
     try:
         CV.__dict__[cvfile.stem] = __read_CVs(cvfile)
-    except Exception as err:
+    # FIXME: This is a catch-all, but we should be more specific
+    except Exception as err:  # noqa: BLE001
         raise ValueError(f"While reading {cvfile} got {err}")
 
 
@@ -920,7 +922,8 @@ def clean_up(  # noqa: C901
     ds = ds.copy()
 
     if variables_and_units:
-        logger.info(f"Converting units: {variables_and_units}")
+        msg = f"Converting units: {variables_and_units}"
+        logger.info(msg)
         ds = change_units(ds=ds, variables_and_units=variables_and_units)
 
     # convert calendar
@@ -946,15 +949,17 @@ def clean_up(  # noqa: C901
         ):
             convert_calendar_kwargs["align_on"] = "random"
 
-        logger.info(f"Converting calendar with {convert_calendar_kwargs} ")
+        msg = f"Converting calendar with {convert_calendar_kwargs}."
+        logger.info(msg)
         ds = ds.convert_calendar(**convert_calendar_kwargs).where(~ocean)
 
         # convert each variable individually
         if missing_by_var:
-            # remove 'missing' argument to be replace by `missing_by_var`
+            # remove 'missing' argument to be replaced by `missing_by_var`
             del convert_calendar_kwargs["missing"]
             for var, missing in missing_by_var.items():
-                logging.info(f"Filling missing {var} with {missing}")
+                msg = f"Filling missing {var} with {missing}"
+                logging.info(msg)
                 if missing == "interpolate":
                     ds_with_nan = ds[var].where(ds[var] != -9999)
                     converted_var = ds_with_nan.chunk({"time": -1}).interpolate_na(
@@ -1011,7 +1016,8 @@ def clean_up(  # noqa: C901
         try:
             ds.attrs["cat:id"] = generate_id(ds).iloc[0]
         except IndexError as err:
-            logger.warning(f"Unable to generate a new id for the dataset. Got {err}.")
+            msg = f"Unable to generate a new id for the dataset. Got {err}."
+            logger.warning(msg)
 
     if to_level:
         ds.attrs["cat:processing_level"] = to_level
@@ -1084,7 +1090,7 @@ def clean_up(  # noqa: C901
 def publish_release_notes(
     style: str = "md",
     file: Optional[Union[os.PathLike, StringIO, TextIO]] = None,
-    changes: Union[str, os.PathLike] = None,
+    changes: Optional[Union[str, os.PathLike]] = None,
 ) -> Optional[str]:
     """Format release history in Markdown or ReStructuredText.
 
@@ -1114,7 +1120,7 @@ def publish_release_notes(
     if not changes_file.exists():
         raise FileNotFoundError("Changes file not found in xscen file tree.")
 
-    with open(changes_file) as f:
+    with Path(changes_file).open(encoding="utf-8") as f:
         changes = f.read()
 
     if style == "rst":
@@ -1146,7 +1152,7 @@ def publish_release_notes(
                     str(grouping[0]).replace("(", r"\(").replace(")", r"\)")
                 )
                 search = rf"({fixed_grouping})\n([\{level}]{'{' + str(len(grouping[1])) + '}'})"
-                replacement = f"{'##' if level=='-' else '###'} {grouping[0]}"
+                replacement = f"{'##' if level == '-' else '###'} {grouping[0]}"
                 changes = re.sub(search, replacement, changes)
 
         link_expressions = r"[\`]{1}([\w\s]+)\s<(.+)>`\_"
@@ -1166,7 +1172,7 @@ def publish_release_notes(
 def unstack_dates(  # noqa: C901
     ds: xr.Dataset,
     seasons: Optional[dict[int, str]] = None,
-    new_dim: str = None,
+    new_dim: Optional[str] = None,
     winter_starts_year: bool = False,
 ):
     """Unstack a multi-season timeseries into a yearly axis and a season one.
@@ -1528,10 +1534,10 @@ def season_sort_key(idx: pd.Index, name: Optional[str] = None):
         if (name or getattr(idx, "name", None)) == "month":
             m = list(xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values())
             return idx.map(m.index)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as err:
         # ValueError if string not in seasons, or value not in months
         # TypeError if season element was not a string.
-        pass
+        logging.error(err)
     return idx
 
 

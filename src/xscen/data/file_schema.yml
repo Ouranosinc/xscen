@@ -25,14 +25,14 @@
 original-non-sims:
   with:
     - facet: type
-      value: [station-obs, reconstruction, forecast]
+      value: [ station-obs, reconstruction, forecast ]
     - facet: processing_level
       value: raw
   folders:
     - type
     - domain
     - institution
-    - [source, version]
+    - [ source, version ]
     - (member)
     - frequency
     - variable
@@ -66,7 +66,7 @@ original-sims-ba:
   folders:
     - type
     - processing_level
-    - [bias_adjust_project, version]
+    - [ bias_adjust_project, version ]
     - mip_era
     - activity
     - domain
@@ -91,7 +91,7 @@ original-hydro-reconstruction:
     - hydrology_source
     - (hydrology_member)
     - institution
-    - [source, version]
+    - [ source, version ]
     - (member)
     - frequency
     - variable
@@ -131,7 +131,7 @@ original-hydro-sims-ba:
     - hydrology_source
     - (hydrology_member)
     - processing_level
-    - [bias_adjust_project, version]
+    - [ bias_adjust_project, version ]
     - mip_era
     - activity
     - domain
@@ -159,7 +159,7 @@ derived-sims-ba:
   - facet: bias_adjust_project
   folders:
     - type
-    - [bias_adjust_project, version]
+    - [ bias_adjust_project, version ]
     - mip_era
     - activity
     - institution
@@ -198,7 +198,7 @@ derived-reconstruction:
   folders:
     - type
     - institution
-    - [source, version]
+    - [ source, version ]
     - (member)
     - domain
     - processing_level
@@ -215,7 +215,7 @@ derived-hydro-sims-ba:
     - hydrology_project
     - hydrology_source
     - (hydrology_member)
-    - [bias_adjust_project, version]
+    - [ bias_adjust_project, version ]
     - mip_era
     - activity
     - institution
@@ -260,7 +260,7 @@ derived-hydro-reconstruction:
     - hydrology_source
     - (hydrology_member)
     - institution
-    - [source, version]
+    - [ source, version ]
     - (member)
     - domain
     - processing_level

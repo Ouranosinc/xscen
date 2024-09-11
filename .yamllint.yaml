@@ -28,7 +28,7 @@ rules:
   line-length:
     allow-non-breakable-words: true
     allow-non-breakable-inline-mappings: true
-    max: 190
+    max: 225
     level: warning
 
   new-lines:

@@ -127,7 +127,8 @@ def compute_indicators(  # noqa: C901
     except TypeError:
         N = None
     else:
-        logger.info(f"Computing {N} indicators.")
+        msg = f"Computing {N} indicators."
+        logger.info(msg)
 
     def _infer_freq_from_meta(ind):
         return (
@@ -148,7 +149,8 @@ def compute_indicators(  # noqa: C901
             iden, ind = ind
         else:
             iden = ind.identifier
-        logger.info(f"{i} - Computing {iden}.")
+        msg = f"{i} - Computing {iden}."
+        logger.info(msg)
 
         if periods is None:
             # Make the call to xclim

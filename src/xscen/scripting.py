@@ -255,7 +255,8 @@ class measure_time:
     def __enter__(self):  # noqa: D105
         self.start = time.perf_counter()
         self.start_cpu = time.process_time()
-        self.logger.info(f"Started process {self.name}.")
+        msg = f"Started process {self.name}."
+        self.logger.info(msg)
         return
 
     def __exit__(self, *args, **kwargs):  # noqa: D105
@@ -269,7 +270,8 @@ class measure_time:
         self.logger.info(s)
 
 
-class TimeoutException(Exception):
+# FIXME: This should be written as "TimeoutError"
+class TimeoutException(Exception):  # noqa: N818
     """An exception raised with a timeout occurs."""
 
     def __init__(self, seconds: int, task: str = "", **kwargs):
@@ -424,7 +426,8 @@ def save_and_update(
     # update catalog
     pcat.update_from_ds(ds=ds, path=path, **update_kwargs)
 
-    logger.info(f"File {path} has saved succesfully and the catalog was updated.")
+    msg = f"File {path} has been saved successfully and the catalog was updated."
+    logger.info(msg)
 
 
 def move_and_delete(
@@ -456,7 +459,8 @@ def move_and_delete(
             source, dest = files[0], files[1]
             if Path(source).exists():
                 if copy:
-                    logger.info(f"Copying {source} to {dest}.")
+                    msg = f"Copying {source} to {dest}."
+                    logger.info(msg)
                     copied_files = copy_tree(source, dest)
                     for f in copied_files:
                         # copied files don't include zarr files
@@ -467,13 +471,15 @@ def move_and_delete(
                             ds = xr.open_dataset(f)
                             pcat.update_from_ds(ds=ds, path=f)
                 else:
-                    logger.info(f"Moving {source} to {dest}.")
+                    msg = f"Moving {source} to {dest}."
+                    logger.info(msg)
                     sh.move(source, dest)
                 if Path(dest).suffix in [".zarr", ".nc"]:
                     ds = xr.open_dataset(dest)
                     pcat.update_from_ds(ds=ds, path=dest)
             else:
-                logger.info(f"You are trying to move {source}, but it does not exist.")
+                msg = f"You are trying to move {source}, but it does not exist."
+                logger.info(msg)
     else:
         raise ValueError("`moving` should be a list of lists.")
 
@@ -481,9 +487,10 @@ def move_and_delete(
     if isinstance(deleting, list):
         for dir_to_delete in deleting:
             if Path(dir_to_delete).exists() and Path(dir_to_delete).is_dir():
-                logger.info(f"Deleting content inside {dir_to_delete}.")
+                msg = f"Deleting content inside {dir_to_delete}."
+                logger.info(msg)
                 sh.rmtree(dir_to_delete)
-                os.mkdir(dir_to_delete)
+                Path(dir_to_delete).mkdir()
     elif deleting is None:
         pass
     else:

@@ -5,6 +5,7 @@ import operator
 import os
 import warnings
 from copy import deepcopy
+from pathlib import Path
 from typing import Optional, Union
 
 import cartopy.crs as ccrs
@@ -116,19 +117,19 @@ def regrid_dataset(  # noqa: C901
             ds = out or ds
 
             kwargs = deepcopy(regridder_kwargs)
-            # if weights_location does no exist, create it
-            if not os.path.exists(weights_location):
-                os.makedirs(weights_location)
+            # if weights_location does not exist, create it
+            if not Path(weights_location).exists():
+                Path(weights_location).mkdir(parents=True)
             id = ds.attrs["cat:id"] if "cat:id" in ds.attrs else "weights"
             # give unique name to weights file
-            weights_filename = os.path.join(
+            weights_filename = Path(
                 weights_location,
                 f"{id}_{domain}_regrid{i}"
                 f"{'_'.join(kwargs[k] for k in kwargs if isinstance(kwargs[k], str))}.nc",
             )
 
             # Re-use existing weight file if possible
-            if os.path.isfile(weights_filename) and not (
+            if Path(weights_filename).is_file() and not (
                 ("reuse_weights" in kwargs) and (kwargs["reuse_weights"] is False)
             ):
                 kwargs["weights"] = weights_filename
@@ -350,7 +351,7 @@ def _regridder(
         unmapped_to_nan=unmapped_to_nan,
         **kwargs,
     )
-    if not os.path.isfile(filename):
+    if not Path(filename).is_file():
         regridder.to_netcdf(filename)
 
     return regridder
