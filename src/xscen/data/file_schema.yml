@@ -17,6 +17,7 @@
 #       - text: < value >     # A fixed string
 #     filename: # The file name schema, a list of facet names. If a facet is empty, it will be skipped. Elements will be separated by "_".
 #               # The special "DATES" facet will be replaced by the most concise way found to define the temporal range covered by the file.
+#               # DATES should only appear at the end.
 ---
 ### Original / raw data
 #

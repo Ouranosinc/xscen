@@ -228,6 +228,14 @@ def test_build_path(samplecat):
     ) in df.new_path.values
 
 
+def test_pattern_from_schema(samplecat):
+    df = cu.build_path(samplecat, mip_era="CMIP5")
+    patts = cu.patterns_from_schema("original-sims-raw")
+    for p in df.new_path.values:
+        res = [cu._compile_pattern(patt).parse(p) for patt in patts]
+        assert any(res)
+
+
 def test_build_path_ds():
     ds = xr.tutorial.open_dataset("air_temperature")
     ds = ds.assign(time=xr.cftime_range("0001-01-01", freq="6h", periods=ds.time.size))

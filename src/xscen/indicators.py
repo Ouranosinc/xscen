@@ -8,16 +8,18 @@ from pathlib import Path
 from types import ModuleType
 from typing import Optional, Union
 
+import pandas as pd
 import xarray as xr
 import xclim as xc
 from intake_esm import DerivedVariableRegistry
+from xclim.core.calendar import construct_offset, parse_offset
 from xclim.core.indicator import Indicator
 from yaml import safe_load
 
 from xscen.config import parse_config
 
 from .catutils import parse_from_ds
-from .utils import CV, standardize_periods
+from .utils import CV, rechunk_for_resample, standardize_periods
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +64,42 @@ def load_xclim_module(
     return xc.build_indicator_module_from_yaml(filename)
 
 
+def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str):
+    """Returns the variables names and resampling frequency of a given indicator.
+
+    CAUTION : Some indicators will build the variable name on-the-fly according to the arguments.
+    This function will return the template string (with "{}").
+
+    Parameters
+    ----------
+    ind : Indicator
+        An xclim indicator
+    in_freq : str
+        The data's sampling frequency.
+
+    Returns
+    -------
+    var_names : list
+        List of variable names
+    freq : str
+        Indicator resampling frequency. "fx" for time-reducing indicator.
+    """
+    if isinstance(ind, xc.core.indicator.ReducingIndicator):
+        frq = "fx"
+    elif not isinstance(ind, xc.core.indicator.ResamplingIndicator):
+        frq = in_freq
+    else:
+        frq = (
+            ind.injected_parameters["freq"]
+            if "freq" in ind.injected_parameters
+            else ind.parameters["freq"].default
+        )
+    if frq == "YS":
+        frq = "YS-JAN"
+    var_names = [cfa["var_name"] for cfa in ind.cf_attrs]
+    return var_names, frq
+
+
 @parse_config
 def compute_indicators(  # noqa: C901
     ds: xr.Dataset,
@@ -76,6 +114,7 @@ def compute_indicators(  # noqa: C901
     periods: Optional[Union[list[str], list[list[str]]]] = None,
     restrict_years: bool = True,
     to_level: Optional[str] = "indicators",
+    rechunk_input: bool = False,
 ) -> dict:
     """Calculate variables and indicators based on a YAML call to xclim.
 
@@ -105,6 +144,10 @@ def compute_indicators(  # noqa: C901
     to_level : str, optional
         The processing level to assign to the output.
         If None, the processing level of the inputs is preserved.
+    rechunk_input : bool
+        If True, the dataset is rechunked with :py:func:`flox.xarray.rechunk_for_blockwise`
+        according to the resampling frequency of the indicator. Each rechunking is done
+        once per frequency with :py:func:`xscen.utils.rechunk_for_resample`.
 
     Returns
     -------
@@ -130,18 +173,9 @@ def compute_indicators(  # noqa: C901
         msg = f"Computing {N} indicators."
         logger.info(msg)
 
-    def _infer_freq_from_meta(ind):
-        return (
-            ind.injected_parameters["freq"]
-            if "freq" in ind.injected_parameters
-            else (
-                ind.parameters["freq"].default
-                if "freq" in ind.parameters
-                else ind.src_freq
-            )
-        )
-
     periods = standardize_periods(periods)
+    in_freq = xr.infer_freq(ds.time) if "time" in ds.dims else "fx"
+    dss_rechunked = {}
 
     out_dict = dict()
     for i, ind in enumerate(indicators, 1):
@@ -152,9 +186,27 @@ def compute_indicators(  # noqa: C901
         msg = f"{i} - Computing {iden}."
         logger.info(msg)
 
+        _, freq = get_indicator_outputs(ind, in_freq)
+
+        if rechunk_input and freq not in ["fx", in_freq]:
+            if freq not in dss_rechunked:
+                logger.debug(f"Rechunking with flox for freq {freq}")
+                dss_rechunked[freq] = rechunk_for_resample(ds, time=freq)
+            else:
+                logger.debug(f"Using rechunked for freq {freq}")
+            ds_in = dss_rechunked[freq]
+        else:
+            ds_in = ds
+
         if periods is None:
+            # Pandas as no semiannual frequency and 2Q is capricious
+            if freq.startswith("2Q"):
+                logger.debug(
+                    "Dropping start of timeseries to ensure semiannual frequency works."
+                )
+                ds_in = fix_semiannual(ds_in, freq)
             # Make the call to xclim
-            out = ind(ds=ds)
+            out = ind(ds=ds_in)
 
             # In the case of multiple outputs, merge them into a single dataset
             if isinstance(out, tuple):
@@ -163,23 +215,18 @@ def compute_indicators(  # noqa: C901
             else:
                 out = out.to_dataset()
 
-            # Infer the indicator's frequency
-            if "time" in out.dims:
-                if len(out.time) < 3:
-                    freq = _infer_freq_from_meta(ind)
-                else:
-                    freq = xr.infer_freq(out.time)
-            else:
-                freq = "fx"
-            if freq == "YS":
-                freq = "YS-JAN"
-
         else:
             # Multiple time periods to concatenate
             concats = []
             for period in periods:
                 # Make the call to xclim
-                ds_subset = ds.sel(time=slice(period[0], period[1]))
+                ds_subset = ds_in.sel(time=slice(period[0], period[1]))
+                # Pandas as no semiannual frequency and 2Q is capricious
+                if freq.startswith("2Q"):
+                    logger.debug(
+                        "Dropping start of timeseries to ensure semiannual frequency works."
+                    )
+                    ds_subset = fix_semiannual(ds_subset, freq)
                 tmp = ind(ds=ds_subset)
 
                 # In the case of multiple outputs, merge them into a single dataset
@@ -189,21 +236,9 @@ def compute_indicators(  # noqa: C901
                 else:
                     tmp = tmp.to_dataset()
 
-                # Infer the indicator's frequency
-                if "time" in tmp.dims:
-                    if len(tmp.time) < 3:
-                        freq = _infer_freq_from_meta(ind)
-                    else:
-                        freq = xr.infer_freq(tmp.time)
-                else:
-                    freq = "fx"
-
-                if freq == "YS":
-                    freq = "YS-JAN"
                 # In order to concatenate time periods, the indicator still needs a time dimension
                 if freq == "fx":
                     tmp = tmp.assign_coords({"time": ds_subset.time[0]})
-
                 concats.append(tmp)
             out = xr.concat(concats, dim="time")
 
@@ -353,3 +388,48 @@ def select_inds_for_avail_vars(
     return xc.core.indicator.build_indicator_module(
         "inds_for_avail_vars", available_inds, reload=True
     )
+
+
+def _wrap_month(m):
+    # Ensure the month number is between 1 and 12
+    # Modulo returns 0 if m is a multiple of 12, 0 is false and we want 12.
+    return (m % 12) or 12
+
+
+def fix_semiannual(ds, freq):
+    """Avoid wrong start dates for semiannual frequency.
+
+    Resampling with offsets that are multiples of a base frequency (ex: 2QS-OCT) is broken in pandas (https://github.com/pandas-dev/pandas/issues/51563).
+    This will cut the beggining of the dataset so it starts exactly at the beginning of the resampling period.
+    """
+    # I hate that we have to do that
+    mul, b, s, anc = parse_offset(freq)
+    if mul != 2 or b != "Q":
+        raise NotImplementedError("This only fixes 2Q frequencies.")
+    # Get MONTH: N mapping (invert xarray's)
+    months_inv = xr.coding.cftime_offsets._MONTH_ABBREVIATIONS
+    months = dict(zip(months_inv.values(), months_inv.keys()))
+
+    if s:
+        m1 = months[anc]
+    else:
+        m1 = _wrap_month(months[anc] + 1)
+        freq = construct_offset(mul, b, True, months_inv[m1])
+    m2 = _wrap_month(m1 + 6)
+
+    time = ds.indexes["time"]
+    if isinstance(time, xr.CFTimeIndex):
+        offset = xr.coding.cftime_offsets.to_offset(freq)
+        is_on_offset = offset.onOffset
+    else:
+        offset = pd.tseries.frequencies.to_offset(freq)
+        is_on_offset = offset.is_on_offset
+
+    if is_on_offset(time[0]) and time[0].month in (m1, m2):
+        # wow, already correct!
+        return ds
+
+    for t in time:
+        if is_on_offset(t) and t.month in (m1, m2):
+            return ds.sel(time=(time >= t))
+    raise ValueError(f"Can't find a start date that fits with frequency {freq}.")
