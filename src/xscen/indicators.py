@@ -190,10 +190,12 @@ def compute_indicators(  # noqa: C901
 
         if rechunk_input and freq not in ["fx", in_freq]:
             if freq not in dss_rechunked:
-                logger.debug(f"Rechunking with flox for freq {freq}")
+                msg = f"Rechunking with flox for freq {freq}."
+                logger.debug(msg)
                 dss_rechunked[freq] = rechunk_for_resample(ds, time=freq)
             else:
-                logger.debug(f"Using rechunked for freq {freq}")
+                msg = f"Using rechunked for freq {freq}"
+                logger.debug(msg)
             ds_in = dss_rechunked[freq]
         else:
             ds_in = ds

@@ -591,18 +591,22 @@ class DataCatalog(intake_esm.esm_datastore):
         else:
             data = build_path(data, root=dest).drop(columns=["new_path_type"])
 
-        logger.debug(f"Will copy {len(data)} files.")
+        msg = f"Will copy {len(data)} files."
+        logger.debug(msg)
         for i, row in data.iterrows():
             old = Path(row.path)
             new = Path(row.new_path)
             if unzip and old.suffix == ".zip":
-                logger.info(f"Unzipping {old} to {new}.")
+                msg = f"Unzipping {old} to {new}."
+                logger.info(msg)
                 unzip_directory(old, new)
             elif old.is_dir():
-                logger.info(f"Copying directory tree {old} to {new}.")
+                msg = f"Copying directory tree {old} to {new}."
+                logger.info(msg)
                 sh.copytree(old, new)
             else:
-                logger.info(f"Copying file {old} to {new}.")
+                msg = f"Copying file {old} to {new}."
+                logger.info(msg)
                 sh.copy(old, new)
         if inplace:
             self.esmcat._df["path"] = data["new_path"]

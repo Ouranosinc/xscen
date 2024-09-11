@@ -1235,7 +1235,7 @@ def patterns_from_schema(
     """
     if isinstance(schema, str):
         schemas = Path(__file__).parent / "data" / "file_schema.yml"
-        with open(schemas) as f:
+        with schemas.open(encoding="utf-8") as f:
             schema = yaml.safe_load(f)[schema]
 
     # # Base folder patterns

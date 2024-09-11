@@ -205,10 +205,6 @@ idna==3.7 \
     --hash=sha256:028ff3aadf0609c1fd278d8ea3089299412a7a8b9bd005dd08b9f8285bcb5cfc \
     --hash=sha256:82fee1fc78add43492d3a1898bfa6d8a904cc97d8427f683ed8e798d07761aa0
     # via requests
-importlib-metadata==8.5.0 \
-    --hash=sha256:45e54197d28b7a7f1559e60b95e7c567032b602131fbd588f1497f47880aa68b \
-    --hash=sha256:71522656f0abace1d072b9e5481a48f07c138e00f079c38c8f883823f9c26bd7
-    # via setuptools-scm
 markdown-it-py==3.0.0 \
     --hash=sha256:355216845c60bd96232cd8d8c40e8f9765cc86f46880e43a8fd22dc1a1a8cab1 \
     --hash=sha256:e3f60a94fa066dc52ec76661e37c851cb232d92f9886b15cb560aaada2df8feb
@@ -369,9 +365,9 @@ rich-click==1.8.3 \
     --hash=sha256:636d9c040d31c5eee242201b5bf4f2d358bfae4db14bb22ec1cafa717cfd02cd \
     --hash=sha256:6d75bdfa7aa9ed2c467789a0688bc6da23fbe3a143e19aa6ad3f8bac113d2ab3
     # via bump-my-version
-setuptools-scm==8.0.0 \
-    --hash=sha256:40d5508fddd34e2ca6e44eefc0148ff76c80a66560c453c1eff9d5a6fc99c8f8 \
-    --hash=sha256:f6b9d6deb0f006681d4454bf20c950d333362ade49f7219e75ee75510ac35cf1
+setuptools-scm==8.1.0 \
+    --hash=sha256:42dea1b65771cba93b7a515d65a65d8246e560768a66b9106a592c8e7f26c8a7 \
+    --hash=sha256:897a3226a6fd4a6eb2f068745e49733261a21f70b1bb28fce0339feb978d9af3
     # via -r CI/requirements_ci.in
 tomli==2.0.1 \
     --hash=sha256:939de3e7a6161af0c887ef91b7d41a53e7c5a1ca976325f429cb46ea9bc30ecc \
@@ -419,19 +415,15 @@ wcwidth==0.2.13 \
     --hash=sha256:3da69048e4540d84af32131829ff948f1e022c1c6bdb8d6102117aac784f6859 \
     --hash=sha256:72ea0c06399eb286d978fdedb6923a9eb47e1c486ce63e9b4e64fc18303972b5
     # via prompt-toolkit
-zipp==3.20.1 \
-    --hash=sha256:9960cd8967c8f85a56f920d5d507274e74f9ff813a0ab8889a5b5be2daf44064 \
-    --hash=sha256:c22b14cc4763c5a5b04134207736c107db42e9d3ef2d9779d465f5f1bcba572b
-    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 pip==24.2 \
     --hash=sha256:2cd581cf58ab7fcfca4ce8efa6dcacd0de5bf8d0a3eb9ec927e07405f4d9e2a2 \
     --hash=sha256:5b5e490b5e9cb275c879595064adce9ebd31b854e3e803740b72f9ccf34a45b8
     # via -r CI/requirements_ci.in
-setuptools==65.0.0 \
-    --hash=sha256:d73f8cd714a1a6691f5eb5abeeacbf313242b7aa2f5eba93776542c1aad90c6f \
-    --hash=sha256:fe9a97f68b064a6ddd4bacfb0b4b93a4c65a556d97ce906255540439d0c35cef
+setuptools==74.1.2 \
+    --hash=sha256:5f4c08aa4d3ebcb57a50c33b1b07e94315d7fc7230f7115e47fc99776c8ce308 \
+    --hash=sha256:95b40ed940a1c67eb70fc099094bd6e99c6ee7c23aa2306f4d2697ba7916f9c6
     # via
     #   -r CI/requirements_ci.in
     #   setuptools-scm
