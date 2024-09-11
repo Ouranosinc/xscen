@@ -6,8 +6,10 @@ import json
 import logging
 import os
 import re
+import warnings
 from collections import defaultdict
 from collections.abc import Sequence
+from copy import deepcopy
 from datetime import datetime
 from io import StringIO
 from itertools import chain
@@ -22,7 +24,7 @@ import pandas as pd
 import xarray as xr
 from xarray.coding import cftime_offsets as cfoff
 from xclim.core import units
-from xclim.core.calendar import convert_calendar, get_calendar, parse_offset
+from xclim.core.calendar import get_calendar, parse_offset
 from xclim.core.options import METADATA_LOCALES
 from xclim.core.options import OPTIONS as XC_OPTIONS
 from xclim.core.utils import uses_dask
@@ -272,20 +274,59 @@ def minimum_calendar(*calendars) -> str:
 
     Uses the hierarchy: 360_day < noleap < standard < all_leap, and returns one of those names.
     """
+    # Unwrap any lists or tuples given in the input, but without destroying strings.
+    calendars = [[cal] if isinstance(cal, str) else cal for cal in calendars]
+    calendars = list(chain(*calendars))
+
+    # Raise an error if the calendars are not recognized
+    unknowns = set(calendars).difference(
+        [
+            "360_day",
+            "365_day",
+            "noleap",
+            "standard",
+            "default",
+            "all_leap",
+            "366_day",
+            "gregorian",
+            "proleptic_gregorian",
+        ]
+    )
+    if unknowns:
+        warnings.warn(
+            f"These calendars are not recognized: {unknowns}. Results may be incorrect.",
+        )
+
     if "360_day" in calendars:
-        return "360_day"
+        out = "360_day"
+    elif "noleap" in calendars or "365_day" in calendars:
+        out = "noleap"
+    elif all(cal in ["all_leap", "366_day"] for cal in calendars):
+        out = "all_leap"
+    else:
+        out = "standard"
 
-    if "noleap" in calendars or "365_day" in calendars:
-        return "noleap"
-
-    if all(cal in ["all_leap", "366_day"] for cal in calendars):
-        return "all_leap"
-
-    return "standard"
+    return out
 
 
-def translate_time_chunk(chunks: dict, calendar: str, timesize) -> dict:
+def translate_time_chunk(chunks: dict, calendar: str, timesize: int) -> dict:
     """Translate chunk specification for time into a number.
+
+    Parameters
+    ----------
+    chunks : dict
+        Dictionary specifying the chunk sizes for each dimension. The time dimension can be specified as:
+        -1 : translates to `timesize`
+        'Nyear' : translates to N times the number of days in a year of the given calendar.
+    calendar : str
+        The calendar type (e.g., 'noleap', '360_day', 'all_leap').
+    timesize : int
+        The size of the time dimension.
+
+    Returns
+    -------
+    dict
+        The updated chunks dictionary with the time dimension translated to a number.
 
     Notes
     -----
@@ -298,10 +339,19 @@ def translate_time_chunk(chunks: dict, calendar: str, timesize) -> dict:
         elif k == "time" and v is not None:
             if isinstance(v, str) and v.endswith("year"):
                 n = int(chunks["time"].split("year")[0])
-                Nt = n * {"noleap": 365, "360_day": 360, "all_leap": 366}.get(
-                    calendar, 365.25
-                )
-                chunks[k] = int(Nt)
+                nt = n * {
+                    "noleap": 365,
+                    "365_day": 365,
+                    "360_day": 360,
+                    "all_leap": 366,
+                    "366_day": 366,
+                }.get(calendar, 365.25)
+                if nt != int(nt):
+                    warnings.warn(
+                        f"The number of days in {chunks['time']} for calendar {calendar} is not an integer. "
+                        f"Chunks will not align perfectly with year ends."
+                    )
+                chunks[k] = int(nt)
             elif v == -1:
                 chunks[k] = timesize
     return chunks
@@ -310,7 +360,7 @@ def translate_time_chunk(chunks: dict, calendar: str, timesize) -> dict:
 @parse_config
 def stack_drop_nans(
     ds: xr.Dataset,
-    mask: xr.DataArray,
+    mask: Union[xr.DataArray, list[str]],
     *,
     new_dim: str = "loc",
     to_file: Optional[str] = None,
@@ -321,9 +371,10 @@ def stack_drop_nans(
     ----------
     ds : xr.Dataset
       A dataset with the same coords as `mask`.
-    mask : xr.DataArray
-      A boolean DataArray with True on the points to keep.
-      Mask will be loaded within this function.
+    mask : xr.DataArray or list of str
+      A boolean DataArray with True on the points to keep. The mask will be loaded within this function, but not the dataset.
+      Alternatively, a list of dimension names to stack. In this case, a mask will be created by loading all data and checking for NaNs.
+      The latter is not recommended for large datasets.
     new_dim : str
       The name of the new stacked dim.
     to_file : str, optional
@@ -350,23 +401,37 @@ def stack_drop_nans(
     --------
     unstack_fill_nan : The inverse operation.
     """
-    original_shape = "x".join(map(str, mask.shape))
-
-    mask_1d = mask.stack({new_dim: mask.dims})
-    out = ds.stack({new_dim: mask.dims}).where(mask_1d, drop=True).reset_index(new_dim)
+    if isinstance(mask, xr.DataArray):
+        mask_1d = mask.stack({new_dim: mask.dims})
+        out = ds.stack({new_dim: mask.dims}).where(mask_1d, drop=True)
+    else:
+        mask = ds.coords.to_dataset().drop_vars(
+            [v for v in ds.coords if not any(d in mask for d in ds[v].dims)]
+        )
+        mask = xr.DataArray(
+            np.ones(list(mask.sizes.values())), dims=mask.dims, coords=mask.coords
+        )  # Make it a DataArray to fit the rest of the function
+        out = ds.stack({new_dim: mask.dims}).dropna(new_dim, how="all")
+    out = out.reset_index(new_dim)
     for dim in mask.dims:
         out[dim].attrs.update(ds[dim].attrs)
 
+    original_shape = "x".join(map(str, mask.shape))
+
     if to_file is not None:
-        # set default path to store the information necessary to unstack
-        # the name includes the domain and the original shape to uniquely identify the dataset
+        # Set default path to store the information necessary to unstack
+        # The name includes the domain and the original shape to uniquely identify the dataset
         domain = ds.attrs.get("cat:domain", "unknown")
         to_file = to_file.format(domain=domain, shape=original_shape)
         if not Path(to_file).parent.exists():
             os.makedirs(Path(to_file).parent, exist_ok=True)
+        # Add all coordinates that might have been affected by the stack
+        mask = mask.assign_coords(
+            {c: ds[c] for c in ds.coords if any(d in mask.dims for d in ds[c].dims)}
+        )
         mask.coords.to_dataset().to_netcdf(to_file)
 
-    # carry information about original shape to be able to unstack properly
+    # Carry information about original shape to be able to unstack properly
     for dim in mask.dims:
         out[dim].attrs["original_shape"] = original_shape
 
@@ -387,7 +452,9 @@ def unstack_fill_nan(
     *,
     dim: str = "loc",
     coords: Optional[
-        Union[str, os.PathLike, Sequence[Union[str, os.PathLike]], dict]
+        Union[
+            str, os.PathLike, Sequence[Union[str, os.PathLike]], dict[str, xr.DataArray]
+        ]
     ] = None,
 ):
     """Unstack a Dataset that was stacked by :py:func:`stack_drop_nans`.
@@ -395,38 +462,47 @@ def unstack_fill_nan(
     Parameters
     ----------
     ds : xr.Dataset
-      A dataset with some dims stacked by `stack_drop_nans`.
+      A dataset with some dimensions stacked by `stack_drop_nans`.
     dim : str
       The dimension to unstack, same as `new_dim` in `stack_drop_nans`.
-    coords : Sequence of strings, Mapping of str to array, str, optional
-      If a sequence : if the dataset has coords along `dim` that are not original
-      dimensions, those original dimensions must be listed here.
-      If a dict : a mapping from the name to the array of the coords to unstack
-      If a str : a filename to a dataset containing only those coords (as coords).
-      If given a string with {shape} and {domain}, the formatting will fill them with
-      the original shape of the dataset (that should have been store in the
-      attributes of the stacked dimensions) by `stack_drop_nans` and the global attributes 'cat:domain'.
-      It is recommended to fill this argument in the config. It will be parsed automatically.
-      E.g.:
-
-          utils:
-            stack_drop_nans:
-                to_file: /some_path/coords/coords_{domain}_{shape}.nc
-            unstack_fill_nan:
-                coords: /some_path/coords/coords_{domain}_{shape}.nc
-
-      If None (default), all coords that have `dim` a single dimension are used as the
-      new dimensions/coords in the unstacked output.
-      Coordinates will be loaded within this function.
+    coords : string or os.PathLike or Sequence or dict, optional
+        Additional information used to reconstruct coordinates that might have been lost in the stacking (e.g., if a lat/lon grid was all NaNs).
+        If a string or os.PathLike : Path to a dataset containing only those coordinates, such as the output of `to_file` in `stack_drop_nans`.
+        This is the recommended option.
+        If a dictionary : A mapping from the name of the coordinate that was stacked to a DataArray. Better alternative if no file is available.
+        If a sequence : The names of the original dimensions that were stacked. Worst option.
+        If None (default), same as a sequence, but all coordinates that have `dim` as a single dimension are used as the new dimensions.
+        See Notes for more information.
 
     Returns
     -------
     xr.Dataset
       Same as `ds`, but `dim` has been unstacked to coordinates in `coords`.
       Missing elements are filled according to the defaults of `fill_value` of :py:meth:`xarray.Dataset.unstack`.
+
+    Notes
+    -----
+    Some information might have been completely lost in the stacking process, for example, if a longitude is NaN across all latitudes.
+    It is impossible to recover that information when using `coords` as a list, which is why it is recommended to use a file or a dictionary instead.
+
+    If a dictionary is used, the keys must be the names of the coordinates that were stacked and the values must be the DataArrays.
+    This method can recover both dimensions and additional coordinates that were not dimensions in the original dataset, but were stacked.
+
+    If the original stacking was done with `stack_drop_nans` and the `to_file` argument was used, the `coords` argument should be a string with
+    the path to the file. Additionally, the file name can contain the formatting fields {shape} and {domain}, which will be automatically  filled
+    with the original shape of the dataset and the global attribute 'cat:domain'. If using that dynamic path, it is recommended to fill the
+    argument in the xscen config.
+    E.g.:
+
+          utils:
+            stack_drop_nans:
+                to_file: /some_path/coords/coords_{domain}_{shape}.nc
+            unstack_fill_nan:
+                coords: /some_path/coords/coords_{domain}_{shape}.nc
     """
     if coords is None:
         logger.info("Dataset unstacked using no coords argument.")
+        coords = [d for d in ds.coords if ds[d].dims == (dim,)]
 
     if isinstance(coords, (str, os.PathLike)):
         # find original shape in the attrs of one of the dimension
@@ -461,29 +537,50 @@ def unstack_fill_nan(
 
         # only reindex with the dims
         out = out.reindex(**coords_and_dims)
-        # add back the coords that arent dims
+        # add back the coords that aren't dims
         for c in coords_not_dims:
             out[c] = coords[c]
     else:
-        if isinstance(coords, (list, tuple)):
-            dims, crds = zip(*[(name, ds[name].load().values) for name in coords])
-        else:
-            dims, crds = zip(
-                *[
-                    (name, crd.load().values)
-                    for name, crd in ds.coords.items()
-                    if crd.dims == (dim,)
-                ]
-            )
+        coord_not_dim = {}
+        # Special case where the dictionary contains both dimensions and other coordinates
+        if isinstance(coords, dict):
+            coord_not_dim = {
+                k: v
+                for k, v in coords.items()
+                if len(set(v.dims).intersection(list(coords))) != 1
+            }
+            coords = deepcopy(coords)
+            coords = {
+                k: v
+                for k, v in coords.items()
+                if k in set(coords).difference(coord_not_dim)
+            }
 
-        # explicitly get lat and lon
+        dims, crds = zip(
+            *[
+                (name, crd.load().values)
+                for name, crd in ds.coords.items()
+                if (crd.dims == (dim,) and name in set(coords))
+            ]
+        )
+
+        # Reconstruct the dimensions
         mindex_obj = pd.MultiIndex.from_arrays(crds, names=dims)
         mindex_coords = xr.Coordinates.from_pandas_multiindex(mindex_obj, dim)
 
         out = ds.drop_vars(dims).assign_coords(mindex_coords).unstack(dim)
 
-        if not isinstance(coords, (list, tuple)) and coords is not None:
-            out = out.reindex(**coords.coords)
+        if isinstance(coords, dict):
+            # Reindex with the coords that were dimensions
+            out = out.reindex(**coords)
+            # Add back the coordinates that aren't dimensions
+            for c in coord_not_dim:
+                out[c] = coord_not_dim[c]
+
+        # Reorder the dimensions to match the CF conventions
+        order = [out.cf.axes.get(d, [""])[0] for d in ["T", "Z", "Y", "X"]]
+        order = [d for d in order if d] + [d for d in out.dims if d not in order]
+        out = out.transpose(*order)
 
     for dim in dims:
         out[dim].attrs.update(ds[dim].attrs)
@@ -544,6 +641,7 @@ def get_cat_attrs(
 @parse_config
 def maybe_unstack(
     ds: xr.Dataset,
+    dim: Optional[str] = None,
     coords: Optional[str] = None,
     rechunk: Optional[dict] = None,
     stack_drop_nans: bool = False,
@@ -554,6 +652,8 @@ def maybe_unstack(
     ----------
     ds : xr.Dataset
         Dataset to unstack.
+    dim : str, optional
+        Dimension to unstack.
     coords : str, optional
         Path to a dataset containing the coords to unstack (and only those).
     rechunk : dict, optional
@@ -568,7 +668,7 @@ def maybe_unstack(
         Unstacked dataset.
     """
     if stack_drop_nans:
-        ds = unstack_fill_nan(ds, coords=coords)
+        ds = unstack_fill_nan(ds, dim=dim, coords=coords)
         if rechunk is not None:
             ds = ds.chunk(rechunk)
     return ds
@@ -720,7 +820,7 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
                     # ds is a rate
                     ds[v] = units.rate2amount(ds[v], out_units=variables_and_units[v])
                 else:
-                    raise NotImplementedError(
+                    raise ValueError(
                         f"No known transformation between {ds[v].units} and {variables_and_units[v]} (temporal dimensionality mismatch)."
                     )
             elif (v in ds) and (ds[v].units != variables_and_units[v]):
@@ -745,15 +845,16 @@ def clean_up(  # noqa: C901
     attrs_to_remove: Optional[dict] = None,
     remove_all_attrs_except: Optional[dict] = None,
     add_attrs: Optional[dict] = None,
-    change_attr_prefix: Optional[str] = None,
+    change_attr_prefix: Optional[Union[str, dict]] = None,
     to_level: Optional[str] = None,
 ) -> xr.Dataset:
     """Clean up of the dataset.
 
     It can:
-     - convert to the right units using xscen.finalize.change_units
+     - convert to the right units using xscen.utils.change_units
      - convert the calendar and interpolate over missing dates
-     - call the xscen.common.maybe_unstack function
+     - call the xscen.utils.maybe_unstack function
+     - round variables
      - remove a list of attributes
      - remove everything but a list of attributes
      - add attributes
@@ -768,12 +869,12 @@ def clean_up(  # noqa: C901
     variables_and_units : dict, optional
         Dictionary of variable to convert. e.g. {'tasmax': 'degC', 'pr': 'mm d-1'}
     convert_calendar_kwargs : dict, optional
-        Dictionary of arguments to feed to xclim.core.calendar.convert_calendar. This will be the same for all variables.
+        Dictionary of arguments to feed to xarray.Dataset.convert_calendar. This will be the same for all variables.
         If missing_by_vars is given, it will override the 'missing' argument given here.
-        Eg. {target': default, 'align_on': 'random'}
+        Eg. {'calendar': 'standard', 'align_on': 'random'}
     missing_by_var : dict, optional
         Dictionary where the keys are the variables and the values are the argument to feed the `missing`
-        parameters of the xclim.core.calendar.convert_calendar for the given variable with the
+        parameters of xarray.Dataset.convert_calendar for the given variable with the
         `convert_calendar_kwargs`. When the value of an entry is 'interpolate', the missing values will be filled
         with NaNs, then linearly interpolated over time.
     maybe_unstack_dict : dict, optional
@@ -789,27 +890,21 @@ def clean_up(  # noqa: C901
         Dictionary of arguments for xarray.open_dataset(). Used with common_attrs_only if given paths.
     attrs_to_remove : dict, optional
         Dictionary where the keys are the variables and the values are a list of the attrs that should be removed.
+        The match is done using re.fullmatch, so the strings can be regex patterns but don't need to contain '^' or '$'.
         For global attrs, use the key 'global'.
-        The element of the list can be exact matches for the attributes name
-        or use the same substring matching rules as intake_esm:
-        - ending with a '*' means checks if the substring is contained in the string
-        - starting with a '^' means check if the string starts with the substring.
-        e.g. {'global': ['unnecessary note', 'cell*'], 'tasmax': 'old_name'}
+        e.g. {'global': ['unnecessary note', 'cell.*'], 'tasmax': 'old_name'}
     remove_all_attrs_except : dict, optional
-        Dictionary where the keys are the variables and the values are a list of the attrs that should NOT be removed,
-        all other attributes will be deleted. If None (default), nothing will be deleted.
-        For global attrs, use the key 'global'.
-        The element of the list can be exact matches for the attributes name
-        or use the same substring matching rules as intake_esm:
-        - ending with a '*' means checks if the substring is contained in the string
-        - starting with a '^' means check if the string starts with the substring.
+        Dictionary where the keys are the variables and the values are a list of the attrs that should NOT be removed.
+        The match is done using re.fullmatch, so the strings can be regex patterns but don't need to contain '^' or '$'.
+        All other attributes will be deleted. For global attrs, use the key 'global'.
         e.g. {'global': ['necessary note', '^cat:'], 'tasmax': 'new_name'}
     add_attrs : dict, optional
         Dictionary where the keys are the variables and the values are a another dictionary of attributes.
         For global attrs, use the key 'global'.
         e.g. {'global': {'title': 'amazing new dataset'}, 'tasmax': {'note': 'important info about tasmax'}}
-    change_attr_prefix : str, optional
-        Replace "cat:" in the catalog global attrs by this new string
+    change_attr_prefix : str or dict, optional
+        If a string, replace "cat:" in the catalog global attributes by this new string.
+        If a dictionary, the key is the old prefix and the value is the new prefix.
     to_level : str, optional
         The processing level to assign to the output.
 
@@ -822,15 +917,16 @@ def clean_up(  # noqa: C901
     --------
     xclim.core.calendar.convert_calendar
     """
+    ds = ds.copy()
+
     if variables_and_units:
         logger.info(f"Converting units: {variables_and_units}")
         ds = change_units(ds=ds, variables_and_units=variables_and_units)
 
     # convert calendar
     if convert_calendar_kwargs:
-        ds_copy = ds.copy()
         # create mask of grid point that should always be nan
-        ocean = ds_copy.isnull().all("time")
+        ocean = ds.isnull().all("time")
 
         # if missing_by_var exist make sure missing data are added to time axis
         if missing_by_var:
@@ -841,11 +937,17 @@ def clean_up(  # noqa: C901
             convert_calendar_kwargs["missing"] = -9999
 
         # make default `align_on`='`random` when the initial calendar is 360day
-        if get_calendar(ds) == "360_day" and "align_on" not in convert_calendar_kwargs:
+        if (
+            any(
+                cal == "360_day"
+                for cal in [get_calendar(ds), convert_calendar_kwargs["calendar"]]
+            )
+            and "align_on" not in convert_calendar_kwargs
+        ):
             convert_calendar_kwargs["align_on"] = "random"
 
         logger.info(f"Converting calendar with {convert_calendar_kwargs} ")
-        ds = convert_calendar(ds, **convert_calendar_kwargs).where(~ocean)
+        ds = ds.convert_calendar(**convert_calendar_kwargs).where(~ocean)
 
         # convert each variable individually
         if missing_by_var:
@@ -871,14 +973,16 @@ def clean_up(  # noqa: C901
     if round_var:
         for var, n in round_var.items():
             ds[var] = ds[var].round(n)
-
-    def _search(a, b):
-        if a[-1] == "*":  # check if a is contained in b
-            return a[:-1] in b
-        elif a[0] == "^":
-            return b.startswith(a[1:])
-        else:
-            return a == b
+            new_history = (
+                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                f"Rounded '{var}' to {n} decimals."
+            )
+            history = (
+                f"{new_history}\n{ds[var].attrs['history']}"
+                if "history" in ds[var].attrs
+                else new_history
+            )
+            ds[var].attrs["history"] = history
 
     if common_attrs_only:
         from .catalog import generate_id
@@ -908,8 +1012,6 @@ def clean_up(  # noqa: C901
             ds.attrs["cat:id"] = generate_id(ds).iloc[0]
         except IndexError as err:
             logger.warning(f"Unable to generate a new id for the dataset. Got {err}.")
-            if "cat:id" in ds.attrs:
-                del ds.attrs["cat:id"]
 
     if to_level:
         ds.attrs["cat:processing_level"] = to_level
@@ -918,24 +1020,32 @@ def clean_up(  # noqa: C901
     if attrs_to_remove:
         for var, list_of_attrs in attrs_to_remove.items():
             obj = ds if var == "global" else ds[var]
-            for ds_attr in list(obj.attrs.keys()):  # iter over attrs in ds
-                for list_attr in list_of_attrs:  # check if we want to remove attrs
-                    if _search(list_attr, ds_attr):
-                        del obj.attrs[ds_attr]
+            to_remove = list(
+                chain.from_iterable(
+                    [
+                        list(filter(re.compile(attr).fullmatch, list(obj.attrs.keys())))
+                        for attr in list_of_attrs
+                    ]
+                )
+            )
+            for attr in to_remove:
+                del obj.attrs[attr]
 
     # delete all attrs, but the ones in the list
     if remove_all_attrs_except:
         for var, list_of_attrs in remove_all_attrs_except.items():
             obj = ds if var == "global" else ds[var]
-            for ds_attr in list(obj.attrs.keys()):  # iter over attrs in ds
-                delete = True  # assume we should delete it
-                for list_attr in list_of_attrs:
-                    if _search(list_attr, ds_attr):
-                        delete = (
-                            False  # if attr is on the list to not delete, don't delete
-                        )
-                if delete:
-                    del obj.attrs[ds_attr]
+            to_keep = list(
+                chain.from_iterable(
+                    [
+                        list(filter(re.compile(attr).fullmatch, list(obj.attrs.keys())))
+                        for attr in list_of_attrs
+                    ]
+                )
+            )
+            to_remove = list(set(obj.attrs.keys()).difference(to_keep))
+            for attr in to_remove:
+                del obj.attrs[attr]
 
     if add_attrs:
         for var, attrs in add_attrs.items():
@@ -944,10 +1054,29 @@ def clean_up(  # noqa: C901
                 obj.attrs[attrname] = attrtmpl
 
     if change_attr_prefix:
+        if isinstance(change_attr_prefix, str):
+            change_attr_prefix = {"cat:": change_attr_prefix}
+        # Make sure that the prefixes are in the right format
+        chg_attr_prefix = {}
+        for old_prefix, new_prefix in change_attr_prefix.items():
+            if not old_prefix.endswith(":"):
+                old_prefix += ":"
+            if not new_prefix.endswith(":"):
+                new_prefix += ":"
+            chg_attr_prefix[old_prefix] = new_prefix
+
+        # Change the prefixes, but keep the order of the keys
+        attrs = {}
         for ds_attr in list(ds.attrs.keys()):
-            new_name = ds_attr.replace("cat:", change_attr_prefix)
-            if new_name:
-                ds.attrs[new_name] = ds.attrs.pop(ds_attr)
+            changed = False
+            for old_prefix, new_prefix in chg_attr_prefix.items():
+                if ds_attr.startswith(old_prefix):
+                    new_name = ds_attr.replace(old_prefix, new_prefix)
+                    attrs[new_name] = ds.attrs[ds_attr]
+                    changed = True
+            if not changed:
+                attrs[ds_attr] = ds.attrs[ds_attr]
+        ds.attrs = attrs
 
     return ds
 
@@ -1034,10 +1163,10 @@ def publish_release_notes(
     print(changes, file=file)
 
 
-def unstack_dates(
+def unstack_dates(  # noqa: C901
     ds: xr.Dataset,
     seasons: Optional[dict[int, str]] = None,
-    new_dim: str = "season",
+    new_dim: str = None,
     winter_starts_year: bool = False,
 ):
     """Unstack a multi-season timeseries into a yearly axis and a season one.
@@ -1052,8 +1181,10 @@ def unstack_dates(
       A dictionary from month number (as int) to a season name.
       If not given, it is guessed from the time coordinate frequency.
       See notes.
-    new_dim : str
+    new_dim : str, optional
       The name of the new dimension.
+      If None, the name is inferred from the frequency of the time axis.
+      See notes.
     winter_starts_year : bool
       If True, the year of winter (DJF) is built from the year of January, not December.
       i.e. DJF made from [Dec 1980, Jan 1981, and Feb 1981] will be associated with the year 1981, not 1980.
@@ -1065,14 +1196,16 @@ def unstack_dates(
 
     Notes
     -----
-    When `season` is None, the inferred frequency determines the new coordinate:
-
+    When `seasons` is None, the inferred frequency determines the new coordinate:
     - For MS, the coordinates are the month abbreviations in english (JAN, FEB, etc.)
-    - For ?QS-? and other ?MS frequencies, the coordinates are the initials of the months in each season.
-      Ex: QS-DEC (with winter_starts_year=True) : DJF, MAM, JJA, SON.
+    - For ?QS-? and other ?MS frequencies, the coordinates are the initials of the months in each season. Ex: QS -> DJF, MAM, JJA, SON.
     - For YS or YS-JAN, the new coordinate has a single value of "annual".
-    - For ?YS-? frequencies, the new coordinate has a single value of "annual-{anchor}", were "anchor"
-      is the abbreviation of the first month of the year. Ex: YS-JUL -> "annual-JUL".
+    - For ?YS-? frequencies, the new coordinate has a single value of "annual-{anchor}". Ex: YS-JUL -> "annual-JUL".
+
+    When `new_dim` is None, the new dimension name is inferred from the frequency:
+    - For ?YS, ?QS frequencies or ?MS with mult > 1, the new dimension is "season".
+    - For MS, the new dimension is "month".
+
     """
     # Get some info about the time axis
     freq = xr.infer_freq(ds.time)
@@ -1092,23 +1225,35 @@ def unstack_dates(
             f"Only monthly frequencies or coarser are supported. Got: {freq}."
         )
 
-    # Fast track for annual
+    if new_dim is None:
+        if base == "M" and mult == 1:
+            new_dim = "month"
+        else:
+            new_dim = "season"
+
     if base in "YA":
         if seasons:
-            seaname = seasons[first.month]
+            seaname = f"{seasons[first.month]}"
         elif anchor == "JAN":
             seaname = "annual"
         else:
             seaname = f"annual-{anchor}"
-        dso = ds.expand_dims({new_dim: [seaname]})
-        dso["time"] = xr.date_range(
-            f"{first.year}-01-01",
-            f"{last.year}-01-01",
-            freq="YS",
-            calendar=calendar,
-            use_cftime=use_cftime,
-        )
-        return dso
+        if mult > 1:
+            seaname = f"{mult}{seaname}"
+        # Fast track for annual, if nothing more needs to be done.
+        if winter_starts_year is False:
+            dso = ds.expand_dims({new_dim: [seaname]})
+            dso["time"] = xr.date_range(
+                f"{first.year}-01-01",
+                f"{last.year}-01-01",
+                freq=f"{mult}YS",
+                calendar=calendar,
+                use_cftime=use_cftime,
+            )
+            return dso
+        else:
+            seasons = seasons or {}
+            seasons.update({first.month: seaname})
 
     if base == "M" and 12 % mult != 0:
         raise ValueError(
@@ -1127,6 +1272,9 @@ def unstack_dates(
             }
         else:  # M or MS
             seasons = xr.coding.cftime_offsets._MONTH_ABBREVIATIONS
+    else:
+        # Only keep the entries for the months in the data
+        seasons = {m: seasons[m] for m in np.unique(ds.time.dt.month)}
     # The ordered season names
     seas_list = [seasons[month] for month in sorted(seasons.keys())]
 
@@ -1160,8 +1308,6 @@ def unstack_dates(
     )
 
     def reshape_da(da):
-        if "time" not in da.dims:
-            return da
         # Replace (A,'time',B) by (A,'time', 'season',B) in both the new shape and the new dims
         new_dims = list(
             chain.from_iterable(
@@ -1180,9 +1326,10 @@ def unstack_dates(
     new_coords = dict(ds.coords)
     new_coords.update({"time": new_time, new_dim: seas_list})
 
-    # put horizon in the right time dimension
-    if "horizon" in new_coords:
-        new_coords["horizon"] = reshape_da(new_coords["horizon"])
+    # put other coordinates that depend on time in the new shape
+    for coord in new_coords:
+        if (coord not in ["time", new_dim]) and ("time" in ds[coord].dims):
+            new_coords[coord] = reshape_da(dsp[coord])
 
     if isinstance(ds, xr.Dataset):
         dso = dsp.map(reshape_da, keep_attrs=True)
@@ -1225,11 +1372,13 @@ def show_versions(
             "intake_esm",
             "matplotlib",
             "netCDF4",
+            "numcodecs",
             "numpy",
             "pandas",
             "parse",
             "pyyaml",
             "rechunker",
+            "scipy",
             "shapely",
             "sparse",
             "toolz",
@@ -1237,18 +1386,46 @@ def show_versions(
             "xclim",
             "xesmf",
             "zarr",
-            # For translations
-            "babel",
             # Opt
             "nc-time-axis",
             "pyarrow",
-            # Extras specific to this function
-            "fastprogress",
-            "intake",
-            "pydantic",
-            "requests",
-            "xcollection",
-            "yaml",
+            # Dev
+            "babel",
+            "black",
+            "blackdoc",
+            "bump-my-version",
+            "coverage",
+            "coveralls",
+            "flake8",
+            "flake8-rst-docstrings",
+            "ipykernel",
+            "ipython",
+            "isort",
+            "jupyter_client",
+            "nbsphinx",
+            "nbval",
+            "pandoc",
+            "pooch",
+            "pre-commit",
+            "pytest",
+            "pytest-cov",
+            "ruff",
+            "setuptools",
+            "setuptools-scm",
+            "sphinx",
+            "sphinx-autoapi",
+            "sphinx-rtd-theme",
+            "sphinxcontrib-napoleon",
+            "sphinx-codeautolink",
+            "sphinx-copybutton",
+            "sphinx-mdinclude",
+            "watchdog",
+            "xdoctest",
+            "tox",
+            "build",
+            "wheel",
+            "pip",
+            "flake8-alphabetize",
         ]
 
     return _show_versions(file=file, deps=deps)
@@ -1323,7 +1500,7 @@ def standardize_periods(
 
 
 def season_sort_key(idx: pd.Index, name: Optional[str] = None):
-    """Get a proper sort key for a "season"  or "month" index to avoid alphabetical sorting.
+    """Get a proper sort key for a "season" or "month" index to avoid alphabetical sorting.
 
     If any of the values in the index is not recognized as a 3-letter
     season code or a 3-letter month abbreviation, the operation is
