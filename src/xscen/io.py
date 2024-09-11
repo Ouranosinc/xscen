@@ -1000,7 +1000,10 @@ def rechunk(
 
 
 def zip_directory(
-    root: Union[str, os.PathLike], zipfile: Union[str, os.PathLike], **zip_args
+    root: Union[str, os.PathLike],
+    zipfile: Union[str, os.PathLike],
+    delete: bool = False,
+    **zip_args,
 ):
     r"""Make a zip archive of the content of a directory.
 
@@ -1010,6 +1013,8 @@ def zip_directory(
         The directory with the content to archive.
     zipfile : path
         The zip file to create.
+    delete : bool
+        If True, the original directory is deleted after zipping.
     \*\*zip_args
         Any other arguments to pass to :py:mod:`zipfile.ZipFile`, such as "compression".
         The default is to make no compression (``compression=ZIP_STORED``).
@@ -1025,6 +1030,9 @@ def zip_directory(
     with ZipFile(zipfile, "w", **zip_args) as zf:
         for file in root.iterdir():
             _add_to_zip(zf, file, root)
+
+    if delete:
+        sh.rmtree(root)
 
 
 def unzip_directory(zipfile: Union[str, os.PathLike], root: Union[str, os.PathLike]):
