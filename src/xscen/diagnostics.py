@@ -15,6 +15,11 @@ import xclim as xc
 import xclim.core.dataflags
 from xclim.core.indicator import Indicator
 
+try:  # Changed in xclim 0.53
+    from xclim.core import ValidationError
+except ImportError:
+    from xclim.core.utils import ValidationError
+
 from .config import parse_config
 from .indicators import load_xclim_module
 from .utils import (
@@ -174,7 +179,7 @@ def health_checks(  # noqa: C901
 
     # Check the calendar
     if calendar is not None:
-        cal = xc.core.calendar.get_calendar(ds.time)
+        cal = ds.time.dt.calendar
         if xc.core.calendar.common_calendar([calendar]).replace(
             "default", "standard"
         ) != xc.core.calendar.common_calendar([cal]).replace("default", "standard"):
@@ -210,7 +215,7 @@ def health_checks(  # noqa: C901
                 with xc.set_options(data_validation="raise"):
                     try:
                         xc.core.units.check_units(ds[v], variables_and_units[v])
-                    except xc.core.utils.ValidationError as e:
+                    except ValidationError as e:
                         _error(f"'{v}' ValidationError: {e}", "variables_and_units")
                 _error(
                     f"The variable '{v}' does not have the expected units '{variables_and_units[v]}'. Received '{ds[v].attrs['units']}'.",
@@ -232,7 +237,7 @@ def health_checks(  # noqa: C901
                 with xc.set_options(cf_compliance="raise"):
                     try:
                         getattr(xc.core.cfchecks, check)(**cfchecks[v][check])
-                    except xc.core.utils.ValidationError as e:
+                    except ValidationError as e:
                         _error(f"'{v}' ValidationError: {e}", "cfchecks")
 
     if freq is not None:

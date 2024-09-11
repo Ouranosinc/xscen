@@ -152,7 +152,7 @@ class TestAdjust:
             "name='time.dayofyear', window=31), kind='+'"
             ").adjust(sim, )"
         )
-        assert xc.core.calendar.get_calendar(out) == "noleap"
+        assert out.time.dt.calendar == "noleap"
 
         if bias_adjust_institution is not None:
             assert out.attrs["cat:bias_adjust_institution"] == "i"
