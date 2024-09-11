@@ -1,5 +1,23 @@
 """A climate change scenario-building analysis framework, built with xclim/xarray."""
 
+###################################################################################
+# Apache Software License 2.0
+#
+# Copyright (c) 2024, Gabriel Rondeau-Genesse, Pascal Bourgault, Juliette Lavoie, Trevor James Smith
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+###################################################################################
+
 import warnings
 
 # Import the submodules
@@ -57,7 +75,29 @@ __version__ = "0.9.2-dev.9"
 def warning_on_one_line(
     message: str, category: Warning, filename: str, lineno: int, file=None, line=None
 ):
-    """Monkeypatch Reformat warning so that `warnings.warn` doesn't mention itself."""
+    """
+    Monkeypatch Reformat warning so that `warnings.warn` doesn't mention itself.
+
+    Parameters
+    ----------
+    message : str
+        The warning message.
+    category : Warning
+        The warning category.
+    filename : str
+        The filename where the warning was raised.
+    lineno : int
+        The line number where the warning was raised.
+    file : file
+        The file where the warning was raised.
+    line : str
+        The line where the warning was raised.
+
+    Returns
+    -------
+    str
+        The reformatted warning message.
+    """
     return f"{filename}:{lineno}: {category.__name__}: {message}\n"
 
 
