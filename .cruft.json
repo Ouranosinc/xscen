@@ -1,5 +1,5 @@
 {
-  "template": "/home/tjs/git/cookiecutter-pypackage",
+  "template": "https://github.com/Ouranosinc/cookiecutter-pypackage",
   "commit": "ebbb093c373c042067047a286e3681d6543cc94b",
   "checkout": null,
   "context": {
@@ -23,7 +23,7 @@
       "open_source_license": "Apache Software License 2.0",
       "generated_with_cruft": "y",
       "__gh_slug": "https://github.com/Ouranosinc/xscen",
-      "_template": "/home/tjs/git/cookiecutter-pypackage"
+      "_template": "https://github.com/Ouranosinc/cookiecutter-pypackage"
     }
   },
   "directory": null
