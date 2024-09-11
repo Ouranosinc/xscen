@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import re
-import warnings
+import shutil as sh
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from functools import reduce
@@ -436,12 +436,12 @@ class DataCatalog(intake_esm.esm_datastore):
           If None, this will be the same as `create_ensemble_on`.
           The resulting coordinate must be unique.
         calendar : str, optional
-          If `create_ensemble_on` is given, all datasets are converted to this calendar before concatenation.
-          Ignored otherwise (default). If None, no conversion is done.
-          `align_on` is always "date".
+          If `create_ensemble_on` is given but not `preprocess`, all datasets are converted to this calendar before concatenation.
+          Ignored otherwise (default). If None, no conversion is done. `align_on` is always "date".
+          If `preprocess` is given, it must do the needed calendar handling.
         kwargs:
           Any other arguments are passed to :py:meth:`~intake_esm.core.esm_datastore.to_dataset_dict`.
-          The `preprocess` argument cannot be used if `create_ensemble_on` is given.
+          The `preprocess` argument must convert calendars as needed if `create_ensemble_on` is given.
 
         Returns
         -------
@@ -493,10 +493,6 @@ class DataCatalog(intake_esm.esm_datastore):
             )
 
         if create_ensemble_on:
-            if kwargs.get("preprocess") is not None:
-                warnings.warn(
-                    "Using `create_ensemble_on` will override the given `preprocess` function."
-                )
             cat.df["realization"] = generate_id(cat.df, ensemble_name)
             cat.esmcat.aggregation_control.aggregations.append(
                 intake_esm.cat.Aggregation(
@@ -506,15 +502,19 @@ class DataCatalog(intake_esm.esm_datastore):
             )
             xrfreq = cat.df["xrfreq"].unique()[0]
 
-            def preprocess(ds):
-                ds = ensure_correct_time(ds, xrfreq)
-                if calendar is not None:
-                    ds = ds.convert_calendar(
-                        calendar, use_cftime=(calendar != "default"), align_on="date"
-                    )
-                return ds
+            if kwargs.get("preprocess") is None:
 
-            kwargs["preprocess"] = preprocess
+                def preprocess(ds):
+                    ds = ensure_correct_time(ds, xrfreq)
+                    if calendar is not None:
+                        ds = ds.convert_calendar(
+                            calendar,
+                            use_cftime=(calendar != "default"),
+                            align_on="date",
+                        )
+                    return ds
+
+                kwargs["preprocess"] = preprocess
 
         if len(rm_from_id) > 1:
             # Guess what the ID was and rebuild a new one, omitting the columns part of the aggregation
@@ -535,6 +535,81 @@ class DataCatalog(intake_esm.esm_datastore):
 
         ds = cat.to_dask(**kwargs)
         return ds
+
+    def copy_files(
+        self,
+        dest: Union[str, os.PathLike],
+        flat: bool = True,
+        unzip: bool = False,
+        inplace: bool = False,
+    ):
+        """Copy each file of the catalog to another location, unzipping datasets along the way if requested.
+
+        Parameters
+        ----------
+        cat: DataCatalog or ProjectCatalog
+            A catalog to copy.
+        dest: str, path
+            The root directory of the destination.
+        flat: bool
+            If True (default), all dataset files are copied in the same directory.
+            Renaming with an integer suffix ("{name}_01.{ext}") is done in case of duplicate file names.
+            If False, :py:func:`xscen.catutils.build_path` (with default arguments) is used to generated the new path below the destination.
+            Nothing is done in case of duplicates in that case.
+        unzip: bool
+            If True, any datasets with a `.zip` suffix are unzipped during the copy (or rather instead of a copy).
+        inplace : bool
+            If True, the catalog is updated in place. If False (default), a copy is returned.
+
+        Returns
+        -------
+        If inplace is False, this returns a catalog similar to self except with updated filenames. Some special attributes are not preserved,
+        such as those added by :py:func:`xscen.extract.search_data_catalogs`. In this case, use `inplace=True`.
+        """
+        # Local imports to avoid circular imports
+        from .catutils import build_path
+        from .io import unzip_directory
+
+        dest = Path(dest)
+        data = self.esmcat._df.copy()
+        if flat:
+            new_paths = []
+            for path in map(Path, data.path.values):
+                if unzip and path.suffix == ".zip":
+                    new = dest / path.with_suffix("").name
+                else:
+                    new = dest / path.name
+                if new in new_paths:
+                    suffixes = "".join(new.suffixes)
+                    name = new.name.removesuffix(suffixes)
+                    i = 1
+                    while new in new_paths:
+                        new = dest / (name + f"_{i:02d}" + suffixes)
+                        i += 1
+                new_paths.append(new)
+            data["new_path"] = new_paths
+        else:
+            data = build_path(data, root=dest).drop(columns=["new_path_type"])
+
+        logger.debug(f"Will copy {len(data)} files.")
+        for i, row in data.iterrows():
+            old = Path(row.path)
+            new = Path(row.new_path)
+            if unzip and old.suffix == ".zip":
+                logger.info(f"Unzipping {old} to {new}.")
+                unzip_directory(old, new)
+            elif old.is_dir():
+                logger.info(f"Copying directory tree {old} to {new}.")
+                sh.copytree(old, new)
+            else:
+                logger.info(f"Copying file {old} to {new}.")
+                sh.copy(old, new)
+        if inplace:
+            self.esmcat._df["path"] = data["new_path"]
+            return
+        data["path"] = data["new_path"]
+        data = data.drop(columns=["new_path"])
+        return self.__class__({"esmcat": self.esmcat.dict(), "df": data})
 
 
 class ProjectCatalog(DataCatalog):
@@ -856,17 +931,20 @@ def concat_data_catalogs(*dcs):
         registry.update(dc.derivedcat._registry)
         catalogs.append(dc.df)
         requested_variables.extend(dc._requested_variables)
-        requested_variables_true.extend(dc._requested_variables_true)
-        dependent_variables.extend(dc._dependent_variables)
-        requested_variable_freqs.extend(dc._requested_variable_freqs)
+        requested_variables_true.extend(getattr(dc, "_requested_variables_true", []))
+        dependent_variables.extend(getattr(dc, "_dependent_variables", []))
+        requested_variable_freqs.extend(getattr(dc, "_requested_variable_freqs", []))
     df = pd.concat(catalogs, axis=0).drop_duplicates(ignore_index=True)
     dvr = intake_esm.DerivedVariableRegistry()
     dvr._registry.update(registry)
     newcat = DataCatalog({"esmcat": dcs[0].esmcat.dict(), "df": df}, registry=dvr)
     newcat._requested_variables = requested_variables
-    newcat._requested_variables_true = requested_variables_true
-    newcat._dependent_variables = dependent_variables
-    newcat._requested_variable_freqs = requested_variable_freqs
+    if requested_variables_true:
+        newcat._requested_variables_true = requested_variables_true
+    if dependent_variables:
+        newcat._dependent_variables = dependent_variables
+    if requested_variable_freqs:
+        newcat._requested_variable_freqs = requested_variable_freqs
     return newcat
 
 

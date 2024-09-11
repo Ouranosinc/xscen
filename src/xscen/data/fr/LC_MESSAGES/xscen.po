@@ -1,32 +1,23 @@
-#: src/xscen/aggregate.py:435
-#, fuzzy
 msgid "{window}-year climatological {operation} of {attr}."
 msgstr "Moyenne {window} ans de {attr}."
 
-#: src/xscen/aggregate.py:649
 msgid "{attr1}: {kind} delta compared to {refhoriz}."
 msgstr "{attr1}: Delta {kind} comparé à {refhoriz}."
 
-#: src/xscen/diagnostics.py:522
 msgid "Ranking of measure performance"
 msgstr "Classement de performance de la mesure"
 
-#: src/xscen/diagnostics.py:581
 msgid "Fraction of improved grid cells"
 msgstr "Fraction de points de grille améliorés"
 
-#: src/xscen/io.py:761 src/xscen/io.py:769
 msgid "Variable"
 msgstr "Variable"
 
-#: src/xscen/io.py:762
 msgid "Description"
 msgstr "Description"
 
-#: src/xscen/io.py:765
 msgid "Units"
 msgstr "Unités"
 
-#: src/xscen/io.py:770
 msgid "Content"
 msgstr "Contenu"
