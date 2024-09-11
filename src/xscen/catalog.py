@@ -566,7 +566,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Returns
         -------
-        If inplace is False, this returs a catalog similar to self except with updated filenames. Some special attributes are not preserved,
+        If inplace is False, this returns a catalog similar to self except with updated filenames. Some special attributes are not preserved,
         such as those added by :py:func:`xscen.extract.search_data_catalogs`. In this case, use `inplace=True`.
         """
         # Local imports to avoid circular imports
