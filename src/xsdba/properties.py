@@ -14,11 +14,13 @@ from collections.abc import Sequence
 
 import numpy as np
 import xarray as xr
+import xclim.indices.run_length as rl
 from scipy import stats
 from statsmodels.tsa import stattools
+from xclim.core.indicator import Indicator, base_registry
+from xclim.indices.generic import compare, select_resample_op
+from xclim.indices.stats import fit, parametric_quantile
 
-import xsdba.xclim_submodules.run_length as rl
-from xsdba.indicator import Indicator, base_registry
 from xsdba.units import (
     convert_units_to,
     ensure_delta,
@@ -27,8 +29,6 @@ from xsdba.units import (
     units2pint,
 )
 from xsdba.utils import uses_dask
-from xsdba.xclim_submodules.generic import compare, select_resample_op
-from xsdba.xclim_submodules.stats import fit, parametric_quantile
 
 from .base import Grouper, map_groups, parse_group, parse_offset
 from .nbutils import _pairwise_haversine_and_bins
@@ -101,7 +101,7 @@ class StatisticalProperty(Indicator):
 
     def get_measure(self):
         """Get the statistical measure indicator that is best used with this statistical property."""
-        from xsdba.indicator import registry
+        from xclim.core.indicator import registry
 
         return registry[self.measure].get_instance()
 

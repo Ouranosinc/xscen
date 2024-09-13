@@ -14,10 +14,8 @@ from collections.abc import Sequence
 
 import numpy as np
 import xarray as xr
+from xclim.core.indicator import Indicator, base_registry
 
-from xsdba.indicator import Indicator, base_registry
-
-# ADAPT
 from .base import Grouper
 from .typing import InputKind
 from .units import convert_units_to, ensure_delta
@@ -28,7 +26,7 @@ class StatisticalMeasure(Indicator):
     """Base indicator class for statistical measures used when validating bias-adjusted outputs.
 
     Statistical measures use input data where the time dimension was reduced, usually by the computation
-    of a :py:class:`xsdba.properties.StatisticalProperty` instance.  They usually take two arrays
+    of a :py:class:`xclim.sdba.properties.StatisticalProperty` instance.  They usually take two arrays
     as input: "sim" and "ref", "sim" being measured against "ref". The two arrays must have identical
     coordinates on their common dimensions.
 
@@ -36,7 +34,7 @@ class StatisticalMeasure(Indicator):
     to match "ref".
     """
 
-    # realm = "generic"
+    realm = "generic"
 
     @classmethod
     def _ensure_correct_parameters(cls, parameters):
@@ -91,7 +89,7 @@ class StatisticalPropertyMeasure(Indicator):
     """A list of allowed groupings. A subset of dayofyear, week, month, season or group.
     The latter stands for no temporal grouping."""
 
-    # realm = "generic"
+    realm = "generic"
 
     @classmethod
     def _ensure_correct_parameters(cls, parameters):

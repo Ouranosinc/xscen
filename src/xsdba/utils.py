@@ -964,3 +964,140 @@ def load_module(path: os.PathLike, name: str | None = None):
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)  # This executes code, effectively loading the module
     return mod
+
+
+# XC : redundancy
+# Fit the parameters.
+# This would also be the place to impose constraints on the series minimum length if needed.
+def _fitfunc_1d(arr, *, dist, nparams, method, **fitkwargs):
+    """Fit distribution parameters."""
+    x = np.ma.masked_invalid(arr).compressed()  # pylint: disable=no-member
+
+    # Return NaNs if array is empty.
+    if len(x) <= 1:
+        return np.asarray([np.nan] * nparams)
+
+    # Estimate parameters
+    if method in ["ML", "MLE"]:
+        args, kwargs = _fit_start(x, dist.name, **fitkwargs)
+        params = dist.fit(x, *args, method="mle", **kwargs, **fitkwargs)
+    elif method == "MM":
+        params = dist.fit(x, method="mm", **fitkwargs)
+    elif method == "PWM":
+        params = list(dist.lmom_fit(x).values())
+    elif method == "APP":
+        args, kwargs = _fit_start(x, dist.name, **fitkwargs)
+        kwargs.setdefault("loc", 0)
+        params = list(args) + [kwargs["loc"], kwargs["scale"]]
+    else:
+        raise NotImplementedError(f"Unknown method `{method}`.")
+
+    params = np.asarray(params)
+
+    # Fill with NaNs if one of the parameters is NaN
+    if np.isnan(params).any():
+        params[:] = np.nan
+
+    return params
+
+
+# XC : redundancy
+def _fit_start(x, dist: str, **fitkwargs: Any) -> tuple[tuple, dict]:
+    r"""Return initial values for distribution parameters.
+
+    Providing the ML fit method initial values can help the optimizer find the global optimum.
+
+    Parameters
+    ----------
+    x : array-like
+        Input data.
+    dist : str
+        Name of the univariate distribution, e.g. `beta`, `expon`, `genextreme`, `gamma`, `gumbel_r`, `lognorm`, `norm`.
+        (see :py:mod:scipy.stats). Only `genextreme` and `weibull_exp` distributions are supported.
+    \*\*fitkwargs
+        Kwargs passed to fit.
+
+    Returns
+    -------
+    tuple, dict
+
+    References
+    ----------
+    :cite:cts:`coles_introduction_2001,cohen_parameter_2019, thom_1958, cooke_1979, muralidhar_1992`
+    """
+    x = np.asarray(x)
+    m = x.mean()
+    v = x.var()
+
+    if dist == "genextreme":
+        s = np.sqrt(6 * v) / np.pi
+        return (0.1,), {"loc": m - 0.57722 * s, "scale": s}
+
+    if dist == "genpareto" and "floc" in fitkwargs:
+        # Taken from julia' Extremes. Case for when "mu/loc" is known.
+        t = fitkwargs["floc"]
+        if not np.isclose(t, 0):
+            m = (x - t).mean()
+            v = (x - t).var()
+
+        c = 0.5 * (1 - m**2 / v)
+        scale = (1 - c) * m
+        return (c,), {"scale": scale}
+
+    if dist in "weibull_min":
+        s = x.std()
+        loc = x.min() - 0.01 * s
+        chat = np.pi / np.sqrt(6) / (np.log(x - loc)).std()
+        scale = ((x - loc) ** chat).mean() ** (1 / chat)
+        return (chat,), {"loc": loc, "scale": scale}
+
+    if dist in ["gamma"]:
+        if "floc" in fitkwargs:
+            loc0 = fitkwargs["floc"]
+        else:
+            xs = sorted(x)
+            x1, x2, xn = xs[0], xs[1], xs[-1]
+            # muralidhar_1992 would suggest the following, but it seems more unstable
+            # using cooke_1979 for now
+            # n = len(x)
+            # cv = x.std() / x.mean()
+            # p = (0.48265 + 0.32967 * cv) * n ** (-0.2984 * cv)
+            # xp = xs[int(p/100*n)]
+            xp = x2
+            loc0 = (x1 * xn - xp**2) / (x1 + xn - 2 * xp)
+            loc0 = loc0 if loc0 < x1 else (0.9999 * x1 if x1 > 0 else 1.0001 * x1)
+        x_pos = x - loc0
+        x_pos = x_pos[x_pos > 0]
+        m = x_pos.mean()
+        log_of_mean = np.log(m)
+        mean_of_logs = np.log(x_pos).mean()
+        A = log_of_mean - mean_of_logs
+        a0 = (1 + np.sqrt(1 + 4 * A / 3)) / (4 * A)
+        scale0 = m / a0
+        kwargs = {"scale": scale0, "loc": loc0}
+        return (a0,), kwargs
+
+    if dist in ["fisk"]:
+        if "floc" in fitkwargs:
+            loc0 = fitkwargs["floc"]
+        else:
+            xs = sorted(x)
+            x1, x2, xn = xs[0], xs[1], xs[-1]
+            loc0 = (x1 * xn - x2**2) / (x1 + xn - 2 * x2)
+            loc0 = loc0 if loc0 < x1 else (0.9999 * x1 if x1 > 0 else 1.0001 * x1)
+        x_pos = x - loc0
+        x_pos = x_pos[x_pos > 0]
+        # method of moments:
+        # LHS is computed analytically with the two-parameters log-logistic distribution
+        # and depends on alpha,beta
+        # RHS is from the sample
+        # <x> = m
+        # <x^2> / <x>^2 = m2/m**2
+        # solving these equations yields
+        m = x_pos.mean()
+        m2 = (x_pos**2).mean()
+        scale0 = 2 * m**3 / (m2 + m**2)
+        c0 = np.pi * m / np.sqrt(3) / np.sqrt(m2 - m**2)
+        kwargs = {"scale": scale0, "loc": loc0}
+        return (c0,), kwargs
+    return (), {}

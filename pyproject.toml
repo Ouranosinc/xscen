@@ -110,6 +110,7 @@ docs = [
   "sphinxcontrib-bibtex",
   "sphinxcontrib-svg2pdfconverter[Cairosvg]"
 ]
+extras = ["xclim>=0.52"]
 all = ["xsdba[dev]", "xsdba[docs]"]
 
 [project.scripts]

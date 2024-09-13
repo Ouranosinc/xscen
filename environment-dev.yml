@@ -39,3 +39,4 @@ dependencies:
   - pre-commit >=3.5.0
   - ruff >=0.5.7
   - xdoctest>=1.1.5
+  - xclim>=0.52

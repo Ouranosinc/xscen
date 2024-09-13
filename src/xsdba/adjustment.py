@@ -11,6 +11,7 @@ from warnings import warn
 
 import numpy as np
 import xarray as xr
+from scipy import stats
 from xarray.core.dataarray import DataArray
 
 from xsdba.base import get_calendar
@@ -45,7 +46,6 @@ from .utils import (
     pc_matrix,
     rand_rot_matrix,
 )
-from .xclim_submodules import stats
 
 __all__ = [
     "LOCI",
@@ -747,7 +747,7 @@ class ExtremeValues(TrainAdjust):
             ),
             q_thresh=q_thresh,
             cluster_thresh=cluster_thresh,
-            dist=stats.get_dist("genpareto"),
+            dist=stats.genpareto,
             quantiles=np.arange(int(N)),
             group="time",
         )
@@ -787,7 +787,7 @@ class ExtremeValues(TrainAdjust):
         scen = extremes_adjust(
             ds.assign(sim=sim, scen=scen),
             cluster_thresh=self.cluster_thresh,
-            dist=stats.get_dist("genpareto"),
+            dist=stats.genpareto,
             frac=frac,
             power=power,
             interp=interp,
