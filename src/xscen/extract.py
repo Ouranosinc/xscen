@@ -685,7 +685,7 @@ def search_data_catalogs(  # noqa: C901
                 keep=False
             )
             msg = f"Removing {len(ex.df)} assets based on exclusion dict '{k}': {exclusions[k]}."
-            logger.info()
+            logger.info(msg)
     full_catalog = deepcopy(catalog)  # Used for searching for fixed fields
     if other_search_criteria:
         catalog = catalog.search(**other_search_criteria)

@@ -675,11 +675,10 @@ def generate_weights(  # noqa: C901
 def build_partition_data(
     datasets: Union[dict, list[xr.Dataset]],
     partition_dim: list[str] = ["source", "experiment", "bias_adjust_project"],
-    *,
-    subset_kw: dict,
-    regrid_kw: dict,
-    indicators_kw: dict,
-    rename_dict: dict,
+    subset_kw: Optional[dict] = None,
+    regrid_kw: Optional[dict] = None,
+    indicators_kw: Optional[dict] = None,
+    rename_dict: Optional[dict] = None,
 ):
     """
     Get the input for the xclim partition functions.
@@ -701,16 +700,16 @@ def build_partition_data(
         Components of the partition. They will become the dimension of the output.
         The default is ['source', 'experiment', 'bias_adjust_project'].
         For source, the dimension will actually be institution_source_member.
-    subset_kw : dict
+    subset_kw : dict, optional
         Arguments to pass to `xs.spatial.subset()`.
-    regrid_kw : dict
+    regrid_kw : dict, optional
         Arguments to pass to `xs.regrid_dataset()`.
-    indicators_kw : dict
+    indicators_kw : dict, optional
         Arguments to pass to `xs.indicators.compute_indicators()`.
         All indicators have to be for the same frequency, in order to be put on a single time axis.
-    rename_dict : dict
+    rename_dict : dict, optional
         Dictionary to rename the dimensions from xscen names to xclim names.
-        The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
+        If None, the default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
 
     Returns
     -------
