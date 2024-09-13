@@ -111,6 +111,11 @@ jobs:
       - name: Conda and Mamba versions
         run: |
           echo "micromamba $(micromamba --version)"
+      - name: Install xclim development version
+        run: |
+          echo "Installing xclim from main branch until version 0.53.0+ is released"
+          micromamba remove -y xclim
+          python -m pip install git+https://github.com/Ouranosinc/xclim.git@main
       - name: Install xsdba
         run: |
           python -m pip install --no-deps .
