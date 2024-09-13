@@ -541,6 +541,7 @@ class DataCatalog(intake_esm.esm_datastore):
         dest: Union[str, os.PathLike],
         flat: bool = True,
         unzip: bool = False,
+        zipzarr: bool = False,
         inplace: bool = False,
     ):
         """Copy each file of the catalog to another location, unzipping datasets along the way if requested.
@@ -558,6 +559,8 @@ class DataCatalog(intake_esm.esm_datastore):
             Nothing is done in case of duplicates in that case.
         unzip: bool
             If True, any datasets with a `.zip` suffix are unzipped during the copy (or rather instead of a copy).
+        zipzarr: bool
+            If True, any datasets with a `.zarr` suffix are zipped during the copy (or rather instead of a copy).
         inplace : bool
             If True, the catalog is updated in place. If False (default), a copy is returned.
 
@@ -568,7 +571,7 @@ class DataCatalog(intake_esm.esm_datastore):
         """
         # Local imports to avoid circular imports
         from .catutils import build_path
-        from .io import unzip_directory
+        from .io import unzip_directory, zip_directory
 
         dest = Path(dest)
         data = self.esmcat._df.copy()
@@ -577,6 +580,8 @@ class DataCatalog(intake_esm.esm_datastore):
             for path in map(Path, data.path.values):
                 if unzip and path.suffix == ".zip":
                     new = dest / path.with_suffix("").name
+                elif zipzarr and path.suffix == ".zarr":
+                    new = dest / path.with_suffix(".zarr.zip").name
                 else:
                     new = dest / path.name
                 if new in new_paths:
@@ -600,6 +605,9 @@ class DataCatalog(intake_esm.esm_datastore):
                 msg = f"Unzipping {old} to {new}."
                 logger.info(msg)
                 unzip_directory(old, new)
+            elif zipzarr and old.suffix == ".zarr":
+                logger.info(f"Zipping {old} to {new}.")
+                zip_directory(old, new)
             elif old.is_dir():
                 msg = f"Copying directory tree {old} to {new}."
                 logger.info(msg)
