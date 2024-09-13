@@ -606,7 +606,8 @@ class DataCatalog(intake_esm.esm_datastore):
                 logger.info(msg)
                 unzip_directory(old, new)
             elif zipzarr and old.suffix == ".zarr":
-                logger.info(f"Zipping {old} to {new}.")
+                msg = f"Zipping {old} to {new}."
+                logger.info(msg)
                 zip_directory(old, new)
             elif old.is_dir():
                 msg = f"Copying directory tree {old} to {new}."
