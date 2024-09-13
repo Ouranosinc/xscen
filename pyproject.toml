@@ -34,7 +34,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
+  # "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: CPython",
   "Topic :: Scientific/Engineering :: Atmospheric Science"
 ]
@@ -130,8 +130,7 @@ target-version = [
   "py39",
   "py310",
   "py311",
-  "py312",
-  "py313"
+  "py312"
 ]
 
 [tool.bumpversion]
@@ -210,7 +209,7 @@ py_version = 39
 
 [tool.mypy]
 files = "."
-python_version = 3.8
+python_version = 3.9
 show_error_codes = true
 strict = true
 warn_no_return = true
