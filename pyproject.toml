@@ -337,6 +337,7 @@ ignore = [
   "D205", # blank-line-after-summary
   "D400", # ends-in-period
   "D401", # non-imperative-mood
+  "E402", # top import module
   # WIP xsdba
   "D200",
   "FLY002",
