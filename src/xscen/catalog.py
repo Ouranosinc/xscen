@@ -37,8 +37,8 @@ intake_esm.set_options(attrs_prefix="cat")
 
 __all__ = [
     "COLUMNS",
-    "DataCatalog",
     "ID_COLUMNS",
+    "DataCatalog",
     "ProjectCatalog",
     "concat_data_catalogs",
     "generate_id",
@@ -236,7 +236,7 @@ class DataCatalog(intake_esm.esm_datastore):
             ).reset_index(drop=True)
 
         if isinstance(esmdata, os.PathLike):
-            with open(esmdata) as f:
+            with Path(esmdata).open(encoding="utf-8") as f:
                 esmdata = json.load(f)
         elif esmdata is None:
             esmdata = deepcopy(esm_col_data)
@@ -356,9 +356,8 @@ class DataCatalog(intake_esm.esm_datastore):
             path = Path(row.path)
             exists = (path.is_dir() and path.suffix == ".zarr") or (path.is_file())
             if not exists:
-                logger.info(
-                    f"File {path} was not found on disk, removing from catalog."
-                )
+                msg = f"File {path} was not found on disk, removing from catalog."
+                logger.info(msg)
             return exists
 
         # In case variables were deleted manually in a Zarr, double-check that they still exist
@@ -399,7 +398,8 @@ class DataCatalog(intake_esm.esm_datastore):
         """
         exists = bool(len(self.search(**columns)))
         if exists:
-            logger.info(f"An entry exists for: {columns}")
+            msg = f"An entry exists for: {columns}"
+            logger.info(msg)
         return exists
 
     def to_dataset(
@@ -596,21 +596,26 @@ class DataCatalog(intake_esm.esm_datastore):
         else:
             data = build_path(data, root=dest).drop(columns=["new_path_type"])
 
-        logger.debug(f"Will copy {len(data)} files.")
+        msg = f"Will copy {len(data)} files."
+        logger.debug(msg)
         for i, row in data.iterrows():
             old = Path(row.path)
             new = Path(row.new_path)
             if unzip and old.suffix == ".zip":
-                logger.info(f"Unzipping {old} to {new}.")
+                msg = f"Unzipping {old} to {new}."
+                logger.info(msg)
                 unzip_directory(old, new)
             elif zipzarr and old.suffix == ".zarr":
-                logger.info(f"Zipping {old} to {new}.")
+                msg = f"Zipping {old} to {new}."
+                logger.info(msg)
                 zip_directory(old, new)
             elif old.is_dir():
-                logger.info(f"Copying directory tree {old} to {new}.")
+                msg = f"Copying directory tree {old} to {new}."
+                logger.info(msg)
                 sh.copytree(old, new)
             else:
-                logger.info(f"Copying file {old} to {new}.")
+                msg = f"Copying file {old} to {new}."
+                logger.info(msg)
                 sh.copy(old, new)
         if inplace:
             self.esmcat._df["path"] = data["new_path"]
@@ -643,26 +648,26 @@ class ProjectCatalog(DataCatalog):
         Parameters
         ----------
         filename : os.PathLike or str
-          A path to the json file (with or without suffix).
+            A path to the json file (with or without suffix).
         project : dict, optional
-          Metadata to create the catalog. If None, `CONFIG['project']` will be used.
-          Valid fields are:
+            Metadata to create the catalog. If None, `CONFIG['project']` will be used.
+            Valid fields are:
 
-          - title : Name of the project, given as the catalog's "title".
-          - id : slug-like version of the name, given as the catalog's id (should be url-proof)
-                 Defaults to a modified name.
-          - version : Version of the project (and thus the catalog), string like "x.y.z".
-          - description : Detailed description of the project, given to the catalog's "description".
-          - Any other entry defined in :py:data:`esm_col_data`.
+            - title : Name of the project, given as the catalog's "title".
+            - id : slug-like version of the name, given as the catalog's id (should be url-proof)
+              Defaults to a modified name.
+            - version : Version of the project (and thus the catalog), string like "x.y.z".
+            - description : Detailed description of the project, given to the catalog's "description".
+            - Any other entry defined in :py:data:`esm_col_data`.
 
-          At least one of `id` and `title` must be given, the rest is optional.
+            At least one of `id` and `title` must be given, the rest is optional.
         overwrite : bool
-          If True, will overwrite any existing JSON and CSV file.
+            If True, will overwrite any existing JSON and CSV file.
 
         Returns
         -------
         ProjectCatalog
-          An empty intake_esm catalog.
+            An empty intake_esm catalog.
         """
         path = Path(filename)
         meta_path = path.with_suffix(".json")
@@ -701,10 +706,10 @@ class ProjectCatalog(DataCatalog):
         )
 
         # Change catalog_file to a relative path
-        with open(meta_path) as f:
+        with Path(meta_path).open(encoding="utf-8") as f:
             meta = json.load(f)
             meta["catalog_file"] = data_path.name
-        with open(meta_path, "w") as f:
+        with Path(meta_path).open("w", encoding="utf-8") as f:
             json.dump(meta, f, indent=2)
 
         return cls(str(meta_path))
@@ -718,7 +723,8 @@ class ProjectCatalog(DataCatalog):
         project: Optional[dict] = None,
         **kwargs,
     ):
-        """Open or create a project catalog.
+        """
+        Open or create a project catalog.
 
         Parameters
         ----------
@@ -740,9 +746,7 @@ class ProjectCatalog(DataCatalog):
         The ‘df’ key must be a Pandas DataFrame containing content that would otherwise be in the CSV file.
         """
         if create:
-            if isinstance(df, (str, Path)) and (
-                not os.path.isfile(Path(df)) or overwrite
-            ):
+            if isinstance(df, (str, Path)) and (not Path(df).is_file() or overwrite):
                 self.create(df, project=project, overwrite=overwrite)
         super().__init__(df, *args, **kwargs)
         self.check_valid()
@@ -895,9 +899,8 @@ class ProjectCatalog(DataCatalog):
 
         if "format" not in d:
             d["format"] = Path(d["path"]).suffix.split(".")[1]
-            logger.info(
-                f"File format not specified. Adding it as '{d['format']}' based on file name."
-            )
+            msg = f"File format not specified. Adding it as '{d['format']}' based on file name."
+            logger.info(msg)
 
         self.update(pd.Series(d))
 
@@ -1018,7 +1021,7 @@ def unstack_id(df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]) -> dict:
             [
                 col
                 for col in subset.columns
-                if bool(re.search(f"((_)|(^)){str(subset[col].iloc[0])}((_)|($))", ids))
+                if bool(re.search(f"((_)|(^)){subset[col].iloc[0]!s}((_)|($))", ids))
             ]
         ].drop("id", axis=1)
 
@@ -1070,9 +1073,8 @@ def subset_file_coverage(
 
     # Check for duplicated Intervals
     if duplicates_ok is False and intervals.is_overlapping:
-        logging.warning(
-            f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Time periods are overlapping."
-        )
+        msg = f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Time periods are overlapping."
+        logging.warning(msg)
         return pd.DataFrame(columns=df.columns)
 
     # Create an array of True/False
@@ -1086,9 +1088,8 @@ def subset_file_coverage(
         files_in_range = intervals.overlaps(period_interval)
 
         if not files_in_range.any():
-            logging.warning(
-                f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage (no files in range {period})."
-            )
+            msg = f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage (no files in range {period})."
+            logging.warning(msg)
             return pd.DataFrame(columns=df.columns)
 
         # Very rough guess of the coverage relative to the requested period,
@@ -1107,10 +1108,11 @@ def subset_file_coverage(
             ).length.sum()
 
             if guessed_length / period_length < coverage:
-                logging.warning(
+                msg = (
                     f"{df['id'].iloc[0] + ': ' if 'id' in df.columns else ''}Insufficient coverage "
                     f"(guessed at {guessed_length / period_length:.1%})."
                 )
+                logging.warning(msg)
                 return pd.DataFrame(columns=df.columns)
 
         files_to_keep.append(files_in_range)

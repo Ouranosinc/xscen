@@ -243,10 +243,8 @@ def extract_dataset(  # noqa: C901
                     if pd.to_timedelta(
                         CV.xrfreq_to_timedelta(catalog[key].df["xrfreq"].iloc[0])
                     ) < pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq)):
-                        logger.info(
-                            f"Resampling {var_name} from [{catalog[key].df['xrfreq'].iloc[0]}]"
-                            f" to [{xrfreq}]."
-                        )
+                        msg = f"Resampling {var_name} from [{catalog[key].df['xrfreq'].iloc[0]}] to [{xrfreq}]."
+                        logger.info(msg)
                         ds = ds.assign(
                             {
                                 var_name: resample(
@@ -373,19 +371,20 @@ def resample(  # noqa: C901
             and var_name in CV.resampling_methods.dict[target_frequency]
         ):
             method = CV.resampling_methods(target_frequency)[var_name]
-            logger.info(
-                f"Resampling method for {var_name}: '{method}', based on variable name and frequency."
-            )
+            msg = f"Resampling method for {var_name}: '{method}', based on variable name and frequency."
+            logger.info(msg)
 
         elif var_name in CV.resampling_methods.dict["any"]:
             method = CV.resampling_methods("any")[var_name]
-            logger.info(
+            msg = (
                 f"Resampling method for {var_name}: '{method}', based on variable name."
             )
+            logger.info(msg)
 
         else:
             method = "mean"
-            logger.info(f"Resampling method for {var_name} defaulted to: 'mean'.")
+            msg = f"Resampling method for {var_name} defaulted to: 'mean'."
+            logger.info(msg)
 
     weights = None
     if (
@@ -671,7 +670,8 @@ def search_data_catalogs(  # noqa: C901
         },
         **cat_kwargs,
     )
-    logger.info(f"Catalog opened: {catalog} from {len(data_catalogs)} files.")
+    msg = f"Catalog opened: {catalog} from {len(data_catalogs)} files."
+    logger.info(msg)
 
     if match_hist_and_fut:
         logger.info("Dispatching historical dataset to future experiments.")
@@ -684,15 +684,15 @@ def search_data_catalogs(  # noqa: C901
             catalog.esmcat._df = pd.concat([catalog.df, ex.df]).drop_duplicates(
                 keep=False
             )
-            logger.info(
-                f"Removing {len(ex.df)} assets based on exclusion dict '{k}': {exclusions[k]}."
-            )
+            msg = f"Removing {len(ex.df)} assets based on exclusion dict '{k}': {exclusions[k]}."
+            logger.info(msg)
     full_catalog = deepcopy(catalog)  # Used for searching for fixed fields
     if other_search_criteria:
         catalog = catalog.search(**other_search_criteria)
-        logger.info(
+        msg = (
             f"{len(catalog.df)} assets matched the criteria : {other_search_criteria}."
         )
+        logger.info(msg)
     if restrict_warming_level:
         if isinstance(restrict_warming_level, bool):
             restrict_warming_level = {}
@@ -720,7 +720,8 @@ def search_data_catalogs(  # noqa: C901
     coverage_kwargs = coverage_kwargs or {}
     periods = standardize_periods(periods)
 
-    logger.info(f"Iterating over {len(catalog.unique('id'))} potential datasets.")
+    msg = f"Iterating over {len(catalog.unique('id'))} potential datasets."
+    logger.info(msg)
     # Loop on each dataset to assess whether they have all required variables
     # And select best freq/timedelta for each
     catalogs = {}
@@ -782,9 +783,8 @@ def search_data_catalogs(  # noqa: C901
                         varcat = scat.search(
                             variable=var_id, require_all_on=["id", "xrfreq"]
                         )
-                        logger.debug(
-                            f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
-                        )
+                        msg = f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
+                        logger.debug(msg)
                         # TODO: Temporary fix until this is changed in intake_esm
                         varcat._requested_variables_true = [var_id]
                         varcat._dependent_variables = list(
@@ -851,9 +851,8 @@ def search_data_catalogs(  # noqa: C901
                             varcat.esmcat._df = pd.DataFrame()
 
                     if varcat.df.empty:
-                        logger.debug(
-                            f"Dataset {sim_id} doesn't have all needed variables (missing at least {var_id})."
-                        )
+                        msg = f"Dataset {sim_id} doesn't have all needed variables (missing at least {var_id})."
+                        logger.debug(msg)
                         break
                     if "timedelta" in varcat.df.columns:
                         varcat.df.drop(columns=["timedelta"], inplace=True)
@@ -869,9 +868,8 @@ def search_data_catalogs(  # noqa: C901
                     catalogs[sim_id]._requested_periods = periods
 
     if len(catalogs) > 0:
-        logger.info(
-            f"Found {len(catalogs)} with all variables requested and corresponding to the criteria."
-        )
+        msg = f"Found {len(catalogs)} with all variables requested and corresponding to the criteria."
+        logger.info(msg)
     else:
         logger.warning("Found no match corresponding to the search criteria.")
 
@@ -1021,9 +1019,10 @@ def get_warming_level(  # noqa: C901
             )
         tas_sel = tas.isel(simulation=candidates.argmax())
         selected = "_".join([tas_sel[c].item() for c in FIELDS])
-        logger.debug(
+        msg = (
             f"Computing warming level +{wl}°C for {model} from simulation: {selected}."
         )
+        logger.debug(msg)
 
         # compute reference temperature for the warming and difference from reference
         yearly_diff = tas_sel - tas_sel.sel(time=slice(*tas_baseline_period)).mean()
@@ -1039,10 +1038,11 @@ def get_warming_level(  # noqa: C901
 
         yrs = rolling_diff.where(rolling_diff >= wl, drop=True)
         if yrs.size == 0:
-            logger.info(
+            msg = (
                 f"Global warming level of +{wl}C is not reached by the last year "
                 f"({tas.time[-1].dt.year.item()}) of the provided 'tas_src' database for {selected}."
             )
+            logger.info(msg)
             return [None, None] if return_horizon else None
 
         yr = yrs.isel(time=0).time.dt.year.item()
@@ -1428,7 +1428,8 @@ def _restrict_by_resolution(
         domains = pd.unique(df_sim["domain"])
 
         if len(domains) > 1:
-            logger.info(f"Dataset {i} appears to have multiple resolutions.")
+            msg = f"Dataset {i} appears to have multiple resolutions."
+            logger.info(msg)
 
             # For CMIP, the order is dictated by a list of grid labels
             if "MIP" in pd.unique(df_sim["activity"])[0]:
@@ -1504,10 +1505,8 @@ def _restrict_by_resolution(
                         )
 
             else:
-                logger.warning(
-                    f"Dataset {i} seems to have multiple resolutions, "
-                    "but its activity is not yet recognized or supported."
-                )
+                msg = f"Dataset {i} seems to have multiple resolutions, but its activity is not yet recognized or supported."
+                logger.warning(msg)
                 chosen = list(domains)
                 pass
 
@@ -1520,7 +1519,8 @@ def _restrict_by_resolution(
             )
 
             for k in to_remove:
-                logger.info(f"Removing {k} from the results.")
+                msg = f"Removing {k} from the results."
+                logger.info(msg)
                 catalogs.pop(k)
 
     return catalogs
@@ -1563,9 +1563,8 @@ def _restrict_multimembers(
         members = pd.unique(df_sim["member"])
 
         if len(members) > 1:
-            logger.info(
-                f"Dataset {i} has {len(members)} valid members. Restricting as per requested."
-            )
+            msg = f"Dataset {i} has {len(members)} valid members. Restricting as per requested."
+            logger.info(msg)
 
             if "ordered" in restrictions:
                 members = natural_sort(members)[0 : restrictions["ordered"]]
@@ -1583,7 +1582,8 @@ def _restrict_multimembers(
             )
 
             for k in to_remove:
-                logger.info(f"Removing {k} from the results.")
+                msg = f"Removing {k} from the results."
+                logger.info(msg)
                 catalogs.pop(k)
 
     return catalogs
@@ -1610,7 +1610,6 @@ def _restrict_wl(df: pd.DataFrame, restrictions: dict):
     to_keep = get_warming_level(df, return_horizon=False, **restrictions).notnull()
     removed = pd.unique(df[~to_keep]["id"])
     df = df[to_keep]
-    logger.info(
-        f"Removing the following datasets because of the restriction for warming levels: {list(removed)}"
-    )
+    msg = f"Removing the following datasets because of the restriction for warming levels: {list(removed)}"
+    logger.info(msg)
     return df

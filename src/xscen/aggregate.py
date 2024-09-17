@@ -833,14 +833,14 @@ def spatial_mean(  # noqa: C901
             )
 
         if "units" not in ds.cf["latitude"].attrs:
-            logger.warning(
-                f"{ds.attrs.get('cat:id', '')}: Latitude does not appear to have units. Make sure that the computation is right."
-            )
+            msg = f"{ds.attrs.get('cat:id', '')}: Latitude does not appear to have units. Make sure that the computation is right."
+            logger.warning(msg)
         elif ds.cf["latitude"].attrs["units"] != "degrees_north":
-            logger.warning(
+            msg = (
                 f"{ds.attrs.get('cat:id', '')}: Latitude units is '{ds.cf['latitude'].attrs['units']}', expected 'degrees_north'. "
-                f"Make sure that the computation is right."
+                "Make sure that the computation is right."
             )
+            logger.warning(msg)
 
         if ((ds.cf["longitude"].min() < -160) & (ds.cf["longitude"].max() > 160)) or (
             (ds.cf["longitude"].min() < 20) & (ds.cf["longitude"].max() > 340)

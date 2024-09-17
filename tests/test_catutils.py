@@ -20,7 +20,7 @@ from xscen import catutils as cu
         [{".nc", ".zarr"}, {6, 7, 8}, "*ssp126*", 2],
     ),
 )
-def test_find_assets(exts, lens, dirglob, N):
+def test_find_assets(exts, lens, dirglob, N):  # noqa: N803
     finder = cu._find_assets(str(SAMPLES_DIR), exts=exts, lengths=lens, dirglob=dirglob)
     assert isinstance(finder, Generator)
     assert len(list(finder)) == N

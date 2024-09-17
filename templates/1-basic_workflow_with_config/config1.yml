@@ -478,7 +478,7 @@ aggregate:
     op: mean
     window: 30
     stride: 10
-    periods: [['1951', '2100']]
+    periods: [ [ '1951', '2100' ] ]
     to_level: climatology
     #periods_as_dim: True
     #min_periods:
@@ -549,11 +549,11 @@ logging: # general logging args
     xscen:
       propagate: False
       level: INFO
-      handlers: [console] # [file, console] could also be used to write the log to a file
+      handlers: [ console ] # [file, console] could also be used to write the log to a file
 
 
 xclim:  # Options for xclim
-  metadata_locales:  # Enable french translation for xclim indicators, but also some xscen methods.
+  metadata_locales:  # Enable French translation for xclim indicators, but also some xscen methods.
     - fr
 
 

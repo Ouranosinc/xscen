@@ -853,7 +853,7 @@ class TestPublish:
             file=tmpdir / "foo.md",
             changes=Path(__file__).parent.parent.joinpath("CHANGELOG.rst"),
         )
-        with open(tmpdir / "foo.md") as f:
+        with Path(tmpdir).joinpath("foo.md").open(encoding="utf-8") as f:
             assert f.read().startswith("# Changelog\n\n")
 
 
@@ -1044,7 +1044,7 @@ class TestUnstackDates:
 
 def test_show_version(tmpdir):
     xs.utils.show_versions(file=tmpdir / "versions.txt")
-    with open(tmpdir / "versions.txt") as f:
+    with Path(tmpdir).joinpath("versions.txt").open(encoding="utf-8") as f:
         out = f.read()
     assert "xscen" in out
     assert "xclim" in out

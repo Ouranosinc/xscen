@@ -8,7 +8,7 @@ on:
       - CHANGELOG.rst
       - README.rst
       - pyproject.toml
-      - xscen/__init__.py
+      - src/xscen/__init__.py
   schedule:
     - cron: "0 0 * * *" # Daily “At 00:00” UTC
   workflow_dispatch: # allows you to trigger the workflow run manually
@@ -25,7 +25,6 @@ jobs:
     name: Python${{ matrix.python-version }}-upstream
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       issues: write
     if: |
       (github.event_name == 'schedule') ||

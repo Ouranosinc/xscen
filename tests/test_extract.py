@@ -364,14 +364,14 @@ class TestGetWarmingLevel:
                 "CMIP6_CanESM5_ssp585_r1i1p1f1", wl=2, window=3.85, return_horizon=True
             )
 
-    def test_DataArray(self):
+    def test_DataArray(self):  # noqa: N802
         reals = xr.DataArray(
             ["CMIP6_CanESM5_ssp126_r1i1p1f1"], dims=("x",), coords={"x": [1]}
         )
         out = xs.get_warming_level(reals, wl=2, return_horizon=False)
         xr.testing.assert_identical(out, reals.copy(data=["2026"]))
 
-    def test_DataFrame(self):
+    def test_DataFrame(self):  # noqa: N802
         reals = pd.DataFrame.from_records(
             [
                 {

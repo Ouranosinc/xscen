@@ -133,9 +133,8 @@ def ensemble_stats(  # noqa: C901
 
     for stat in statistics_to_compute:
         stats_kwargs = deepcopy(statistics.get(stat) or {})
-        logger.info(
-            f"Calculating {stat} from an ensemble of {len(ens.realization)} simulations."
-        )
+        msg = f"Calculating {stat} from an ensemble of {len(ens.realization)} simulations."
+        logger.info(msg)
 
         # Workaround for robustness_categories
         real_stat = None
@@ -181,9 +180,8 @@ def ensemble_stats(  # noqa: C901
                             f"{v} is a delta, but 'ref' was still specified."
                         )
                     if delta_kind in ["rel.", "relative", "*", "/"]:
-                        logging.info(
-                            f"Relative delta detected for {v}. Applying 'v - 1' before change_significance."
-                        )
+                        msg = f"Relative delta detected for {v}. Applying 'v - 1' before change_significance."
+                        logging.info(msg)
                         ens_v = ens[v] - 1
                     else:
                         ens_v = ens[v]
@@ -335,9 +333,8 @@ def generate_weights(  # noqa: C901
     if skipna is False:
         if v_for_skipna is None:
             v_for_skipna = list(datasets[list(datasets.keys())[0]].data_vars)[0]
-            logger.info(
-                f"Using '{v_for_skipna}' as the variable to check for missing values."
-            )
+            msg = f"Using '{v_for_skipna}' as the variable to check for missing values."
+            logger.info(msg)
 
         # Check if any dataset has dimensions that are not 'time' or 'horizon'
         other_dims = {
@@ -678,12 +675,13 @@ def generate_weights(  # noqa: C901
 def build_partition_data(
     datasets: Union[dict, list[xr.Dataset]],
     partition_dim: list[str] = ["source", "experiment", "bias_adjust_project"],
-    subset_kw: dict = None,
-    regrid_kw: dict = None,
-    indicators_kw: dict = None,
-    rename_dict: dict = None,
+    subset_kw: Optional[dict] = None,
+    regrid_kw: Optional[dict] = None,
+    indicators_kw: Optional[dict] = None,
+    rename_dict: Optional[dict] = None,
 ):
-    """Get the input for the xclim partition functions.
+    """
+    Get the input for the xclim partition functions.
 
     From a list or dictionary of datasets, create a single dataset with
     `partition_dim` dimensions (and time) to pass to one of the xclim partition functions
@@ -692,27 +690,26 @@ def build_partition_data(
     they have to be subsetted and regridded to a common grid/point.
     Indicators can also be computed before combining the datasets.
 
-
     Parameters
     ----------
     datasets : dict
         List or dictionnary of Dataset objects that will be included in the ensemble.
         The datasets should include the necessary ("cat:") attributes to understand their metadata.
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
-    partition_dim: list[str]
+    partition_dim : list[str]
         Components of the partition. They will become the dimension of the output.
         The default is ['source', 'experiment', 'bias_adjust_project'].
         For source, the dimension will actually be institution_source_member.
-    subset_kw: dict
+    subset_kw : dict, optional
         Arguments to pass to `xs.spatial.subset()`.
-    regrid_kw:
+    regrid_kw : dict, optional
         Arguments to pass to `xs.regrid_dataset()`.
-    indicators_kw:
+    indicators_kw : dict, optional
         Arguments to pass to `xs.indicators.compute_indicators()`.
         All indicators have to be for the same frequency, in order to be put on a single time axis.
-    rename_dict:
+    rename_dict : dict, optional
         Dictionary to rename the dimensions from xscen names to xclim names.
-        The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
+        If None, the default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
 
     Returns
     -------
@@ -722,7 +719,6 @@ def build_partition_data(
     See Also
     --------
     xclim.ensembles
-
     """
     if isinstance(datasets, dict):
         datasets = list(datasets.values())

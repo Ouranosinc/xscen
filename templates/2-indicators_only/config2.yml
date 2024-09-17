@@ -2,36 +2,36 @@
 ## Comments starting with a single # are example/suggested entries
 ## Descriptive comments start with ##.
 dask:
-    client:
-        n_workers: 3
-        threads_per_worker: 4
-        memory_limit: 10GB
-        # dashboard_address: 11111
-        # silence_logs: 50  # To supress warnings about garbage collection and other inevitable stuff
+  client:
+    n_workers: 3
+    threads_per_worker: 4
+    memory_limit: 10GB
+    # dashboard_address: 11111
+    # silence_logs: 50  # To supress warnings about garbage collection and other inevitable stuff
     array.slicing.split_large_chunks: False
 
 logging:
-    formatters:
-        default:
-            format: '%(asctime)s %(levelname)-8s %(name)-15s %(message)s'
-            datefmt: '%Y-%m-%d %H:%M:%S'
-    handlers:
-        console:
-            class : logging.StreamHandler
-            formatter: default
-            level : DEBUG
-    loggers:
-        workflow:
-            level: INFO
-            propagate: False
-            handlers: [console]
-        xscen:
-            level: INFO
-            propagate: False
-            handlers: [console]
-    root:
-        level: INFO
-        handlers: [console]
+  formatters:
+    default:
+      format: '%(asctime)s %(levelname)-8s %(name)-15s %(message)s'
+      datefmt: '%Y-%m-%d %H:%M:%S'
+  handlers:
+    console:
+      class : logging.StreamHandler
+      formatter: default
+      level : DEBUG
+  loggers:
+    workflow:
+      level: INFO
+      propagate: False
+      handlers: [ console ]
+    xscen:
+      level: INFO
+      propagate: False
+      handlers: [ console ]
+  root:
+    level: INFO
+    handlers: [ console ]
 
 xclim:
   ## Enable french translation for xclim indicators, but also some xscen methods.
@@ -41,54 +41,54 @@ xclim:
   cf_compliance: log
 
 main:
-    ## Path to a project catalog, the workflow creates it if needed
-    catalog:
-    ## The template of the file name, including the parent path, valid fields are the catalog's column
-    ## One zarr dataset per xrfreq is produced
-    # outfilename: /DATA/{source}_indicators_{xrfreq}_{date_start:%Y}-{date_end:%Y}.zarr
-    outfilename:
+  ## Path to a project catalog, the workflow creates it if needed
+  catalog:
+  ## The template of the file name, including the parent path, valid fields are the catalog's column
+  ## One zarr dataset per xrfreq is produced
+  # outfilename: /DATA/{source}_indicators_{xrfreq}_{date_start:%Y}-{date_end:%Y}.zarr
+  outfilename:
 
 indicators:
-    ## Path (careful : this is relative to where the script is called)
-    module: indicators2.yml
+  ## Path (careful : this is relative to where the script is called)
+  module: indicators2.yml
 
 extract:
-    ## Arguments to select the dataset and extract it.
-    ## Example args as comments, good defaults uncommented
-    search_data_catalogs:
-        data_catalogs:
-            # - /DATA/reconstruction.json
-        variables_and_freqs:
-            tas: D
-            tasmax: D
-            tasmin: D
-            pr: D
-        other_search_criteria:
-            # source: ERA5-Land
-            # domain: NAM
-        allow_conversion: True  # Mainly for (tasmax, tasmin)-> tas
-        allow_resampling: True  # To get from hourly to daily
+  ## Arguments to select the dataset and extract it.
+  ## Example args as comments, good defaults uncommented
+  search_data_catalogs:
+    data_catalogs:
+      # - /DATA/reconstruction.json
+    variables_and_freqs:
+      tas: D
+      tasmax: D
+      tasmin: D
+      pr: D
+    other_search_criteria:
+      # source: ERA5-Land
+      # domain: NAM
+    allow_conversion: True  # Mainly for (tasmax, tasmin)-> tas
+    allow_resampling: True  # To get from hourly to daily
 
-    extract_dataset:
-        ## This might not need any arguments
-        ## But a region might be of interest:
-        # region :
-            # name: region_name
-            # method: bbox
-            # lat_bnds: [45, 47]
-            # lon_bnds: [-75, -70]
+  extract_dataset:
+    ## This might not need any arguments
+    ## But a region might be of interest:
+    # region :
+      # name: region_name
+      # method: bbox
+      # lat_bnds: [45, 47]
+      # lon_bnds: [-75, -70]
 
 io:
-    save_to_zarr:
-        # Mode o will remove existing variables in the zarr, the script already checks what was already computed through the catalog.
-        # but the dataset itself and other variables are preserved.
-        mode: o
-        itervar: False  # if the computation is too slow, write one indicator at a time by turning this to True.
-        rechunk:  # Normal chunking of daily data would be too small for indicators, one only usually needs to change the time chunk
-            time: 40
+  save_to_zarr:
+    # Mode o will remove existing variables in the zarr, the script already checks what was already computed through the catalog.
+    # but the dataset itself and other variables are preserved.
+    mode: o
+    itervar: False  # if the computation is too slow, write one indicator at a time by turning this to True.
+    rechunk:  # Normal chunking of daily data would be too small for indicators, one only usually needs to change the time chunk
+      time: 40
 
 scripting:
-    send_main_on_exit:
-        subject: "Indicator computing terminated."
-        msg_ok: "🥳 Everything went well."
-        msg_err: "🔥 Something went wrong while computing the indicators. 🔥"
+  send_main_on_exit:
+    subject: "Indicator computing terminated."
+    msg_ok: "🥳 Everything went well."
+    msg_err: "🔥 Something went wrong while computing the indicators. 🔥"
