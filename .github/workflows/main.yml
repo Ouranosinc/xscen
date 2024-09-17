@@ -82,8 +82,8 @@ jobs:
           create-args: >-
             esmf=${{ env.esmf-version }}
             python=${{ matrix.python-version }}
-            tox
-            tox-gh
+            tox>=4.17.1
+            tox-gh>=1.3.2
       - name: Environment Caching
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
