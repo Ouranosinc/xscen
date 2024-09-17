@@ -1,8 +1,5 @@
 name: xsdba Testing Suite
 
-env:
-  XCLIM_TESTDATA_BRANCH: v2023.12.14
-
 on:
   push:
     branches:

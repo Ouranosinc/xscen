@@ -241,7 +241,7 @@ def tmp_netcdf_filename(tmpdir) -> Path:
 @pytest.fixture(scope="session")
 def open_dataset(threadsafe_data_dir):
     def _open_session_scoped_file(
-        file: str | os.PathLike, branch: str = helpers.TESTDATA_BRANCH, **xr_kwargs
+        file: str | os.PathLike, branch: str = TESTDATA_BRANCH, **xr_kwargs
     ):
         xr_kwargs.setdefault("engine", "h5netcdf")
         return _open_dataset(

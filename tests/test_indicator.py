@@ -11,15 +11,14 @@ from typing import Union
 import numpy as np
 import pytest
 import xarray as xr
+from xclim.core.indicator import Indicator
 
 from xsdba.formatting import (
     AttrFormatter,
     default_formatter,
     merge_attributes,
-    parse_doc,
     update_history,
 )
-from xsdba.indicator import Indicator, registry
 from xsdba.logging import MissingVariableError
 from xsdba.options import set_options
 from xsdba.typing import InputKind, Quantified
