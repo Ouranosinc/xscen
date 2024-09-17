@@ -20,17 +20,22 @@
 
 from __future__ import annotations
 
-from . import (
-    adjustment,
-    base,
-    detrending,
-    measures,
-    processing,
-    properties,
-    testing,
-    units,
-    utils,
-)
+import importlib
+import warnings
+
+from . import adjustment, base, detrending, processing, testing, units, utils
+
+xclim_installed = importlib.util.find_spec("xclim") is not None
+if xclim_installed:
+    warnings.warn(
+        "Sub-modules `properties` and `measures` depend on `xclim`. Run `pip install xsdba['extras']` to install it."
+    )
+else:
+    from . import (
+        measures,
+        properties,
+    )
+
 from .adjustment import *
 from .base import Grouper
 from .options import set_options

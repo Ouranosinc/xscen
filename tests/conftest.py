@@ -13,7 +13,6 @@ import numpy as np
 import pytest
 import xarray as xr
 from packaging.version import Version
-from xclim.testing import helpers
 from xclim.testing.utils import (
     TESTDATA_BRANCH,
     TESTDATA_CACHE_DIR,
@@ -39,7 +38,7 @@ if re.match(r"^\d+\.\d+\.\d+$", __xsdba_version__) and TESTDATA_BRANCH == "main"
     # This does not need to be emitted on GitHub Workflows and ReadTheDocs
     if not os.getenv("CI") and not os.getenv("READTHEDOCS"):
         warnings.warn(
-            f'`xclim` {__xsdba_version__} is running tests against the "main" branch of `Ouranosinc/xclim-testdata`. '
+            f'`xsdba` {__xsdba_version__} is running tests against the "main" branch of `Ouranosinc/xclim-testdata`. '
             "It is possible that changes in xclim-testdata may be incompatible with test assertions in this version. "
             "Please be sure to check https://github.com/Ouranosinc/xclim-testdata for more information.",
             UserWarning,
@@ -184,21 +183,7 @@ def areacella() -> xr.DataArray:
 
 areacello = areacella
 
-
-# ADAPT?
-# @pytest.fixture(autouse=True, scope="session")
-# def add_imports(xdoctest_namespace, threadsafe_data_dir) -> None:
-#     """Add these imports into the doctests scope."""
-#     ns = xdoctest_namespace
-#     ns["np"] = np
-#     ns["xr"] = xclim.testing  # xr.open_dataset(...) -> xclim.testing.open_dataset(...)
-#     ns["xclim"] = xclim
-#     ns["open_dataset"] = partial(
-#         _open_dataset,
-#         cache_dir=threadsafe_data_dir,
-#         branch=helpers.TESTDATA_BRANCH,
-#         engine="h5netcdf",
-#     )  # Needed for modules where xarray is imported as `xr`
+# TODO: Adapt add_imports for new open_dataset for doctests?
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -298,5 +283,6 @@ def cleanup(request):
     request.addfinalizer(remove_data_written_flag)
 
 
+@pytest.fixture
 def timeseries():
     return test_timeseries
