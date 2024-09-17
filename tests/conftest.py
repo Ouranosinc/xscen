@@ -13,7 +13,6 @@ import numpy as np
 import pytest
 import xarray as xr
 from packaging.version import Version
-from xclim.testing import helpers
 from xclim.testing.utils import (
     TESTDATA_BRANCH,
     TESTDATA_CACHE_DIR,
@@ -256,7 +255,7 @@ def tmp_netcdf_filename(tmpdir) -> Path:
 @pytest.fixture(scope="session")
 def open_dataset(threadsafe_data_dir):
     def _open_session_scoped_file(
-        file: str | os.PathLike, branch: str = helpers.TESTDATA_BRANCH, **xr_kwargs
+        file: str | os.PathLike, branch: str = TESTDATA_BRANCH, **xr_kwargs
     ):
         xr_kwargs.setdefault("engine", "h5netcdf")
         return _open_dataset(
@@ -298,5 +297,6 @@ def cleanup(request):
     request.addfinalizer(remove_data_written_flag)
 
 
+@pytest.fixture
 def timeseries():
     return test_timeseries
