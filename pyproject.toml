@@ -127,7 +127,8 @@ all = ["xscen[dev]", "xscen[docs]", "xscen[extra]"]
 target-version = [
   "py310",
   "py311",
-  "py312"
+  "py312",
+  "py313"
 ]
 
 [tool.bumpversion]

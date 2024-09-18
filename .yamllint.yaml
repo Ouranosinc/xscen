@@ -37,6 +37,3 @@ rules:
   trailing-spaces: {}
 
   truthy: disable
-
-ignore: |
-  conda/xscen/meta.yaml
