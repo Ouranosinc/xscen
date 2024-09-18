@@ -133,7 +133,7 @@ def args_as_str(*args: tuple[Any, ...]) -> tuple[str, ...]:
 def load_config(
     *elements,
     reset: bool = False,
-    encoding: Optional[str] = None,
+    encoding: str | None = None,
     verbose: bool = False,
 ):
     """Load configuration from given files or key=value pairs.

@@ -26,9 +26,7 @@ logger = logging.getLogger(__name__)
 __all__ = ["compute_indicators", "load_xclim_module", "registry_from_module"]
 
 
-def load_xclim_module(
-    filename: Union[str, os.PathLike], reload: bool = False
-) -> ModuleType:
+def load_xclim_module(filename: str | os.PathLike, reload: bool = False) -> ModuleType:
     """Return the xclim module described by the yaml file (or group of yaml, jsons and py).
 
     Parameters
@@ -103,17 +101,17 @@ def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str):
 @parse_config
 def compute_indicators(  # noqa: C901
     ds: xr.Dataset,
-    indicators: Union[
-        str,
-        os.PathLike,
-        Sequence[Indicator],
-        Sequence[tuple[str, Indicator]],
-        ModuleType,
-    ],
+    indicators: (
+        str
+        | os.PathLike
+        | Sequence[Indicator]
+        | Sequence[tuple[str, Indicator]]
+        | ModuleType
+    ),
     *,
-    periods: Optional[Union[list[str], list[list[str]]]] = None,
+    periods: list[str] | list[list[str]] | None = None,
     restrict_years: bool = True,
-    to_level: Optional[str] = "indicators",
+    to_level: str | None = "indicators",
     rechunk_input: bool = False,
 ) -> dict:
     """Calculate variables and indicators based on a YAML call to xclim.
@@ -158,7 +156,7 @@ def compute_indicators(  # noqa: C901
     --------
     xclim.indicators, xclim.core.indicator.build_indicator_module_from_yaml
     """
-    if isinstance(indicators, (str, os.PathLike)):
+    if isinstance(indicators, str | os.PathLike):
         logger.debug("Loading indicator module.")
         module = load_xclim_module(indicators)
         indicators = module.iter_indicators()
@@ -284,7 +282,7 @@ def compute_indicators(  # noqa: C901
 
 def registry_from_module(
     module: ModuleType,
-    registry: Optional[DerivedVariableRegistry] = None,
+    registry: DerivedVariableRegistry | None = None,
     variable_column: str = "variable",
 ) -> DerivedVariableRegistry:
     """Convert a xclim virtual indicators module to an intake_esm Derived Variable Registry.
@@ -319,7 +317,7 @@ def registry_from_module(
 
 
 def _ensure_list(x):
-    if not isinstance(x, (list, tuple)):
+    if not isinstance(x, list | tuple):
         return [x]
     return x
 
@@ -338,13 +336,13 @@ def _derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
 
 def select_inds_for_avail_vars(
     ds: xr.Dataset,
-    indicators: Union[
-        str,
-        os.PathLike,
-        Sequence[Indicator],
-        Sequence[tuple[str, Indicator]],
-        ModuleType,
-    ],
+    indicators: (
+        str
+        | os.PathLike
+        | Sequence[Indicator]
+        | Sequence[tuple[str, Indicator]]
+        | ModuleType
+    ),
 ) -> ModuleType:
     """Filter the indicators for which the necessary variables are available.
 
@@ -370,12 +368,12 @@ def select_inds_for_avail_vars(
     is_list_of_tuples = isinstance(indicators, list) and all(
         isinstance(i, tuple) for i in indicators
     )
-    if isinstance(indicators, (str, os.PathLike)):
+    if isinstance(indicators, str | os.PathLike):
         logger.debug("Loading indicator module.")
         indicators = load_xclim_module(indicators, reload=True)
     if hasattr(indicators, "iter_indicators"):
         indicators = [(name, ind) for name, ind in indicators.iter_indicators()]
-    elif isinstance(indicators, (list, tuple)) and not is_list_of_tuples:
+    elif isinstance(indicators, list | tuple) and not is_list_of_tuples:
         indicators = [(ind.base, ind) for ind in indicators]
 
     available_vars = {

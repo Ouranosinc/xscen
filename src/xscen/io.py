@@ -49,7 +49,7 @@ __all__ = [
 ]
 
 
-def get_engine(file: Union[str, os.PathLike]) -> str:
+def get_engine(file: str | os.PathLike) -> str:
     """Determine which Xarray engine should be used to open the given file.
 
     The .zarr, .zarr.zip and .zip extensions are recognized as Zarr datasets,
@@ -77,7 +77,7 @@ def get_engine(file: Union[str, os.PathLike]) -> str:
 
 
 def estimate_chunks(  # noqa: C901
-    ds: Union[str, os.PathLike, xr.Dataset],
+    ds: str | os.PathLike | xr.Dataset,
     dims: list,
     target_mb: float = 50,
     chunk_per_variable: bool = False,
@@ -158,7 +158,7 @@ def estimate_chunks(  # noqa: C901
 
     out = {}
     # If ds is the path to a file, use NetCDF4
-    if isinstance(ds, (str, os.PathLike)):
+    if isinstance(ds, str | os.PathLike):
         ds = netCDF4.Dataset(ds, "r")
 
         # Loop on variables
@@ -263,7 +263,7 @@ def subset_maxsize(
         )
 
 
-def clean_incomplete(path: Union[str, os.PathLike], complete: Sequence[str]) -> None:
+def clean_incomplete(path: str | os.PathLike, complete: Sequence[str]) -> None:
     """Delete un-catalogued variables from a zarr folder.
 
     The goal of this function is to clean up an incomplete calculation.
@@ -296,9 +296,9 @@ def _coerce_attrs(attrs):
     """Ensure no funky objects in attrs."""
     for k in list(attrs.keys()):
         if not (
-            isinstance(attrs[k], (str, float, int, np.ndarray))
-            or isinstance(attrs[k], (tuple, list))
-            and isinstance(attrs[k][0], (str, float, int))
+            isinstance(attrs[k], str | float | int | np.ndarray)
+            or isinstance(attrs[k], tuple | list)
+            and isinstance(attrs[k][0], str | float | int)
         ):
             attrs[k] = str(attrs[k])
 
@@ -335,7 +335,7 @@ def round_bits(da: xr.DataArray, keepbits: int):
     return da
 
 
-def _get_keepbits(bitround: Union[bool, int, dict], varname: str, vartype):
+def _get_keepbits(bitround: bool | int | dict, varname: str, vartype):
     # Guess the number of bits to keep depending on how bitround was passed, the var dtype and the var name.
     if not np.issubdtype(vartype, np.floating) or bitround is False:
         if isinstance(bitround, dict) and varname in bitround:
@@ -355,12 +355,12 @@ def _get_keepbits(bitround: Union[bool, int, dict], varname: str, vartype):
 @parse_config
 def save_to_netcdf(
     ds: xr.Dataset,
-    filename: Union[str, os.PathLike],
+    filename: str | os.PathLike,
     *,
-    rechunk: Optional[dict] = None,
-    bitround: Union[bool, int, dict] = False,
+    rechunk: dict | None = None,
+    bitround: bool | int | dict = False,
     compute: bool = True,
-    netcdf_kwargs: Optional[dict] = None,
+    netcdf_kwargs: dict | None = None,
 ):
     """Save a Dataset to NetCDF, rechunking or compressing if requested.
 
@@ -422,13 +422,13 @@ def save_to_netcdf(
 @parse_config
 def save_to_zarr(  # noqa: C901
     ds: xr.Dataset,
-    filename: Union[str, os.PathLike],
+    filename: str | os.PathLike,
     *,
-    rechunk: Optional[dict] = None,
-    zarr_kwargs: Optional[dict] = None,
+    rechunk: dict | None = None,
+    zarr_kwargs: dict | None = None,
     compute: bool = True,
-    encoding: Optional[dict] = None,
-    bitround: Union[bool, int, dict] = False,
+    encoding: dict | None = None,
+    bitround: bool | int | dict = False,
     mode: str = "f",
     itervar: bool = False,
     timeout_cleanup: bool = True,
@@ -638,13 +638,13 @@ def _to_dataframe(
 
 
 def to_table(
-    ds: Union[xr.Dataset, xr.DataArray],
+    ds: xr.Dataset | xr.DataArray,
     *,
-    row: Optional[Union[str, Sequence[str]]] = None,
-    column: Optional[Union[str, Sequence[str]]] = None,
-    sheet: Optional[Union[str, Sequence[str]]] = None,
-    coords: Union[bool, str, Sequence[str]] = True,
-) -> Union[pd.DataFrame, dict]:
+    row: str | Sequence[str] | None = None,
+    column: str | Sequence[str] | None = None,
+    sheet: str | Sequence[str] | None = None,
+    coords: bool | str | Sequence[str] = True,
+) -> pd.DataFrame | dict:
     """Convert a dataset to a pandas DataFrame with support for multicolumns and multisheet.
 
     This function will trigger a computation of the dataset.
@@ -737,9 +737,7 @@ def to_table(
     return _to_dataframe(da, **table_kwargs)
 
 
-def make_toc(
-    ds: Union[xr.Dataset, xr.DataArray], loc: Optional[str] = None
-) -> pd.DataFrame:
+def make_toc(ds: xr.Dataset | xr.DataArray, loc: str | None = None) -> pd.DataFrame:
     """Make a table of content describing a dataset's variables.
 
     This return a simple DataFrame with variable names as index, the long_name as "description" and units.
@@ -785,17 +783,17 @@ TABLE_FORMATS = {".csv": "csv", ".xls": "excel", ".xlsx": "excel"}
 
 
 def save_to_table(
-    ds: Union[xr.Dataset, xr.DataArray],
-    filename: Union[str, os.PathLike],
-    output_format: Optional[str] = None,
+    ds: xr.Dataset | xr.DataArray,
+    filename: str | os.PathLike,
+    output_format: str | None = None,
     *,
-    row: Optional[Union[str, Sequence[str]]] = None,
-    column: Union[None, str, Sequence[str]] = "variable",
-    sheet: Optional[Union[str, Sequence[str]]] = None,
-    coords: Union[bool, Sequence[str]] = True,
+    row: str | Sequence[str] | None = None,
+    column: None | str | Sequence[str] = "variable",
+    sheet: str | Sequence[str] | None = None,
+    coords: bool | Sequence[str] = True,
     col_sep: str = "_",
-    row_sep: Optional[str] = None,
-    add_toc: Union[bool, pd.DataFrame] = False,
+    row_sep: str | None = None,
+    add_toc: bool | pd.DataFrame = False,
     **kwargs,
 ):
     """Save the dataset to a tabular file (csv, excel, ...).
@@ -933,13 +931,13 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
 
 @parse_config
 def rechunk(
-    path_in: Union[os.PathLike, str, xr.Dataset],
-    path_out: Union[os.PathLike, str],
+    path_in: os.PathLike | str | xr.Dataset,
+    path_out: os.PathLike | str,
     *,
-    chunks_over_var: Optional[dict] = None,
-    chunks_over_dim: Optional[dict] = None,
+    chunks_over_var: dict | None = None,
+    chunks_over_dim: dict | None = None,
     worker_mem: str,
-    temp_store: Optional[Union[os.PathLike, str]] = None,
+    temp_store: os.PathLike | str | None = None,
     overwrite: bool = False,
 ) -> None:
     """Rechunk a dataset into a new zarr.
@@ -1007,8 +1005,8 @@ def rechunk(
 
 
 def zip_directory(
-    root: Union[str, os.PathLike],
-    zipfile: Union[str, os.PathLike],
+    root: str | os.PathLike,
+    zipfile: str | os.PathLike,
     delete: bool = False,
     **zip_args,
 ):
@@ -1042,7 +1040,7 @@ def zip_directory(
         sh.rmtree(root)
 
 
-def unzip_directory(zipfile: Union[str, os.PathLike], root: Union[str, os.PathLike]):
+def unzip_directory(zipfile: str | os.PathLike, root: str | os.PathLike):
     r"""Unzip an archive to a directory.
 
     This function is the exact opposite of :py:func:`xscen.io.zip_directory`.

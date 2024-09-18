@@ -44,21 +44,21 @@ def _(s):
 
 @parse_config
 def health_checks(  # noqa: C901
-    ds: Union[xr.Dataset, xr.DataArray],
+    ds: xr.Dataset | xr.DataArray,
     *,
-    structure: Optional[dict] = None,
-    calendar: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    variables_and_units: Optional[dict] = None,
-    cfchecks: Optional[dict] = None,
-    freq: Optional[str] = None,
-    missing: Optional[Union[dict, str, list]] = None,
-    flags: Optional[dict] = None,
-    flags_kwargs: Optional[dict] = None,
+    structure: dict | None = None,
+    calendar: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    variables_and_units: dict | None = None,
+    cfchecks: dict | None = None,
+    freq: str | None = None,
+    missing: dict | str | list | None = None,
+    flags: dict | None = None,
+    flags_kwargs: dict | None = None,
     return_flags: bool = False,
-    raise_on: Optional[list] = None,
-) -> Union[None, xr.Dataset]:
+    raise_on: list | None = None,
+) -> None | xr.Dataset:
     """
     Perform a series of health checks on the dataset. Be aware that missing data checks and flag checks can be slow.
 
@@ -304,18 +304,18 @@ def health_checks(  # noqa: C901
 @parse_config
 def properties_and_measures(  # noqa: C901
     ds: xr.Dataset,
-    properties: Union[
-        str,
-        os.PathLike,
-        Sequence[Indicator],
-        Sequence[tuple[str, Indicator]],
-        ModuleType,
-    ],
-    period: Optional[list[str]] = None,
+    properties: (
+        str
+        | os.PathLike
+        | Sequence[Indicator]
+        | Sequence[tuple[str, Indicator]]
+        | ModuleType
+    ),
+    period: list[str] | None = None,
     unstack: bool = False,
-    rechunk: Optional[dict] = None,
-    dref_for_measure: Optional[xr.Dataset] = None,
-    change_units_arg: Optional[dict] = None,
+    rechunk: dict | None = None,
+    dref_for_measure: xr.Dataset | None = None,
+    change_units_arg: dict | None = None,
     to_level_prop: str = "diag-properties",
     to_level_meas: str = "diag-measures",
 ) -> tuple[xr.Dataset, xr.Dataset]:
@@ -362,7 +362,7 @@ def properties_and_measures(  # noqa: C901
     --------
     xclim.sdba.properties, xclim.sdba.measures, xclim.core.indicator.build_indicator_module_from_yaml
     """
-    if isinstance(properties, (str, Path)):
+    if isinstance(properties, str | Path):
         logger.debug("Loading properties module.")
         module = load_xclim_module(properties)
         properties = module.iter_indicators()
@@ -446,7 +446,7 @@ def properties_and_measures(  # noqa: C901
 
 
 def measures_heatmap(
-    meas_datasets: Union[list[xr.Dataset], dict], to_level: str = "diag-heatmap"
+    meas_datasets: list[xr.Dataset] | dict, to_level: str = "diag-heatmap"
 ) -> xr.Dataset:
     """Create a heatmap to compare the performance of the different datasets.
 
@@ -528,7 +528,7 @@ def measures_heatmap(
 
 
 def measures_improvement(
-    meas_datasets: Union[list[xr.Dataset], dict], to_level: str = "diag-improved"
+    meas_datasets: list[xr.Dataset] | dict, to_level: str = "diag-improved"
 ) -> xr.Dataset:
     """
     Calculate the fraction of improved grid points for each property between two datasets of measures.

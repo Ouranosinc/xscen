@@ -22,9 +22,9 @@ def datablock_3d(
     y_step: float = 0.1,
     start: str = "7/1/2000",
     freq: str = "D",
-    units: Optional[str] = None,
+    units: str | None = None,
     as_dataset: bool = False,
-) -> Union[xr.DataArray, xr.Dataset]:
+) -> xr.DataArray | xr.Dataset:
     """Create a generic timeseries object based on pre-defined dictionaries of existing variables.
 
     Parameters
