@@ -53,7 +53,7 @@ dependencies = [
   "matplotlib >=3.6",
   "netCDF4 <1.7",
   "numcodecs",
-  "numpy >=1.24",
+  "numpy >=1.24,<2.0", # v2.0 is not supported by python-netcdf4
   "pandas >=2.2",
   "parse",
   # Used when opening catalogs.
