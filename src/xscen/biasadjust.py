@@ -240,7 +240,8 @@ def adjust(
 
     # evaluate the dict that was stored as a string
     if not isinstance(dtrain.attrs["train_params"], dict):
-        dtrain.attrs["train_params"] = eval(dtrain.attrs["train_params"])
+        # FIXME: eval is bad. There has to be a better way!™
+        dtrain.attrs["train_params"] = eval(dtrain.attrs["train_params"])  # noqa: S307
 
     var = dtrain.attrs["train_params"]["var"]
     if len(var) != 1:

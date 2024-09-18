@@ -4,7 +4,7 @@ Changelog
 
 v0.9.2 (unreleased)
 -------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -17,6 +17,11 @@ New features and enhancements
 * More calendars are now recognized in ``translate_time_chunk``. (:pull:`450`).
 * `new_dim` in ``unstack_dates`` is now None by default and changes depending on the frequency. It becomes `month` if the data is exactly monthly, and keep the old default of `season` otherwise. (:pull:`450`).
 * Updated the list of libraries in `show_versions` to reflect our current environment. (:pull:`450`).
+* New ``xscen.catutils.patterns_from_schema`` to generate all possible patterns from a given schema (or one of xscen's default), to use with :py:func:`parse_directory`. (:pull:`431`).
+* New ``DataCatalog.copy_files`` to copy all files of catalog to a new destination, unzipping if needed and returning a new catalog. (:pull:`431`).
+* Convenience functions ``xs.io.zip_directory`` and ``xs.io.unzip_directory`` (for zarrs). (:pull:`431`).
+* New argument ``compute_indicators``: ``rechunk_input`` to rechunk the inputs to resample-appropriate chunks before calling xclim. (:pull:`431`).
+* New ``xs.indicators.get_indicator_outputs`` to retrieve what variable name(s) and frequency to expect from an xclim indicator. (:pull:`431`).
 
 Bug fixes
 ^^^^^^^^^
@@ -29,21 +34,34 @@ Bug fixes
 * ``unstack_fill_nan`` now works if given a dictionary that contains both dimensions and coordinates. (:pull:`450`).
 * ``clean_up`` no longer modifies the original dataset. (:pull:`450`).
 * ``unstack_dates`` now works correctly for yearly datasets when `winter_starts_year=True`, as well as multi-year datasets. (:pull:`450`).
+* Fix ``xs.catalog.concat_data_catalogs`` for catalogs that have not been search yet. (:pull:`431`).
+* Fix indicator computation using ``freq=2Q*`` by assuming this means a semiannual frequency anchored at the given month (pandas assumes 2 quarter steps, any of them anchored at the given month). (:pull:`431`).
 * ``create_bounds_rotated_pole`` now uses the default value if the dataset has no `north_pole_grid_longitude` attribute, instead of crashing. (:pull:`455`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* `convert_calendar` in ``clean_up`` now uses `xarray` instead of `xclim`. Keywords aren't compatible between the two, but given that `xclim` will abandon its function, no backwards compatibility was sought. (:pull:`450`).
+* `attrs_to_remove` and `remove_all_attrs_except` in ``clean_up`` now use real regex. It should not be too breaking since a `fullmatch()` is used, but `*` is now `.*`. (:pull:`450`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
+* ``DataCatalog.to_dataset`` can now accept a ``preprocess`` argument even if ``create_ensemble_on`` is given. The user assumes calendar handling. (:pull:`431`).
 * Include domain in `weight_location` in ``regrid_dataset``. (:pull:`414`).
 * Added pins to `xarray`, `xclim`, `h5py`, and `netcdf4`. (:pull:`414`).
 * Add ``.zip`` and ``.zarr.zip`` as possible file extensions for Zarr datasets. (:pull:`426`).
 * Explicitly assign coords of multiindex in `xs.unstack_fill_nan`. (:pull:`427`).
 * French translations are compiled offline. A new check ensures no PR are merged with missing messages. (:issue:`342`, :pull:`443`).
 * Continued work to add tests. (:pull:`450`).
-
-Breaking changes
-^^^^^^^^^^^^^^^^
-* `convert_calendar` in ``clean_up`` now uses `xarray` instead of `xclim`. Keywords aren't compatible between the two, but given that `xclim` will abandon its function, no backwards compatibility was sought. (:pull:`450`).
-* `attrs_to_remove` and `remove_all_attrs_except` in ``clean_up`` now use real regex. It should not be too breaking since a `fullmatch()` is used, but `*` is now `.*`. (:pull:`450`).
+* Updated the cookiecutter template via `cruft`: (:pull:`452`)
+    * GitHub Workflows that use rely on `PyPI`-based dependencies now use commit hashes.
+    * `Dependabot` will now group updates by type.
+    * Dependencies have been updated and synchronized.
+    * Contributor guidance documentation has been adjusted.
+    * `numpydoc-validate` has been added to the linting tools.
+    * Linting checks are more reliant on `ruff` suggestions and stricter.
+    * `flake8-alphabetize` has been replaced by `ruff`.
+    * License information has been updated in the library top-level `__init__.py`.
+* Docstrings have been adjusted to meet the `numpydoc` standard. (:pull:`452`).
 
 v0.9.1 (2024-06-04)
 -------------------

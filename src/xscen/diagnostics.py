@@ -270,9 +270,10 @@ def health_checks(  # noqa: C901
                                 "missing",
                             )
                     else:
-                        logger.info(
+                        msg = (
                             f"Variable '{v}' has no time dimension. The missing data check will be skipped.",
                         )
+                        logger.info(msg)
 
     if flags is not None:
         if return_flags:
@@ -373,7 +374,8 @@ def properties_and_measures(  # noqa: C901
     except TypeError:
         N = None
     else:
-        logger.info(f"Computing {N} properties.")
+        msg = f"Computing {N} properties."
+        logger.info(msg)
 
     period = standardize_periods(period, multiple=False)
     # select period for ds
@@ -405,7 +407,8 @@ def properties_and_measures(  # noqa: C901
         else:
             iden = ind.identifier
         # Make the call to xclim
-        logger.info(f"{i} - Computing {iden}.")
+        msg = f"{i} - Computing {iden}."
+        logger.info(msg)
         out = ind(ds=ds)
         vname = out.name
         prop[vname] = out

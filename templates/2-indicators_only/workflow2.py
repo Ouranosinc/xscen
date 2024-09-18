@@ -61,12 +61,13 @@ if __name__ == "__main__":
                 to_compute.append((name, ind))
 
         if not to_compute:
-            logger.info(f"Everything computed for {dsid}.")
+            msg = f"Everything computed for {dsid}."
+            logger.info(msg)
             continue
 
         outd = compute_indicators(ds, indicators=to_compute, to_level="indicators")
 
-        for freq, outds in outd.items():
+        for outds in outd.values():
             outpath = CONFIG["main"]["outfilename"].format(**get_cat_attrs(outds))
             save_to_zarr(outds, outpath)
             pcat.update_from_ds(outds, path=outpath)

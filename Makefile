@@ -58,6 +58,7 @@ clean-test: ## remove test and coverage artifacts
 lint/flake8: ## check style with flake8
 	python -m ruff check src/xscen tests
 	python -m flake8 --config=.flake8 src/xscen tests
+	# python -m numpydoc lint src/xscen/**.py  # FIXME: disabled until the codebase is fully numpydoc compliant
 
 lint/black: ## check style with black
 	python -m black --check src/xscen tests
@@ -70,7 +71,7 @@ test: ## run tests quickly with the default Python
 	python -m pytest
 
 test-all: ## run tests on every Python version with tox
-	tox
+	python -m tox
 
 initialize-translations: clean-docs ## initialize translations, ignoring autodoc-generated files
 	${MAKE} -C docs gettext
@@ -111,14 +112,14 @@ dev: clean ## install the package in editable mode with all development dependen
 
 findfrench:  ## Extract phrases and update the French translation catalog (this doesn't translate)
 	pybabel extract -o src/xscen/data/messages.pot --omit-header --input-dirs=src/xscen/
-	pybabel update -l fr -D xscen -i src/xscen/data/messages.pot -d src/xscen/data/ --omit-header
+	pybabel update -l fr -D xscen -i src/xscen/data/messages.pot -d src/xscen/data/ --omit-header --no-location
 
 translate:   ## Compile the translation catalogs.
 	pybabel compile -f -D xscen -d src/xscen/data/
 
 checkfrench:  ## Error if the catalog could be update or if the compilation is older than the catalog.
 	rm -f .check_messages.pot
-	pybabel extract -o .check_messages.pot --omit-header --input-dirs=src/xscen/
+	pybabel extract -o .check_messages.pot --omit-header --input-dirs=src/xscen/ --no-location
 	pybabel update -l fr -D xscen -i .check_messages.pot -d src/xscen/data/ --omit-header --check
 	rm -f .check_messages.pot
 	if [ src/xscen/data/fr/LC_MESSAGES/xscen.mo -ot src/xscen/data/fr/LC_MESSAGES/xscen.po ]; then echo "Compilation is older than translations. Please compile with 'make translate'."; exit 1; fi

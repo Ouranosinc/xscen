@@ -20,7 +20,7 @@ from xscen import catutils as cu
         [{".nc", ".zarr"}, {6, 7, 8}, "*ssp126*", 2],
     ),
 )
-def test_find_assets(exts, lens, dirglob, N):
+def test_find_assets(exts, lens, dirglob, N):  # noqa: N803
     finder = cu._find_assets(str(SAMPLES_DIR), exts=exts, lengths=lens, dirglob=dirglob)
     assert isinstance(finder, Generator)
     assert len(list(finder)) == N
@@ -226,6 +226,14 @@ def test_build_path(samplecat):
         "/test/simulation/raw/CMIP5/ScenarioMIP/example-region/NCC/NorESM2-MM/ssp585/r1i1p1f1/fx/sftlf/"  # pragma: allowlist secret
         "sftlf_fx_CMIP5_ScenarioMIP_example-region_NCC_NorESM2-MM_ssp585_r1i1p1f1_fx.nc"
     ) in df.new_path.values
+
+
+def test_pattern_from_schema(samplecat):
+    df = cu.build_path(samplecat, mip_era="CMIP5")
+    patts = cu.patterns_from_schema("original-sims-raw")
+    for p in df.new_path.values:
+        res = [cu._compile_pattern(patt).parse(p) for patt in patts]
+        assert any(res)
 
 
 def test_build_path_ds():
