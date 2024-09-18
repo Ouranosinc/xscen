@@ -1,9 +1,12 @@
+import h5py
 import numpy as np
 from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
 from xscen import scripting as sc
+
+h5py._errors.unsilence_errors()
 
 
 class TestScripting:
@@ -45,6 +48,8 @@ class TestScripting:
             TestScripting.ds,
             cat,
             file_format="nc",
+            # To fix hdf5 issues with h5py 3.11 on pip
+            save_kwargs=dict(netcdf_kwargs={"engine": "netcdf4"}),
             build_path_kwargs={"root": root},
         )
 
