@@ -257,7 +257,7 @@ Before you submit a pull request, check that it meets these guidelines:
 
 #. The pull request should not break the templates.
 
-#. The pull request should work for all currently supported Python versions. Check the `pyproject.toml` or `tox.ini` files for the list of supported versions.
+#. The pull request should work for all currently supported Python versions. Check the `pyproject.toml` or `tox.ini` files for the list of supported versions. We aim to follow the support and drop schedule of Python versions as recommended by the NumPy NEP calendar: https://numpy.org/neps/nep-0029-deprecation_policy.html
 
 Tips
 ----
