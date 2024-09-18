@@ -51,6 +51,7 @@ Internal changes
 * Added pins to `xarray`, `xclim`, `h5py`, and `netcdf4`. (:pull:`414`).
 * Add ``.zip`` and ``.zarr.zip`` as possible file extensions for Zarr datasets. (:pull:`426`).
 * Explicitly assign coords of multiindex in `xs.unstack_fill_nan`. (:pull:`427`).
+* Include CF convention for temperature differences and on scale (:pull:`428`, :issue:`428`).
 * French translations are compiled offline. A new check ensures no PR are merged with missing messages. (:issue:`342`, :pull:`443`).
 * Continued work to add tests. (:pull:`450`).
 * Updated the cookiecutter template via `cruft`: (:pull:`452`)
