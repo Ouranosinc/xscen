@@ -50,23 +50,23 @@ dependencies = [
   "h5netcdf",
   "h5py",
   "intake-esm >=2023.07.07",
-  "matplotlib",
+  "matplotlib >=3.6",
   "netCDF4 <1.7",
   "numcodecs",
-  "numpy",
+  "numpy >=1.24",
   "pandas >=2.2",
   "parse",
   # Used when opening catalogs.
   "pyarrow>=10.0.1",
   "pyyaml",
   "rechunker",
-  "scipy",
+  "scipy >=1.10",
   "shapely >=2.0",
   "sparse",
   "toolz",
-  "xarray >=2023.11.0, !=2024.6.0, <2024.09.0",
-  "xclim >=0.50, <0.51",
-  "zarr"
+  "xarray >=2023.11.0, !=2024.6.0",
+  "xclim >=0.52.2, <0.53",
+  "zarr >=2.13"
 ]
 
 [project.optional-dependencies]
