@@ -48,7 +48,7 @@ dependencies = [
   "fsspec",
   "geopandas",
   "h5netcdf",
-  "h5py <3.11", # writing and reading with engine h5netcdf was broken
+  "h5py", # <3.11", # writing and reading with engine h5netcdf was broken
   "intake-esm >=2023.07.07",
   "matplotlib >=3.6",
   "netCDF4",
