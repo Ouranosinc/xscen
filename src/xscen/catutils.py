@@ -110,7 +110,7 @@ def _parse_level(text: str) -> str:
 )
 def _parse_datebounds(
     text: str,
-) -> Union[list[str], tuple[None, None], tuple[str, str]]:
+) -> list[str] | tuple[None, None] | tuple[str, str]:
     """Parse helper to translate date bounds, used in the special DATES field."""
     if "-" in text:
         return text.split("-")
@@ -120,10 +120,10 @@ def _parse_datebounds(
 
 
 def _find_assets(
-    root: Union[str, os.PathLike],
+    root: str | os.PathLike,
     exts: set[str],
     lengths: set[int],
-    dirglob: Optional[str] = None,
+    dirglob: str | None = None,
 ):
     """Walk recursively over files in a directory, filtering according to a glob pattern, path depth and extensions.
 
@@ -191,13 +191,13 @@ def _compile_pattern(pattern: str) -> parse.Parser:
 
 
 def _name_parser(
-    path: Union[os.PathLike, str],
-    root: Union[os.PathLike, str],
-    patterns: list[Union[str, parse.Parser]],
-    read_from_file: Optional[Union[list[str], dict]] = None,
-    attrs_map: Optional[dict] = None,
-    xr_open_kwargs: Optional[dict] = None,
-) -> Optional[dict]:
+    path: os.PathLike | str,
+    root: os.PathLike | str,
+    patterns: list[str | parse.Parser],
+    read_from_file: list[str] | dict | None = None,
+    attrs_map: dict | None = None,
+    xr_open_kwargs: dict | None = None,
+) -> dict | None:
     """Extract metadata information from the file path.
 
     Parameters
@@ -267,13 +267,13 @@ def _name_parser(
 
 
 def _parse_dir(  # noqa: C901
-    root: Union[os.PathLike, str],
+    root: os.PathLike | str,
     patterns: list[str],
-    dirglob: Optional[str] = None,
-    checks: Optional[list[str]] = None,
-    read_from_file: Optional[Union[list[str], dict]] = None,
-    attrs_map: Optional[dict] = None,
-    xr_open_kwargs: Optional[dict] = None,
+    dirglob: str | None = None,
+    checks: list[str] | None = None,
+    read_from_file: list[str] | dict | None = None,
+    attrs_map: dict | None = None,
+    xr_open_kwargs: dict | None = None,
     progress: bool = False,
 ):
     """Iterate and parses files in a directory, filtering according to basic pattern properties and optional checks.
@@ -452,24 +452,24 @@ def _parse_first_ds(
 
 @parse_config
 def parse_directory(  # noqa: C901
-    directories: Union[str, list[Union[str, os.PathLike]]],
+    directories: str | list[str | os.PathLike],
     patterns: list[str],
     *,
-    id_columns: Optional[list[str]] = None,
-    read_from_file: Union[
-        bool,
-        Sequence[str],
-        tuple[Sequence[str], Sequence[str]],
-        Sequence[tuple[Sequence[str], Sequence[str]]],
-    ] = False,
-    homogenous_info: Optional[dict] = None,
-    cvs: Optional[Union[str, os.PathLike, dict]] = None,
-    dirglob: Optional[str] = None,
-    xr_open_kwargs: Optional[Mapping[str, Any]] = None,
+    id_columns: list[str] | None = None,
+    read_from_file: (
+        bool
+        | Sequence[str]
+        | tuple[Sequence[str], Sequence[str]]
+        | Sequence[tuple[Sequence[str], Sequence[str]]]
+    ) = False,
+    homogenous_info: dict | None = None,
+    cvs: str | os.PathLike | dict | None = None,
+    dirglob: str | None = None,
+    xr_open_kwargs: Mapping[str, Any] | None = None,
     only_official_columns: bool = True,
     progress: bool = False,
-    parallel_dirs: Union[bool, int] = False,
-    file_checks: Optional[list[str]] = None,
+    parallel_dirs: bool | int = False,
+    file_checks: list[str] | None = None,
 ) -> pd.DataFrame:
     r"""Parse files in a directory and return them as a pd.DataFrame.
 
@@ -726,9 +726,9 @@ def parse_directory(  # noqa: C901
 
 
 def parse_from_ds(  # noqa: C901
-    obj: Union[str, os.PathLike, xr.Dataset],
+    obj: str | os.PathLike | xr.Dataset,
     names: Sequence[str],
-    attrs_map: Optional[Mapping[str, str]] = None,
+    attrs_map: Mapping[str, str] | None = None,
     **xrkwargs,
 ):
     """Parse a list of catalog fields from the file/dataset itself.
@@ -818,7 +818,7 @@ def parse_from_ds(  # noqa: C901
 
 
 def _parse_from_zarr(
-    path: Union[os.PathLike, str], get_vars: bool = True, get_time: bool = True
+    path: os.PathLike | str, get_vars: bool = True, get_time: bool = True
 ):
     """Obtain the list of variables, the time coordinate and the list of global attributes from a zarr dataset.
 
@@ -881,7 +881,7 @@ def _parse_from_zarr(
 
 
 def _parse_from_nc(
-    path: Union[os.PathLike, str], get_vars: bool = True, get_time: bool = True
+    path: os.PathLike | str, get_vars: bool = True, get_time: bool = True
 ):
     """Obtain the list of variables, the time coordinate, and the list of global attributes from a netCDF dataset, using netCDF4.
 
@@ -934,7 +934,7 @@ def _schema_option(option: dict, facets: dict):
     return answer
 
 
-def _schema_level(schema: Union[dict, list[str], str], facets: dict):
+def _schema_level(schema: dict | list[str] | str, facets: dict):
     if isinstance(schema, str):
         if schema.startswith("(") and schema.endswith(")"):
             optional = True
@@ -1060,12 +1060,12 @@ def _read_schemas(schemas):
 
 
 def _build_path(
-    data: Union[dict, xr.Dataset, xr.DataArray, pd.Series],
+    data: dict | xr.Dataset | xr.DataArray | pd.Series,
     schemas: dict,
-    root: Union[str, os.PathLike],
+    root: str | os.PathLike,
     get_type: bool = False,
     **extra_facets,
-) -> Union[Path, tuple[Path, str]]:
+) -> Path | tuple[Path, str]:
     # Get all known metadata
     if isinstance(data, (xr.Dataset, xr.DataArray)):
         facets = (
@@ -1127,11 +1127,11 @@ def _build_path(
 
 @parse_config
 def build_path(
-    data: Union[dict, xr.Dataset, xr.DataArray, pd.Series, DataCatalog, pd.DataFrame],
-    schemas: Optional[Union[str, os.PathLike, dict]] = None,
-    root: Optional[Union[str, os.PathLike]] = None,
+    data: dict | xr.Dataset | xr.DataArray | pd.Series | DataCatalog | pd.DataFrame,
+    schemas: str | os.PathLike | dict | None = None,
+    root: str | os.PathLike | None = None,
     **extra_facets,
-) -> Union[Path, DataCatalog, pd.DataFrame]:
+) -> Path | DataCatalog | pd.DataFrame:
     r"""Parse the schema from a configuration and construct path using a dictionary of facets.
 
     Parameters
@@ -1210,9 +1210,7 @@ def partial_format(template, **fmtargs):
     return template.format_map(PartialFormatDict(**fmtargs))
 
 
-def patterns_from_schema(
-    schema: Union[str, dict], exts: Optional[Sequence[str]] = None
-):
+def patterns_from_schema(schema: str | dict, exts: Sequence[str] | None = None):
     """Generate all valid patterns for a given schema.
 
     Generated patterns are meant for use with :py:func:`parse_directory`.

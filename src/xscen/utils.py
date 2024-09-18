@@ -78,12 +78,12 @@ except FileNotFoundError as err:
 
 
 def update_attr(
-    ds: Union[xr.Dataset, xr.DataArray],
+    ds: xr.Dataset | xr.DataArray,
     attr: str,
     new: str,
-    others: Optional[Sequence[Union[xr.Dataset, xr.DataArray]]] = None,
+    others: Sequence[xr.Dataset | xr.DataArray] | None = None,
     **fmt,
-) -> Union[xr.Dataset, xr.DataArray]:
+) -> xr.Dataset | xr.DataArray:
     r"""Format an attribute referencing itself in a translatable way.
 
     Parameters
@@ -157,7 +157,7 @@ def update_attr(
         )
 
 
-def add_attr(ds: Union[xr.Dataset, xr.DataArray], attr: str, new: str, **fmt):
+def add_attr(ds: xr.Dataset | xr.DataArray, attr: str, new: str, **fmt):
     """Add a formatted translatable attribute to a dataset."""
     ds.attrs[attr] = new.format(**fmt)
     for loc in XC_OPTIONS[METADATA_LOCALES]:
@@ -165,13 +165,13 @@ def add_attr(ds: Union[xr.Dataset, xr.DataArray], attr: str, new: str, **fmt):
 
 
 def date_parser(  # noqa: C901
-    date: Union[str, cftime.datetime, pd.Timestamp, datetime, pd.Period],
+    date: str | cftime.datetime | pd.Timestamp | datetime | pd.Period,
     *,
-    end_of_period: Union[bool, str] = False,
+    end_of_period: bool | str = False,
     out_dtype: str = "datetime",
     strtime_format: str = "%Y-%m-%d",
     freq: str = "H",
-) -> Union[str, pd.Period, pd.Timestamp]:
+) -> str | pd.Period | pd.Timestamp:
     """Return a datetime from a string.
 
     Parameters
@@ -360,10 +360,10 @@ def translate_time_chunk(chunks: dict, calendar: str, timesize: int) -> dict:
 @parse_config
 def stack_drop_nans(
     ds: xr.Dataset,
-    mask: Union[xr.DataArray, list[str]],
+    mask: xr.DataArray | list[str],
     *,
     new_dim: str = "loc",
-    to_file: Optional[str] = None,
+    to_file: str | None = None,
 ) -> xr.Dataset:
     """Stack dimensions into a single axis and drops indexes where the mask is false.
 
@@ -451,11 +451,9 @@ def unstack_fill_nan(
     ds: xr.Dataset,
     *,
     dim: str = "loc",
-    coords: Optional[
-        Union[
-            str, os.PathLike, Sequence[Union[str, os.PathLike]], dict[str, xr.DataArray]
-        ]
-    ] = None,
+    coords: None | (
+        str | os.PathLike | Sequence[str | os.PathLike] | dict[str, xr.DataArray]
+    ) = None,
 ):
     """Unstack a Dataset that was stacked by :py:func:`stack_drop_nans`.
 
@@ -602,7 +600,7 @@ def natural_sort(_list: list[str]):
 
 
 def get_cat_attrs(
-    ds: Union[xr.Dataset, xr.DataArray, dict], prefix: str = "cat:", var_as_str=False
+    ds: xr.Dataset | xr.DataArray | dict, prefix: str = "cat:", var_as_str=False
 ) -> dict:
     """Return the catalog-specific attributes from a dataset or dictionary.
 
@@ -642,9 +640,9 @@ def get_cat_attrs(
 @parse_config
 def maybe_unstack(
     ds: xr.Dataset,
-    dim: Optional[str] = None,
-    coords: Optional[str] = None,
-    rechunk: Optional[dict] = None,
+    dim: str | None = None,
+    coords: str | None = None,
+    rechunk: dict | None = None,
     stack_drop_nans: bool = False,
 ) -> xr.Dataset:
     """If stack_drop_nans is True, unstack and rechunk.
@@ -835,20 +833,18 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
 def clean_up(  # noqa: C901
     ds: xr.Dataset,
     *,
-    variables_and_units: Optional[dict] = None,
-    convert_calendar_kwargs: Optional[dict] = None,
-    missing_by_var: Optional[dict] = None,
-    maybe_unstack_dict: Optional[dict] = None,
-    round_var: Optional[dict] = None,
-    common_attrs_only: Optional[
-        Union[dict, list[Union[xr.Dataset, str, os.PathLike]]]
-    ] = None,
-    common_attrs_open_kwargs: Optional[dict] = None,
-    attrs_to_remove: Optional[dict] = None,
-    remove_all_attrs_except: Optional[dict] = None,
-    add_attrs: Optional[dict] = None,
-    change_attr_prefix: Optional[Union[str, dict]] = None,
-    to_level: Optional[str] = None,
+    variables_and_units: dict | None = None,
+    convert_calendar_kwargs: dict | None = None,
+    missing_by_var: dict | None = None,
+    maybe_unstack_dict: dict | None = None,
+    round_var: dict | None = None,
+    common_attrs_only: None | (dict | list[xr.Dataset | str | os.PathLike]) = None,
+    common_attrs_open_kwargs: dict | None = None,
+    attrs_to_remove: dict | None = None,
+    remove_all_attrs_except: dict | None = None,
+    add_attrs: dict | None = None,
+    change_attr_prefix: str | dict | None = None,
+    to_level: str | None = None,
 ) -> xr.Dataset:
     """Clean up of the dataset.
 
@@ -1089,9 +1085,9 @@ def clean_up(  # noqa: C901
 
 def publish_release_notes(
     style: str = "md",
-    file: Optional[Union[os.PathLike, StringIO, TextIO]] = None,
-    changes: Optional[Union[str, os.PathLike]] = None,
-) -> Optional[str]:
+    file: os.PathLike | StringIO | TextIO | None = None,
+    changes: str | os.PathLike | None = None,
+) -> str | None:
     """Format release history in Markdown or ReStructuredText.
 
     Parameters
@@ -1171,8 +1167,8 @@ def publish_release_notes(
 
 def unstack_dates(  # noqa: C901
     ds: xr.Dataset,
-    seasons: Optional[dict[int, str]] = None,
-    new_dim: Optional[str] = None,
+    seasons: dict[int, str] | None = None,
+    new_dim: str | None = None,
     winter_starts_year: bool = False,
 ):
     """Unstack a multi-season timeseries into a yearly axis and a season one.
@@ -1345,9 +1341,9 @@ def unstack_dates(  # noqa: C901
 
 
 def show_versions(
-    file: Optional[Union[os.PathLike, StringIO, TextIO]] = None,
-    deps: Optional[list] = None,
-) -> Optional[str]:
+    file: os.PathLike | StringIO | TextIO | None = None,
+    deps: list | None = None,
+) -> str | None:
     """Print the versions of xscen and its dependencies.
 
     Parameters
@@ -1467,8 +1463,8 @@ def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
 
 
 def standardize_periods(
-    periods: Optional[Union[list[str], list[list[str]]]], multiple: bool = True
-) -> Optional[Union[list[str], list[list[str]]]]:
+    periods: list[str] | list[list[str]] | None, multiple: bool = True
+) -> list[str] | list[list[str]] | None:
     """Reformats the input to a list of strings, ['start', 'end'], or a list of such lists.
 
     Parameters
@@ -1505,7 +1501,7 @@ def standardize_periods(
         return periods[0]
 
 
-def season_sort_key(idx: pd.Index, name: Optional[str] = None):
+def season_sort_key(idx: pd.Index, name: str | None = None):
     """Get a proper sort key for a "season" or "month" index to avoid alphabetical sorting.
 
     If any of the values in the index is not recognized as a 3-letter
@@ -1608,7 +1604,7 @@ def _xarray_defaults(**kwargs):
     return kwargs
 
 
-def rechunk_for_resample(obj: Union[xr.DataArray, xr.Dataset], **resample_kwargs):
+def rechunk_for_resample(obj: xr.DataArray | xr.Dataset, **resample_kwargs):
     if not uses_dask(obj):
         return obj
 

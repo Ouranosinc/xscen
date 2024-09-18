@@ -198,10 +198,10 @@ class DataCatalog(intake_esm.esm_datastore):
     @classmethod
     def from_df(
         cls,
-        data: Union[pd.DataFrame, os.PathLike, Sequence[os.PathLike]],
-        esmdata: Optional[Union[os.PathLike, dict]] = None,
+        data: pd.DataFrame | os.PathLike | Sequence[os.PathLike],
+        esmdata: os.PathLike | dict | None = None,
         *,
-        read_csv_kwargs: Optional[Mapping[str, Any]] = None,
+        read_csv_kwargs: Mapping[str, Any] | None = None,
         name: str = "virtual",
         **intake_kwargs,
     ):
@@ -263,7 +263,7 @@ class DataCatalog(intake_esm.esm_datastore):
         else:
             return data.apply(_find_unique, result_type="reduce").to_dict()
 
-    def unique(self, columns: Optional[Union[str, Sequence[str]]] = None):
+    def unique(self, columns: str | Sequence[str] | None = None):
         """Return a series of unique values in the catalog.
 
         Parameters
@@ -309,7 +309,7 @@ class DataCatalog(intake_esm.esm_datastore):
             )
         return cat
 
-    def drop_duplicates(self, columns: Optional[list[str]] = None):
+    def drop_duplicates(self, columns: list[str] | None = None):
         """Drop duplicates in the catalog based on a subset of columns.
 
         Parameters
@@ -404,10 +404,10 @@ class DataCatalog(intake_esm.esm_datastore):
 
     def to_dataset(
         self,
-        concat_on: Optional[Union[list[str], str]] = None,
-        create_ensemble_on: Optional[Union[list[str], str]] = None,
-        ensemble_name: Optional[Union[list[str]]] = None,
-        calendar: Optional[str] = "standard",
+        concat_on: list[str] | str | None = None,
+        create_ensemble_on: list[str] | str | None = None,
+        ensemble_name: list[str] | None = None,
+        calendar: str | None = "standard",
         **kwargs,
     ) -> xr.Dataset:
         """
@@ -538,7 +538,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
     def copy_files(
         self,
-        dest: Union[str, os.PathLike],
+        dest: str | os.PathLike,
         flat: bool = True,
         unzip: bool = False,
         zipzarr: bool = False,
@@ -636,9 +636,9 @@ class ProjectCatalog(DataCatalog):
     @classmethod
     def create(
         cls,
-        filename: Union[os.PathLike, str],
+        filename: os.PathLike | str,
         *,
-        project: Optional[dict] = None,
+        project: dict | None = None,
         overwrite: bool = False,
     ):
         r"""Create a new project catalog from some project metadata.
@@ -716,11 +716,11 @@ class ProjectCatalog(DataCatalog):
 
     def __init__(
         self,
-        df: Union[str, dict],
+        df: str | dict,
         *args,
         create: bool = False,
         overwrite: bool = False,
-        project: Optional[dict] = None,
+        project: dict | None = None,
         **kwargs,
     ):
         """
@@ -756,15 +756,13 @@ class ProjectCatalog(DataCatalog):
     # TODO: Implement a way to easily destroy part of the catalog to "reset" some steps
     def update(
         self,
-        df: Optional[
-            Union[
-                DataCatalog,
-                intake_esm.esm_datastore,
-                pd.DataFrame,
-                pd.Series,
-                Sequence[pd.Series],
-            ]
-        ] = None,
+        df: None | (
+            DataCatalog
+            | intake_esm.esm_datastore
+            | pd.DataFrame
+            | pd.Series
+            | Sequence[pd.Series]
+        ) = None,
     ):
         """Update the catalog with new data and writes the new data to the csv file.
 
@@ -846,8 +844,8 @@ class ProjectCatalog(DataCatalog):
     def update_from_ds(
         self,
         ds: xr.Dataset,
-        path: Union[os.PathLike, str],
-        info_dict: Optional[dict] = None,
+        path: os.PathLike | str,
+        info_dict: dict | None = None,
         **info_kwargs,
     ):
         """Update the catalog with new data and writes the new data to the csv file.
@@ -965,7 +963,7 @@ def _build_id(element: pd.Series, columns: list[str]):
 
 
 def generate_id(
-    df: Union[pd.DataFrame, xr.Dataset], id_columns: Optional[list] = None
+    df: pd.DataFrame | xr.Dataset, id_columns: list | None = None
 ) -> pd.Series:
     """Create an ID from column entries.
 
@@ -996,7 +994,7 @@ def generate_id(
     return df.apply(_build_id, axis=1, args=(id_columns,))
 
 
-def unstack_id(df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]) -> dict:
+def unstack_id(df: pd.DataFrame | ProjectCatalog | DataCatalog) -> dict:
     """Reverse-engineer an ID using catalog entries.
 
     Parameters
@@ -1038,7 +1036,7 @@ def unstack_id(df: Union[pd.DataFrame, ProjectCatalog, DataCatalog]) -> dict:
 
 def subset_file_coverage(
     df: pd.DataFrame,
-    periods: Union[list[str], list[list[str]]],
+    periods: list[str] | list[list[str]],
     *,
     coverage: float = 0.99,
     duplicates_ok: bool = False,

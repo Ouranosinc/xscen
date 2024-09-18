@@ -6,10 +6,10 @@ import os
 import re
 import warnings
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from copy import deepcopy
 from pathlib import Path
-from typing import Callable, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -49,16 +49,16 @@ __all__ = [
 def extract_dataset(  # noqa: C901
     catalog: DataCatalog,
     *,
-    variables_and_freqs: Optional[dict] = None,
-    periods: Optional[Union[list[str], list[list[str]]]] = None,
-    region: Optional[dict] = None,
+    variables_and_freqs: dict | None = None,
+    periods: list[str] | list[list[str]] | None = None,
+    region: dict | None = None,
     to_level: str = "extracted",
     ensure_correct_time: bool = True,
-    xr_open_kwargs: Optional[dict] = None,
-    xr_combine_kwargs: Optional[dict] = None,
-    preprocess: Optional[Callable] = None,
-    resample_methods: Optional[dict] = None,
-    mask: Union[bool, xr.Dataset, xr.DataArray] = False,
+    xr_open_kwargs: dict | None = None,
+    xr_combine_kwargs: dict | None = None,
+    preprocess: Callable | None = None,
+    resample_methods: dict | None = None,
+    mask: bool | xr.Dataset | xr.DataArray = False,
 ) -> dict:
     """
     Take one element of the output of `search_data_catalogs` and returns a dataset,
@@ -322,9 +322,9 @@ def resample(  # noqa: C901
     da: xr.DataArray,
     target_frequency: str,
     *,
-    ds: Optional[xr.Dataset] = None,
-    method: Optional[str] = None,
-    missing: Optional[Union[str, dict]] = None,
+    ds: xr.Dataset | None = None,
+    method: str | None = None,
+    missing: str | dict | None = None,
 ) -> xr.DataArray:
     """Aggregate variable to the target frequency.
 
@@ -542,23 +542,23 @@ def resample(  # noqa: C901
 
 @parse_config
 def search_data_catalogs(  # noqa: C901
-    data_catalogs: Union[
-        str, os.PathLike, DataCatalog, list[Union[str, os.PathLike, DataCatalog]]
-    ],
+    data_catalogs: (
+        str | os.PathLike | DataCatalog | list[str | os.PathLike | DataCatalog]
+    ),
     variables_and_freqs: dict,
     *,
-    other_search_criteria: Optional[dict] = None,
-    exclusions: Optional[dict] = None,
+    other_search_criteria: dict | None = None,
+    exclusions: dict | None = None,
     match_hist_and_fut: bool = False,
-    periods: Optional[Union[list[str], list[list[str]]]] = None,
-    coverage_kwargs: Optional[dict] = None,
-    id_columns: Optional[list[str]] = None,
+    periods: list[str] | list[list[str]] | None = None,
+    coverage_kwargs: dict | None = None,
+    id_columns: list[str] | None = None,
     allow_resampling: bool = False,
     allow_conversion: bool = False,
-    conversion_yaml: Optional[str] = None,
-    restrict_resolution: Optional[str] = None,
-    restrict_members: Optional[dict] = None,
-    restrict_warming_level: Optional[Union[dict, bool]] = None,
+    conversion_yaml: str | None = None,
+    restrict_resolution: str | None = None,
+    restrict_members: dict | None = None,
+    restrict_warming_level: dict | bool | None = None,
 ) -> dict:
     """Search through DataCatalogs.
 
@@ -884,17 +884,17 @@ def search_data_catalogs(  # noqa: C901
 
 @parse_config
 def get_warming_level(  # noqa: C901
-    realization: Union[
-        xr.Dataset, xr.DataArray, dict, pd.Series, pd.DataFrame, str, list
-    ],
+    realization: (
+        xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list
+    ),
     wl: float,
     *,
     window: int = 20,
-    tas_baseline_period: Optional[Sequence[str]] = None,
+    tas_baseline_period: Sequence[str] | None = None,
     ignore_member: bool = False,
-    tas_src: Optional[Union[str, os.PathLike]] = None,
+    tas_src: str | os.PathLike | None = None,
     return_horizon: bool = True,
-) -> Union[dict, list[str], str]:
+) -> dict | list[str] | str:
     """
     Use the IPCC Atlas method to return the window of time
     over which the requested level of global warming is first reached.
@@ -1072,11 +1072,11 @@ def get_warming_level(  # noqa: C901
 @parse_config
 def subset_warming_level(
     ds: xr.Dataset,
-    wl: Union[float, Sequence[float]],
+    wl: float | Sequence[float],
     to_level: str = "warminglevel-{wl}vs{period0}-{period1}",
-    wl_dim: Union[str, bool] = "+{wl}Cvs{period0}-{period1}",
+    wl_dim: str | bool = "+{wl}Cvs{period0}-{period1}",
     **kwargs,
-) -> Optional[xr.Dataset]:
+) -> xr.Dataset | None:
     r"""
     Subsets the input dataset with only the window of time over which the requested level of global warming
     is first reached, using the IPCC Atlas method.
@@ -1273,7 +1273,7 @@ def subset_warming_level(
 
 
 def _dispatch_historical_to_future(
-    catalog: DataCatalog, id_columns: Optional[list[str]] = None
+    catalog: DataCatalog, id_columns: list[str] | None = None
 ) -> DataCatalog:
     """Update a DataCatalog by recopying each "historical" entry to its corresponding future experiments.
 
@@ -1387,7 +1387,7 @@ def _dispatch_historical_to_future(
 
 
 def _restrict_by_resolution(
-    catalogs: dict, restrictions: str, id_columns: Optional[list[str]] = None
+    catalogs: dict, restrictions: str, id_columns: list[str] | None = None
 ) -> dict:
     """Update the results from search_data_catalogs by removing simulations with multiple resolutions available.
 
@@ -1527,7 +1527,7 @@ def _restrict_by_resolution(
 
 
 def _restrict_multimembers(
-    catalogs: dict, restrictions: dict, id_columns: Optional[list[str]] = None
+    catalogs: dict, restrictions: dict, id_columns: list[str] | None = None
 ):
     """Update the results from search_data_catalogs by removing simulations with multiple members available.
 

@@ -34,10 +34,10 @@ __all__ = ["create_mask", "regrid_dataset"]
 def regrid_dataset(  # noqa: C901
     ds: xr.Dataset,
     ds_grid: xr.Dataset,
-    weights_location: Union[str, os.PathLike],
+    weights_location: str | os.PathLike,
     *,
-    regridder_kwargs: Optional[dict] = None,
-    intermediate_grids: Optional[dict] = None,
+    regridder_kwargs: dict | None = None,
+    intermediate_grids: dict | None = None,
     to_level: str = "regridded",
 ) -> xr.Dataset:
     """Regrid a dataset according to weights and a reference grid.
@@ -228,7 +228,7 @@ def regrid_dataset(  # noqa: C901
 
 
 @parse_config
-def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.DataArray:
+def create_mask(ds: xr.Dataset | xr.DataArray, mask_args: dict) -> xr.DataArray:
     """Create a 0-1 mask based on incoming arguments.
 
     Parameters
@@ -302,10 +302,10 @@ def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.Data
 def _regridder(
     ds_in: xr.Dataset,
     ds_grid: xr.Dataset,
-    filename: Union[str, os.PathLike],
+    filename: str | os.PathLike,
     *,
     method: str = "bilinear",
-    unmapped_to_nan: Optional[bool] = True,
+    unmapped_to_nan: bool | None = True,
     **kwargs,
 ) -> Regridder:
     """Call to xesmf Regridder with a few default arguments.

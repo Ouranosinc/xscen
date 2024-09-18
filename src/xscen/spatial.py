@@ -140,7 +140,7 @@ def subset(
     ds: xr.Dataset,
     method: str,
     *,
-    name: Optional[str] = None,
+    name: str | None = None,
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
@@ -205,10 +205,10 @@ def subset(
 
 def _subset_gridpoint(
     ds: xr.Dataset,
-    lon: Union[float, Sequence[float], xr.DataArray],
-    lat: Union[float, Sequence[float], xr.DataArray],
+    lon: float | Sequence[float] | xr.DataArray,
+    lat: float | Sequence[float] | xr.DataArray,
     *,
-    name: Optional[str] = None,
+    name: str | None = None,
     **kwargs,
 ) -> xr.Dataset:
     r"""Subset the data to a gridpoint.
@@ -254,10 +254,10 @@ def _subset_gridpoint(
 
 def _subset_bbox(
     ds: xr.Dataset,
-    lon_bnds: Union[tuple[float, float], list[float]],
-    lat_bnds: Union[tuple[float, float], list[float]],
+    lon_bnds: tuple[float, float] | list[float],
+    lat_bnds: tuple[float, float] | list[float],
     *,
-    name: Optional[str] = None,
+    name: str | None = None,
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
@@ -317,9 +317,9 @@ def _subset_bbox(
 
 def _subset_shape(
     ds: xr.Dataset,
-    shape: Union[str, Path, gpd.GeoDataFrame],
+    shape: str | Path | gpd.GeoDataFrame,
     *,
-    name: Optional[str] = None,
+    name: str | None = None,
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
@@ -392,7 +392,7 @@ def _subset_shape(
     return update_history_and_name(ds_subset, new_history, name)
 
 
-def _subset_sel(ds: xr.Dataset, *, name: Optional[str] = None, **kwargs) -> xr.Dataset:
+def _subset_sel(ds: xr.Dataset, *, name: str | None = None, **kwargs) -> xr.Dataset:
     r"""Subset the data using the .sel() method.
 
     Parameters

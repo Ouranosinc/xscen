@@ -12,10 +12,10 @@ from .config import parse_config
 
 @parse_config
 def build_reduction_data(
-    datasets: Union[dict, list[xr.Dataset]],
+    datasets: dict | list[xr.Dataset],
     *,
-    xrfreqs: Optional[list[str]] = None,
-    horizons: Optional[list[str]] = None,
+    xrfreqs: list[str] | None = None,
+    horizons: list[str] | None = None,
 ) -> xr.DataArray:
     """Construct the input required for ensemble reduction.
 
@@ -84,11 +84,11 @@ def build_reduction_data(
 
 @parse_config
 def reduce_ensemble(
-    data: Union[xr.DataArray, dict, list, xr.Dataset],
+    data: xr.DataArray | dict | list | xr.Dataset,
     method: str,
     *,
-    horizons: Optional[list[str]] = None,
-    create_kwargs: Optional[dict] = None,
+    horizons: list[str] | None = None,
+    create_kwargs: dict | None = None,
     **kwargs,
 ):
     r"""Reduce an ensemble of simulations using clustering algorithms from xclim.ensembles.
@@ -140,7 +140,7 @@ def reduce_ensemble(
     )
 
 
-def _concat_criteria(criteria: Optional[xr.DataArray], ens: xr.Dataset):
+def _concat_criteria(criteria: xr.DataArray | None, ens: xr.Dataset):
     """Combine all variables and dimensions excepting 'realization'."""
     if criteria is None:
         i = 0
