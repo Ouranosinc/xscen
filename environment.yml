@@ -2,7 +2,7 @@ name: xscen
 channels:
   - conda-forge
 dependencies:
-  - python >=3.9,<3.13
+  - python >=3.10,<3.13
   # Don't forget to sync changes between environment.yml, environment-dev.yml, and pyproject.toml!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
@@ -15,24 +15,24 @@ dependencies:
   - fsspec
   - geopandas
   - h5netcdf
-  - h5py <3.11
+  - h5py <3.11 # writing and reading with engine h5netcdf was broken
   - intake-esm >=2023.07.07
-  - matplotlib
-  - netCDF4 <1.7
+  - matplotlib >=3.6
+  - netCDF4 <1.7 # writing and reading with engine h5netcdf was broken
   - numcodecs
-  - numpy
+  - numpy >=1.24,<2.0  # v2.0 is not supported by python-netcdf4
   - pandas >=2.2
   - parse
   - pyyaml
   - rechunker
-  - scipy
+  - scipy >=1.10
   - shapely >=2.0
   - sparse
   - toolz
-  - xarray >=2023.11.0, !=2024.6.0, <2024.09.0
-  - xclim >=0.50, <0.51
+  - xarray >=2023.11.0, !=2024.6.0
+  - xclim >=0.52.2, <0.53
   - xesmf >=0.7
-  - zarr
+  - zarr >=2.13
   # To install from source
   - setuptools >=65.0.0
   - setuptools-scm >=8.0.0

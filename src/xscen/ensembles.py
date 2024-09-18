@@ -31,17 +31,17 @@ __all__ = [
 
 @parse_config
 def ensemble_stats(  # noqa: C901
-    datasets: Union[
-        dict,
-        list[Union[str, os.PathLike]],
-        list[xr.Dataset],
-        list[xr.DataArray],
-        xr.Dataset,
-    ],
+    datasets: (
+        dict
+        | list[str | os.PathLike]
+        | list[xr.Dataset]
+        | list[xr.DataArray]
+        | xr.Dataset
+    ),
     statistics: dict,
     *,
-    create_kwargs: Optional[dict] = None,
-    weights: Optional[xr.DataArray] = None,
+    create_kwargs: dict | None = None,
+    weights: xr.DataArray | None = None,
     common_attrs_only: bool = True,
     to_level: str = "ensemble",
 ) -> xr.Dataset:
@@ -107,7 +107,7 @@ def ensemble_stats(  # noqa: C901
     statistics = deepcopy(statistics)  # to avoid modifying the original dictionary
 
     # if input files are .zarr, change the engine automatically
-    if isinstance(datasets, list) and isinstance(datasets[0], (str, os.PathLike)):
+    if isinstance(datasets, list) and isinstance(datasets[0], str | os.PathLike):
         path = Path(datasets[0])
         if path.suffix == ".zarr":
             create_kwargs.setdefault("engine", "zarr")
@@ -245,13 +245,13 @@ def ensemble_stats(  # noqa: C901
 
 
 def generate_weights(  # noqa: C901
-    datasets: Union[dict, list],
+    datasets: dict | list,
     *,
     independence_level: str = "model",
     balance_experiments: bool = False,
-    attribute_weights: Optional[dict] = None,
+    attribute_weights: dict | None = None,
     skipna: bool = True,
-    v_for_skipna: Optional[str] = None,
+    v_for_skipna: str | None = None,
     standardize: bool = False,
     experiment_weights: bool = False,
 ) -> xr.DataArray:
@@ -673,12 +673,12 @@ def generate_weights(  # noqa: C901
 
 
 def build_partition_data(
-    datasets: Union[dict, list[xr.Dataset]],
+    datasets: dict | list[xr.Dataset],
     partition_dim: list[str] = ["source", "experiment", "bias_adjust_project"],
-    subset_kw: Optional[dict] = None,
-    regrid_kw: Optional[dict] = None,
-    indicators_kw: Optional[dict] = None,
-    rename_dict: Optional[dict] = None,
+    subset_kw: dict | None = None,
+    regrid_kw: dict | None = None,
+    indicators_kw: dict | None = None,
+    rename_dict: dict | None = None,
 ):
     """
     Get the input for the xclim partition functions.
@@ -765,11 +765,11 @@ def build_partition_data(
 
 @parse_config
 def reduce_ensemble(
-    data: Union[xr.DataArray, dict, list, xr.Dataset],
+    data: xr.DataArray | dict | list | xr.Dataset,
     method: str,
     *,
-    horizons: Optional[list[str]] = None,
-    create_kwargs: Optional[dict] = None,
+    horizons: list[str] | None = None,
+    create_kwargs: dict | None = None,
     **kwargs,
 ):
     r"""Reduce an ensemble of simulations using clustering algorithms from xclim.ensembles.
@@ -808,7 +808,7 @@ def reduce_ensemble(
     If the indicators are a mix of yearly, seasonal, and monthly, they should be stacked on the same time/horizon axis and put in the same dataset.
     You can use py:func:`xscen.utils.unstack_dates` on seasonal or monthly indicators to this end.
     """
-    if isinstance(data, (list, dict)):
+    if isinstance(data, list | dict):
         data = ensembles.create_ensemble(datasets=data, **(create_kwargs or {}))
     if horizons:
         if "horizon" not in data.dims:

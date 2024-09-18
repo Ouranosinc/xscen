@@ -19,7 +19,7 @@ maintainers = [
 ]
 description = "A climate change scenario-building analysis framework, built with xclim/xarray."
 readme = "README.rst"
-requires-python = ">=3.9.0"
+requires-python = ">=3.10.0"
 keywords = ["xscen"]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -30,7 +30,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -50,25 +49,24 @@ dependencies = [
   "geopandas",
   "h5netcdf",
   "h5py",
-  "intake-esm >=2023.07.07,<v2024.2.6; python_version == '3.9'",
-  "intake-esm >=2023.07.07; python_version >= '3.10'",
-  "matplotlib",
+  "intake-esm >=2023.07.07",
+  "matplotlib >=3.6",
   "netCDF4 <1.7",
   "numcodecs",
-  "numpy",
+  "numpy >=1.24,<2.0", # v2.0 is not supported by python-netcdf4
   "pandas >=2.2",
   "parse",
   # Used when opening catalogs.
   "pyarrow>=10.0.1",
   "pyyaml",
   "rechunker",
-  "scipy",
+  "scipy >=1.10",
   "shapely >=2.0",
   "sparse",
   "toolz",
-  "xarray >=2023.11.0, !=2024.6.0, <2024.09.0",
-  "xclim >=0.50, <0.51",
-  "zarr"
+  "xarray >=2023.11.0, !=2024.6.0",
+  "xclim >=0.52.2, <0.53",
+  "zarr >=2.13"
 ]
 
 [project.optional-dependencies]
@@ -127,10 +125,10 @@ all = ["xscen[dev]", "xscen[docs]", "xscen[extra]"]
 
 [tool.black]
 target-version = [
-  "py39",
   "py310",
   "py311",
-  "py312"
+  "py312",
+  "py313"
 ]
 
 [tool.bumpversion]
@@ -205,11 +203,11 @@ source = ["xscen"]
 append_only = true
 known_first_party = "xscen"
 profile = "black"
-py_version = 39
+py_version = 310
 
 [tool.mypy]
 files = "."
-python_version = 3.9
+python_version = 3.10
 show_error_codes = true
 strict = true
 warn_no_return = true
@@ -261,7 +259,6 @@ markers = ["requires_netcdf: marks tests that require netcdf files to run"]
 [tool.ruff]
 src = ["src/xscen"]
 line-length = 150
-target-version = "py39"
 exclude = [
   ".eggs",
   ".git",

@@ -148,10 +148,6 @@ jobs:
           environment-file: environment-dev.yml
           create-args: >-
             python=${{ matrix.python-version }}
-      - name: Downgrade intake-esm
-        if: matrix.python-version == '3.9'
-        run: |
-          micromamba install -y -c conda-forge intake-esm=2023.11.10
       - name: Conda and Mamba versions
         run: |
           echo "micromamba $(micromamba --version)"
