@@ -258,7 +258,6 @@ markers = ["requires_netcdf: marks tests that require netcdf files to run"]
 [tool.ruff]
 src = ["src/xscen"]
 line-length = 150
-target-version = "py310"
 exclude = [
   ".eggs",
   ".git",
