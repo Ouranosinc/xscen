@@ -29,6 +29,7 @@ Bug fixes
 * ``unstack_fill_nan`` now works if given a dictionary that contains both dimensions and coordinates. (:pull:`450`).
 * ``clean_up`` no longer modifies the original dataset. (:pull:`450`).
 * ``unstack_dates`` now works correctly for yearly datasets when `winter_starts_year=True`, as well as multi-year datasets. (:pull:`450`).
+* ``create_bounds_rotated_pole`` now uses the default value if the dataset has no `north_pole_grid_longitude` attribute, instead of crashing. (:pull:`455`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
