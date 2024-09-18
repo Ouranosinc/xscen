@@ -370,12 +370,13 @@ def create_bounds_rotated_pole(ds: xr.Dataset):
     rlonv = rlonv1D.expand_dims(rlat_vertices=rlatv1D).transpose(
         "rlon_vertices", "rlat_vertices"
     )
-
+    central = ds.rotated_pole.attrs.get("north_pole_grid_longitude")
+    central = float(central) if central is not None else None
     # Get cartopy's crs for the projection
     RP = ccrs.RotatedPole(
-        pole_longitude=ds.rotated_pole.grid_north_pole_longitude,
-        pole_latitude=ds.rotated_pole.grid_north_pole_latitude,
-        central_rotated_longitude=ds.rotated_pole.north_pole_grid_longitude,
+        pole_longitude=float(ds.rotated_pole.grid_north_pole_longitude),
+        pole_latitude=float(ds.rotated_pole.grid_north_pole_latitude),
+        central_rotated_longitude=central,
     )
     PC = ccrs.PlateCarree()
 
