@@ -221,7 +221,7 @@ def adjust(
     bias_adjust_project : str, optional
       The project to assign to the output.
     align_on: str, optional
-      `align_on` argument for the fonction `xr.DataArray.convert_calendar`.
+      `align_on` argument for the function `xr.DataArray.convert_calendar`.
 
     Returns
     -------
