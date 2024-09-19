@@ -44,6 +44,7 @@ Breaking changes
 * `convert_calendar` in ``clean_up`` now uses `xarray` instead of `xclim`. Keywords aren't compatible between the two, but given that `xclim` will abandon its function, no backwards compatibility was sought. (:pull:`450`).
 * `attrs_to_remove` and `remove_all_attrs_except` in ``clean_up`` now use real regex. It should not be too breaking since a `fullmatch()` is used, but `*` is now `.*`. (:pull:`450`).
 * Python 3.9 is no longer supported. (:pull:`456`).
+* Functions and arguments that were deprecated in 0.8.0 or earlier have been removed. (:pull:`461`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
