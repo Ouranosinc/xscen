@@ -33,7 +33,6 @@ from .utils import standardize_periods, unstack_dates, update_attr
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "climatological_mean",
     "climatological_op",
     "compute_deltas",
     "produce_horizon",
