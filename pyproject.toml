@@ -48,12 +48,12 @@ dependencies = [
   "fsspec",
   "geopandas",
   "h5netcdf",
-  "h5py",
+  "h5py", # <3.11", # writing and reading with engine h5netcdf was broken
   "intake-esm >=2023.07.07",
   "matplotlib >=3.6",
-  "netCDF4 <1.7",
+  "netCDF4",
   "numcodecs",
-  "numpy >=1.24,<2.0", # v2.0 is not supported by python-netcdf4
+  "numpy >=1.24",
   "pandas >=2.2",
   "parse",
   # Used when opening catalogs.

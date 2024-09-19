@@ -994,7 +994,7 @@ def get_warming_level(  # noqa: C901
         info_models.append(info)
 
     # open nc
-    tas = xr.open_dataset(tas_src, engine="h5netcdf").tas
+    tas = xr.open_dataset(tas_src).tas
 
     def _get_warming_level(model):
         # choose colum based in ds cat attrs, +'$' to ensure a full match (matches end-of-string)
@@ -1236,8 +1236,8 @@ def subset_warming_level(
         else:
             # WL not reached, not in ds, or not fully contained in ds.time
             if wl_not_reached:
-                ds_wl = ds.isel(time=slice(0, fake_time.size)) * np.NaN
-                wlbnds = (("warminglevel", "wl_bounds"), [[np.NaN, np.NaN]])
+                ds_wl = ds.isel(time=slice(0, fake_time.size)) * np.nan
+                wlbnds = (("warminglevel", "wl_bounds"), [[np.nan, np.nan]])
             else:
                 wlbnds = (
                     ("warminglevel", "wl_bounds"),
@@ -1337,9 +1337,9 @@ def _dispatch_historical_to_future(
                 "For example, xscen expects experiment `historical` to have `CMIP` activity "
                 "and experiments `sspXYZ` to have `ScenarioMIP` activity. "
             )
-        for activity_id in set(sdf.activity) - {"HighResMip", np.NaN}:
+        for activity_id in set(sdf.activity) - {"HighResMip", np.nan}:
             sub_sdf = sdf[sdf.activity == activity_id]
-            for exp_id in set(sub_sdf.experiment) - {"historical", "piControl", np.NaN}:
+            for exp_id in set(sub_sdf.experiment) - {"historical", "piControl", np.nan}:
                 exp_hist = hist.copy()
                 exp_hist["experiment"] = exp_id
                 exp_hist["activity"] = activity_id

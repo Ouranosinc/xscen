@@ -45,6 +45,8 @@ class TestScripting:
             TestScripting.ds,
             cat,
             file_format="nc",
+            # To fix hdf5 issues with h5py 3.11 on pip
+            save_kwargs=dict(netcdf_kwargs={"engine": "netcdf4"}),
             build_path_kwargs={"root": root},
         )
 
