@@ -375,7 +375,7 @@ def select_inds_for_avail_vars(
     elif isinstance(indicators, list | tuple) and not is_list_of_tuples:
         indicators = [(ind.base, ind) for ind in indicators]
 
-    # Changed in xclim 0.53
+    # FIXME: Remove if-else when updating minimum xclim version to 0.53
     XCVARS = (
         xc.core.VARIABLES if hasattr(xc.core, "VARIABLES") else xc.core.utils.VARIABLES
     )

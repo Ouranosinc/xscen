@@ -14,6 +14,7 @@ import xclim as xc
 import xclim.core.dataflags
 from xclim.core.indicator import Indicator
 
+# FIXME: Remove this when updating minimum xclim version to 0.53
 try:  # Changed in xclim 0.53
     from xclim.core import ValidationError
 except ImportError:
