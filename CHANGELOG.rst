@@ -65,6 +65,10 @@ Internal changes
     * License information has been updated in the library top-level `__init__.py`.
 * Docstrings have been adjusted to meet the `numpydoc` standard. (:pull:`452`).
 
+CI changes
+^^^^^^^^^^
+* The `bump-version.yml` workflow now uses the Ouranosinc GitHub Helper Bot to sign bump version commits. (:pull:`462`).
+
 v0.9.1 (2024-06-04)
 -------------------
 Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
