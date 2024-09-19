@@ -19,6 +19,7 @@ from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
 
+# FIXME: Remove if-else when updating minimum xclim version to 0.53
 if Version(xc.__version__) < Version("0.53.0"):
     # Hack to revert to old testdata with old xclim
     open_dataset = partial(open_dataset, branch="v2023.12.14")
