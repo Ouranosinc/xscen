@@ -6,7 +6,6 @@ import logging
 import warnings
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Union
 
 import clisops.core.subset
 import dask

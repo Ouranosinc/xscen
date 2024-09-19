@@ -52,7 +52,7 @@ import warnings
 from copy import deepcopy
 from functools import wraps
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import xarray as xr
 import xclim as xc

@@ -2,7 +2,6 @@
 
 import logging
 from copy import deepcopy
-from typing import Optional, Union
 
 import xarray as xr
 import xclim as xc
