@@ -22,6 +22,7 @@ New features and enhancements
 * Convenience functions ``xs.io.zip_directory`` and ``xs.io.unzip_directory`` (for zarrs). (:pull:`431`).
 * New argument ``compute_indicators``: ``rechunk_input`` to rechunk the inputs to resample-appropriate chunks before calling xclim. (:pull:`431`).
 * New ``xs.indicators.get_indicator_outputs`` to retrieve what variable name(s) and frequency to expect from an xclim indicator. (:pull:`431`).
+* `xscen` now supports launches tests from `pytest` with the `--numprocesses` option. See the `pytest-xdist documentation <https://pytest-xdist.readthedocs.io/en/stable/>`_ for more information. (:pull:`464`).
 
 Bug fixes
 ^^^^^^^^^
@@ -45,6 +46,7 @@ Breaking changes
 * `attrs_to_remove` and `remove_all_attrs_except` in ``clean_up`` now use real regex. It should not be too breaking since a `fullmatch()` is used, but `*` is now `.*`. (:pull:`450`).
 * Python 3.9 is no longer supported. (:pull:`456`).
 * Functions and arguments that were deprecated in `xscen` v0.8.0 or earlier have been removed. (:pull:`461`).
+* `pytest-xdist` is now a development dependency. (:pull:`464`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
