@@ -367,12 +367,6 @@ class TestProduceHorizon:
         assert out.attrs["cat:processing_level"] == "warminglevel+1Cvs1851-1901"
 
     def test_errors(self):
-        # FutureWarning
-        with pytest.warns(FutureWarning, match="The 'period' argument is deprecated"):
-            xs.produce_horizon(
-                self.ds, indicators=self.yaml_file, period=["1982", "1988"]
-            )
-
         # Bad input
         with pytest.raises(
             ValueError, match="Could not understand the format of warminglevels"
