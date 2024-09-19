@@ -67,7 +67,7 @@ Internal changes
 
 CI changes
 ^^^^^^^^^^
-* The `bump-version.yml` workflow now uses the Ouranosinc GitHub Helper Bot to sign bump version commits.
+* The `bump-version.yml` workflow now uses the Ouranosinc GitHub Helper Bot to sign bump version commits. (:pull:`462`).
 
 v0.9.1 (2024-06-04)
 -------------------
