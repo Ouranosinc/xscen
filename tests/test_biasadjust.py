@@ -129,7 +129,7 @@ class TestAdjust:
         self, periods, to_level, bias_adjust_institution, bias_adjust_project
     ):
         dtrain = xs.train(
-            self.dref,
+            self.dref.copy(),
             self.dsim.sel(time=slice("2001", "2003")),
             var="tas",
             period=["2001", "2003"],
@@ -137,7 +137,7 @@ class TestAdjust:
 
         out = xs.adjust(
             dtrain,
-            self.dsim,
+            self.dsim.copy(),
             periods=periods,
             to_level=to_level,
             bias_adjust_institution=bias_adjust_institution,
@@ -175,9 +175,9 @@ class TestAdjust:
                 np.concatenate([np.ones(365 * 1) * 1, np.ones(365 * 1) * 3]),
             )
 
-    def test_write_train(self):
+    def test_write_train(self, tmpdir):
         dtrain = xs.train(
-            self.dref,
+            self.dref.copy(),
             self.dsim.sel(time=slice("2001", "2003")),
             var="tas",
             period=["2001", "2003"],
@@ -186,7 +186,7 @@ class TestAdjust:
             jitter_under={"thresh": "2 K"},
         )
 
-        root = str(notebooks / "_data")
+        root = str(tmpdir / "_data")
         xs.save_to_zarr(dtrain, f"{root}/test.zarr", mode="o")
         dtrain2 = xr.open_dataset(
             f"{root}/test.zarr", chunks={"dayofyear": 365, "quantiles": 15}
@@ -194,7 +194,7 @@ class TestAdjust:
 
         out = xs.adjust(
             dtrain,
-            self.dsim,
+            self.dsim.copy(),
             periods=["2001", "2006"],
             xclim_adjust_args={
                 "detrend": {
@@ -205,7 +205,7 @@ class TestAdjust:
 
         out2 = xs.adjust(
             dtrain2,
-            self.dsim,
+            self.dsim.copy(),
             periods=["2001", "2006"],
             xclim_adjust_args={
                 "detrend": {
