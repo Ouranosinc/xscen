@@ -25,7 +25,7 @@ class TestComputeDeltas:
         ),
         op="mean",
         window=30,
-        interval=30,
+        stride=30,
     )
 
     @pytest.mark.parametrize(
@@ -106,7 +106,7 @@ class TestComputeDeltas:
             ),
             op="mean",
             window=30,
-            interval=30,
+            stride=30,
         )
 
         out = xs.compute_deltas(
