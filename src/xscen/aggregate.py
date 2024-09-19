@@ -8,7 +8,6 @@ from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, Union
 
 import geopandas as gpd
 import numpy as np
@@ -45,64 +44,6 @@ __all__ = [
 # Dummy function to make gettext aware of translatable-strings
 def _(s):
     return s
-
-
-@parse_config
-def climatological_mean(
-    ds: xr.Dataset,
-    *,
-    window: int | None = None,
-    min_periods: int | None = None,
-    interval: int = 1,
-    periods: list[str] | list[list[str]] | None = None,
-    to_level: str | None = "climatology",
-) -> xr.Dataset:
-    """Compute the mean over 'year' for given time periods, respecting the temporal resolution of ds.
-
-    Parameters
-    ----------
-    ds : xr.Dataset
-        Dataset to use for the computation.
-    window : int, optional
-        Number of years to use for the time periods.
-        If left at None and periods is given, window will be the size of the first period.
-        If left at None and periods is not given, the window will be the size of the input dataset.
-    min_periods : int, optional
-        For the rolling operation, minimum number of years required for a value to be computed.
-        If left at None and the xrfreq is either QS or AS and doesn't start in January, min_periods will be one less than window.
-        If left at None, it will be deemed the same as 'window'.
-    interval : int
-        Interval (in years) at which to provide an output.
-    periods : list of str or list of lists of str, optional
-        Either [start, end] or list of [start, end] of continuous periods to be considered.
-        This is needed when the time axis of ds contains some jumps in time.
-        If None, the dataset will be considered continuous.
-    to_level : str, optional
-        The processing level to assign to the output.
-        If None, the processing level of the inputs is preserved.
-
-    Returns
-    -------
-    xr.Dataset
-        Returns a Dataset of the climatological mean, by calling climatological_op with option op=='mean'.
-
-    """
-    warnings.warn(
-        "xs.climatological_mean is deprecated and will be abandoned in a future release. "
-        "Use xs.climatological_op with option op=='mean' instead.",
-        category=FutureWarning,
-    )
-    return climatological_op(
-        ds,
-        op="mean",
-        window=window,
-        min_periods=min_periods,
-        stride=interval,
-        periods=periods,
-        rename_variables=False,
-        to_level=to_level,
-        horizons_as_dim=False,
-    )
 
 
 @parse_config
@@ -767,24 +708,6 @@ def spatial_mean(  # noqa: C901
     xarray.Dataset.mean, xarray.Dataset.interp, xesmf.SpatialAverager
     """
     kwargs = kwargs or {}
-    if method == "mean":
-        warnings.warn(
-            "xs.spatial_mean with method=='mean' is deprecated and will be abandoned in a future release. "
-            "Use method=='cos-lat' instead for a more robust but similar method.",
-            category=FutureWarning,
-        )
-    elif method == "interp_coord":
-        warnings.warn(
-            "xs.spatial_mean with method=='interp_coord' is deprecated. Use method=='interp_centroid' instead.",
-            category=FutureWarning,
-        )
-        method = "interp_centroid"
-    if call_clisops:
-        warnings.warn(
-            "call_clisops has been renamed and is deprecated. Use spatial_subset instead.",
-            category=FutureWarning,
-        )
-        spatial_subset = call_clisops
 
     if region == "global":
         region = {
@@ -797,21 +720,6 @@ def spatial_mean(  # noqa: C901
             region["lon_bnds"] = [0, 360]
         else:
             region["lon_bnds"] = [-180, 180]
-
-    if (
-        (region is not None)
-        and (region["method"] in region)
-        and (isinstance(region[region["method"]], dict))
-    ):
-        warnings.warn(
-            "You seem to be using a deprecated version of region. Please use the new formatting.",
-            category=FutureWarning,
-        )
-        region = deepcopy(region)
-        if "buffer" in region:
-            region["tile_buffer"] = region.pop("buffer")
-        _kwargs = region.pop(region["method"])
-        region.update(_kwargs)
 
     if (
         (region is not None)
@@ -873,19 +781,6 @@ def spatial_mean(  # noqa: C901
             f"weighted mean(dim={[d for d in ds.cf.axes['X'] + ds.cf.axes['Y']]}) using a 'cos-lat' approximation of areacella (in deg2)"
         )
 
-    # This simply calls .mean() over the spatial dimensions
-    elif method == "mean":
-        if "dim" not in kwargs:
-            kwargs["dim"] = ds.cf.axes["X"] + ds.cf.axes["Y"]
-
-        ds_agg = ds.mean(keep_attrs=True, **kwargs)
-
-        # Prepare the History field
-        new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"xarray.mean(dim={kwargs['dim']}) - xarray v{xr.__version__}"
-        )
-
     # This calls .interp() to a pair of coordinates
     elif method == "interp_centroid":
         # Find the centroid
@@ -896,7 +791,7 @@ def spatial_mean(  # noqa: C901
                 kwargs[ds.cf.axes["Y"][0]] = ds[ds.cf.axes["Y"][0]].mean().values
         else:
             if region["method"] == "gridpoint":
-                if len(region["lon"] != 1):
+                if len(region["lon"]) != 1:
                     raise ValueError(
                         "Only a single location should be used with interp_centroid."
                     )
@@ -1045,7 +940,6 @@ def produce_horizon(  # noqa: C901
     periods: list[str] | list[list[str]] | None = None,
     warminglevels: dict | None = None,
     to_level: str | None = "horizons",
-    period: list | None = None,
 ) -> xr.Dataset:
     """
     Compute indicators, then the climatological mean, and finally unstack dates in order
@@ -1084,12 +978,6 @@ def produce_horizon(  # noqa: C901
             "If you want to use produce_horizon for multiple warming levels, "
             "extract the full time series and use the `warminglevels` argument instead."
         )
-    if period is not None:
-        warnings.warn(
-            "The 'period' argument is deprecated and will be removed in a future version. Use 'periods' instead.",
-            category=FutureWarning,
-        )
-        periods = [standardize_periods(period, multiple=False)]
 
     all_periods = []
     if periods is not None:

@@ -7,7 +7,6 @@ from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
