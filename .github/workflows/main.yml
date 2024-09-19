@@ -161,7 +161,7 @@ jobs:
           python -m pip check || true
       - name: Test with pytest
         run: |
-          python -m pytest --cov xscen
+          python -m pytest --numprocesses=auto
       - name: Report Coverage
         run: |
           python -m coveralls
