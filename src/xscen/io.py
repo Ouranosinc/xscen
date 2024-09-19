@@ -8,7 +8,6 @@ from collections import defaultdict
 from collections.abc import Sequence
 from inspect import signature
 from pathlib import Path
-from typing import Optional, Union
 from zipfile import ZipFile
 
 import h5py

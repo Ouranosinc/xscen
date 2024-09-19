@@ -15,7 +15,6 @@ from email.message import EmailMessage
 from io import BytesIO
 from pathlib import Path
 from traceback import format_exception
-from typing import Optional, Union
 
 import xarray as xr
 from matplotlib.figure import Figure

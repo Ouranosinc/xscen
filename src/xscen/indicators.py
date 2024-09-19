@@ -6,7 +6,6 @@ from collections.abc import Sequence
 from functools import partial
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, Union
 
 import pandas as pd
 import xarray as xr

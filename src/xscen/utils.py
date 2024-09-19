@@ -15,7 +15,7 @@ from io import StringIO
 from itertools import chain
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, TextIO, Union
+from typing import TextIO
 
 import cftime
 import flox.xarray
