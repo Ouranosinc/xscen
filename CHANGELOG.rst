@@ -4,7 +4,7 @@ Changelog
 
 v0.9.2 (unreleased)
 -------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -36,6 +36,14 @@ Bug fixes
 * ``unstack_dates`` now works correctly for yearly datasets when `winter_starts_year=True`, as well as multi-year datasets. (:pull:`450`).
 * Fix ``xs.catalog.concat_data_catalogs`` for catalogs that have not been search yet. (:pull:`431`).
 * Fix indicator computation using ``freq=2Q*`` by assuming this means a semiannual frequency anchored at the given month (pandas assumes 2 quarter steps, any of them anchored at the given month). (:pull:`431`).
+* ``create_bounds_rotated_pole`` now uses the default value if the dataset has no `north_pole_grid_longitude` attribute, instead of crashing. (:pull:`455`).
+* Rewrote the global tas data file with latest HDF5/h5py to avoid errors when using h5py 3.11 and hdf5 1.14.2. (:pull:`1861`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* `convert_calendar` in ``clean_up`` now uses `xarray` instead of `xclim`. Keywords aren't compatible between the two, but given that `xclim` will abandon its function, no backwards compatibility was sought. (:pull:`450`).
+* `attrs_to_remove` and `remove_all_attrs_except` in ``clean_up`` now use real regex. It should not be too breaking since a `fullmatch()` is used, but `*` is now `.*`. (:pull:`450`).
+* Python 3.9 is no longer supported. (:pull:`456`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -46,11 +54,20 @@ Internal changes
 * Explicitly assign coords of multiindex in `xs.unstack_fill_nan`. (:pull:`427`).
 * French translations are compiled offline. A new check ensures no PR are merged with missing messages. (:issue:`342`, :pull:`443`).
 * Continued work to add tests. (:pull:`450`).
+* Updated the cookiecutter template via `cruft`: (:pull:`452`)
+    * GitHub Workflows that use rely on `PyPI`-based dependencies now use commit hashes.
+    * `Dependabot` will now group updates by type.
+    * Dependencies have been updated and synchronized.
+    * Contributor guidance documentation has been adjusted.
+    * `numpydoc-validate` has been added to the linting tools.
+    * Linting checks are more reliant on `ruff` suggestions and stricter.
+    * `flake8-alphabetize` has been replaced by `ruff`.
+    * License information has been updated in the library top-level `__init__.py`.
+* Docstrings have been adjusted to meet the `numpydoc` standard. (:pull:`452`).
 
-Breaking changes
-^^^^^^^^^^^^^^^^
-* `convert_calendar` in ``clean_up`` now uses `xarray` instead of `xclim`. Keywords aren't compatible between the two, but given that `xclim` will abandon its function, no backwards compatibility was sought. (:pull:`450`).
-* `attrs_to_remove` and `remove_all_attrs_except` in ``clean_up`` now use real regex. It should not be too breaking since a `fullmatch()` is used, but `*` is now `.*`. (:pull:`450`).
+CI changes
+^^^^^^^^^^
+* The `bump-version.yml` workflow now uses the Ouranosinc GitHub Helper Bot to sign bump version commits. (:pull:`462`).
 
 v0.9.1 (2024-06-04)
 -------------------

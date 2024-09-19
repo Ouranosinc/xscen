@@ -110,7 +110,7 @@ def _parse_level(text: str) -> str:
 )
 def _parse_datebounds(
     text: str,
-) -> Union[list[str], tuple[None, None], tuple[str, str]]:
+) -> list[str] | tuple[None, None] | tuple[str, str]:
     """Parse helper to translate date bounds, used in the special DATES field."""
     if "-" in text:
         return text.split("-")
@@ -120,22 +120,22 @@ def _parse_datebounds(
 
 
 def _find_assets(
-    root: Union[str, os.PathLike],
+    root: str | os.PathLike,
     exts: set[str],
     lengths: set[int],
-    dirglob: Optional[str] = None,
+    dirglob: str | None = None,
 ):
     """Walk recursively over files in a directory, filtering according to a glob pattern, path depth and extensions.
 
     Parameters
     ----------
-    root: str or Pathlike
+    root : str or Pathlike
         Path of the directory to walk through.
-    exts: set of strings
+    exts : set of strings
         Set of file extensions to look for.
-    lengths: set of ints
+    lengths : set of ints
         Set of path depths to look for.
-    dirglob: str, optional
+    dirglob : str, optional
         A glob pattern. If given, only parent folders matching this pattern are walked through.
         This pattern can not include the asset's basename.
     """
@@ -159,11 +159,11 @@ def _find_assets(
 
         if ".zarr" in exts:
             for zr in zarrs:
-                yield os.path.join(top, zr)
+                yield Path(top).joinpath(zr).as_posix()
         if exts - {".zarr"}:  # There are more exts than
             for file in files:
-                if os.path.splitext(file)[-1] in exts:
-                    yield os.path.join(top, file)
+                if Path(file).suffix in exts:
+                    yield Path(top).joinpath(file).as_posix()
 
 
 def _compile_pattern(pattern: str) -> parse.Parser:
@@ -191,13 +191,13 @@ def _compile_pattern(pattern: str) -> parse.Parser:
 
 
 def _name_parser(
-    path: Union[os.PathLike, str],
-    root: Union[os.PathLike, str],
-    patterns: list[Union[str, parse.Parser]],
-    read_from_file: Optional[Union[list[str], dict]] = None,
-    attrs_map: Optional[dict] = None,
-    xr_open_kwargs: Optional[dict] = None,
-) -> Optional[dict]:
+    path: os.PathLike | str,
+    root: os.PathLike | str,
+    patterns: list[str | parse.Parser],
+    read_from_file: list[str] | dict | None = None,
+    attrs_map: dict | None = None,
+    xr_open_kwargs: dict | None = None,
+) -> dict | None:
     """Extract metadata information from the file path.
 
     Parameters
@@ -267,26 +267,26 @@ def _name_parser(
 
 
 def _parse_dir(  # noqa: C901
-    root: Union[os.PathLike, str],
+    root: os.PathLike | str,
     patterns: list[str],
-    dirglob: Optional[str] = None,
-    checks: Optional[list[str]] = None,
-    read_from_file: Optional[Union[list[str], dict]] = None,
-    attrs_map: Optional[dict] = None,
-    xr_open_kwargs: Optional[dict] = None,
+    dirglob: str | None = None,
+    checks: list[str] | None = None,
+    read_from_file: list[str] | dict | None = None,
+    attrs_map: dict | None = None,
+    xr_open_kwargs: dict | None = None,
     progress: bool = False,
 ):
     """Iterate and parses files in a directory, filtering according to basic pattern properties and optional checks.
 
     Parameters
     ----------
-    root: os.PathLike or str
+    root : os.PathLike or str
         Path to walk through.
-    patterns: list of strings or compiled parsers
+    patterns : list of strings or compiled parsers
         Patterns that the files will be checked against.
         The extensions of the patterns are extracted and only paths with these are returned.
         Also, the depths of the patterns are calculated and only paths of this depth under the root are returned.
-    dirglob: str
+    dirglob : str
         A glob pattern. If given, only parent folders matching this pattern are walked through.
         This pattern can not include the asset's basename.
     checks: list of strings, optional
@@ -302,7 +302,7 @@ def _parse_dir(  # noqa: C901
         If `read_from_file` is not None, passed directly to :py:func:`parse_from_ds`.
     xr_open_kwargs : dict, optional
         If `read_from_file` is not None, passed directly to :py:func:`parse_from_ds`.
-    progress: bool
+    progress : bool
         If True, the number of found files is printed to stdout.
 
     Return
@@ -311,7 +311,7 @@ def _parse_dir(  # noqa: C901
         Metadata parsed from each found asset.
     """
     lengths = {patt.count(os.path.sep) for patt in patterns}
-    exts = {os.path.splitext(patt)[-1] for patt in patterns}
+    exts = {Path(patt).suffix for patt in patterns}
     comp_patterns = list(map(_compile_pattern, patterns))
     checks = checks or []
 
@@ -320,7 +320,7 @@ def _parse_dir(  # noqa: C901
     # Another thread runs the checks
     # Another thread parses the path and file.
     # In theory, for a local disk, walking a directory cannot be parallelized. This is not as true for network-mounted drives.
-    # Thus we parallelize the parsing steps.
+    # Thus, we parallelize the parsing steps.
     # If the name-parsing step becomes blocking, we could try to increase the number of threads (but netCDF4 can't multithread...)
     # Usually, the walking is the bottleneck.
     q_found = queue.Queue()
@@ -343,7 +343,8 @@ def _parse_dir(  # noqa: C901
                         # TODO: testing for zarr validity is not implemented
                         with netCDF4.Dataset(path):
                             pass
-                except Exception:
+                # FIXME: This is a catch-all, we should catch the specific exception raised by netCDF4.
+                except Exception:  # noqa: BLE001
                     valid = False
             if valid:
                 q_checked.put(path)
@@ -362,8 +363,10 @@ def _parse_dir(  # noqa: C901
                     attrs_map=attrs_map,
                     xr_open_kwargs=xr_open_kwargs,
                 )
-            except Exception as err:
-                logger.error(f"Parsing file {path} failed with {err}.")
+            # FIXME: This is not specific enough, we should catch the specific exception raised by _name_parser.
+            except Exception as err:  # noqa: BLE001
+                msg = f"Parsing file {path} failed with {err}."
+                logger.error(msg)
             else:
                 if d is not None:
                     parsed.append(d)
@@ -374,7 +377,8 @@ def _parse_dir(  # noqa: C901
                     ):
                         print(f"Found {n:7d} files", end="\r")
                 else:
-                    logger.debug(f"File {path} didn't match any pattern.")
+                    msg = f"File {path} didn't match any pattern."
+                    logger.debug(msg)
             q_checked.task_done()
 
     CW = threading.Thread(target=check_worker, daemon=True)
@@ -409,7 +413,7 @@ def _replace_in_row(oldrow: pd.Series, replacements: dict):
     List-like fields are handled.
     """
     row = oldrow.copy()
-    list_cols = [col for col in oldrow.index if isinstance(oldrow[col], (tuple, list))]
+    list_cols = [col for col in oldrow.index if isinstance(oldrow[col], tuple | list)]
     for col, reps in replacements.items():
         if col not in row:
             continue
@@ -437,7 +441,8 @@ def _parse_first_ds(
     """Parse attributes from one file per group, apply them to the whole group."""
     fromfile = parse_from_ds(grp.path.iloc[0], cols, attrs_map, **xr_open_kwargs)
 
-    logger.info(f"Got {len(fromfile)} fields, applying to {len(grp)} entries.")
+    msg = f"Got {len(fromfile)} fields, applying to {len(grp)} entries."
+    logger.info(msg)
     out = grp.copy()
     for col, val in fromfile.items():
         for i in grp.index:  # If val is an iterable we can't use loc.
@@ -447,24 +452,24 @@ def _parse_first_ds(
 
 @parse_config
 def parse_directory(  # noqa: C901
-    directories: Union[str, list[Union[str, os.PathLike]]],
+    directories: str | list[str | os.PathLike],
     patterns: list[str],
     *,
-    id_columns: Optional[list[str]] = None,
-    read_from_file: Union[
-        bool,
-        Sequence[str],
-        tuple[Sequence[str], Sequence[str]],
-        Sequence[tuple[Sequence[str], Sequence[str]]],
-    ] = False,
-    homogenous_info: Optional[dict] = None,
-    cvs: Optional[Union[str, os.PathLike, dict]] = None,
-    dirglob: Optional[str] = None,
-    xr_open_kwargs: Optional[Mapping[str, Any]] = None,
+    id_columns: list[str] | None = None,
+    read_from_file: (
+        bool
+        | Sequence[str]
+        | tuple[Sequence[str], Sequence[str]]
+        | Sequence[tuple[Sequence[str], Sequence[str]]]
+    ) = False,
+    homogenous_info: dict | None = None,
+    cvs: str | os.PathLike | dict | None = None,
+    dirglob: str | None = None,
+    xr_open_kwargs: Mapping[str, Any] | None = None,
     only_official_columns: bool = True,
     progress: bool = False,
-    parallel_dirs: Union[bool, int] = False,
-    file_checks: Optional[list[str]] = None,
+    parallel_dirs: bool | int = False,
+    file_checks: list[str] | None = None,
 ) -> pd.DataFrame:
     r"""Parse files in a directory and return them as a pd.DataFrame.
 
@@ -550,7 +555,7 @@ def parse_directory(  # noqa: C901
     pd.DataFrame
         Parsed directory files
     """
-    if isinstance(directories, (str, Path)):
+    if isinstance(directories, str | Path):
         directories = [directories]
     homogenous_info = homogenous_info or {}
     xr_open_kwargs = xr_open_kwargs or {}
@@ -583,7 +588,7 @@ def parse_directory(  # noqa: C901
 
     if cvs is not None:
         if not isinstance(cvs, dict):
-            with open(cvs) as f:
+            with Path(cvs).open(encoding="utf-8") as f:
                 cvs = yaml.safe_load(f)
         attrs_map = cvs.pop("attributes", {})
     else:
@@ -617,8 +622,9 @@ def parse_directory(  # noqa: C901
         raise ValueError("No files found.")
     else:
         if progress:
-            print()
-        logger.info(f"Found and parsed {len(parsed)} files.")
+            print()  # This is because of the \r outputted in the _parse_dir call.
+        msg = f"Found and parsed {len(parsed)} files."
+        logger.info(msg)
 
     # Path has become NaN when some paths didn't fit any passed pattern
     df = pd.DataFrame(parsed).dropna(axis=0, subset=["path"])
@@ -691,7 +697,8 @@ def parse_directory(  # noqa: C901
             warnings.warn(
                 f"{n} invalid entries where the start and end dates are Null but the frequency is not 'fx'."
             )
-            logger.debug(f"Paths: {df.path[invalid].values}")
+            msg = f"Paths: {df.path[invalid].values}"
+            logger.debug(msg)
             df = df[~invalid]
         # Exact opposite
         invalid = df.date_start.notnull() & df.date_end.notnull() & (df.xrfreq == "fx")
@@ -700,7 +707,8 @@ def parse_directory(  # noqa: C901
             warnings.warn(
                 f"{n} invalid entries where the start and end dates are given but the frequency is 'fx'."
             )
-            logger.debug(f"Paths: {df.path[invalid].values}")
+            msg = f"Paths: {df.path[invalid].values}"
+            logger.debug(msg)
             df = df[~invalid]
 
     # Create id from user specifications
@@ -718,9 +726,9 @@ def parse_directory(  # noqa: C901
 
 
 def parse_from_ds(  # noqa: C901
-    obj: Union[str, os.PathLike, xr.Dataset],
+    obj: str | os.PathLike | xr.Dataset,
     names: Sequence[str],
-    attrs_map: Optional[Mapping[str, str]] = None,
+    attrs_map: Mapping[str, str] | None = None,
     **xrkwargs,
 ):
     """Parse a list of catalog fields from the file/dataset itself.
@@ -753,18 +761,21 @@ def parse_from_ds(  # noqa: C901
         obj = Path(obj)
 
     if isinstance(obj, Path) and obj.suffixes[-1] == ".zarr":
-        logger.info(f"Parsing attributes from Zarr {obj}.")
+        msg = f"Parsing attributes from Zarr {obj}."
+        logger.info(msg)
         ds_attrs, variables, time = _parse_from_zarr(
             obj, get_vars="variable" in names, get_time=get_time
         )
     elif isinstance(obj, Path) and obj.suffixes[-1] == ".nc":
-        logger.info(f"Parsing attributes with netCDF4 from {obj}.")
+        msg = f"Parsing attributes with netCDF4 from {obj}."
+        logger.info(msg)
         ds_attrs, variables, time = _parse_from_nc(
             obj, get_vars="variable" in names, get_time=get_time
         )
     else:
         if isinstance(obj, Path):
-            logger.info(f"Parsing attributes with xarray from {obj}.")
+            msg = f"Parsing attributes with xarray from {obj}."
+            logger.info(msg)
             obj = xr.open_dataset(obj, engine=get_engine(obj), **xrkwargs)
         ds_attrs = obj.attrs
         time = obj.indexes["time"] if "time" in obj else None
@@ -801,12 +812,13 @@ def parse_from_ds(  # noqa: C901
         elif name in ds_attrs:
             attrs[name] = ds_attrs[name].strip()
 
-    logger.debug(f"Got fields {attrs.keys()} from file.")
+    msg = f"Got fields {attrs.keys()} from file."
+    logger.debug(msg)
     return attrs
 
 
 def _parse_from_zarr(
-    path: Union[os.PathLike, str], get_vars: bool = True, get_time: bool = True
+    path: os.PathLike | str, get_vars: bool = True, get_time: bool = True
 ):
     """Obtain the list of variables, the time coordinate and the list of global attributes from a zarr dataset.
 
@@ -869,7 +881,7 @@ def _parse_from_zarr(
 
 
 def _parse_from_nc(
-    path: Union[os.PathLike, str], get_vars: bool = True, get_time: bool = True
+    path: os.PathLike | str, get_vars: bool = True, get_time: bool = True
 ):
     """Obtain the list of variables, the time coordinate, and the list of global attributes from a netCDF dataset, using netCDF4.
 
@@ -922,7 +934,7 @@ def _schema_option(option: dict, facets: dict):
     return answer
 
 
-def _schema_level(schema: Union[dict, list[str], str], facets: dict):
+def _schema_level(schema: dict | list[str] | str, facets: dict):
     if isinstance(schema, str):
         if schema.startswith("(") and schema.endswith(")"):
             optional = True
@@ -1036,7 +1048,7 @@ def _read_schemas(schemas):
     elif not isinstance(schemas, dict):
         if schemas is None:
             schemas = Path(__file__).parent / "data" / "file_schema.yml"
-        with open(schemas) as f:
+        with Path(schemas).open(encoding="utf-8") as f:
             schemas = yaml.safe_load(f)
     for name, schema in schemas.items():
         missing_fields = {"with", "folders", "filename"} - set(schema.keys())
@@ -1048,14 +1060,14 @@ def _read_schemas(schemas):
 
 
 def _build_path(
-    data: Union[dict, xr.Dataset, xr.DataArray, pd.Series],
+    data: dict | xr.Dataset | xr.DataArray | pd.Series,
     schemas: dict,
-    root: Union[str, os.PathLike],
+    root: str | os.PathLike,
     get_type: bool = False,
     **extra_facets,
-) -> Union[Path, tuple[Path, str]]:
+) -> Path | tuple[Path, str]:
     # Get all known metadata
-    if isinstance(data, (xr.Dataset, xr.DataArray)):
+    if isinstance(data, xr.Dataset | xr.DataArray):
         facets = (
             # Get non-attribute metadata
             parse_from_ds(
@@ -1115,11 +1127,11 @@ def _build_path(
 
 @parse_config
 def build_path(
-    data: Union[dict, xr.Dataset, xr.DataArray, pd.Series, DataCatalog, pd.DataFrame],
-    schemas: Optional[Union[str, os.PathLike, dict]] = None,
-    root: Optional[Union[str, os.PathLike]] = None,
+    data: dict | xr.Dataset | xr.DataArray | pd.Series | DataCatalog | pd.DataFrame,
+    schemas: str | os.PathLike | dict | None = None,
+    root: str | os.PathLike | None = None,
     **extra_facets,
-) -> Union[Path, DataCatalog, pd.DataFrame]:
+) -> Path | DataCatalog | pd.DataFrame:
     r"""Parse the schema from a configuration and construct path using a dictionary of facets.
 
     Parameters
@@ -1160,7 +1172,7 @@ def build_path(
     if root:
         root = Path(root)
     schemas = _read_schemas(schemas)
-    if isinstance(data, (esm_datastore, pd.DataFrame)):
+    if isinstance(data, esm_datastore | pd.DataFrame):
         if isinstance(data, esm_datastore):
             df = data.df
         else:
@@ -1198,9 +1210,7 @@ def partial_format(template, **fmtargs):
     return template.format_map(PartialFormatDict(**fmtargs))
 
 
-def patterns_from_schema(
-    schema: Union[str, dict], exts: Optional[Sequence[str]] = None
-):
+def patterns_from_schema(schema: str | dict, exts: Sequence[str] | None = None):
     """Generate all valid patterns for a given schema.
 
     Generated patterns are meant for use with :py:func:`parse_directory`.
@@ -1223,7 +1233,7 @@ def patterns_from_schema(
     """
     if isinstance(schema, str):
         schemas = Path(__file__).parent / "data" / "file_schema.yml"
-        with open(schemas) as f:
+        with schemas.open(encoding="utf-8") as f:
             schema = yaml.safe_load(f)[schema]
 
     # # Base folder patterns

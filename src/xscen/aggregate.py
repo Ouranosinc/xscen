@@ -51,11 +51,11 @@ def _(s):
 def climatological_mean(
     ds: xr.Dataset,
     *,
-    window: Optional[int] = None,
-    min_periods: Optional[int] = None,
+    window: int | None = None,
+    min_periods: int | None = None,
     interval: int = 1,
-    periods: Optional[Union[list[str], list[list[str]]]] = None,
-    to_level: Optional[str] = "climatology",
+    periods: list[str] | list[list[str]] | None = None,
+    to_level: str | None = "climatology",
 ) -> xr.Dataset:
     """Compute the mean over 'year' for given time periods, respecting the temporal resolution of ds.
 
@@ -109,11 +109,11 @@ def climatological_mean(
 def climatological_op(  # noqa: C901
     ds: xr.Dataset,
     *,
-    op: Union[str, dict] = "mean",
-    window: Optional[int] = None,
-    min_periods: Optional[Union[int, float]] = None,
+    op: str | dict = "mean",
+    window: int | None = None,
+    min_periods: int | float | None = None,
     stride: int = 1,
-    periods: Optional[Union[list[str], list[list[str]]]] = None,
+    periods: list[str] | list[list[str]] | None = None,
     rename_variables: bool = True,
     to_level: str = "climatology",
     horizons_as_dim: bool = False,
@@ -506,11 +506,11 @@ def climatological_op(  # noqa: C901
 @parse_config
 def compute_deltas(  # noqa: C901
     ds: xr.Dataset,
-    reference_horizon: Union[str, xr.Dataset],
+    reference_horizon: str | xr.Dataset,
     *,
-    kind: Union[str, dict] = "+",
+    kind: str | dict = "+",
     rename_variables: bool = True,
-    to_level: Optional[str] = "deltas",
+    to_level: str | None = "deltas",
 ) -> xr.Dataset:
     """Compute deltas in comparison to a reference time period, respecting the temporal resolution of ds.
 
@@ -702,13 +702,13 @@ def spatial_mean(  # noqa: C901
     ds: xr.Dataset,
     method: str,
     *,
-    spatial_subset: Optional[bool] = None,
-    call_clisops: Optional[bool] = False,
-    region: Optional[Union[dict, str]] = None,
-    kwargs: Optional[dict] = None,
-    simplify_tolerance: Optional[float] = None,
-    to_domain: Optional[str] = None,
-    to_level: Optional[str] = None,
+    spatial_subset: bool | None = None,
+    call_clisops: bool | None = False,
+    region: dict | str | None = None,
+    kwargs: dict | None = None,
+    simplify_tolerance: float | None = None,
+    to_domain: str | None = None,
+    to_level: str | None = None,
 ) -> xr.Dataset:
     """Compute the spatial mean using a variety of available methods.
 
@@ -833,14 +833,14 @@ def spatial_mean(  # noqa: C901
             )
 
         if "units" not in ds.cf["latitude"].attrs:
-            logger.warning(
-                f"{ds.attrs.get('cat:id', '')}: Latitude does not appear to have units. Make sure that the computation is right."
-            )
+            msg = f"{ds.attrs.get('cat:id', '')}: Latitude does not appear to have units. Make sure that the computation is right."
+            logger.warning(msg)
         elif ds.cf["latitude"].attrs["units"] != "degrees_north":
-            logger.warning(
+            msg = (
                 f"{ds.attrs.get('cat:id', '')}: Latitude units is '{ds.cf['latitude'].attrs['units']}', expected 'degrees_north'. "
-                f"Make sure that the computation is right."
+                "Make sure that the computation is right."
             )
+            logger.warning(msg)
 
         if ((ds.cf["longitude"].min() < -160) & (ds.cf["longitude"].max() > 160)) or (
             (ds.cf["longitude"].min() < 20) & (ds.cf["longitude"].max() > 340)
@@ -1034,18 +1034,18 @@ def spatial_mean(  # noqa: C901
 @parse_config
 def produce_horizon(  # noqa: C901
     ds: xr.Dataset,
-    indicators: Union[
-        str,
-        os.PathLike,
-        Sequence[Indicator],
-        Sequence[tuple[str, Indicator]],
-        ModuleType,
-    ],
+    indicators: (
+        str
+        | os.PathLike
+        | Sequence[Indicator]
+        | Sequence[tuple[str, Indicator]]
+        | ModuleType
+    ),
     *,
-    periods: Optional[Union[list[str], list[list[str]]]] = None,
-    warminglevels: Optional[dict] = None,
-    to_level: Optional[str] = "horizons",
-    period: Optional[list] = None,
+    periods: list[str] | list[list[str]] | None = None,
+    warminglevels: dict | None = None,
+    to_level: str | None = "horizons",
+    period: list | None = None,
 ) -> xr.Dataset:
     """
     Compute indicators, then the climatological mean, and finally unstack dates in order
@@ -1095,7 +1095,7 @@ def produce_horizon(  # noqa: C901
     if periods is not None:
         all_periods.extend(standardize_periods(periods))
     if warminglevels is not None:
-        if isinstance(warminglevels["wl"], (int, float)):
+        if isinstance(warminglevels["wl"], int | float):
             all_periods.append(warminglevels)
         elif isinstance(warminglevels["wl"], list):
             template = deepcopy(warminglevels)

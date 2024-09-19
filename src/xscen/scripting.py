@@ -43,12 +43,12 @@ def send_mail(
     *,
     subject: str,
     msg: str,
-    to: Optional[str] = None,
+    to: str | None = None,
     server: str = "127.0.0.1",
     port: int = 25,
-    attachments: Optional[
-        list[Union[tuple[str, Union[Figure, os.PathLike]], Figure, os.PathLike]]
-    ] = None,
+    attachments: None | (
+        list[tuple[str, Figure | os.PathLike] | Figure | os.PathLike]
+    ) = None,
 ) -> None:
     """Send email.
 
@@ -160,9 +160,9 @@ exit_watcher.hook()
 @parse_config
 def send_mail_on_exit(
     *,
-    subject: Optional[str] = None,
-    msg_ok: Optional[str] = None,
-    msg_err: Optional[str] = None,
+    subject: str | None = None,
+    msg_ok: str | None = None,
+    msg_err: str | None = None,
     on_error_only: bool = False,
     skip_ctrlc: bool = True,
     **mail_kwargs,
@@ -244,7 +244,7 @@ class measure_time:
 
     def __init__(
         self,
-        name: Optional[str] = None,
+        name: str | None = None,
         cpu: bool = False,
         logger: logging.Logger = logger,
     ):
@@ -255,7 +255,8 @@ class measure_time:
     def __enter__(self):  # noqa: D105
         self.start = time.perf_counter()
         self.start_cpu = time.process_time()
-        self.logger.info(f"Started process {self.name}.")
+        msg = f"Started process {self.name}."
+        self.logger.info(msg)
         return
 
     def __exit__(self, *args, **kwargs):  # noqa: D105
@@ -269,7 +270,8 @@ class measure_time:
         self.logger.info(s)
 
 
-class TimeoutException(Exception):
+# FIXME: This should be written as "TimeoutError"
+class TimeoutException(Exception):  # noqa: N818
     """An exception raised with a timeout occurs."""
 
     def __init__(self, seconds: int, task: str = "", **kwargs):
@@ -309,9 +311,7 @@ def timeout(seconds: int, task: str = ""):
 
 
 @contextmanager
-def skippable(
-    seconds: int = 2, task: str = "", logger: Optional[logging.Logger] = None
-):
+def skippable(seconds: int = 2, task: str = "", logger: logging.Logger | None = None):
     """Skippable context manager.
 
     When CTRL-C (SIGINT, KeyboardInterrupt) is sent within the context,
@@ -353,11 +353,11 @@ def skippable(
 def save_and_update(
     ds: xr.Dataset,
     pcat: ProjectCatalog,
-    path: Optional[Union[str, os.PathLike]] = None,
-    file_format: Optional[str] = None,
-    build_path_kwargs: Optional[dict] = None,
-    save_kwargs: Optional[dict] = None,
-    update_kwargs: Optional[dict] = None,
+    path: str | os.PathLike | None = None,
+    file_format: str | None = None,
+    build_path_kwargs: dict | None = None,
+    save_kwargs: dict | None = None,
+    update_kwargs: dict | None = None,
 ):
     """
     Construct the path, save and delete.
@@ -424,13 +424,14 @@ def save_and_update(
     # update catalog
     pcat.update_from_ds(ds=ds, path=path, **update_kwargs)
 
-    logger.info(f"File {path} has saved succesfully and the catalog was updated.")
+    msg = f"File {path} has been saved successfully and the catalog was updated."
+    logger.info(msg)
 
 
 def move_and_delete(
-    moving: list[list[Union[str, os.PathLike]]],
+    moving: list[list[str | os.PathLike]],
     pcat: ProjectCatalog,
-    deleting: Optional[list[Union[str, os.PathLike]]] = None,
+    deleting: list[str | os.PathLike] | None = None,
     copy: bool = False,
 ):
     """
@@ -456,7 +457,8 @@ def move_and_delete(
             source, dest = files[0], files[1]
             if Path(source).exists():
                 if copy:
-                    logger.info(f"Copying {source} to {dest}.")
+                    msg = f"Copying {source} to {dest}."
+                    logger.info(msg)
                     copied_files = copy_tree(source, dest)
                     for f in copied_files:
                         # copied files don't include zarr files
@@ -467,13 +469,15 @@ def move_and_delete(
                             ds = xr.open_dataset(f)
                             pcat.update_from_ds(ds=ds, path=f)
                 else:
-                    logger.info(f"Moving {source} to {dest}.")
+                    msg = f"Moving {source} to {dest}."
+                    logger.info(msg)
                     sh.move(source, dest)
                 if Path(dest).suffix in [".zarr", ".nc"]:
                     ds = xr.open_dataset(dest)
                     pcat.update_from_ds(ds=ds, path=dest)
             else:
-                logger.info(f"You are trying to move {source}, but it does not exist.")
+                msg = f"You are trying to move {source}, but it does not exist."
+                logger.info(msg)
     else:
         raise ValueError("`moving` should be a list of lists.")
 
@@ -481,9 +485,10 @@ def move_and_delete(
     if isinstance(deleting, list):
         for dir_to_delete in deleting:
             if Path(dir_to_delete).exists() and Path(dir_to_delete).is_dir():
-                logger.info(f"Deleting content inside {dir_to_delete}.")
+                msg = f"Deleting content inside {dir_to_delete}."
+                logger.info(msg)
                 sh.rmtree(dir_to_delete)
-                os.mkdir(dir_to_delete)
+                Path(dir_to_delete).mkdir()
     elif deleting is None:
         pass
     else:

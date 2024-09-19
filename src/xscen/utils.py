@@ -78,12 +78,12 @@ except FileNotFoundError as err:
 
 
 def update_attr(
-    ds: Union[xr.Dataset, xr.DataArray],
+    ds: xr.Dataset | xr.DataArray,
     attr: str,
     new: str,
-    others: Optional[Sequence[Union[xr.Dataset, xr.DataArray]]] = None,
+    others: Sequence[xr.Dataset | xr.DataArray] | None = None,
     **fmt,
-) -> Union[xr.Dataset, xr.DataArray]:
+) -> xr.Dataset | xr.DataArray:
     r"""Format an attribute referencing itself in a translatable way.
 
     Parameters
@@ -157,7 +157,7 @@ def update_attr(
         )
 
 
-def add_attr(ds: Union[xr.Dataset, xr.DataArray], attr: str, new: str, **fmt):
+def add_attr(ds: xr.Dataset | xr.DataArray, attr: str, new: str, **fmt):
     """Add a formatted translatable attribute to a dataset."""
     ds.attrs[attr] = new.format(**fmt)
     for loc in XC_OPTIONS[METADATA_LOCALES]:
@@ -165,13 +165,13 @@ def add_attr(ds: Union[xr.Dataset, xr.DataArray], attr: str, new: str, **fmt):
 
 
 def date_parser(  # noqa: C901
-    date: Union[str, cftime.datetime, pd.Timestamp, datetime, pd.Period],
+    date: str | cftime.datetime | pd.Timestamp | datetime | pd.Period,
     *,
-    end_of_period: Union[bool, str] = False,
+    end_of_period: bool | str = False,
     out_dtype: str = "datetime",
     strtime_format: str = "%Y-%m-%d",
     freq: str = "H",
-) -> Union[str, pd.Period, pd.Timestamp]:
+) -> str | pd.Period | pd.Timestamp:
     """Return a datetime from a string.
 
     Parameters
@@ -360,10 +360,10 @@ def translate_time_chunk(chunks: dict, calendar: str, timesize: int) -> dict:
 @parse_config
 def stack_drop_nans(
     ds: xr.Dataset,
-    mask: Union[xr.DataArray, list[str]],
+    mask: xr.DataArray | list[str],
     *,
     new_dim: str = "loc",
-    to_file: Optional[str] = None,
+    to_file: str | None = None,
 ) -> xr.Dataset:
     """Stack dimensions into a single axis and drops indexes where the mask is false.
 
@@ -424,7 +424,7 @@ def stack_drop_nans(
         domain = ds.attrs.get("cat:domain", "unknown")
         to_file = to_file.format(domain=domain, shape=original_shape)
         if not Path(to_file).parent.exists():
-            os.makedirs(Path(to_file).parent, exist_ok=True)
+            Path(to_file).parent.mkdir(exist_ok=True)
         # Add all coordinates that might have been affected by the stack
         mask = mask.assign_coords(
             {c: ds[c] for c in ds.coords if any(d in mask.dims for d in ds[c].dims)}
@@ -451,11 +451,9 @@ def unstack_fill_nan(
     ds: xr.Dataset,
     *,
     dim: str = "loc",
-    coords: Optional[
-        Union[
-            str, os.PathLike, Sequence[Union[str, os.PathLike]], dict[str, xr.DataArray]
-        ]
-    ] = None,
+    coords: None | (
+        str | os.PathLike | Sequence[str | os.PathLike] | dict[str, xr.DataArray]
+    ) = None,
 ):
     """Unstack a Dataset that was stacked by :py:func:`stack_drop_nans`.
 
@@ -504,7 +502,7 @@ def unstack_fill_nan(
         logger.info("Dataset unstacked using no coords argument.")
         coords = [d for d in ds.coords if ds[d].dims == (dim,)]
 
-    if isinstance(coords, (str, os.PathLike)):
+    if isinstance(coords, str | os.PathLike):
         # find original shape in the attrs of one of the dimension
         original_shape = "unknown"
         for c in ds.coords:
@@ -512,7 +510,8 @@ def unstack_fill_nan(
                 original_shape = ds[c].attrs["original_shape"]
         domain = ds.attrs.get("cat:domain", "unknown")
         coords = coords.format(domain=domain, shape=original_shape)
-        logger.info(f"Dataset unstacked using {coords}.")
+        msg = f"Dataset unstacked using {coords}."
+        logger.info(msg)
         coords = xr.open_dataset(coords)
         # separate coords that are dims or not
         coords_and_dims = {
@@ -601,7 +600,7 @@ def natural_sort(_list: list[str]):
 
 
 def get_cat_attrs(
-    ds: Union[xr.Dataset, xr.DataArray, dict], prefix: str = "cat:", var_as_str=False
+    ds: xr.Dataset | xr.DataArray | dict, prefix: str = "cat:", var_as_str=False
 ) -> dict:
     """Return the catalog-specific attributes from a dataset or dictionary.
 
@@ -619,7 +618,7 @@ def get_cat_attrs(
     dict
         Compilation of all attributes in a dictionary.
     """
-    if isinstance(ds, (xr.Dataset, xr.DataArray)):
+    if isinstance(ds, xr.Dataset | xr.DataArray):
         attrs = ds.attrs
     else:
         attrs = ds
@@ -641,9 +640,9 @@ def get_cat_attrs(
 @parse_config
 def maybe_unstack(
     ds: xr.Dataset,
-    dim: Optional[str] = None,
-    coords: Optional[str] = None,
-    rechunk: Optional[dict] = None,
+    dim: str | None = None,
+    coords: str | None = None,
+    rechunk: dict | None = None,
     stack_drop_nans: bool = False,
 ) -> xr.Dataset:
     """If stack_drop_nans is True, unstack and rechunk.
@@ -728,7 +727,7 @@ CV = ModuleType(
 )
 
 
-def __read_CVs(cvfile):
+def __read_CVs(cvfile):  # noqa: N802
     with cvfile.open("r") as f:
         cv = json.load(f)
     is_regex = cv.pop("is_regex", False)
@@ -776,10 +775,11 @@ def __read_CVs(cvfile):
     return cvfunc
 
 
-for cvfile in (Path(__file__).parent / "CVs").glob("*.json"):
+for cvfile in Path(__file__).parent.joinpath("CVs").glob("*.json"):
     try:
         CV.__dict__[cvfile.stem] = __read_CVs(cvfile)
-    except Exception as err:
+    # FIXME: This is a catch-all, but we should be more specific
+    except Exception as err:  # noqa: BLE001
         raise ValueError(f"While reading {cvfile} got {err}")
 
 
@@ -833,20 +833,18 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
 def clean_up(  # noqa: C901
     ds: xr.Dataset,
     *,
-    variables_and_units: Optional[dict] = None,
-    convert_calendar_kwargs: Optional[dict] = None,
-    missing_by_var: Optional[dict] = None,
-    maybe_unstack_dict: Optional[dict] = None,
-    round_var: Optional[dict] = None,
-    common_attrs_only: Optional[
-        Union[dict, list[Union[xr.Dataset, str, os.PathLike]]]
-    ] = None,
-    common_attrs_open_kwargs: Optional[dict] = None,
-    attrs_to_remove: Optional[dict] = None,
-    remove_all_attrs_except: Optional[dict] = None,
-    add_attrs: Optional[dict] = None,
-    change_attr_prefix: Optional[Union[str, dict]] = None,
-    to_level: Optional[str] = None,
+    variables_and_units: dict | None = None,
+    convert_calendar_kwargs: dict | None = None,
+    missing_by_var: dict | None = None,
+    maybe_unstack_dict: dict | None = None,
+    round_var: dict | None = None,
+    common_attrs_only: None | (dict | list[xr.Dataset | str | os.PathLike]) = None,
+    common_attrs_open_kwargs: dict | None = None,
+    attrs_to_remove: dict | None = None,
+    remove_all_attrs_except: dict | None = None,
+    add_attrs: dict | None = None,
+    change_attr_prefix: str | dict | None = None,
+    to_level: str | None = None,
 ) -> xr.Dataset:
     """Clean up of the dataset.
 
@@ -920,7 +918,8 @@ def clean_up(  # noqa: C901
     ds = ds.copy()
 
     if variables_and_units:
-        logger.info(f"Converting units: {variables_and_units}")
+        msg = f"Converting units: {variables_and_units}"
+        logger.info(msg)
         ds = change_units(ds=ds, variables_and_units=variables_and_units)
 
     # convert calendar
@@ -946,15 +945,17 @@ def clean_up(  # noqa: C901
         ):
             convert_calendar_kwargs["align_on"] = "random"
 
-        logger.info(f"Converting calendar with {convert_calendar_kwargs} ")
+        msg = f"Converting calendar with {convert_calendar_kwargs}."
+        logger.info(msg)
         ds = ds.convert_calendar(**convert_calendar_kwargs).where(~ocean)
 
         # convert each variable individually
         if missing_by_var:
-            # remove 'missing' argument to be replace by `missing_by_var`
+            # remove 'missing' argument to be replaced by `missing_by_var`
             del convert_calendar_kwargs["missing"]
             for var, missing in missing_by_var.items():
-                logging.info(f"Filling missing {var} with {missing}")
+                msg = f"Filling missing {var} with {missing}"
+                logging.info(msg)
                 if missing == "interpolate":
                     ds_with_nan = ds[var].where(ds[var] != -9999)
                     converted_var = ds_with_nan.chunk({"time": -1}).interpolate_na(
@@ -992,7 +993,7 @@ def clean_up(  # noqa: C901
             common_attrs_only = list(common_attrs_only.values())
 
         for i in range(len(common_attrs_only)):
-            if isinstance(common_attrs_only[i], (str, os.PathLike)):
+            if isinstance(common_attrs_only[i], str | os.PathLike):
                 dataset = xr.open_dataset(
                     common_attrs_only[i], **common_attrs_open_kwargs
                 )
@@ -1011,7 +1012,8 @@ def clean_up(  # noqa: C901
         try:
             ds.attrs["cat:id"] = generate_id(ds).iloc[0]
         except IndexError as err:
-            logger.warning(f"Unable to generate a new id for the dataset. Got {err}.")
+            msg = f"Unable to generate a new id for the dataset. Got {err}."
+            logger.warning(msg)
 
     if to_level:
         ds.attrs["cat:processing_level"] = to_level
@@ -1083,9 +1085,9 @@ def clean_up(  # noqa: C901
 
 def publish_release_notes(
     style: str = "md",
-    file: Optional[Union[os.PathLike, StringIO, TextIO]] = None,
-    changes: Union[str, os.PathLike] = None,
-) -> Optional[str]:
+    file: os.PathLike | StringIO | TextIO | None = None,
+    changes: str | os.PathLike | None = None,
+) -> str | None:
     """Format release history in Markdown or ReStructuredText.
 
     Parameters
@@ -1106,7 +1108,7 @@ def publish_release_notes(
     -----
     This function exists solely for development purposes. Adapted from xclim.testing.utils.publish_release_notes.
     """
-    if isinstance(changes, (str, Path)):
+    if isinstance(changes, str | Path):
         changes_file = Path(changes).absolute()
     else:
         changes_file = Path(__file__).absolute().parents[2].joinpath("CHANGELOG.rst")
@@ -1114,7 +1116,7 @@ def publish_release_notes(
     if not changes_file.exists():
         raise FileNotFoundError("Changes file not found in xscen file tree.")
 
-    with open(changes_file) as f:
+    with Path(changes_file).open(encoding="utf-8") as f:
         changes = f.read()
 
     if style == "rst":
@@ -1146,7 +1148,7 @@ def publish_release_notes(
                     str(grouping[0]).replace("(", r"\(").replace(")", r"\)")
                 )
                 search = rf"({fixed_grouping})\n([\{level}]{'{' + str(len(grouping[1])) + '}'})"
-                replacement = f"{'##' if level=='-' else '###'} {grouping[0]}"
+                replacement = f"{'##' if level == '-' else '###'} {grouping[0]}"
                 changes = re.sub(search, replacement, changes)
 
         link_expressions = r"[\`]{1}([\w\s]+)\s<(.+)>`\_"
@@ -1158,15 +1160,15 @@ def publish_release_notes(
 
     if not file:
         return changes
-    if isinstance(file, (Path, os.PathLike)):
+    if isinstance(file, Path | os.PathLike):
         file = Path(file).open("w")
     print(changes, file=file)
 
 
 def unstack_dates(  # noqa: C901
     ds: xr.Dataset,
-    seasons: Optional[dict[int, str]] = None,
-    new_dim: str = None,
+    seasons: dict[int, str] | None = None,
+    new_dim: str | None = None,
     winter_starts_year: bool = False,
 ):
     """Unstack a multi-season timeseries into a yearly axis and a season one.
@@ -1339,9 +1341,9 @@ def unstack_dates(  # noqa: C901
 
 
 def show_versions(
-    file: Optional[Union[os.PathLike, StringIO, TextIO]] = None,
-    deps: Optional[list] = None,
-) -> Optional[str]:
+    file: os.PathLike | StringIO | TextIO | None = None,
+    deps: list | None = None,
+) -> str | None:
     """Print the versions of xscen and its dependencies.
 
     Parameters
@@ -1461,8 +1463,8 @@ def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
 
 
 def standardize_periods(
-    periods: Optional[Union[list[str], list[list[str]]]], multiple: bool = True
-) -> Optional[Union[list[str], list[list[str]]]]:
+    periods: list[str] | list[list[str]] | None, multiple: bool = True
+) -> list[str] | list[list[str]] | None:
     """Reformats the input to a list of strings, ['start', 'end'], or a list of such lists.
 
     Parameters
@@ -1499,7 +1501,7 @@ def standardize_periods(
         return periods[0]
 
 
-def season_sort_key(idx: pd.Index, name: Optional[str] = None):
+def season_sort_key(idx: pd.Index, name: str | None = None):
     """Get a proper sort key for a "season" or "month" index to avoid alphabetical sorting.
 
     If any of the values in the index is not recognized as a 3-letter
@@ -1528,10 +1530,10 @@ def season_sort_key(idx: pd.Index, name: Optional[str] = None):
         if (name or getattr(idx, "name", None)) == "month":
             m = list(xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values())
             return idx.map(m.index)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as err:
         # ValueError if string not in seasons, or value not in months
         # TypeError if season element was not a string.
-        pass
+        logging.error(err)
     return idx
 
 
@@ -1602,7 +1604,7 @@ def _xarray_defaults(**kwargs):
     return kwargs
 
 
-def rechunk_for_resample(obj: Union[xr.DataArray, xr.Dataset], **resample_kwargs):
+def rechunk_for_resample(obj: xr.DataArray | xr.Dataset, **resample_kwargs):
     if not uses_dask(obj):
         return obj
 

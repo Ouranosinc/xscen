@@ -1,0 +1,7 @@
+bump-my-version==0.26.1
+coveralls==4.0.1
+pip==24.2.0
+setuptools==75.1.0
+setuptools-scm==8.1.0
+tox==4.19.0
+tox-gh==1.4.1

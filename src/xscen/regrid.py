@@ -5,6 +5,7 @@ import operator
 import os
 import warnings
 from copy import deepcopy
+from pathlib import Path
 from typing import Optional, Union
 
 import cartopy.crs as ccrs
@@ -33,10 +34,10 @@ __all__ = ["create_mask", "regrid_dataset"]
 def regrid_dataset(  # noqa: C901
     ds: xr.Dataset,
     ds_grid: xr.Dataset,
-    weights_location: Union[str, os.PathLike],
+    weights_location: str | os.PathLike,
     *,
-    regridder_kwargs: Optional[dict] = None,
-    intermediate_grids: Optional[dict] = None,
+    regridder_kwargs: dict | None = None,
+    intermediate_grids: dict | None = None,
     to_level: str = "regridded",
 ) -> xr.Dataset:
     """Regrid a dataset according to weights and a reference grid.
@@ -116,19 +117,19 @@ def regrid_dataset(  # noqa: C901
             ds = out or ds
 
             kwargs = deepcopy(regridder_kwargs)
-            # if weights_location does no exist, create it
-            if not os.path.exists(weights_location):
-                os.makedirs(weights_location)
+            # if weights_location does not exist, create it
+            if not Path(weights_location).exists():
+                Path(weights_location).mkdir(parents=True)
             id = ds.attrs["cat:id"] if "cat:id" in ds.attrs else "weights"
             # give unique name to weights file
-            weights_filename = os.path.join(
+            weights_filename = Path(
                 weights_location,
                 f"{id}_{domain}_regrid{i}"
                 f"{'_'.join(kwargs[k] for k in kwargs if isinstance(kwargs[k], str))}.nc",
             )
 
             # Re-use existing weight file if possible
-            if os.path.isfile(weights_filename) and not (
+            if Path(weights_filename).is_file() and not (
                 ("reuse_weights" in kwargs) and (kwargs["reuse_weights"] is False)
             ):
                 kwargs["weights"] = weights_filename
@@ -227,7 +228,7 @@ def regrid_dataset(  # noqa: C901
 
 
 @parse_config
-def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.DataArray:
+def create_mask(ds: xr.Dataset | xr.DataArray, mask_args: dict) -> xr.DataArray:
     """Create a 0-1 mask based on incoming arguments.
 
     Parameters
@@ -301,10 +302,10 @@ def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.Data
 def _regridder(
     ds_in: xr.Dataset,
     ds_grid: xr.Dataset,
-    filename: Union[str, os.PathLike],
+    filename: str | os.PathLike,
     *,
     method: str = "bilinear",
-    unmapped_to_nan: Optional[bool] = True,
+    unmapped_to_nan: bool | None = True,
     **kwargs,
 ) -> Regridder:
     """Call to xesmf Regridder with a few default arguments.
@@ -350,7 +351,7 @@ def _regridder(
         unmapped_to_nan=unmapped_to_nan,
         **kwargs,
     )
-    if not os.path.isfile(filename):
+    if not Path(filename).is_file():
         regridder.to_netcdf(filename)
 
     return regridder
@@ -369,12 +370,13 @@ def create_bounds_rotated_pole(ds: xr.Dataset):
     rlonv = rlonv1D.expand_dims(rlat_vertices=rlatv1D).transpose(
         "rlon_vertices", "rlat_vertices"
     )
-
+    central = ds.rotated_pole.attrs.get("north_pole_grid_longitude")
+    central = float(central) if central is not None else None
     # Get cartopy's crs for the projection
     RP = ccrs.RotatedPole(
-        pole_longitude=ds.rotated_pole.grid_north_pole_longitude,
-        pole_latitude=ds.rotated_pole.grid_north_pole_latitude,
-        central_rotated_longitude=ds.rotated_pole.north_pole_grid_longitude,
+        pole_longitude=float(ds.rotated_pole.grid_north_pole_longitude),
+        pole_latitude=float(ds.rotated_pole.grid_north_pole_latitude),
+        central_rotated_longitude=central,
     )
     PC = ccrs.PlateCarree()
 

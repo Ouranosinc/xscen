@@ -48,7 +48,7 @@ __all__ = [
 ]
 
 
-def get_engine(file: Union[str, os.PathLike]) -> str:
+def get_engine(file: str | os.PathLike) -> str:
     """Determine which Xarray engine should be used to open the given file.
 
     The .zarr, .zarr.zip and .zip extensions are recognized as Zarr datasets,
@@ -76,7 +76,7 @@ def get_engine(file: Union[str, os.PathLike]) -> str:
 
 
 def estimate_chunks(  # noqa: C901
-    ds: Union[str, os.PathLike, xr.Dataset],
+    ds: str | os.PathLike | xr.Dataset,
     dims: list,
     target_mb: float = 50,
     chunk_per_variable: bool = False,
@@ -157,7 +157,7 @@ def estimate_chunks(  # noqa: C901
 
     out = {}
     # If ds is the path to a file, use NetCDF4
-    if isinstance(ds, (str, os.PathLike)):
+    if isinstance(ds, str | os.PathLike):
         ds = netCDF4.Dataset(ds, "r")
 
         # Loop on variables
@@ -244,7 +244,8 @@ def subset_maxsize(
         size_of_file = size_of_file + (varsize * dtype_size) / 1024**3
 
     if size_of_file < maxsize_gb:
-        logger.info(f"Dataset is already smaller than {maxsize_gb} Gb.")
+        msg = f"Dataset is already smaller than {maxsize_gb} Gb."
+        logger.info(msg)
         return [ds]
 
     elif "time" in ds:
@@ -261,7 +262,7 @@ def subset_maxsize(
         )
 
 
-def clean_incomplete(path: Union[str, os.PathLike], complete: Sequence[str]) -> None:
+def clean_incomplete(path: str | os.PathLike, complete: Sequence[str]) -> None:
     """Delete un-catalogued variables from a zarr folder.
 
     The goal of this function is to clean up an incomplete calculation.
@@ -285,7 +286,8 @@ def clean_incomplete(path: Union[str, os.PathLike], complete: Sequence[str]) -> 
 
     for fold in filter(lambda p: p.is_dir(), path.iterdir()):
         if fold.name not in complete:
-            logger.warning(f"Removing {fold} from disk")
+            msg = f"Removing {fold} from disk"
+            logger.warning(msg)
             sh.rmtree(fold)
 
 
@@ -293,9 +295,9 @@ def _coerce_attrs(attrs):
     """Ensure no funky objects in attrs."""
     for k in list(attrs.keys()):
         if not (
-            isinstance(attrs[k], (str, float, int, np.ndarray))
-            or isinstance(attrs[k], (tuple, list))
-            and isinstance(attrs[k][0], (str, float, int))
+            isinstance(attrs[k], str | float | int | np.ndarray)
+            or isinstance(attrs[k], tuple | list)
+            and isinstance(attrs[k][0], str | float | int)
         ):
             attrs[k] = str(attrs[k])
 
@@ -332,7 +334,7 @@ def round_bits(da: xr.DataArray, keepbits: int):
     return da
 
 
-def _get_keepbits(bitround: Union[bool, int, dict], varname: str, vartype):
+def _get_keepbits(bitround: bool | int | dict, varname: str, vartype):
     # Guess the number of bits to keep depending on how bitround was passed, the var dtype and the var name.
     if not np.issubdtype(vartype, np.floating) or bitround is False:
         if isinstance(bitround, dict) and varname in bitround:
@@ -352,12 +354,12 @@ def _get_keepbits(bitround: Union[bool, int, dict], varname: str, vartype):
 @parse_config
 def save_to_netcdf(
     ds: xr.Dataset,
-    filename: Union[str, os.PathLike],
+    filename: str | os.PathLike,
     *,
-    rechunk: Optional[dict] = None,
-    bitround: Union[bool, int, dict] = False,
+    rechunk: dict | None = None,
+    bitround: bool | int | dict = False,
     compute: bool = True,
-    netcdf_kwargs: Optional[dict] = None,
+    netcdf_kwargs: dict | None = None,
 ):
     """Save a Dataset to NetCDF, rechunking or compressing if requested.
 
@@ -419,56 +421,57 @@ def save_to_netcdf(
 @parse_config
 def save_to_zarr(  # noqa: C901
     ds: xr.Dataset,
-    filename: Union[str, os.PathLike],
+    filename: str | os.PathLike,
     *,
-    rechunk: Optional[dict] = None,
-    zarr_kwargs: Optional[dict] = None,
+    rechunk: dict | None = None,
+    zarr_kwargs: dict | None = None,
     compute: bool = True,
-    encoding: Optional[dict] = None,
-    bitround: Union[bool, int, dict] = False,
+    encoding: dict | None = None,
+    bitround: bool | int | dict = False,
     mode: str = "f",
     itervar: bool = False,
     timeout_cleanup: bool = True,
 ):
-    """Save a Dataset to Zarr format, rechunking and compressing if requested.
+    """
+    Save a Dataset to Zarr format, rechunking and compressing if requested.
 
     According to mode, removes variables that we don't want to re-compute in ds.
 
     Parameters
     ----------
     ds : xr.Dataset
-      Dataset to be saved.
+        Dataset to be saved.
     filename : str
-      Name of the Zarr file to be saved.
+        Name of the Zarr file to be saved.
     rechunk : dict, optional
-      This is a mapping from dimension name to new chunks (in any format understood by dask).
-      Spatial dimensions can be generalized as 'X' and 'Y' which will be mapped to the actual grid type's
-      dimension names.
-      Rechunking is only done on *data* variables sharing dimensions with this argument.
+        This is a mapping from dimension name to new chunks (in any format understood by dask).
+        Spatial dimensions can be generalized as 'X' and 'Y' which will be mapped to the actual grid type's
+        dimension names.
+        Rechunking is only done on *data* variables sharing dimensions with this argument.
     zarr_kwargs : dict, optional
-      Additional arguments to send to_zarr()
+        Additional arguments to send to_zarr()
     compute : bool
-      Whether to start the computation or return a delayed object.
+        Whether to start the computation or return a delayed object.
     mode : {'f', 'o', 'a'}
-      If 'f', fails if any variable already exists.
-      if 'o', removes the existing variables.
-      if 'a', skip existing variables, writes the others.
+        If 'f', fails if any variable already exists.
+        if 'o', removes the existing variables.
+        if 'a', skip existing variables, writes the others.
     encoding : dict, optional
-      If given, skipped variables are popped in place.
+        If given, skipped variables are popped in place.
     bitround : bool or int or dict
-      If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa,
-      allowing for a much better compression.
-      If an int, this is the number of bits to keep for all float variables.
-      If a dict, a mapping from variable name to the number of bits to keep.
-      If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12,
-      which yields a relative error of 0.012%.
+        If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa,
+        allowing for a much better compression.
+        If an int, this is the number of bits to keep for all float variables.
+        If a dict, a mapping from variable name to the number of bits to keep.
+        If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12,
+        which yields a relative error of 0.012%.
     itervar : bool
-      If True, (data) variables are written one at a time, appending to the zarr.
-      If False, this function computes, no matter what was passed to kwargs.
+        If True, (data) variables are written one at a time, appending to the zarr.
+        If False, this function computes, no matter what was passed to kwargs.
     timeout_cleanup : bool
-      If True (default) and a :py:class:`xscen.scripting.TimeoutException` is raised during the writing,
-      the variable being written is removed from the dataset as it is incomplete.
-      This does nothing if `compute` is False.
+        If True (default) and a :py:class:`xscen.scripting.TimeoutException` is raised during the writing,
+        the variable being written is removed from the dataset as it is incomplete.
+        This does nothing if `compute` is False.
 
     Returns
     -------
@@ -509,7 +512,8 @@ def save_to_zarr(  # noqa: C901
         if mode == "o":
             if exists:
                 var_path = path / var
-                logger.warning(f"Removing {var_path} to overwrite.")
+                msg = f"Removing {var_path} to overwrite."
+                logger.warning(msg)
                 sh.rmtree(var_path)
             return False
 
@@ -520,7 +524,8 @@ def save_to_zarr(  # noqa: C901
 
     for var in list(ds.data_vars.keys()):
         if _skip(var):
-            logger.info(f"Skipping {var} in {path}.")
+            msg = f"Skipping {var} in {path}."
+            logger.info(msg)
             ds = ds.drop_vars(var)
             if encoding:
                 encoding.pop(var)
@@ -546,7 +551,8 @@ def save_to_zarr(  # noqa: C901
             dsbase = ds.drop_vars(allvars)
             dsbase.to_zarr(path, **zarr_kwargs, mode="w")
         for i, (name, var) in enumerate(ds.data_vars.items()):
-            logger.debug(f"Writing {name} ({i + 1} of {len(ds.data_vars)}) to {path}")
+            msg = f"Writing {name} ({i + 1} of {len(ds.data_vars)}) to {path}"
+            logger.debug(msg)
             dsvar = ds.drop_vars(allvars - {name})
             try:
                 dsvar.to_zarr(
@@ -557,21 +563,22 @@ def save_to_zarr(  # noqa: C901
                 )
             except TimeoutException:
                 if timeout_cleanup:
-                    logger.info(f"Removing incomplete {name}.")
+                    msg = f"Removing incomplete {name}."
+                    logger.info(msg)
                     sh.rmtree(path / name)
                 raise
 
     else:
-        logger.debug(f"Writing {list(ds.data_vars.keys())} for {filename}.")
+        msg = f"Writing {list(ds.data_vars.keys())} for {filename}."
+        logger.debug(msg)
         try:
             return ds.to_zarr(
                 filename, compute=compute, mode="a", encoding=encoding, **zarr_kwargs
             )
         except TimeoutException:
             if timeout_cleanup:
-                logger.info(
-                    f"Removing incomplete {list(ds.data_vars.keys())} for {filename}."
-                )
+                msg = f"Removing incomplete {list(ds.data_vars.keys())} for {filename}."
+                logger.info(msg)
                 for name in ds.data_vars:
                     sh.rmtree(path / name)
             raise
@@ -630,13 +637,13 @@ def _to_dataframe(
 
 
 def to_table(
-    ds: Union[xr.Dataset, xr.DataArray],
+    ds: xr.Dataset | xr.DataArray,
     *,
-    row: Optional[Union[str, Sequence[str]]] = None,
-    column: Optional[Union[str, Sequence[str]]] = None,
-    sheet: Optional[Union[str, Sequence[str]]] = None,
-    coords: Union[bool, str, Sequence[str]] = True,
-) -> Union[pd.DataFrame, dict]:
+    row: str | Sequence[str] | None = None,
+    column: str | Sequence[str] | None = None,
+    sheet: str | Sequence[str] | None = None,
+    coords: bool | str | Sequence[str] = True,
+) -> pd.DataFrame | dict:
     """Convert a dataset to a pandas DataFrame with support for multicolumns and multisheet.
 
     This function will trigger a computation of the dataset.
@@ -729,9 +736,7 @@ def to_table(
     return _to_dataframe(da, **table_kwargs)
 
 
-def make_toc(
-    ds: Union[xr.Dataset, xr.DataArray], loc: Optional[str] = None
-) -> pd.DataFrame:
+def make_toc(ds: xr.Dataset | xr.DataArray, loc: str | None = None) -> pd.DataFrame:
     """Make a table of content describing a dataset's variables.
 
     This return a simple DataFrame with variable names as index, the long_name as "description" and units.
@@ -777,17 +782,17 @@ TABLE_FORMATS = {".csv": "csv", ".xls": "excel", ".xlsx": "excel"}
 
 
 def save_to_table(
-    ds: Union[xr.Dataset, xr.DataArray],
-    filename: Union[str, os.PathLike],
-    output_format: Optional[str] = None,
+    ds: xr.Dataset | xr.DataArray,
+    filename: str | os.PathLike,
+    output_format: str | None = None,
     *,
-    row: Optional[Union[str, Sequence[str]]] = None,
-    column: Union[None, str, Sequence[str]] = "variable",
-    sheet: Optional[Union[str, Sequence[str]]] = None,
-    coords: Union[bool, Sequence[str]] = True,
+    row: str | Sequence[str] | None = None,
+    column: None | str | Sequence[str] = "variable",
+    sheet: str | Sequence[str] | None = None,
+    coords: bool | Sequence[str] = True,
     col_sep: str = "_",
-    row_sep: Optional[str] = None,
-    add_toc: Union[bool, pd.DataFrame] = False,
+    row_sep: str | None = None,
+    add_toc: bool | pd.DataFrame = False,
     **kwargs,
 ):
     """Save the dataset to a tabular file (csv, excel, ...).
@@ -925,13 +930,13 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
 
 @parse_config
 def rechunk(
-    path_in: Union[os.PathLike, str, xr.Dataset],
-    path_out: Union[os.PathLike, str],
+    path_in: os.PathLike | str | xr.Dataset,
+    path_out: os.PathLike | str,
     *,
-    chunks_over_var: Optional[dict] = None,
-    chunks_over_dim: Optional[dict] = None,
+    chunks_over_var: dict | None = None,
+    chunks_over_dim: dict | None = None,
     worker_mem: str,
-    temp_store: Optional[Union[os.PathLike, str]] = None,
+    temp_store: os.PathLike | str | None = None,
     overwrite: bool = False,
 ) -> None:
     """Rechunk a dataset into a new zarr.
@@ -999,8 +1004,8 @@ def rechunk(
 
 
 def zip_directory(
-    root: Union[str, os.PathLike],
-    zipfile: Union[str, os.PathLike],
+    root: str | os.PathLike,
+    zipfile: str | os.PathLike,
     delete: bool = False,
     **zip_args,
 ):
@@ -1034,7 +1039,7 @@ def zip_directory(
         sh.rmtree(root)
 
 
-def unzip_directory(zipfile: Union[str, os.PathLike], root: Union[str, os.PathLike]):
+def unzip_directory(zipfile: str | os.PathLike, root: str | os.PathLike):
     r"""Unzip an archive to a directory.
 
     This function is the exact opposite of :py:func:`xscen.io.zip_directory`.

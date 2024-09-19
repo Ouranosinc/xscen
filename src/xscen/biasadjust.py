@@ -57,17 +57,17 @@ def _add_preprocessing_attr(scen, train_kwargs):
 def train(
     dref: xr.Dataset,
     dhist: xr.Dataset,
-    var: Union[str, list[str]],
+    var: str | list[str],
     period: list[str],
     *,
     method: str = "DetrendedQuantileMapping",
-    group: Optional[Union[sdba.Grouper, str, dict]] = None,
-    xclim_train_args: Optional[dict] = None,
+    group: sdba.Grouper | str | dict | None = None,
+    xclim_train_args: dict | None = None,
     maximal_calendar: str = "noleap",
-    adapt_freq: Optional[dict] = None,
-    jitter_under: Optional[dict] = None,
-    jitter_over: Optional[dict] = None,
-    align_on: Optional[str] = "year",
+    adapt_freq: dict | None = None,
+    jitter_under: dict | None = None,
+    jitter_over: dict | None = None,
+    align_on: str | None = "year",
 ) -> xr.Dataset:
     """
     Train a bias-adjustment.
@@ -193,13 +193,13 @@ def train(
 def adjust(
     dtrain: xr.Dataset,
     dsim: xr.Dataset,
-    periods: Union[list[str], list[list[str]]],
+    periods: list[str] | list[list[str]],
     *,
-    xclim_adjust_args: Optional[dict] = None,
+    xclim_adjust_args: dict | None = None,
     to_level: str = "biasadjusted",
-    bias_adjust_institution: Optional[str] = None,
-    bias_adjust_project: Optional[str] = None,
-    align_on: Optional[str] = "year",
+    bias_adjust_institution: str | None = None,
+    bias_adjust_project: str | None = None,
+    align_on: str | None = "year",
 ) -> xr.Dataset:
     """
     Adjust a simulation.
@@ -239,7 +239,8 @@ def adjust(
 
     # evaluate the dict that was stored as a string
     if not isinstance(dtrain.attrs["train_params"], dict):
-        dtrain.attrs["train_params"] = eval(dtrain.attrs["train_params"])
+        # FIXME: eval is bad. There has to be a better way!™
+        dtrain.attrs["train_params"] = eval(dtrain.attrs["train_params"])  # noqa: S307
 
     var = dtrain.attrs["train_params"]["var"]
     if len(var) != 1:
