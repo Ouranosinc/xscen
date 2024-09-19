@@ -6,7 +6,6 @@ import os
 import warnings
 from copy import deepcopy
 from pathlib import Path
-from typing import Optional, Union
 
 import cartopy.crs as ccrs
 import cf_xarray as cfxr

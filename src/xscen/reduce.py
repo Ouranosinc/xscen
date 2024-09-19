@@ -1,7 +1,6 @@
 """Functions to reduce an ensemble of simulations."""
 
 import warnings
-from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -37,7 +36,7 @@ def build_reduction_data(
         2D DataArray of dimensions "realization" and "criteria", to be used as input for ensemble reduction.
     """
     warnings.warn(
-        "This function will be dropped in a future version, as it is now redundant with xclim.ensembles.make_criteria."
+        "This function will be dropped in v0.11.0, as it is now redundant with xclim.ensembles.make_criteria."
         "Either use xclim.ensembles.make_criteria directly (preceded by xclim.ensembles.create_ensemble if needed) or "
         "use xscen's reduce_ensemble function to build the criteria and reduce the ensemble in one step.",
         FutureWarning,
@@ -128,7 +127,7 @@ def reduce_ensemble(
     You can use py:func:`xscen.utils.unstack_dates` on seasonal or monthly indicators to this end.
     """
     warnings.warn(
-        "This function has been moved to xscen.ensembles.reduce_ensemble. This version will be dropped in a future release.",
+        "This function has been moved to xscen.ensembles.reduce_ensemble. This version will be dropped in v0.11.0.",
         FutureWarning,
     )
     return reduce_ensemble(
