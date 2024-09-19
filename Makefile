@@ -117,9 +117,12 @@ findfrench:  ## Extract phrases and update the French translation catalog (this 
 translate:   ## Compile the translation catalogs.
 	pybabel compile -f -D xscen -d src/xscen/data/
 
+MO_LAST_COMMIT = $(shell git log -n 1 --pretty=format:%H -- src/xscen/data/fr/LC_MESSAGES/xscen.mo)
+PO_LAST_COMMIT = $(shell git log -n 1 --pretty=format:%H -- src/xscen/data/fr/LC_MESSAGES/xscen.po)
 checkfrench:  ## Error if the catalog could be update or if the compilation is older than the catalog.
 	rm -f .check_messages.pot
 	pybabel extract -o .check_messages.pot --omit-header --input-dirs=src/xscen/ --no-location
 	pybabel update -l fr -D xscen -i .check_messages.pot -d src/xscen/data/ --omit-header --check
 	rm -f .check_messages.pot
-	if [ src/xscen/data/fr/LC_MESSAGES/xscen.mo -ot src/xscen/data/fr/LC_MESSAGES/xscen.po ]; then echo "Compilation is older than translations. Please compile with 'make translate'."; exit 1; fi
+	# Last commit that touched the PO file must be an ancestor of the last that touched the MO
+	if git merge-base --is-ancestor $(PO_LAST_COMMIT) $(MO_LAST_COMMIT); then echo "ok"; else echo "Compilation is older than translations. Please compile with 'make translate'."; exit 1; fi
