@@ -375,9 +375,11 @@ def select_inds_for_avail_vars(
     elif isinstance(indicators, list | tuple) and not is_list_of_tuples:
         indicators = [(ind.base, ind) for ind in indicators]
 
-    available_vars = {
-        var for var in ds.data_vars if var in xc.core.utils.VARIABLES.keys()
-    }
+    # FIXME: Remove if-else when updating minimum xclim version to 0.53
+    XCVARS = (
+        xc.core.VARIABLES if hasattr(xc.core, "VARIABLES") else xc.core.utils.VARIABLES
+    )
+    available_vars = {var for var in ds.data_vars if var in XCVARS.keys()}
     available_inds = [
         (name, ind)
         for var in available_vars
