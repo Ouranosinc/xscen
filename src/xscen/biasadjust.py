@@ -2,12 +2,10 @@
 
 import logging
 from copy import deepcopy
-from typing import Optional, Union
 
 import xarray as xr
 import xclim as xc
 from xclim import sdba
-from xclim.core.calendar import convert_calendar, get_calendar
 
 from .catutils import parse_from_ds
 from .config import parse_config
@@ -100,7 +98,7 @@ def train(
     jitter_over: dict, optional
       If given, a dictionary of args to pass to `jitter_over_thresh`.
     align_on: str, optional
-      `align_on` argument for the function `xclim.core.calendar.convert_calendar`.
+      `align_on` argument for the function `xr.DataArray.convert_calendar`.
 
     Returns
     -------
@@ -137,13 +135,13 @@ def train(
     ref = ref.sel(time=slice(period[0], period[1]))
 
     # convert calendar if necessary
-    simcal = get_calendar(hist)
-    refcal = get_calendar(ref)
+    simcal = hist.time.dt.calendar
+    refcal = ref.time.dt.calendar
     mincal = minimum_calendar(simcal, maximal_calendar)
     if simcal != mincal:
-        hist = convert_calendar(hist, mincal, align_on=align_on)
+        hist = hist.convert_calendar(mincal, align_on=align_on)
     if refcal != mincal:
-        ref = convert_calendar(ref, mincal, align_on=align_on)
+        ref = ref.convert_calendar(mincal, align_on=align_on)
 
     if group:
         if isinstance(group, dict):
@@ -223,7 +221,7 @@ def adjust(
     bias_adjust_project : str, optional
       The project to assign to the output.
     align_on: str, optional
-      `align_on` argument for the fonction `xclim.core.calendar.convert_calendar`.
+      `align_on` argument for the function `xr.DataArray.convert_calendar`.
 
     Returns
     -------
@@ -253,10 +251,10 @@ def adjust(
         sim = dsim[var]
 
     # get right calendar
-    simcal = get_calendar(sim)
+    simcal = sim.time.dt.calendar
     mincal = minimum_calendar(simcal, dtrain.attrs["train_params"]["maximal_calendar"])
     if simcal != mincal:
-        sim = convert_calendar(sim, mincal, align_on=align_on)
+        sim = sim.convert_calendar(mincal, align_on=align_on)
 
     # adjust
     ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)

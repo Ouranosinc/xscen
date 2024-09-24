@@ -15,7 +15,7 @@ from functools import partial, reduce
 from itertools import chain, combinations, product
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import cftime
 import netCDF4

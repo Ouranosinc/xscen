@@ -88,6 +88,7 @@ dev = [
   "pre-commit >=3.3.2",
   "pytest-cov >=5.0.0",
   "pytest >=8.3.2",
+  "pytest-xdist[psutil] >=3.2.0",
   "ruff >=0.5.7",
   "tox >=4.18.0",
   "watchdog >=4.0.0",
@@ -132,7 +133,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.9.2-dev.16"
+current_version = "0.9.2-dev.18"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -249,8 +250,12 @@ addopts = [
   "--color=yes",
   "--cov=xscen",
   "--ignore-glob='*.ipynb_checkpoints'",
+  "--strict-config",
   "--strict-markers",
-  "--verbose"
+  "--verbose",
+  "--numprocesses=0",
+  "--maxprocesses=8",
+  "--dist=worksteal"
 ]
 filterwarnings = ["ignore::UserWarning"]
 testpaths = "tests"

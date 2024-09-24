@@ -22,6 +22,7 @@ New features and enhancements
 * Convenience functions ``xs.io.zip_directory`` and ``xs.io.unzip_directory`` (for zarrs). (:pull:`431`).
 * New argument ``compute_indicators``: ``rechunk_input`` to rechunk the inputs to resample-appropriate chunks before calling xclim. (:pull:`431`).
 * New ``xs.indicators.get_indicator_outputs`` to retrieve what variable name(s) and frequency to expect from an xclim indicator. (:pull:`431`).
+* `xscen` now supports launches tests from `pytest` with the `--numprocesses` option. See the `pytest-xdist documentation <https://pytest-xdist.readthedocs.io/en/stable/>`_ for more information. (:pull:`464`).
 
 Bug fixes
 ^^^^^^^^^
@@ -38,12 +39,15 @@ Bug fixes
 * Fix indicator computation using ``freq=2Q*`` by assuming this means a semiannual frequency anchored at the given month (pandas assumes 2 quarter steps, any of them anchored at the given month). (:pull:`431`).
 * ``create_bounds_rotated_pole`` now uses the default value if the dataset has no `north_pole_grid_longitude` attribute, instead of crashing. (:pull:`455`).
 * Rewrote the global tas data file with latest HDF5/h5py to avoid errors when using h5py 3.11 and hdf5 1.14.2. (:pull:`1861`).
+* Remove reference of deprecated xclim functions (``convert_calendar``, ``get_calendar``) and adapt the code for supporting xclim 0.52.2 and its subsequent development version. (:pull:`465`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * `convert_calendar` in ``clean_up`` now uses `xarray` instead of `xclim`. Keywords aren't compatible between the two, but given that `xclim` will abandon its function, no backwards compatibility was sought. (:pull:`450`).
 * `attrs_to_remove` and `remove_all_attrs_except` in ``clean_up`` now use real regex. It should not be too breaking since a `fullmatch()` is used, but `*` is now `.*`. (:pull:`450`).
 * Python 3.9 is no longer supported. (:pull:`456`).
+* Functions and arguments that were deprecated in `xscen` v0.8.0 or earlier have been removed. (:pull:`461`).
+* `pytest-xdist` is now a development dependency. (:pull:`464`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^

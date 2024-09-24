@@ -7,7 +7,6 @@ import warnings
 from copy import deepcopy
 from itertools import chain, groupby
 from pathlib import Path
-from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -253,7 +252,6 @@ def generate_weights(  # noqa: C901
     skipna: bool = True,
     v_for_skipna: str | None = None,
     standardize: bool = False,
-    experiment_weights: bool = False,
 ) -> xr.DataArray:
     """Use realization attributes to automatically generate weights along the 'realization' dimension.
 
@@ -291,8 +289,6 @@ def generate_weights(  # noqa: C901
         Variable to use for skipna=False. If None, the first variable in the first dataset is used.
     standardize : bool
         If True, the weights are standardized to sum to 1 (per timestep/horizon, if skipna=False).
-    experiment_weights : bool
-        Deprecated. Use balance_experiments instead.
 
     Notes
     -----
@@ -309,22 +305,8 @@ def generate_weights(  # noqa: C901
     xr.DataArray
         Weights along the 'realization' dimension, or 2D weights along the 'realization' and 'time/horizon' dimensions if skipna=False.
     """
-    if experiment_weights is True:
-        warnings.warn(
-            "`experiment_weights` has been renamed and will be removed in a future release. Use `balance_experiments` instead.",
-            category=FutureWarning,
-        )
-        balance_experiments = True
-
     if isinstance(datasets, list):
         datasets = {i: datasets[i] for i in range(len(datasets))}
-
-    if independence_level == "all":
-        warnings.warn(
-            "The independence level 'all' is deprecated and will be removed in a future version. Use 'model' instead.",
-            category=FutureWarning,
-        )
-        independence_level = "model"
 
     if independence_level not in ["model", "GCM", "institution"]:
         raise ValueError(

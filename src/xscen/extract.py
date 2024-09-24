@@ -9,7 +9,6 @@ from collections import defaultdict
 from collections.abc import Callable, Sequence
 from copy import deepcopy
 from pathlib import Path
-from typing import Optional, Union
 
 import numpy as np
 import pandas as pd

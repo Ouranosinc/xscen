@@ -8,7 +8,6 @@ from collections import defaultdict
 from collections.abc import Sequence
 from inspect import signature
 from pathlib import Path
-from typing import Optional, Union
 from zipfile import ZipFile
 
 import h5py
@@ -19,7 +18,6 @@ import xarray as xr
 import zarr
 from numcodecs.bitround import BitRound
 from rechunker import rechunk as _rechunk
-from xclim.core.calendar import get_calendar
 from xclim.core.options import METADATA_LOCALES
 from xclim.core.options import OPTIONS as XC_OPTIONS
 
@@ -987,7 +985,7 @@ def rechunk(
     elif chunks_over_dim:
         chunks = {v: {d: chunks_over_dim[d] for d in ds[v].dims} for v in variables}
         chunks.update(time=None, lat=None, lon=None)
-        cal = get_calendar(ds)
+        cal = ds.time.dt.calendar
         Nt = ds.time.size
         chunks = translate_time_chunk(chunks, cal, Nt)
     else:

@@ -15,7 +15,7 @@ from io import StringIO
 from itertools import chain
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, TextIO, Union
+from typing import TextIO
 
 import cftime
 import flox.xarray
@@ -24,7 +24,7 @@ import pandas as pd
 import xarray as xr
 from xarray.coding import cftime_offsets as cfoff
 from xclim.core import units
-from xclim.core.calendar import get_calendar, parse_offset
+from xclim.core.calendar import parse_offset
 from xclim.core.options import METADATA_LOCALES
 from xclim.core.options import OPTIONS as XC_OPTIONS
 from xclim.core.utils import uses_dask
@@ -939,7 +939,7 @@ def clean_up(  # noqa: C901
         if (
             any(
                 cal == "360_day"
-                for cal in [get_calendar(ds), convert_calendar_kwargs["calendar"]]
+                for cal in [ds.time.dt.calendar, convert_calendar_kwargs["calendar"]]
             )
             and "align_on" not in convert_calendar_kwargs
         ):

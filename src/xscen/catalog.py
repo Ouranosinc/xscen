@@ -12,7 +12,7 @@ from copy import deepcopy
 from functools import reduce
 from operator import or_
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import fsspec as fs
 import intake_esm
