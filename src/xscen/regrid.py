@@ -331,18 +331,39 @@ def _regridder(
         Regridder object
     """
     if method.startswith("conservative"):
+        gridmap_in = np.unique(
+            [
+                ds_in[v].attrs["grid_mapping"]
+                for v in ds_in.data_vars
+                if "grid_mapping" in ds_in[v].attrs
+            ]
+        )
+        gridmap_grid = np.unique(
+            [
+                ds_grid[v].attrs["grid_mapping"]
+                for v in ds_grid.data_vars
+                if "grid_mapping" in ds_grid[v].attrs
+            ]
+        )
+        if len(gridmap_in) > 1 or len(gridmap_grid) > 1:
+            warnings.warn(
+                "Multiple grid_mapping attributes found. Conservative regridding may not work as expected."
+            )
+        gridmap_in = gridmap_in[0] if gridmap_in else ""
+        gridmap_grid = gridmap_grid[0] if gridmap_grid else ""
+
         if (
             ds_in.cf["longitude"].ndim == 2
             and "longitude" not in ds_in.cf.bounds
-            and "rotated_pole" in ds_in
+            and gridmap_in in ds_in
         ):
-            ds_in = ds_in.update(create_bounds_rotated_pole(ds_in))
+            ds_in = ds_in.update(create_bounds_gridmapping(ds_in, gridmap_in))
         if (
             ds_grid.cf["longitude"].ndim == 2
             and "longitude" not in ds_grid.cf.bounds
-            and "rotated_pole" in ds_grid
+            and gridmap_grid in ds_grid
         ):
-            ds_grid = ds_grid.update(create_bounds_rotated_pole(ds_grid))
+            ds_grid = ds_grid.update(create_bounds_gridmapping(ds_grid, gridmap_grid))
 
     regridder = xe.Regridder(
         ds_in=ds_in,
@@ -357,48 +378,61 @@ def _regridder(
     return regridder
 
 
-def create_bounds_rotated_pole(ds: xr.Dataset):
+def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str) -> xr.Dataset:
     """Create bounds for rotated pole datasets."""
-    ds = ds.cf.add_bounds(["rlat", "rlon"])
+    xname = ds.cf.axes["X"][0]
+    yname = ds.cf.axes["Y"][0]
+
+    ds = ds.cf.add_bounds([yname, xname])
 
     # In "vertices" format then expand to 2D. From (N, 2) to (N+1,) to (N+1, M+1)
-    rlatv1D = cfxr.bounds_to_vertices(ds.rlat_bounds, "bounds")
-    rlonv1D = cfxr.bounds_to_vertices(ds.rlon_bounds, "bounds")
-    rlatv = rlatv1D.expand_dims(rlon_vertices=rlonv1D).transpose(
-        "rlon_vertices", "rlat_vertices"
+    yv1D = cfxr.bounds_to_vertices(ds[f"{yname}_bounds"], "bounds")
+    xv1D = cfxr.bounds_to_vertices(ds[f"{xname}_bounds"], "bounds")
+    yv = yv1D.expand_dims(dict([(f"{xname}_vertices", xv1D)])).transpose(
+        f"{xname}_vertices", f"{yname}_vertices"
     )
-    rlonv = rlonv1D.expand_dims(rlat_vertices=rlatv1D).transpose(
-        "rlon_vertices", "rlat_vertices"
+    xv = xv1D.expand_dims(dict([(f"{yname}_vertices", yv1D)])).transpose(
+        f"{xname}_vertices", f"{yname}_vertices"
     )
-    central = ds.rotated_pole.attrs.get("north_pole_grid_longitude")
-    central = float(central) if central is not None else None
-    # Get cartopy's crs for the projection
-    RP = ccrs.RotatedPole(
-        pole_longitude=float(ds.rotated_pole.grid_north_pole_longitude),
-        pole_latitude=float(ds.rotated_pole.grid_north_pole_latitude),
-        central_rotated_longitude=central,
-    )
+
+    if gridmap == "rotated_pole":
+        central = ds.rotated_pole.attrs.get("north_pole_grid_longitude")
+        central = float(central) if central is not None else None
+        # Get cartopy's crs for the projection
+        RP = ccrs.RotatedPole(
+            pole_longitude=float(ds.rotated_pole.grid_north_pole_longitude),
+            pole_latitude=float(ds.rotated_pole.grid_north_pole_latitude),
+            central_rotated_longitude=central,
+        )
+    elif gridmap == "oblique_mercator":
+        RP = ccrs.ObliqueMercator(
+            central_longitude=float(ds.oblique_mercator.longitude_of_projection_origin),
+            central_latitude=float(ds.oblique_mercator.latitude_of_projection_origin),
+            false_easting=float(ds.oblique_mercator.false_easting),
+            false_northing=float(ds.oblique_mercator.false_northing),
+            scale_factor=float(ds.oblique_mercator.scale_factor_at_projection_origin),
+            azimuth=float(ds.oblique_mercator.azimuth_of_central_line),
+        )
+    else:
+        raise NotImplementedError(f"Grid mapping {gridmap} not yet implemented.")
+
     PC = ccrs.PlateCarree()
 
     # Project points
-    pts = PC.transform_points(RP, rlonv.values, rlatv.values)
-    lonv = rlonv.copy(data=pts[..., 0]).rename("lon_vertices")
-    latv = rlatv.copy(data=pts[..., 1]).rename("lat_vertices")
+    pts = PC.transform_points(RP, xv.values, yv.values)
+    lonv = xv.copy(data=pts[..., 0]).rename("lon_vertices")
+    latv = yv.copy(data=pts[..., 1]).rename("lat_vertices")
 
     # Back to CF bounds format. From (N+1, M+1) to (4, N, M)
-    lonb = cfxr.vertices_to_bounds(lonv, ("bounds", "rlon", "rlat")).rename(
-        "lon_bounds"
-    )
-    latb = cfxr.vertices_to_bounds(latv, ("bounds", "rlon", "rlat")).rename(
-        "lat_bounds"
-    )
+    lonb = cfxr.vertices_to_bounds(lonv, ("bounds", xname, yname)).rename("lon_bounds")
+    latb = cfxr.vertices_to_bounds(latv, ("bounds", xname, yname)).rename("lat_bounds")
 
     # Create dataset, set coords and attrs
     ds_bnds = xr.merge([lonb, latb]).assign(
-        lon=ds.lon, lat=ds.lat, rotated_pole=ds.rotated_pole
+        dict([("lon", ds.lon), ("lat", ds.lat), (gridmap, ds[gridmap])])
     )
-    ds_bnds["rlat"] = ds.rlat
-    ds_bnds["rlon"] = ds.rlon
+    ds_bnds[yname] = ds[yname]
+    ds_bnds[xname] = ds[xname]
     ds_bnds.lat.attrs["bounds"] = "lat_bounds"
     ds_bnds.lon.attrs["bounds"] = "lon_bounds"
     return ds_bnds.transpose(*ds.lon.dims, "bounds")
