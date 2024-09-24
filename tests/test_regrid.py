@@ -5,7 +5,7 @@ try:
     import xesmf as xe
 except ImportError:
     xe = None
-from xscen.regrid import create_bounds_rotated_pole, regrid_dataset
+from xscen.regrid import create_bounds_gridmapping, regrid_dataset
 from xscen.testing import datablock_3d
 
 
@@ -22,9 +22,27 @@ def test_create_bounds_rotated_pole():
         "2000-01-01",
         as_dataset=True,
     )
-    bnds = create_bounds_rotated_pole(ds)
+    bnds = create_bounds_gridmapping(ds, "rotated_pole")
     np.testing.assert_allclose(bnds.lon_bounds[-1, -1, 1], 83)
     np.testing.assert_allclose(bnds.lat_bounds[-1, -1, 1], 42.5)
+
+
+def test_create_bounds_oblique():
+    ds = datablock_3d(
+        np.zeros((20, 10, 10)),
+        "tas",
+        "x",
+        -5000,
+        "y",
+        5000,
+        100000,
+        100000,
+        "2000-01-01",
+        as_dataset=True,
+    )
+    bnds = create_bounds_gridmapping(ds, "oblique_mercator")
+    np.testing.assert_allclose(bnds.lon_bounds[-1, -1, -1], -48.98790806)
+    np.testing.assert_allclose(bnds.lat_bounds[-1, -1, -1], 52.9169163)
 
 
 @pytest.mark.skipif(xe is None, reason="xesmf needed for testing regrdding")
