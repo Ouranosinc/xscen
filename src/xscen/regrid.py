@@ -378,6 +378,14 @@ def _regridder(
     return regridder
 
 
+def create_bounds_rotated_pole(ds: xr.Dataset) -> xr.Dataset:
+    warnings.warn(
+        "This function is deprecated and will be removed in xscen v0.12.0. Use create_bounds_gridmapping instead.",
+        FutureWarning,
+    )
+    return create_bounds_gridmapping(ds, "rotated_pole")
+
+
 def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str) -> xr.Dataset:
     """Create bounds for rotated pole datasets."""
     xname = ds.cf.axes["X"][0]

@@ -5,7 +5,11 @@ try:
     import xesmf as xe
 except ImportError:
     xe = None
-from xscen.regrid import create_bounds_gridmapping, regrid_dataset
+from xscen.regrid import (
+    create_bounds_gridmapping,
+    create_bounds_rotated_pole,
+    regrid_dataset,
+)
 from xscen.testing import datablock_3d
 
 
@@ -25,6 +29,8 @@ def test_create_bounds_rotated_pole():
     bnds = create_bounds_gridmapping(ds, "rotated_pole")
     np.testing.assert_allclose(bnds.lon_bounds[-1, -1, 1], 83)
     np.testing.assert_allclose(bnds.lat_bounds[-1, -1, 1], 42.5)
+
+    assert create_bounds_rotated_pole(ds).equals(bnds)
 
 
 def test_create_bounds_oblique():
