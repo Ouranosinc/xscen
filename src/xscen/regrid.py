@@ -403,21 +403,27 @@ def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str) -> xr.Dataset:
         f"{xname}_vertices", f"{yname}_vertices"
     )
 
+    # Some CRS have additional attributes according to CF conventions
+    def _get_opt_attr_as_float(da: xr.DataArray, attr: str) -> float | None:
+        return float(da.attrs[attr]) if attr in da.attrs else None
+
     if gridmap == "rotated_pole":
-        central = ds.rotated_pole.attrs.get("north_pole_grid_longitude")
-        central = float(central) if central is not None else None
         # Get cartopy's crs for the projection
         RP = ccrs.RotatedPole(
             pole_longitude=float(ds.rotated_pole.grid_north_pole_longitude),
             pole_latitude=float(ds.rotated_pole.grid_north_pole_latitude),
-            central_rotated_longitude=central,
+            central_rotated_longitude=_get_opt_attr_as_float(
+                ds.rotated_pole, "north_pole_grid_longitude"
+            ),
         )
     elif gridmap == "oblique_mercator":
         RP = ccrs.ObliqueMercator(
             central_longitude=float(ds.oblique_mercator.longitude_of_projection_origin),
             central_latitude=float(ds.oblique_mercator.latitude_of_projection_origin),
-            false_easting=float(ds.oblique_mercator.false_easting),
-            false_northing=float(ds.oblique_mercator.false_northing),
+            false_easting=_get_opt_attr_as_float(ds.oblique_mercator, "false_easting"),
+            false_northing=_get_opt_attr_as_float(
+                ds.oblique_mercator, "false_northing"
+            ),
             scale_factor=float(ds.oblique_mercator.scale_factor_at_projection_origin),
             azimuth=float(ds.oblique_mercator.azimuth_of_central_line),
         )
