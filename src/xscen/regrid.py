@@ -24,7 +24,7 @@ except ImportError:
 
 from .config import parse_config
 
-__all__ = ["create_mask", "regrid_dataset"]
+__all__ = ["create_bounds_gridmapping", "create_mask", "regrid_dataset"]
 
 
 @parse_config
