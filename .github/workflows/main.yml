@@ -77,7 +77,7 @@ jobs:
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
         uses: mamba-org/setup-micromamba@f8b8a1e23a26f60a44c853292711bacfd3eac822 # v1.9.0
         with:
-          cache-downloads: true
+          cache-downloads: false
           environment-name: xscen-pypi
           create-args: >-
             esmf=${{ env.esmf-version }}
@@ -144,8 +144,8 @@ jobs:
       - name: Setup Conda (Micromamba) with Python ${{ matrix.python-version }}
         uses: mamba-org/setup-micromamba@f8b8a1e23a26f60a44c853292711bacfd3eac822 # v1.9.0
         with:
-          cache-downloads: true
-          cache-environment: true
+          cache-downloads: false
+          cache-environment: false
           environment-file: environment-dev.yml
           create-args: >-
             python=${{ matrix.python-version }}
