@@ -149,6 +149,7 @@ jobs:
           environment-file: environment-dev.yml
           create-args: >-
             python=${{ matrix.python-version }}
+          micromamba-version: "2.0.0-0"  # pinned to avoid breaking changes with mamba and micromamba.
       - name: Conda and Mamba versions
         run: |
           echo "micromamba $(micromamba --version)"
