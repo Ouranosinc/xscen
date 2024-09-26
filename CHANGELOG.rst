@@ -24,6 +24,7 @@ New features and enhancements
 * New ``xs.indicators.get_indicator_outputs`` to retrieve what variable name(s) and frequency to expect from an xclim indicator. (:pull:`431`).
 * `xscen` now supports launches tests from `pytest` with the `--numprocesses` option. See the `pytest-xdist documentation <https://pytest-xdist.readthedocs.io/en/stable/>`_ for more information. (:pull:`464`).
 * Conservative regridding now supports oblique mercator projections. (:pull:`467`).
+* The automatic name for the weight file in ``regrid_dataset`` is now more explicit to avoid errors, but now requires `cat:id` and `cat:domain` arguments for both the source and target datasets. (:pull:`467`).
 
 Bug fixes
 ^^^^^^^^^
@@ -50,6 +51,8 @@ Breaking changes
 * Functions and arguments that were deprecated in `xscen` v0.8.0 or earlier have been removed. (:pull:`461`).
 * `pytest-xdist` is now a development dependency. (:pull:`464`).
 * ``xs.regrid.create_bounds_rotated_pole`` has been renamed to ``xs.regrid.create_bounds_gridmapping``. (:pull:`467`).
+* The `weights_location` argument in ``regrid_dataset`` is no longer positional. (:pull:`467`).
+* The ``xs.regrid.create_mask`` function now requires explicit arguments instead of a dictionary. (:pull:`467`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
