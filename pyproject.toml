@@ -64,8 +64,8 @@ dependencies = [
   "shapely >=2.0",
   "sparse",
   "toolz",
-  "xarray >=2023.11.0,!=2024.6.0",
-  "xclim >=0.52.2,<0.53",
+  "xarray >=2023.11.0, !=2024.6.0",
+  "xclim >=0.52.2, <0.53",
   "zarr >=2.13"
 ]
 
