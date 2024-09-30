@@ -133,7 +133,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.9.2-dev.19"
+current_version = "0.10.0"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -144,33 +144,6 @@ serialize = [
   "{major}.{minor}.{patch}-{release}.{build}",
   "{major}.{minor}.{patch}"
 ]
-
-[[tool.bumpversion.files]]
-filename = "CHANGELOG.rst"
-include_bumps = ["release"]
-search = """\
-`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-------------------------------------------------------------
-"""
-replace = """\
-`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-------------------------------------------------------------
-
-Contributors:
-
-Changes
-^^^^^^^
-* No change.
-
-Fixes
-^^^^^
-* No change.
-
-.. _changes_{new_version}:
-
-`v{new_version} <https://github.com/Ouranosinc/xscen/tree/{new_version}>`_
-----------------------------------------------------------------------
-"""
 
 [[tool.bumpversion.files]]
 filename = "src/xscen/__init__.py"

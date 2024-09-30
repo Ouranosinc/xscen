@@ -2,8 +2,8 @@
 Changelog
 =========
 
-v0.9.2 (unreleased)
--------------------
+v0.10.0 (2024-09-30)
+--------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
 
 New features and enhancements
