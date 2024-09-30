@@ -84,6 +84,8 @@ jobs:
             python=${{ matrix.python-version }}
             tox>=4.17.1
             tox-gh>=1.3.2
+          # FIXME: https://github.com/mamba-org/setup-micromamba/issues/225
+          micromamba-version: "1.5.10-0"  # pinned to avoid the breaking changes with mamba and micromamba (2.0.0).
       - name: Environment Caching
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
@@ -144,10 +146,12 @@ jobs:
         uses: mamba-org/setup-micromamba@f8b8a1e23a26f60a44c853292711bacfd3eac822 # v1.9.0
         with:
           cache-downloads: true
-          cache-environment: true
+          cache-environment: false  # FIXME: No environment caching until issues with micromamba 2.0.0 are resolved.
           environment-file: environment-dev.yml
           create-args: >-
             python=${{ matrix.python-version }}
+          # FIXME: https://github.com/mamba-org/setup-micromamba/issues/225
+          micromamba-version: "1.5.10-0"  # pinned to avoid the breaking changes with mamba and micromamba (2.0.0).
       - name: Conda and Mamba versions
         run: |
           echo "micromamba $(micromamba --version)"
