@@ -649,6 +649,7 @@ class TestAttrs:
         )
         assert out.attrs["cat:id"] == ""
 
+    @pytest.mark.requires_netcdf
     def test_common_open(self):
         ds1 = xr.open_dataset(
             Path(__file__).parent.parent
