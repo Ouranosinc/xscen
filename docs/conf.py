@@ -63,17 +63,15 @@ extlinks = {
 templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
-source_suffix = ['.rst']
+# You can specify multiple suffix as a dictionary of suffix: filetype
+source_suffix = {'.rst': 'restructuredtext'}
 
 # The master toctree document.
 master_doc = 'index'
 
 # General information about the project.
 project = 'xsdba'
-copyright = "2024, Trevor James Smith"
+copyright = "2024, Ouranosinc, Éric Dupuis, Trevor James Smith"
 author = "Trevor James Smith"
 
 # The version info for the project you're documenting, acts as replacement
@@ -81,7 +79,7 @@ author = "Trevor James Smith"
 # the built documents.
 #
 # The short X.Y version.
-version = xsdba.__version__
+version = xsdba.__version__.split('-')[0]
 # The full version, including alpha/beta/rc tags.
 release = xsdba.__version__
 

@@ -27,6 +27,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: CPython"
 ]
 dynamic = ["description", "version"]
@@ -38,12 +39,12 @@ dependencies = [
 dev = [
   # Dev tools and testing
   "pip >=24.2.0",
-  "bump-my-version >=0.25.1",
+  "bump-my-version >=0.26.0",
   "watchdog >=4.0.0",
   "flake8 >=7.1.1",
   "flake8-rst-docstrings >=0.3.0",
   "flit >=3.9.0,<4.0",
-  "tox >=4.17.1",
+  "tox >=4.18.0",
   "coverage >=7.5.0",
   "coveralls >=4.0.1",
   "mypy",
@@ -89,7 +90,8 @@ target-version = [
   "py39",
   "py310",
   "py311",
-  "py312"
+  "py312",
+  "py313"
 ]
 
 [tool.bumpversion]
@@ -157,6 +159,9 @@ values = [
   "release"
 ]
 
+[tool.coverage.paths]
+source = ["src/xsdba/", "*/site-packages/xsdba/"]
+
 [tool.coverage.run]
 omit = ["tests/*.py"]
 relative_files = true
@@ -206,7 +211,7 @@ py_version = 38
 
 [tool.mypy]
 files = "."
-python_version = 3.9
+python_version = 3.8
 show_error_codes = true
 strict = true
 warn_no_return = true
@@ -254,7 +259,6 @@ testpaths = "tests"
 [tool.ruff]
 src = ["xsdba"]
 line-length = 150
-target-version = "py38"
 exclude = [
   ".eggs",
   ".git",
