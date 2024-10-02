@@ -201,7 +201,7 @@ def pint2str(value: units.Quantity | units.Unit) -> str:
     -----
     If cf-xarray is installed, the units will be converted to cf units.
     """
-    if isinstance(value, (pint.Quantity, units.Quantity)):
+    if isinstance(value, (pint.Quantity | units.Quantity)):
         value = value.units
 
     # Issue originally introduced in https://github.com/hgrecco/pint/issues/1486
@@ -286,14 +286,15 @@ def ensure_delta(unit: str) -> str:
 def extract_units(arg):
     """Extract units from a string, DataArray, or scalar."""
     if not (
-        isinstance(arg, (str, xr.DataArray, pint.Unit, units.Unit)) or np.isscalar(arg)
+        isinstance(arg, (str | xr.DataArray | pint.Unit | units.Unit))
+        or np.isscalar(arg)
     ):
         raise TypeError(
             f"Argument must be a str, DataArray, or scalar. Got {type(arg)}"
         )
     elif isinstance(arg, xr.DataArray):
         ustr = None if "units" not in arg.attrs else arg.attrs["units"]
-    elif isinstance(arg, (pint.Unit, units.Unit)):
+    elif isinstance(arg, (pint.Unit | units.Unit)):
         ustr = pint2str(arg)  # XC: from pint2str
     elif isinstance(arg, str):
         ustr = pint2str(str2pint(arg).units)

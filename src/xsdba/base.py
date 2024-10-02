@@ -7,10 +7,9 @@ from __future__ import annotations
 
 import datetime as pydt
 import itertools
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from inspect import _empty, signature
 from typing import Any, NewType, TypeVar
-from collections.abc import Callable
 
 import cftime
 import dask.array as dsk
@@ -268,7 +267,7 @@ def get_calendar(obj: Any, dim: str = "time") -> str:
       The Climate and Forecasting (CF) calendar name.
       Will always return "standard" instead of "gregorian", following CF conventions 1.9.
     """
-    if isinstance(obj, (xr.DataArray, xr.Dataset)):
+    if isinstance(obj, (xr.DataArray | xr.Dataset)):
         return obj[dim].dt.calendar
     elif isinstance(obj, xr.CFTimeIndex):
         obj = obj.values[0]
@@ -555,7 +554,7 @@ class Grouper(Parametrizable):
         function may add a "_group_apply_reshape" attribute set to `True` on the variables that should be reduced and
         these will be re-grouped by calling `da.groupby(self.name).first()`.
         """
-        if isinstance(da, (dict, xr.Dataset)):
+        if isinstance(da, (dict | xr.Dataset)):
             grpd = self.group(main_only=main_only, **da)
             dim_chunks = min(  # Get smallest chunking to rechunk if the operation is non-grouping
                 [

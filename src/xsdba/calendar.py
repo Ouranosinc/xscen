@@ -152,7 +152,7 @@ def get_calendar(obj: Any, dim: str = "time") -> str:
       The Climate and Forecasting (CF) calendar name.
       Will always return "standard" instead of "gregorian", following CF conventions 1.9.
     """
-    if isinstance(obj, (xr.DataArray, xr.Dataset)):
+    if isinstance(obj, (xr.DataArray | xr.Dataset)):
         return obj[dim].dt.calendar
     elif isinstance(obj, xr.CFTimeIndex):
         obj = obj.values[0]
@@ -889,9 +889,9 @@ def time_bnds(  # noqa: C901
     So "2000-01-31 00:00:00" with a "3h" frequency, means a period going from "2000-01-31 00:00:00" to
     "2000-01-31 02:59:59.999999".
     """
-    if isinstance(time, (xr.DataArray, xr.Dataset)):
+    if isinstance(time, (xr.DataArray | xr.Dataset)):
         time = time.indexes[time.name]
-    elif isinstance(time, (DataArrayResample, DatasetResample)):
+    elif isinstance(time, (DataArrayResample | DatasetResample)):
         for grouper in time.groupers:
             if "time" in grouper.dims:
                 datetime = grouper.unique_coord.data
