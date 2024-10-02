@@ -675,7 +675,11 @@ def to_table(
     if isinstance(ds, xr.Dataset):
         da = ds.to_array(name="data")
         if len(ds) == 1:
-            da = da.isel(variable=0).rename(data=da.variable.values[0])
+            da = da.isel(variable=0)
+            da.name = str(da["variable"].values)
+            da = da.drop_vars("variable")
+    else:
+        da = ds
 
     def _ensure_list(seq):
         if isinstance(seq, str):
@@ -689,7 +693,13 @@ def to_table(
         row = [d for d in da.dims if d != "variable" and d not in passed_dims]
     row = _ensure_list(row)
     if column is None:
-        column = ["variable"] if len(ds) > 1 and "variable" not in passed_dims else []
+        column = (
+            ["variable"]
+            if isinstance(ds, xr.Dataset)
+            and len(ds) > 1
+            and "variable" not in passed_dims
+            else []
+        )
     column = _ensure_list(column)
     if sheet is None:
         sheet = []
@@ -708,10 +718,10 @@ def to_table(
 
     if coords is not True:
         coords = _ensure_list(coords or [])
-        drop = set(ds.coords.keys()) - set(da.dims) - set(coords)
+        drop = set(da.coords.keys()) - set(da.dims) - set(coords)
         da = da.drop_vars(drop)
     else:
-        coords = list(set(ds.coords.keys()) - set(da.dims))
+        coords = list(set(da.coords.keys()) - set(da.dims))
     if len(coords) > 1 and ("variable" in row or "variable" in sheet):
         raise NotImplementedError(
             "Keeping auxiliary coords is not implemented when 'variable' is in the row or in the sheets."
@@ -774,6 +784,26 @@ def make_toc(ds: xr.Dataset | xr.DataArray, loc: str | None = None) -> pd.DataFr
         ],
     ).set_index(_("Variable"))
     toc.attrs["name"] = _("Content")
+
+    # Add global attributes by using a fake variable and description
+    if len(ds.attrs) > 0:
+        globattr = pd.DataFrame.from_records(
+            [
+                {
+                    _("Variable"): vv,
+                    _("Description"): da,
+                    _("Units"): "",
+                }
+                for vv, da in ds.attrs.items()
+            ],
+        ).set_index(_("Variable"))
+        globattr.attrs["name"] = _("Global attributes")
+
+        # Empty row to separate global attributes from variables
+        toc = pd.concat([toc, pd.DataFrame(index=[""])])
+        toc = pd.concat([toc, pd.DataFrame(index=[_("Global attributes")])])
+        toc = pd.concat([toc, globattr])
+
     return toc
 
 

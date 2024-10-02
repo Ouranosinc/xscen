@@ -21,3 +21,6 @@ msgstr "Unités"
 
 msgid "Content"
 msgstr "Contenu"
+
+msgid "Global attributes"
+msgstr "Attributs globaux"
