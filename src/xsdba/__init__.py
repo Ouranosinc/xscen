@@ -3,7 +3,7 @@
 ###################################################################################
 # Apache Software License 2.0
 #
-# Copyright (c) 2024, Trevor James Smith
+# Copyright (c) 2024, Ouranos Inc., Éric Dupuis, Trevor James Smith
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
