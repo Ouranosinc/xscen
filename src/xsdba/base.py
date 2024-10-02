@@ -9,7 +9,8 @@ import datetime as pydt
 import itertools
 from collections.abc import Sequence
 from inspect import _empty, signature
-from typing import Any, Callable, NewType, TypeVar
+from typing import Any, NewType, TypeVar
+from collections.abc import Callable
 
 import cftime
 import dask.array as dsk

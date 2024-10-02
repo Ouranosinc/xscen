@@ -14,7 +14,8 @@ from ast import literal_eval
 from collections.abc import Sequence
 from fnmatch import fnmatch
 from inspect import _empty, signature
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 import xarray as xr
 from boltons.funcutils import wraps

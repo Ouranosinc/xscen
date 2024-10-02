@@ -6,7 +6,7 @@ Global or contextual options for xsdba, similar to xarray.set_options.
 from __future__ import annotations
 
 from inspect import signature
-from typing import Callable
+from collections.abc import Callable
 
 from boltons.funcutils import wraps
 
