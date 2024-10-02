@@ -117,9 +117,9 @@ jobs:
             python=${{ matrix.python-version }}
           micromamba-version: "1.5.10-0"  # pinned to avoid the breaking changes with mamba and micromamba (2.0.0).
       - name: Install xclim development version
+        # FIXME: This is a workaround to install xclim v0.53, which is not released.
         run: |
           echo "Installing xclim from main branch until version 0.53.0+ is released"
-          micromamba remove -y xclim
           python -m pip install git+https://github.com/Ouranosinc/xclim.git@main
       - name: Install xsdba
         run: |
