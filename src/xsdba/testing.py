@@ -22,7 +22,7 @@ from xarray import open_dataset as _open_dataset
 from xsdba.calendar import percentile_doy
 from xsdba.utils import equally_spaced_nodes
 
-__all__ = ["test_timelonlatseries", "test_timeseries"]
+__all__ = ["nancov", "test_timelonlatseries", "test_timeseries"]
 
 # keeping xclim-testdata for now, since it's still this on gitHub
 _default_cache_dir = Path(user_cache_dir("xclim-testdata"))

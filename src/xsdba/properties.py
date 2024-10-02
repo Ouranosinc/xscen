@@ -962,7 +962,7 @@ def _bivariate_spell_length_distribution(
         group=group,
         threshs=threshs,
         methods=methods,
-        opss=[op1, op2],
+        ops=[op1, op2],
         window=window,
         freq=group.freq,
         resample_before_rl=resample_before_rl,

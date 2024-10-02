@@ -366,7 +366,7 @@ def frequency_analysis(
     window: int = 1,
     freq: str | None = None,
     method: str = "ML",
-    **indexer: int | float | str,
+    **indexer: dict[str, int | float | str],
 ) -> xr.DataArray:
     r"""Return the value corresponding to a return period.
 
@@ -391,7 +391,7 @@ def frequency_analysis(
         Fitting method, either maximum likelihood (ML or MLE), method of moments (MOM) or approximate method (APP).
         Also accepts probability weighted moments (PWM), also called L-Moments, if `dist` is an instance from the lmoments3 library.
         The PWM method is usually more robust to outliers.
-    \*\*indexer
+    \*\*indexer : dict
         Time attribute and values over which to subset the array. For example, use season='DJF' to select winter values,
         month=1 to select January, or month=[6,7,8] to select summer months. If indexer is not provided, all values are
         considered.
@@ -435,7 +435,7 @@ def get_dist(dist: str | scipy.stats.rv_continuous):
     return dc
 
 
-def _fit_start(x, dist: str, **fitkwargs: Any) -> tuple[tuple, dict]:
+def _fit_start(x, dist: str, **fitkwargs: dict[str, Any]) -> tuple[tuple, dict]:
     r"""Return initial values for distribution parameters.
 
     Providing the ML fit method initial values can help the optimizer find the global optimum.
@@ -447,7 +447,7 @@ def _fit_start(x, dist: str, **fitkwargs: Any) -> tuple[tuple, dict]:
     dist : str
         Name of the univariate distribution, e.g. `beta`, `expon`, `genextreme`, `gamma`, `gumbel_r`, `lognorm`, `norm`.
         (see :py:mod:scipy.stats). Only `genextreme` and `weibull_exp` distributions are supported.
-    \*\*fitkwargs
+    \*\*fitkwargs : dict
         Kwargs passed to fit.
 
     Returns
@@ -538,7 +538,10 @@ def _fit_start(x, dist: str, **fitkwargs: Any) -> tuple[tuple, dict]:
 
 
 def _dist_method_1D(  # noqa: N802
-    *args, dist: str | scipy.stats.rv_continuous, function: str, **kwargs: Any
+    *args: Sequence[str],
+    dist: str | scipy.stats.rv_continuous,
+    function: str,
+    **kwargs: dict[str, Any],
 ) -> xr.DataArray:
     r"""Statistical function for given argument on given distribution initialized with params.
 
@@ -547,13 +550,13 @@ def _dist_method_1D(  # noqa: N802
 
     Parameters
     ----------
-    \*args
+    \*args : str
         The arguments for the requested scipy function.
     dist : str
         The scipy name of the distribution.
     function : str
         The name of the function to call.
-    \*\*kwargs
+    \*\*kwargs L
         Other parameters to pass to the function call.
 
     Returns
@@ -569,7 +572,7 @@ def dist_method(
     fit_params: xr.DataArray,
     arg: xr.DataArray | None = None,
     dist: str | scipy.stats.rv_continuous | None = None,
-    **kwargs: Any,
+    **kwargs: dict[str, Any],
 ) -> xr.DataArray:
     r"""Vectorized statistical function for given argument on given distribution initialized with params.
 

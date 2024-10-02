@@ -1,23 +1,18 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
-import pint
-import pint.errors
 import pytest
 import xarray as xr
-from dask import array as dsk
+from cf_xarray import __version__ as __cfxr_version__
 from packaging.version import Version
 
-from xsdba.logging import ValidationError
-from xsdba.typing import Quantified
 from xsdba.units import (
-    convert_units_to,
     harmonize_units,
     pint2str,
     str2pint,
     to_agg_units,
     units,
+    units2pint,
 )
 
 
@@ -125,9 +120,9 @@ class TestHarmonizeUnits:
         da = xr.DataArray([1, 2], attrs={"units": "K"})
         thr = "1 K"
 
-        @harmonize_units(["da", "thr"])
-        def gt(da, thr):
-            return (da > thr).sum().values
+        @harmonize_units(["d", "t"])
+        def gt(d, t):
+            return (d > t).sum().values
 
         assert gt(da, thr) == 1
 
@@ -135,9 +130,9 @@ class TestHarmonizeUnits:
         da = xr.DataArray([1, 2])
         thr = 1
 
-        @harmonize_units(["da", "thr"])
-        def gt(da, thr):
-            return (da > thr).sum().values
+        @harmonize_units(["d", "t"])
+        def gt(d, t):
+            return (d > t).sum().values
 
         assert gt(da, thr) == 1
 
@@ -145,9 +140,9 @@ class TestHarmonizeUnits:
         da = xr.DataArray([1, 2], attrs={"units": "K"})
         thr = "1 K"
 
-        @harmonize_units(["da", "thrr"])
-        def gt(da, thr):
-            return (da > thr).sum().values
+        @harmonize_units(["d", "this_is_clearly_wrong"])
+        def gt(d, t):
+            return (d > t).sum().values
 
         with pytest.raises(TypeError, match="should be a subset of"):
             gt(da, thr)
@@ -156,9 +151,9 @@ class TestHarmonizeUnits:
         da = xr.DataArray([1, 2], attrs={"units": "K"})
         thr = "1 K"
 
-        @harmonize_units(["da", "thr"])
-        def gt(da, thr):
-            return (da > thr).sum().values
+        @harmonize_units(["d", "t"])
+        def gt(d, t):
+            return (d > t).sum().values
 
         with pytest.raises(TypeError, match="were passed but only"):
             gt(da)

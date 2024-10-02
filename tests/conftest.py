@@ -207,6 +207,7 @@ def is_matplotlib_installed(xdoctest_namespace) -> None:
 
 
 # ADAPT or REMOVE?
+@pytest.mark.requires_atmosds
 @pytest.fixture(scope="function")
 def atmosds(threadsafe_data_dir) -> xr.Dataset:
     return _open_dataset(

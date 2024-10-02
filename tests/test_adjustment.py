@@ -669,6 +669,7 @@ class TestPrincipalComponents:
 
         group.apply(_group_assert, {"ref": ref, "sim": sim, "scen": scen})
 
+    @pytest.mark.requires_atmosds
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("pcorient", ["full", "simple"])
     def test_real_data(self, atmosds, use_dask, pcorient):
