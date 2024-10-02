@@ -15,7 +15,7 @@ maintainers = [
   {name = "Trevor James Smith", email = "smith.trevorj@ouranos.ca"}
 ]
 readme = {file = "README.rst", content-type = "text/x-rst"}
-requires-python = ">=3.9.0"
+requires-python = ">=3.10.0"
 keywords = ["xsdba"]
 license = {file = "LICENSE"}
 classifiers = [
@@ -26,10 +26,10 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  # "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: CPython"
 ]
 dynamic = ["description", "version"]
@@ -228,12 +228,12 @@ exclude = [
 
 [tool.isort]
 profile = "black"
-py_version = 39
+py_version = 310
 add_imports = "from __future__ import annotations"
 
 [tool.mypy]
 files = "."
-python_version = 3.9
+python_version = 3.10
 show_error_codes = true
 strict = true
 warn_no_return = true
@@ -302,7 +302,6 @@ markers = [
 [tool.ruff]
 src = ["xsdba"]
 line-length = 150
-target-version = "py39"
 exclude = [
   ".eggs",
   ".git",
