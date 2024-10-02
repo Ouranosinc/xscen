@@ -2,6 +2,18 @@
 Changelog
 =========
 
+v0.11.0 (unreleased)
+--------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* ``xs.io.make_toc`` now includes the global attributes of the dataset after the information about the variables. (:pull:`473`).
+
+Bug fixes
+^^^^^^^^^
+* ``xs.io.save_to_table`` now correctly handles the case where the input is a `DataArray` or a `Dataset` with a single variable. (:pull:`473`).
+
 v0.10.0 (2024-09-30)
 --------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).

@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import xarray as xr
+import xclim as xc
 
 import xscen as xs
 
@@ -90,12 +91,24 @@ class TestToTable:
         .reset_index("site")
         .assign_coords(site=list("abcdef"))
     ).transpose("season", "time", "site")
+    ds.attrs = {"foo": "bar", "baz": 1, "qux": 2.0}
 
-    def test_normal(self):
+    @pytest.mark.parametrize(
+        "multiple, as_dataset", [(True, True), (False, True), (False, False)]
+    )
+    def test_normal(self, multiple, as_dataset):
+        if multiple is False:
+            if as_dataset:
+                ds = self.ds[["tas"]].copy()
+            else:
+                ds = self.ds["tas"].copy()
+        else:
+            ds = self.ds.copy()
+
         # Default
-        tab = xs.io.to_table(self.ds)
-        assert tab.shape == (120, 5)  # 3 vars + 2 aux coords
-        assert tab.columns.names == ["variable"]
+        tab = xs.io.to_table(ds)
+        assert tab.shape == (120, 5 if multiple else 3)  # 3 vars + 2 aux coords
+        assert tab.columns.names == ["variable"] if multiple else [None]
         assert tab.index.names == ["season", "time", "site"]
         # Season order is chronological, rather than alphabetical
         np.testing.assert_array_equal(
@@ -105,15 +118,91 @@ class TestToTable:
             ["JFM", "AMJ", "JAS", "OND"],
         )
 
-        # Variable in the index, thus no coords
+        if multiple:
+            # Variable in the index, thus no coords
+            tab = xs.io.to_table(
+                ds, row=["time", "variable"], column=["season", "site"], coords=False
+            )
+            assert tab.shape == (15, 24)
+            assert tab.columns.names == ["season", "site"]
+            np.testing.assert_array_equal(
+                tab.loc[("1993", "pr"), ("JFM",)], ds.pr.sel(time="1993", season="JFM")
+            )
+            # Ensure that the coords are not present
+            assert (
+                len(
+                    set(tab.index.get_level_values("variable").unique()).difference(
+                        ["tas", "pr", "snw"]
+                    )
+                )
+                == 0
+            )
+
+    def test_sheet(self):
         tab = xs.io.to_table(
-            self.ds, row=["time", "variable"], column=["season", "site"], coords=False
+            self.ds,
+            row=["time", "variable"],
+            column=["season"],
+            sheet="site",
+            coords=False,
         )
-        assert tab.shape == (15, 24)
-        assert tab.columns.names == ["season", "site"]
-        np.testing.assert_array_equal(
-            tab.loc[("1993", "pr"), ("JFM",)], self.ds.pr.sel(time="1993", season="JFM")
-        )
+        assert set(tab.keys()) == {("a",), ("b",), ("c",), ("d",), ("e",), ("f",)}
+        assert tab[("a",)].shape == (15, 4)  # 5 time * 3 variable X 4 season
+
+    def test_error(self):
+        with pytest.raises(ValueError, match="Repeated dimension names."):
+            xs.io.to_table(
+                self.ds, row=["time", "variable"], column=["season", "site", "time"]
+            )
+        with pytest.raises(ValueError, match="Passed row, column and sheet"):
+            xs.io.to_table(
+                self.ds, row=["time", "variable"], column=["season", "site", "foo"]
+            )
+        with pytest.raises(
+            NotImplementedError,
+            match="Keeping auxiliary coords is not implemented when",
+        ):
+            xs.io.to_table(
+                self.ds,
+                row=["time", "variable"],
+                column=["season", "site"],
+                coords=True,
+            )
+
+    @pytest.mark.parametrize("as_dataset", [True, False])
+    def test_make_toc(self, as_dataset):
+        ds = self.ds.copy()
+        for v in ds.data_vars:
+            ds[v].attrs["long_name"] = f"Long name for {v}"
+            ds[v].attrs["long_name_fr"] = f"Nom long pour {v}"
+
+        if as_dataset is False:
+            ds = ds["tas"]
+
+        with xc.set_options(metadata_locales="fr"):
+            toc = xs.io.make_toc(ds)
+
+        if as_dataset:
+            assert toc.shape == (8, 2)
+            assert toc.columns.tolist() == ["Description", "Unités"]
+            assert toc.index.tolist() == [
+                "tas",
+                "pr",
+                "snw",
+                "",
+                "Attributs globaux",
+                "foo",
+                "baz",
+                "qux",
+            ]
+            assert toc.loc["tas", "Description"] == "Nom long pour tas"
+            assert toc.loc["tas", "Unités"] == "K"
+        else:
+            assert toc.shape == (1, 2)
+            assert toc.columns.tolist() == ["Description", "Unités"]
+            assert toc.index.tolist() == ["tas"]
+            assert toc.loc["tas", "Description"] == "Nom long pour tas"
+            assert toc.loc["tas", "Unités"] == "K"
 
 
 def test_round_bits(datablock_3d):
