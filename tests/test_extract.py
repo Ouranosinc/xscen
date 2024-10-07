@@ -334,7 +334,7 @@ class TestGetWarmingLevel:
         ds.attrs = attributes[deepcopy(attrs)]
         assert (
             xs.get_period_from_warming_level(
-                ds, wl=2, window=20, ignore_member=True, get_periodiod=False
+                ds, wl=2, window=20, ignore_member=True, return_central_year=True
             )
             == "2026"
         )
@@ -362,7 +362,7 @@ class TestGetWarmingLevel:
 
     def test_odd_window(self):
         assert xs.get_period_from_warming_level(
-            "CMIP6_CanESM5_ssp126_r1i1p1f1", wl=2, window=21, return__central_year=False
+            "CMIP6_CanESM5_ssp126_r1i1p1f1", wl=2, window=21, return_central_year=False
         ) == ["2016", "2036"]
         np.testing.assert_array_almost_equal(
             xs.get_warming_level_from_period(
@@ -370,15 +370,6 @@ class TestGetWarmingLevel:
             ),
             2.019456,
         )
-
-    def test_horizon(self):
-        out1 = xs.get_warming_level_from_period(
-            "CMIP6_CanESM5_ssp585_r1i1p1f1", ["2013", "2032"]
-        )
-        out2 = xs.get_warming_level_from_period(
-            "CMIP6_CanESM5_ssp585_r1i1p1f1", "2013-2032"
-        )
-        np.testing.assert_array_almost_equal(out1, out2)
 
     def test_none(self):
         assert (

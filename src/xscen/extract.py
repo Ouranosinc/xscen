@@ -905,7 +905,7 @@ def get_warming_level(
 
     """
     kwargs = kwargs.copy()
-    kwargs["return_year"] = not kwargs.get("return_horizon", True)
+    kwargs["return_central_year"] = not kwargs.get("return_horizon", True)
     kwargs.pop("return_horizon", None)
     warnings.warn(
         "get_warming_level has been deprecated. Use get_period_from_warming_level instead.",
@@ -965,9 +965,9 @@ def get_period_from_warming_level(  # noqa: C901
     Returns
     -------
     pd.Series or xr.DataArray or dict or list or str
-        If `realization` is not a sequence, the output will follow the format indicated by `return_period`.
+        If `realization` is not a sequence, the output will follow the format indicated by `return_central_year`.
         If `realization` is a sequence, the output will be of the same type,
-        with values following the format indicated by `return_period`.
+        with values following the format indicated by `return_central_year`.
     """
     tas_src = tas_src or Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
     tas_baseline_period = standardize_periods(
@@ -1324,7 +1324,7 @@ def subset_warming_level(
     if "realization" in ds.dims:
         # Vectorized subset
         bounds = get_period_from_warming_level(
-            ds.realization, wl, return_period=True, **kwargs
+            ds.realization, wl, return_central_year=False, **kwargs
         )
         reals = []
         for real in bounds.realization.values:
@@ -1361,7 +1361,7 @@ def subset_warming_level(
     else:
         # Scalar subset, single level
         start_yr, end_yr = get_period_from_warming_level(
-            ds, wl=wl, return_period=True, **kwargs
+            ds, wl=wl, return_central_year=False, **kwargs
         )
         # cut the window selected above and expand dims with wl_crd
         ds_wl = ds.sel(time=slice(start_yr, end_yr))
@@ -1750,7 +1750,7 @@ def _restrict_wl(df: pd.DataFrame, restrictions: dict):
     """
     restrictions.setdefault("wl", 0)
     to_keep = get_period_from_warming_level(
-        df, return_period=False, **restrictions
+        df, return_central_year=True, **restrictions
     ).notnull()
     removed = pd.unique(df[~to_keep]["id"])
     df = df[to_keep]
