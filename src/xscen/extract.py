@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "extract_dataset",
-    "get_horizon_from_warming_level",
+    "get_period_from_warming_level",
     "get_warming_level",
     "get_warming_level_from_period",
     "resample",
