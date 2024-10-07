@@ -63,6 +63,7 @@ dev = [
   "coverage >=7.5.0",
   "coveralls >=4.0.1",
   "mypy",
+  "netcdf4",
   "numpydoc >=1.8.0; python_version >='3.9'",
   "pytest <8.0.0",
   "pytest-cov >=5.0.0",

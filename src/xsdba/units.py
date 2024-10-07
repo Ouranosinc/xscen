@@ -287,6 +287,26 @@ def ensure_cf_units(ustr: str) -> str:
     return pint2cfunits(units2pint(ustr))
 
 
+def pint2cfunits(value: units.Quantity | units.Unit) -> str:
+    """Return a CF-compliant unit string from a `pint` unit.
+
+    Parameters
+    ----------
+    value : pint.Unit
+        Input unit.
+
+    Returns
+    -------
+    str
+        Units following CF-Convention, using symbols.
+    """
+    if isinstance(value, pint.Quantity | units.Quantity):
+        value = value.units
+
+    # Force "1" if the formatted string is "" (pint < 0.24)
+    return f"{value:~cf}" or "1"
+
+
 def ensure_delta(unit: str) -> str:
     """Return delta units for temperature.
 
