@@ -4,9 +4,7 @@ Bias Adjustment and Downscaling Algorithms
 
 The `xsdba` submodule provides a collection of bias-adjustment methods meant to correct for systematic biases found in climate model simulations relative to observations.
 Almost all adjustment algorithms conform to the `train` - `adjust` scheme, meaning that adjustment factors are first estimated on training data sets, then applied in a distinct step to the data to be adjusted.
-Given a reference time series (`ref``), historical simulations (`hist``) and simulations to be adjusted (`sim``),
-any bias-adjustment method would be applied by first estimating the adjustment factors between the historical simulation
-and the observation series, and then applying these factors to `sim`, which could be a future simulation:
+Given a reference time series (`ref`), historical simulations (`hist`) and simulations to be adjusted (`sim`), any bias-adjustment method would be applied by first estimating the adjustment factors between the historical simulation and the observation series, and then applying these factors to `sim``, which could be a future simulation:
 
 .. code-block:: python
 
@@ -31,16 +29,18 @@ Modular Approach
 The module attempts to adopt a modular approach instead of implementing published and named methods directly.
 A generic bias adjustment process is laid out as follows:
 
-- preprocessing on ``ref``, ``hist`` and ``sim`` (using methods in :py:mod:`xsdba.processing` or :py:mod:`xsdba.detrending`)
+- preprocessing on `ref`, `hist` and `sim` (using methods in :py:mod:`xsdba.processing` or :py:mod:`xsdba.detrending`)
 - creating and training the adjustment object ``Adj = Adjustment.train(obs, sim, **kwargs)`` (from :py:mod:`xsdba.adjustment`)
 - adjustment ``scen = Adj.adjust(sim, **kwargs)``
-- post-processing on ``scen`` (for example: re-trending)
+- post-processing on `scen` (for example: re-trending)
 
 ..
+
     TODO : Find a way to link API below, and those later in the file.
-The train-adjust approach allows to inspect the trained adjustment object. The training information is stored in
-the underlying `Adj.ds` dataset and usually has a `af` variable with the adjustment factors. Its layout and the
-other available variables vary between the different algorithm, refer to :ref:`Adjustment methods <sdba-user-api>`.
+
+The train-adjust approach allows to inspect the trained adjustment object.
+The training information is stored in the underlying `Adj.ds` dataset and usually has a `af` variable with the adjustment factors.
+Its layout and the other available variables vary between the different algorithm, refer to :ref:`Adjustment methods <sdba-user-api>`.
 
 Parameters needed by the training and the adjustment are saved to the ``Adj.ds`` dataset as a `adj_params` attribute.
 Parameters passed to the `adjust` call are written to the history attribute in the output scenario DataArray.
@@ -57,6 +57,7 @@ for each day of the year but across all realizations of an ensemble : ``group = 
 In a conventional empirical quantile mapping (EQM), this will compute the quantiles for each day of year and all realizations together, yielding a single set of adjustment factors for all realizations.
 
 .. warning::
+
     If grouping according to the day of the year is needed, the :py:mod:`xsdba.calendar` submodule contains useful
     tools to manage the different calendars that the input data can have. By default, if 2 different calendars are
     passed, the adjustment factors will always be interpolated to the largest range of day of the years but this can
