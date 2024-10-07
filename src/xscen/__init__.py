@@ -49,9 +49,9 @@ from .diagnostics import properties_and_measures
 from .ensembles import *
 from .extract import (
     extract_dataset,
-    get_period_from_warming_level,
+    get_horizon_from_warming_level,
     get_warming_level,
-    get_warming_level_from_period,
+    get_warming_level_from_horizon,
     search_data_catalogs,
     subset_warming_level,
 )

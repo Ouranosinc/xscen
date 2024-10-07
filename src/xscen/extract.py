@@ -37,9 +37,9 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "extract_dataset",
-    "get_period_from_warming_level",
+    "get_horizon_from_warming_level",
     "get_warming_level",
-    "get_warming_level_from_period",
+    "get_warming_level_from_horizon",
     "resample",
     "search_data_catalogs",
     "subset_warming_level",
@@ -611,7 +611,8 @@ def search_data_catalogs(  # noqa: C901
         More option can be added by passing a dictionary instead of a boolean.
         If {'ignore_member':True}, it will disregard the member when trying to match the dataset to a column.
         If {tas_src: Path_to_netcdf}, it will use an alternative netcdf instead of the default one provided by xscen.
-        If 'wl' is a provided key, then `xs.get_period_from_warming_level` will be called and only datasets that reach the warming level will be kept.
+        If 'wl' is a provided key, then `xs.get_horizon_from_warming_level` will be called
+        and only datasets that reach the warming level will be kept.
         This can be combined with other arguments of the function, for example {'wl': 1.5, 'window': 30}.
 
     Notes
@@ -888,30 +889,33 @@ def get_warming_level(
     *args, **kwargs
 ) -> xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list:
     """
-    Deprecated. Use get_period_from_warming_level instead.
+    Deprecated. Use get_horizon_from_warming_level instead.
 
     Parameters
     ----------
     args: list
-        Arguments to pass to get_period_from_warming_level
+        Arguments to pass to get_horizon_from_warming_level
     kwargs: dict
-        Keyword arguments to pass to get_period_from_warming_level
+        Keyword arguments to pass to get_horizon_from_warming_level
 
     Returns
     -------
     xr.Dataset or xr.DataArray or dict or list or str
-        Output of get_period_from_warming_level
+        Output of get_horizon_from_warming_level
 
     """
+    kwargs = kwargs.copy()
+    kwargs["return_period"] = kwargs.get("return_horizon", True)
+    kwargs.pop("return_horizon", None)
     warnings.warn(
-        "get_warming_level has been deprecated. Use get_period_from_warming_level instead.",
+        "get_warming_level has been deprecated. Use get_horizon_from_warming_level instead.",
         FutureWarning,
     )
-    return get_period_from_warming_level(*args, **kwargs)
+    return get_horizon_from_warming_level(*args, **kwargs)
 
 
 @parse_config
-def get_period_from_warming_level(  # noqa: C901
+def get_horizon_from_warming_level(  # noqa: C901
     realization: (
         xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list
     ),
@@ -921,7 +925,7 @@ def get_period_from_warming_level(  # noqa: C901
     tas_baseline_period: Sequence[str] | None = None,
     ignore_member: bool = False,
     tas_src: str | os.PathLike | None = None,
-    return_horizon: bool = True,
+    return_period: bool = True,
 ) -> xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list:
     """
     Use the IPCC Atlas method to return the window of time
@@ -954,16 +958,16 @@ def get_period_from_warming_level(  # noqa: C901
        If None, it will default to data/IPCC_annual_global_tas.nc which was built from
        the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
        and extra data for missing CMIP6 models and pilot models of CRCM5 and ClimEx.
-    return_horizon: bool
+    return_period: bool
         If True, the output will be a list following the format ['start_yr', 'end_yr']
-        If False, the output will be a string representing the middle of the period.
+        If False, the output will be a string representing the middle of the horizon.
 
     Returns
     -------
     pd.Series or xr.DataArray or dict or list or str
-        If `realization` is not a sequence, the output will follow the format indicated by `return_horizon`.
+        If `realization` is not a sequence, the output will follow the format indicated by `return_period`.
         If `realization` is a sequence, the output will be of the same type,
-        with values following the format indicated by `return_horizon`.
+        with values following the format indicated by `return_period`.
     """
     tas_src = tas_src or Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
     tas_baseline_period = standardize_periods(
@@ -982,7 +986,7 @@ def get_period_from_warming_level(  # noqa: C901
     def _get_warming_level(model):
         tas_sel = _wl_find_column(tas, model)
         if tas_sel is None:
-            return [None, None] if return_horizon else None
+            return [None, None] if return_period else None
 
         selected = "_".join([tas_sel[c].item() for c in FIELDS])
         msg = (
@@ -1009,14 +1013,14 @@ def get_period_from_warming_level(  # noqa: C901
                 f"({tas.time[-1].dt.year.item()}) of the provided 'tas_src' database for {selected}."
             )
             logger.info(msg)
-            return [None, None] if return_horizon else None
+            return [None, None] if return_period else None
 
         yr = yrs.isel(time=0).time.dt.year.item()
         start_yr = int(yr - window / 2 + 1)
         end_yr = int(yr + window / 2)
         return (
             standardize_periods([start_yr, end_yr], multiple=False)
-            if return_horizon
+            if return_period
             else str(yr)
         )
 
@@ -1024,7 +1028,7 @@ def get_period_from_warming_level(  # noqa: C901
     if isinstance(realization, pd.DataFrame):
         return pd.Series(out, index=realization.index)
     if isinstance(realization, xr.DataArray):
-        if return_horizon:
+        if return_period:
             return xr.DataArray(
                 out, dims=(realization.dims[0], "wl_bounds"), coords=realization.coords
             )
@@ -1036,11 +1040,11 @@ def get_period_from_warming_level(  # noqa: C901
 
 
 @parse_config
-def get_warming_level_from_period(
+def get_warming_level_from_horizon(
     realization: (
         xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list
     ),
-    period: list[str],
+    horizon: str | list[str],
     *,
     tas_baseline_period: Sequence[str] | None = None,
     ignore_member: bool = False,
@@ -1061,8 +1065,8 @@ def get_warming_level_from_period(
        'cat:mip_era', 'cat:experiment', 'cat:member',
        and either 'cat:source' for global models or 'cat:driving_model' for regional models.
        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
-    period : sequence of str
-        [start, end] of the period to be evaluated.
+    horizon : str or list of str
+        Either a string following the format 'start-end' or a list following the format ['start', 'end'].
     tas_baseline_period : list, optional
        [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
     ignore_member : bool
@@ -1084,7 +1088,10 @@ def get_warming_level_from_period(
     tas_baseline_period = standardize_periods(
         tas_baseline_period or ["1850", "1900"], multiple=False
     )
-    period = standardize_periods(period, multiple=False)
+    if isinstance(horizon, str):
+        period = [yr for yr in horizon.split("-")]
+    else:
+        period = standardize_periods(horizon, multiple=False)
 
     FIELDS = ["mip_era", "source", "experiment", "member"]
     info_models = _wl_prep_infomodels(realization, ignore_member, FIELDS)
@@ -1241,7 +1248,7 @@ def subset_warming_level(
        If None, no new dimensions will be added, invalid if `wl` is a sequence.
        If True, the dimension will include `wl` as numbers and units of "degC".
     \*\*kwargs :
-        Instructions on how to search for warming levels, passed to :py:func:`get_period_from_warming_level`.
+        Instructions on how to search for warming levels, passed to :py:func:`get_horizon_from_warming_level`.
 
     Returns
     -------
@@ -1319,8 +1326,8 @@ def subset_warming_level(
     date_cls = xc.core.calendar.datetime_classes[ds.time.dt.calendar]
     if "realization" in ds.dims:
         # Vectorized subset
-        bounds = get_period_from_warming_level(
-            ds.realization, wl, return_horizon=True, **kwargs
+        bounds = get_horizon_from_warming_level(
+            ds.realization, wl, return_period=True, **kwargs
         )
         reals = []
         for real in bounds.realization.values:
@@ -1356,8 +1363,8 @@ def subset_warming_level(
         ds_wl = xr.concat(reals, "realization")
     else:
         # Scalar subset, single level
-        start_yr, end_yr = get_period_from_warming_level(
-            ds, wl=wl, return_horizon=True, **kwargs
+        start_yr, end_yr = get_horizon_from_warming_level(
+            ds, wl=wl, return_period=True, **kwargs
         )
         # cut the window selected above and expand dims with wl_crd
         ds_wl = ds.sel(time=slice(start_yr, end_yr))
@@ -1735,7 +1742,7 @@ def _restrict_wl(df: pd.DataFrame, restrictions: dict):
     df : pd.DataFrame
         DataFrame to be evaluated.
     restrictions : dict
-        Dictionary of restrictions to be applied. Entries are passed to get_period_from_warming_level.
+        Dictionary of restrictions to be applied. Entries are passed to get_horizon_from_warming_level.
         If 'wl' is present, the warming level csv will be used to remove simulations that do not reach the requested warming level.
         Otherwise, the warming level csv will be used to remove simulations that are not available in it.
 
@@ -1745,8 +1752,8 @@ def _restrict_wl(df: pd.DataFrame, restrictions: dict):
         Updated DataFrame.
     """
     restrictions.setdefault("wl", 0)
-    to_keep = get_period_from_warming_level(
-        df, return_horizon=False, **restrictions
+    to_keep = get_horizon_from_warming_level(
+        df, return_period=False, **restrictions
     ).notnull()
     removed = pd.unique(df[~to_keep]["id"])
     df = df[to_keep]
