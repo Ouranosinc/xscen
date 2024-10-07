@@ -22,7 +22,17 @@ import sys
 
 sys.path.insert(0, os.path.abspath('..'))
 
+import xarray
+from pybtex.plugin import register_plugin
+from pybtex.style.formatting.alpha import Style as AlphaStyle
+from pybtex.style.labels import BaseLabelStyle
+
+xarray.DataArray.__module__ = "xarray"
+xarray.Dataset.__module__ = "xarray"
+xarray.CFTimeIndex.__module__ = "xarray"
+
 import xsdba
+
 
 # -- General configuration ---------------------------------------------
 
@@ -37,8 +47,10 @@ extensions = [
     'sphinx.ext.autosectionlabel',
     'sphinx.ext.extlinks',
     "sphinx.ext.intersphinx",
-    'sphinx.ext.viewcode',
+    "sphinx.ext.napoleon",
     'sphinx.ext.todo',
+    'sphinx.ext.viewcode',
+    "sphinxcontrib.bibtex",
     'sphinx_codeautolink',
     'sphinx_copybutton',
 ]
@@ -54,6 +66,24 @@ autodoc_default_options = {
     "special-members": False,
 }
 
+
+# Bibliography stuff
+# a simple label style which uses the bibtex keys for labels
+class XCLabelStyle(BaseLabelStyle):
+    def format_labels(self, sorted_entries):
+        for entry in sorted_entries:
+            yield entry.key
+
+
+class XCStyle(AlphaStyle):
+    default_label_style = XCLabelStyle
+
+
+register_plugin("pybtex.style.formatting", "xcstyle", XCStyle)
+bibtex_bibfiles = ["references.bib"]
+bibtex_default_style = "xcstyle"
+bibtex_reference_style = "author_year"
+
 intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
 }
@@ -67,17 +97,15 @@ extlinks = {
 templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
-source_suffix = ['.rst']
+# You can specify multiple suffix as a dictionary of suffix: filetype
+source_suffix = {'.rst': 'restructuredtext'}
 
 # The master toctree document.
 master_doc = 'index'
 
 # General information about the project.
 project = 'xsdba'
-copyright = "2024, Trevor James Smith"
+copyright = "2024, Ouranosinc, Éric Dupuis, Trevor James Smith"
 author = "Trevor James Smith"
 
 # The version info for the project you're documenting, acts as replacement
@@ -85,7 +113,7 @@ author = "Trevor James Smith"
 # the built documents.
 #
 # The short X.Y version.
-version = xsdba.__version__
+version = xsdba.__version__.split('-')[0]
 # The full version, including alpha/beta/rc tags.
 release = xsdba.__version__
 

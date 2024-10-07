@@ -3,7 +3,7 @@
 ###################################################################################
 # Apache Software License 2.0
 #
-# Copyright (c) 2024, Trevor James Smith
+# Copyright (c) 2024, Ouranos Inc., Éric Dupuis, Trevor James Smith
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,13 +20,13 @@
 
 from __future__ import annotations
 
-import importlib
+import importlib.util
 import warnings
 
 from . import adjustment, base, detrending, processing, testing, units, utils
 
 xclim_installed = importlib.util.find_spec("xclim") is not None
-if xclim_installed:
+if not xclim_installed:
     warnings.warn(
         "Sub-modules `properties` and `measures` depend on `xclim`. Run `pip install xsdba['extras']` to install it."
     )
