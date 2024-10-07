@@ -411,7 +411,7 @@ class TestGetWarmingLevel:
                 "CMIP6_CanESM5_ssp585_r1i1p1f1_toomany_underscores",
                 wl=2,
                 window=20,
-                return_central_year=false,
+                return_central_year=False,
             )
         with pytest.raises(ValueError):
             xs.get_period_from_warming_level(
