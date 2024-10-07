@@ -12,13 +12,14 @@ from warnings import warn
 import bottleneck as bn
 import numpy as np
 import xarray as xr
+from boltons.funcutils import wraps
 from dask import array as dsk
 from scipy.interpolate import griddata, interp1d
+from scipy.spatial import distance
 from scipy.stats import spearmanr
 from xarray.core.utils import get_temp_dimname
 
 from .base import Grouper, ensure_chunk_size, parse_group, uses_dask
-from .calendar import ensure_longest_doy
 from .nbutils import _extrapolate_on_quantiles, _linear_interpolation
 
 MULTIPLICATIVE = "*"
@@ -41,7 +42,7 @@ def map_cdf(
     ds: xr.Dataset,
     *,
     y_value: xr.DataArray,
-    dim,
+    dim: str,
 ):
     """Return the value in `x` with the same CDF as `y_value` in `y`.
 
@@ -94,6 +95,38 @@ def ecdf(x: xr.DataArray, value: float, dim: str = "time") -> xr.DataArray:
       Empirical CDF.
     """
     return (x <= value).sum(dim) / x.notnull().sum(dim)
+
+
+def ensure_longest_doy(func: Callable) -> Callable:
+    """Ensure that selected day is the longest day of year for x and y dims."""
+
+    @wraps(func)
+    def _ensure_longest_doy(x, y, *args, **kwargs):
+        if (
+            hasattr(x, "dims")
+            and hasattr(y, "dims")
+            and "dayofyear" in x.dims
+            and "dayofyear" in y.dims
+            and x.dayofyear.max() != y.dayofyear.max()
+        ):
+            warn(
+                (
+                    "get_correction received inputs defined on different dayofyear ranges. "
+                    "Interpolating to the longest range. Results could be strange."
+                ),
+                stacklevel=4,
+            )
+            if x.dayofyear.max() < y.dayofyear.max():
+                x = _interpolate_doy_calendar(
+                    x, int(y.dayofyear.max()), int(y.dayofyear.min())
+                )
+            else:
+                y = _interpolate_doy_calendar(
+                    y, int(x.dayofyear.max()), int(x.dayofyear.min())
+                )
+        return func(x, y, *args, **kwargs)
+
+    return _ensure_longest_doy
 
 
 @ensure_longest_doy
@@ -291,7 +324,7 @@ def _interp_on_quantiles_1D_multi(newxs, oldx, oldy, method, extrap):  # noqa: N
             oldy[~np.isnan(oldy)][-1],
         )
     else:  # extrap == 'nan'
-        fill_value = np.NaN
+        fill_value = np.nan
 
     finterp1d = interp1d(
         oldx[~mask_old],
@@ -304,7 +337,7 @@ def _interp_on_quantiles_1D_multi(newxs, oldx, oldy, method, extrap):  # noqa: N
     out = np.zeros_like(newxs)
     for ii in range(newxs.shape[0]):
         mask_new = np.isnan(newxs[ii, :])
-        y1 = newxs[ii, :].copy() * np.NaN
+        y1 = newxs[ii, :].copy() * np.nan
         y1[~mask_new] = finterp1d(newxs[ii, ~mask_new])
         out[ii, :] = y1.flatten()
     return out
@@ -316,7 +349,7 @@ def _interp_on_quantiles_1D(newx, oldx, oldy, method, extrap):  # noqa: N802
     out = np.full_like(newx, np.nan, dtype=f"float{oldy.dtype.itemsize * 8}")
     if np.all(mask_new) or np.all(mask_old):
         warn(
-            "All-NaN slice encountered in interp_on_quantiles",
+            "All-nan slice encountered in interp_on_quantiles",
             category=RuntimeWarning,
         )
         return out
@@ -339,13 +372,13 @@ def _interp_on_quantiles_1D(newx, oldx, oldy, method, extrap):  # noqa: N802
     return out
 
 
-def _interp_on_quantiles_2D(newx, newg, oldx, oldy, oldg, method, extrap):  # noqa: N802
+def _interp_on_quantiles_2d(newx, newg, oldx, oldy, oldg, method, extrap):
     mask_new = np.isnan(newx) | np.isnan(newg)
     mask_old = np.isnan(oldy) | np.isnan(oldx) | np.isnan(oldg)
     out = np.full_like(newx, np.nan, dtype=f"float{oldy.dtype.itemsize * 8}")
     if np.all(mask_new) or np.all(mask_old):
         warn(
-            "All-NaN slice encountered in interp_on_quantiles",
+            "All-nan slice encountered in interp_on_quantiles",
             category=RuntimeWarning,
         )
         return out
@@ -380,8 +413,8 @@ def interp_on_quantiles(
 
     Interpolate in 2D with :py:func:`scipy.interpolate.griddata` if grouping is used, in 1D otherwise, with
     :py:class:`scipy.interpolate.interp1d`.
-    Any NaNs in `xq` or `yq` are removed from the input map.
-    Similarly, NaNs in newx are left NaNs.
+    Any nans in `xq` or `yq` are removed from the input map.
+    Similarly, nans in newx are left nans.
 
     Parameters
     ----------
@@ -406,7 +439,7 @@ def interp_on_quantiles(
     -----
     Extrapolation methods:
 
-    - 'nan' : Any value of `newx` outside the range of `xq` is set to NaN.
+    - 'nan' : Any value of `newx` outside the range of `xq` is set to 'nan'.
     - 'constant' : Values of `newx` smaller than the minimum of `xq` are set to the first
       value of `yq` and those larger than the maximum, set to the last one (first and
       last non-nan values along the "quantiles" dimension). When the grouping is "time.month",
@@ -452,7 +485,7 @@ def interp_on_quantiles(
     oldg = xq[prop].expand_dims(quantiles=xq.coords["quantiles"])
 
     return xr.apply_ufunc(
-        _interp_on_quantiles_2D,
+        _interp_on_quantiles_2d,
         newx,
         newg,
         xq,
@@ -487,23 +520,23 @@ def rank(
 
     Parameters
     ----------
-    da : xr.DataArray
-        Source array.
+    da: xr.DataArray
+      Source array.
     dim : str | list[str], hashable
-        Dimension(s) over which to compute rank.
+      Dimension(s) over which to compute rank.
     pct : bool, optional
-        If True, compute percentage ranks, otherwise compute integer ranks.
-        Percentage ranks range from 0 to 1, in opposition to xarray's implementation,
-        where they range from 1/N to 1.
+      If True, compute percentage ranks, otherwise compute integer ranks.
+      Percentage ranks range from 0 to 1, in opposition to xarray's implementation,
+      where they range from 1/N to 1.
 
     Returns
     -------
-    xr.DataArray
+    DataArray
         DataArray with the same coordinates and dtype 'float64'.
 
     Notes
     -----
-    The `bottleneck` library is required. NaNs in the input array are returned as NaNs.
+    The `bottleneck` library is required. nans in the input array are returned as nans.
 
     See Also
     --------
@@ -513,7 +546,7 @@ def rank(
     dims = dim if isinstance(dim, list) else [dim]
     rnk_dim = dims[0] if len(dims) == 1 else get_temp_dimname(da_dims, "temp")
 
-    # multidimensional ranking through stacking
+    # multi-dimensional ranking through stacking
     if len(dims) > 1:
         da = da.stack(**{rnk_dim: dims})
     rnk = da.rank(rnk_dim, pct=pct)
@@ -544,18 +577,18 @@ def pc_matrix(arr: np.ndarray | dsk.Array) -> np.ndarray | dsk.Array:
     """Construct a Principal Component matrix.
 
     This matrix can be used to transform points in arr to principal components
-    coordinates. Note that this function does not manage NaNs; if a single observation is null, all elements
-    of the transformation matrix involving that variable will be NaN.
+    coordinates. Note that this function does not manage nans; if a single observation is null, all elements
+    of the transformation matrix involving that variable will be nan.
 
     Parameters
     ----------
     arr : numpy.ndarray or dask.array.Array
-        2D array (M, N) of the M coordinates of N points.
+      2D array (M, N) of the M coordinates of N points.
 
     Returns
     -------
     numpy.ndarray or dask.array.Array
-        MxM Array of the same type as arr.
+      MxM Array of the same type as arr.
     """
     # Get appropriate math module
     mod = dsk if isinstance(arr, dsk.Array) else np
@@ -690,11 +723,11 @@ def get_clusters_1d(
     Parameters
     ----------
     data : 1D ndarray
-        Values to get clusters from.
+      Values to get clusters from.
     u1 : float
-        Extreme value threshold, at least one value in the cluster must exceed this.
+      Extreme value threshold, at least one value in the cluster must exceed this.
     u2 : float
-        Cluster threshold, values above this can be part of a cluster.
+      Cluster threshold, values above this can be part of a cluster.
 
     Returns
     -------
@@ -720,7 +753,7 @@ def get_clusters_1d(
     cl_maxval = []
     cl_start = []
     cl_end = []
-    for start, end in zip(starts, ends):
+    for start, end in zip(starts, ends, strict=False):
         cluster_max = data[start:end].max()
         if cluster_max > u1:
             cl_maxval.append(cluster_max)
@@ -762,7 +795,7 @@ def get_clusters(data: xr.DataArray, u1, u2, dim: str = "time") -> xr.Dataset:
         - `maxpos` : Index of the maximal value within the cluster (`dim` reduced, new `cluster`), int
         - `maximum` : Maximal value within the cluster (`dim` reduced, new `cluster`), same dtype as data.
 
-      For `start`, `end` and `maxpos`, -1 means NaN and should always correspond to a `NaN` in `maximum`.
+      For `start`, `end` and `maxpos`, -1 means nan and should always correspond to a `nan` in `maximum`.
       The length along `cluster` is half the size of "dim", the maximal theoretical number of clusters.
     """
 
@@ -827,18 +860,19 @@ def rand_rot_matrix(
 
     Parameters
     ----------
-    crd : xr.DataArray
-        1D coordinate DataArray along which the rotation occurs.
-        The output will be square with the same coordinate replicated, the second renamed to `new_dim`.
+    crd: xr.DataArray
+      1D coordinate DataArray along which the rotation occurs.
+      The output will be square with the same coordinate replicated,
+      the second renamed to `new_dim`.
     num : int
-        If larger than 1 (default), the number of matrices to generate, stacked along a "matrices" dimension.
+      If larger than 1 (default), the number of matrices to generate, stacked along a "matrices" dimension.
     new_dim : str
-        Name of the new "prime" dimension, defaults to the same name as `crd` + "_prime".
+      Name of the new "prime" dimension, defaults to the same name as `crd` + "_prime".
 
     Returns
     -------
     xr.DataArray
-        A float, NxN if num = 1, numxNxN otherwise, where N is the length of crd.
+      Float, NxN if num = 1, numxNxN otherwise, where N is the length of crd.
 
     References
     ----------
@@ -869,10 +903,20 @@ def rand_rot_matrix(
     )
 
 
+def copy_all_attrs(ds: xr.Dataset | xr.DataArray, ref: xr.Dataset | xr.DataArray):
+    """Copy all attributes of ds to ref, including attributes of shared coordinates, and variables in the case of Datasets."""
+    ds.attrs.update(ref.attrs)
+    extras = ds.variables if isinstance(ds, xr.Dataset) else ds.coords
+    others = ref.variables if isinstance(ref, xr.Dataset) else ref.coords
+    for name, var in extras.items():
+        if name in others:
+            var.attrs.update(ref[name].attrs)
+
+
 def _pairwise_spearman(da, dims):
     """Area-averaged pairwise temporal correlation.
 
-    With skipna-shortcuts for cases where all times or all points are NaN.
+    With skipna-shortcuts for cases where all times or all points are nan.
     """
     da = da - da.mean(dims)
     da = (
@@ -883,7 +927,7 @@ def _pairwise_spearman(da, dims):
 
     def _skipna_correlation(data):
         nv, _nt = data.shape
-        # Mask of which variable are all NaN
+        # Mask of which variable are all nan
         mask_omit = np.isnan(data).all(axis=1)
         # Remove useless variables
         data_noallnan = data[~mask_omit, :]
@@ -892,7 +936,7 @@ def _pairwise_spearman(da, dims):
         # Remove those times (they'll be omitted anyway)
         data_nonan = data_noallnan[:, ~mask_skip]
 
-        # We still have a possibility that a NaN was unique to a variable and time.
+        # We still have a possibility that a nan was unique to a variable and time.
         # If this is the case, it will be a lot longer, but what can we do.
         coef = spearmanr(data_nonan, axis=1, nan_policy="omit").correlation
 
@@ -920,6 +964,129 @@ def _pairwise_spearman(da, dims):
             "allow_rechunk": True,
         },
     ).rename("correlation")
+
+
+def bin_width_estimator(X):
+    """Estimate the bin width of an histogram.
+
+    References
+    ----------
+    :cite:cts:`sdba-robin_2021`
+    """
+    if isinstance(X, list):
+        return np.min([bin_width_estimator(x) for x in X], axis=0)
+
+    if X.ndim == 1:
+        X = X.reshape(-1, 1)
+
+    # Freedman-Diaconis
+    bin_width = (
+        2.0
+        * (np.percentile(X, q=75, axis=0) - np.percentile(X, q=25, axis=0))
+        / np.power(X.shape[0], 1.0 / 3.0)
+    )
+    bin_width = np.where(
+        bin_width == 0,
+        # Scott
+        3.49 * np.std(X, axis=0) / np.power(X.shape[0], 1.0 / 3.0),
+        bin_width,
+    )
+
+    return bin_width
+
+
+def histogram(data, bin_width, bin_origin):
+    """Construct an histogram of the data.
+
+    Returns the position of the center of bins, their corresponding frequency and the bin of every data point.
+    """
+    # Find bin indices of data points
+    idx_bin = np.floor((data - bin_origin) / bin_width)
+
+    # Associate unique values with frequencies
+    grid, mu = np.unique(idx_bin, return_counts=True, axis=0)
+
+    # Normalise frequencies
+    mu = np.divide(mu, sum(mu))
+
+    grid = (grid + 0.5) * bin_width + bin_origin
+
+    return grid, mu, idx_bin
+
+
+def optimal_transport(gridX, gridY, muX, muY, num_iter_max, normalization):
+    """Compute the optimal transportation plan on (transformations of) X and Y.
+
+    References
+    ----------
+    :cite:cts:`sdba-robin_2021`
+    """
+    try:
+        from ot import emd  # pylint: disable=import-outside-toplevel
+    except ImportError as e:
+        raise ImportError(
+            "The optional dependency `POT` is required for optimal_transport. "
+            "You can install it with `pip install POT`, `conda install -c conda-forge pot` or `pip install 'xsdba[extras]'`."
+        ) from e
+
+    if normalization == "standardize":
+        gridX = (gridX - gridX.mean(axis=0)) / gridX.std(axis=0)
+        gridY = (gridY - gridY.mean(axis=0)) / gridY.std(axis=0)
+
+    elif normalization == "max_distance":
+        max1 = np.abs(gridX.max(axis=0) - gridY.min(axis=0))
+        max2 = np.abs(gridY.max(axis=0) - gridX.min(axis=0))
+        max_dist = np.maximum(max1, max2)
+        gridX = gridX / max_dist
+        gridY = gridY / max_dist
+
+    elif normalization == "max_value":
+        max_value = np.maximum(gridX.max(axis=0), gridY.max(axis=0))
+        gridX = gridX / max_value
+        gridY = gridY / max_value
+
+    # Compute the distances from every X bin to every Y bin
+    C = distance.cdist(gridX, gridY, "sqeuclidean")
+
+    # Compute the optimal transportation plan
+    gamma = emd(muX, muY, C, numItermax=num_iter_max)
+    plan = (gamma.T / gamma.sum(axis=1)).T
+
+    return plan
+
+
+def eps_cholesky(M, nit=26):
+    """Cholesky decomposition.
+
+    References
+    ----------
+    :cite:cts:`sdba-robin_2021,sdba-higham_1988,sdba-knol_1989`
+    """
+    MC = None
+    try:
+        MC = np.linalg.cholesky(M)
+    except np.linalg.LinAlgError:
+        MC = None
+
+    if MC is None:
+        # Introduce small perturbations until M is positive-definite
+        eps = min(1e-9, np.abs(np.diagonal(M)).min())
+        if eps == 0:
+            eps = 1e-9
+        it = 0
+        while MC is None:
+            if it == nit:
+                raise ValueError(
+                    "The vcov matrix is far from positive-definite. Please use `cov_factor = 'std'`"
+                )
+            perturb = np.identity(M.shape[0]) * eps
+            try:
+                MC = np.linalg.cholesky(M + perturb)
+            except np.linalg.LinAlgError:
+                MC = None
+            eps = 2 * eps
+            it += 1
+    return MC
 
 
 # ADAPT: Maybe this is not the best place

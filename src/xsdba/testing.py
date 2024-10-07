@@ -19,7 +19,6 @@ from platformdirs import user_cache_dir
 from scipy.stats import gamma
 from xarray import open_dataset as _open_dataset
 
-from xsdba.calendar import percentile_doy
 from xsdba.utils import equally_spaced_nodes
 
 __all__ = ["nancov", "test_timelonlatseries", "test_timeseries"]

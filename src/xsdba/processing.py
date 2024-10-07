@@ -14,11 +14,10 @@ import numpy as np
 import xarray as xr
 from xarray.core.utils import get_temp_dimname
 
-from xsdba.calendar import get_calendar, max_doy, parse_offset, uses_dask
 from xsdba.formatting import update_xsdba_history
 
 from ._processing import _adapt_freq, _normalize, _reordering
-from .base import Grouper
+from .base import Grouper, parse_offset, uses_dask
 from .nbutils import _escore
 from .units import convert_units_to, harmonize_units, pint2str
 from .utils import ADDITIVE, copy_all_attrs
@@ -480,16 +479,8 @@ def _get_number_of_elements_by_year(time):
 
     Only calendar with uniform year lengths are supported : 360_day, noleap, all_leap.
     """
-    cal = get_calendar(time)
-
-    # Calendar check
-    if cal in ["standard", "gregorian", "default", "proleptic_gregorian"]:
-        raise ValueError(
-            "For moving window computations, the data must have a uniform calendar (360_day, no_leap or all_leap)"
-        )
-
     mult, freq, _, _ = parse_offset(xr.infer_freq(time))
-    days_in_year = max_doy[cal]
+    days_in_year = time.dt.days_in_year.max()
     elements_in_year = {"Q": 4, "M": 12, "D": days_in_year, "h": days_in_year * 24}
     N_in_year = elements_in_year.get(freq, 1) / mult
     if N_in_year % 1 != 0:
@@ -613,25 +604,25 @@ def from_additive_space(
     lower_bound : str, optional
         The smallest physical value of the variable, as a Quantity string.
         The final data will have no value smaller or equal to this bound.
-        If None (default), the `sdba_transform_lower` attribute is looked up on `data`.
+        If None (default), the `xsdba_transform_lower` attribute is looked up on `data`.
     upper_bound : str, optional
         The largest physical value of the variable, as a Quantity string.
         Only relevant for the logit transformation.
         The final data will have no value larger or equal to this bound.
-        If None (default), the `sdba_transform_upper` attribute is looked up on `data`.
+        If None (default), the `xsdba_transform_upper` attribute is looked up on `data`.
     trans : {'log', 'logit'}, optional
         The transformation to use. See notes.
-        If None (the default), the `sdba_transform` attribute is looked up on `data`.
+        If None (the default), the `xsdba_transform` attribute is looked up on `data`.
     units : str, optional
         The units of the data before transformation to the additive space.
-        If None (the default), the `sdba_transform_units` attribute is looked up on `data`.
+        If None (the default), the `xsdba_transform_units` attribute is looked up on `data`.
 
     Returns
     -------
     xr.DataArray
         The physical variable. Attributes are conserved, even if some might be incorrect.
-        Except units which are taken from `sdba_transform_units` if available.
-        All `sdba_transform*` attributes are deleted.
+        Except units which are taken from `xsdba_transform_units` if available.
+        All `xsdba_transform*` attributes are deleted.
 
     Notes
     -----
@@ -663,15 +654,15 @@ def from_additive_space(
     """
     if trans is None and lower_bound is None and units is None:
         try:
-            trans = data.attrs["sdba_transform"]
-            units = data.attrs["sdba_transform_units"]
-            lower_bound_array = np.array(data.attrs["sdba_transform_lower"]).astype(
+            trans = data.attrs["xsdba_transform"]
+            units = data.attrs["xsdba_transform_units"]
+            lower_bound_array = np.array(data.attrs["xsdba_transform_lower"]).astype(
                 float
             )
             if trans == "logit":
-                upper_bound_array = np.array(data.attrs["sdba_transform_upper"]).astype(
-                    float
-                )
+                upper_bound_array = np.array(
+                    data.attrs["xsdba_transform_upper"]
+                ).astype(float)
         except KeyError as err:
             raise ValueError(
                 f"Attribute {err!s} must be present on the input data "
@@ -707,10 +698,10 @@ def from_additive_space(
             raise NotImplementedError("`trans` must be one of 'log' or 'logit'.")
 
     # Remove unneeded attributes, put correct units back.
-    out.attrs.pop("sdba_transform", None)
-    out.attrs.pop("sdba_transform_lower", None)
-    out.attrs.pop("sdba_transform_upper", None)
-    out.attrs.pop("sdba_transform_units", None)
+    out.attrs.pop("xsdba_transform", None)
+    out.attrs.pop("xsdba_transform_lower", None)
+    out.attrs.pop("xsdba_transform_upper", None)
+    out.attrs.pop("xsdba_transform_units", None)
     out = out.assign_attrs(units=units)
     return out
 
@@ -735,9 +726,9 @@ def stack_variables(ds: xr.Dataset, rechunk: bool = True, dim: str = "multivar")
     -------
     xr.DataArray
         The transformed variable. Attributes are conserved, even if some might be incorrect, except for units,
-        which are replaced with `""`. Old units are stored in `sdba_transformation_units`.
-        A `sdba_transform` attribute is added, set to the transformation method. `sdba_transform_lower` and
-        `sdba_transform_upper` are also set if the requested bounds are different from the defaults.
+        which are replaced with `""`. Old units are stored in `xsdba_transformation_units`.
+        A `xsdba_transform` attribute is added, set to the transformation method. `xsdba_transform_lower` and
+        `xsdba_transform_upper` are also set if the requested bounds are different from the defaults.
 
         Array with variables stacked along `dim` dimension. Units are set to "".
     """

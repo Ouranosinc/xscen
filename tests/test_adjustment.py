@@ -17,8 +17,7 @@ from xsdba.adjustment import (
     QuantileDeltaMapping,
     Scaling,
 )
-from xsdba.base import Grouper
-from xsdba.calendar import stack_periods
+from xsdba.base import Grouper, stack_periods
 from xsdba.options import set_options
 from xsdba.processing import (
     jitter_under_thresh,
@@ -593,6 +592,15 @@ class TestQM:
                 chunks = {"location": -1}
             else:
                 chunks = None
+
+            dsim = open_dataset(
+                "sdba/CanESM2_1950-2100.nc",
+                chunks=chunks,
+                drop_variables=["lat", "lon"],
+            ).tasmax
+            hist = dsim.sel(time=slice("1981", "2010"))
+            sim = dsim.sel(time=slice("2041", "2070"))
+
             ref = (
                 open_dataset(
                     "sdba/ahccd_1950-2013.nc",
@@ -603,15 +611,9 @@ class TestQM:
                 .tasmax
             )
             ref = convert_units_to(ref, "K")
-            ref = ref.isel(location=1, drop=True).expand_dims(location=["Amos"])
-
-            dsim = open_dataset(
-                "sdba/CanESM2_1950-2100.nc",
-                chunks=chunks,
-                drop_variables=["lat", "lon"],
-            ).tasmax
-            hist = dsim.sel(time=slice("1981", "2010"))
-            sim = dsim.sel(time=slice("2041", "2070"))
+            # The idea is to have ref defined only over 1 location
+            # But sdba needs the same dimensions on ref and hist for Grouping with add_dims
+            ref = ref.where(ref.location == "Amos")
 
             # With add_dims, "does it run" test
             group = Grouper("time.dayofyear", window=5, add_dims=["location"])

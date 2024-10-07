@@ -389,7 +389,7 @@ def _first_and_last_nonnull(arr):
 def _extrapolate_on_quantiles(interp, oldx, oldg, oldy, newx, newg, method="constant"):
     """Apply extrapolation to the output of interpolation on quantiles with a given grouping.
 
-    Arguments are the same as _interp_on_quantiles_2D.
+    Arguments are the same as _interp_on_quantiles_2d.
     """
     bnds = _first_and_last_nonnull(oldx)
     xp = np.arange(bnds.shape[0])

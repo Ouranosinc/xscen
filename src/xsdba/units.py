@@ -15,6 +15,7 @@ import pint
 # this dependency is "necessary" for convert_units_to
 # if we only do checks, we could get rid of it
 
+# XC : units
 
 try:
     # allows to use cf units
@@ -25,11 +26,29 @@ except ImportError:  # noqa: S110
 import warnings
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
-from .calendar import get_calendar, parse_offset
+from .base import get_calendar, parse_offset
 from .typing import Quantified
 from .utils import copy_all_attrs
+
+__all__ = [
+    "compare_units",
+    "convert_units_to",
+    "ensure_absolute_temperature",
+    "ensure_cf_units",
+    "ensure_delta",
+    "harmonize_units",
+    "infer_context",
+    "infer_sampling_units",
+    "pint2cfunits",
+    "pint_multiply",
+    "str2pint",
+    "to_agg_units",
+    "units",
+    "units2pint",
+]
 
 units = pint.get_application_registry()
 # Another alias not included by cf_xarray
@@ -258,6 +277,14 @@ def ensure_absolute_temperature(units: str):
     if a.units in DELTA_ABSOLUTE_TEMP:
         return pint2str(DELTA_ABSOLUTE_TEMP[a.units])
     return units
+
+
+def ensure_cf_units(ustr: str) -> str:
+    """Ensure the passed unit string is CF-compliant.
+
+    The string will be parsed to pint then recast to a string by xclim's `pint2cfunits`.
+    """
+    return pint2cfunits(units2pint(ustr))
 
 
 def ensure_delta(unit: str) -> str:
@@ -515,13 +542,13 @@ def to_agg_units(
         out.attrs["units"] = ensure_absolute_temperature(orig.attrs["units"])
 
     elif op in ["var"]:
-        out.attrs["units"] = pint2str(
+        out.attrs["units"] = pint2cfunits(
             str2pint(ensure_absolute_temperature(orig.units)) ** 2
         )
 
     elif op in ["doymin", "doymax"]:
         out.attrs.update(
-            units="", is_dayofyear=np.int32(1), calendar=get_calendar(orig)
+            units="1", is_dayofyear=np.int32(1), calendar=get_calendar(orig)
         )
 
     elif op in ["count", "integral"]:
@@ -537,9 +564,9 @@ def to_agg_units(
                 # We need to simplify units after multiplication
                 out_units = (orig_u * freq_u).to_reduced_units()
                 out = out * out_units.magnitude
-                out.attrs["units"] = pint2str(out_units)
+                out.attrs["units"] = pint2cfunits(out_units)
             else:
-                out.attrs["units"] = pint2str(orig_u * freq_u)
+                out.attrs["units"] = pint2cfunits(orig_u * freq_u)
     else:
         raise ValueError(
             f"Unknown aggregation op {op}. "

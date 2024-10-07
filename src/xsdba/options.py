@@ -124,7 +124,7 @@ def datacheck(func: Callable) -> Callable:
 
 
 class set_options:
-    """Set options for xclim in a controlled context.
+    """Set options for xsdba in a controlled context.
 
     Attributes
     ----------
@@ -188,9 +188,8 @@ class set_options:
         self.old = {}
         for k, v in kwargs.items():
             if k not in OPTIONS:
-                raise ValueError(
-                    f"argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}"
-                )
+                msg = f"Argument name {k!r} is not in the set of valid options {set(OPTIONS)!r}."
+                raise ValueError(msg)
             if k in _VALIDATORS and not _VALIDATORS[k](v):
                 raise ValueError(f"option {k!r} given an invalid value: {v!r}")
 
