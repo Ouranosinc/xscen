@@ -92,7 +92,7 @@ def adapt_freq(
 
     References
     ----------
-    :cite:cts:`sdba-themesl_empirical-statistical_2012`
+    :cite:cts:`themesl_empirical-statistical_2012`
     """
     out = _adapt_freq(xr.Dataset(dict(sim=sim, ref=ref)), group=group, thresh=thresh)
 
@@ -369,7 +369,7 @@ def reordering(ref: xr.DataArray, sim: xr.DataArray, group: str = "time") -> xr.
 
     References
     ----------
-    :cite:cts:`sdba-cannon_multivariate_2018`.
+    :cite:cts:`cannon_multivariate_2018`.
     """
     ds = xr.Dataset({"sim": sim, "ref": ref})
     out: xr.Dataset = _reordering(ds, group=group).reordered
@@ -435,7 +435,7 @@ def escore(
 
     References
     ----------
-    :cite:cts:`sdba-baringhaus_new_2004,sdba-cannon_multivariate_2018,sdba-cannon_mbc_2020,sdba-szekely_testing_2004`.
+    :cite:cts:`baringhaus_new_2004,sdba-cannon_multivariate_2018,sdba-cannon_mbc_2020,sdba-szekely_testing_2004`.
     """
     pts_dim, obs_dim = dims
 
@@ -554,7 +554,7 @@ def to_additive_space(
 
     References
     ----------
-    :cite:cts:`sdba-alavoine_distinct_2022`.
+    :cite:cts:`alavoine_distinct_2022`.
     """
     # with units.context(infer_context(data.attrs.get("standard_name"))):
     lower_bound_array = np.array(lower_bound).astype(float)
@@ -650,7 +650,7 @@ def from_additive_space(
 
     References
     ----------
-    :cite:cts:`sdba-alavoine_distinct_2022`.
+    :cite:cts:`alavoine_distinct_2022`.
     """
     if trans is None and lower_bound is None and units is None:
         try:

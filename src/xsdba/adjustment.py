@@ -412,7 +412,7 @@ class EmpiricalQuantileMapping(TrainAdjust):
 
     References
     ----------
-    :cite:cts:`sdba-deque_frequency_2007`
+    :cite:cts:`deque_frequency_2007`
     """
 
     _allow_diff_calendars = False
@@ -511,7 +511,7 @@ class DetrendedQuantileMapping(TrainAdjust):
 
     References
     ----------
-    :cite:cts:`sdba-cannon_bias_2015`
+    :cite:cts:`cannon_bias_2015`
     """
 
     _allow_diff_calendars = False
@@ -622,7 +622,7 @@ class QuantileDeltaMapping(EmpiricalQuantileMapping):
 
     References
     ----------
-    :cite:cts:`sdba-cannon_bias_2015`
+    :cite:cts:`cannon_bias_2015`
     """
 
     def _adjust(self, sim, interp="nearest", extrapolation="constant"):
@@ -716,8 +716,8 @@ class ExtremeValues(TrainAdjust):
 
     References
     ----------
-    :cite:cts:`sdba-roy_juliaclimateclimatetoolsjl_2021`
-    :cite:cts:`sdba-roy_extremeprecip_2023`
+    :cite:cts:`roy_juliaclimateclimatetoolsjl_2021`
+    :cite:cts:`roy_extremeprecip_2023`
     """
 
     @classmethod
@@ -839,7 +839,7 @@ class LOCI(TrainAdjust):
 
     References
     ----------
-    :cite:cts:`sdba-schmidli_downscaling_2006`
+    :cite:cts:`schmidli_downscaling_2006`
     """
 
     _allow_diff_calendars = False
@@ -984,7 +984,7 @@ class PrincipalComponents(TrainAdjust):
 
     References
     ----------
-    :cite:cts:`sdba-hnilica_multisite_2017,sdba-alavoine_distinct_2022`
+    :cite:cts:`hnilica_multisite_2017,sdba-alavoine_distinct_2022`
     """
 
     @classmethod
@@ -1184,7 +1184,7 @@ class NpdfTransform(Adjust):
 
     References
     ----------
-    :cite:cts:`sdba-cannon_multivariate_2018,sdba-cannon_mbc_2020,sdba-pitie_n-dimensional_2005,sdba-mezzadri_how_2007,sdba-szekely_testing_2004`
+    :cite:cts:`cannon_multivariate_2018,sdba-cannon_mbc_2020,sdba-pitie_n-dimensional_2005,sdba-mezzadri_how_2007,sdba-szekely_testing_2004`
     """
 
     @classmethod
@@ -1367,7 +1367,7 @@ class MBCn(TrainAdjust):
 
     References
     ----------
-    :cite:cts:`sdba-cannon_multivariate_2018,sdba-cannon_mbc_2020,sdba-pitie_n-dimensional_2005,sdba-mezzadri_how_2007,sdba-szekely_testing_2004`
+    :cite:cts:`cannon_multivariate_2018,sdba-cannon_mbc_2020,sdba-pitie_n-dimensional_2005,sdba-mezzadri_how_2007,sdba-szekely_testing_2004`
 
     Notes
     -----

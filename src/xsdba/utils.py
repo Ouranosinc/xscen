@@ -642,7 +642,7 @@ def best_pc_orientation_simple(
 
     References
     ----------
-    :cite:cts:`sdba-hnilica_multisite_2017`
+    :cite:cts:`hnilica_multisite_2017`
     """
     m = R.shape[0]
     P = np.diag(val * np.ones(m))
@@ -691,7 +691,7 @@ def best_pc_orientation_full(
 
     References
     ----------
-    :cite:cts:`sdba-alavoine_distinct_2022`
+    :cite:cts:`alavoine_distinct_2022`
 
     See Also
     --------
@@ -735,7 +735,7 @@ def get_clusters_1d(
 
     References
     ----------
-    `getcluster` of Extremes.jl (:cite:cts:`sdba-jalbert_extreme_2022`).
+    `getcluster` of Extremes.jl (:cite:cts:`jalbert_extreme_2022`).
     """
     # Boolean array, True where data is over u2
     # We pad with values under u2, so that clusters never start or end at boundaries.
@@ -876,7 +876,7 @@ def rand_rot_matrix(
 
     References
     ----------
-    :cite:cts:`sdba-mezzadri_how_2007`
+    :cite:cts:`mezzadri_how_2007`
     """
     if num > 1:
         return xr.concat([rand_rot_matrix(crd, num=1) for i in range(num)], "matrices")
@@ -971,7 +971,7 @@ def bin_width_estimator(X):
 
     References
     ----------
-    :cite:cts:`sdba-robin_2021`
+    :cite:cts:`robin_2021`
     """
     if isinstance(X, list):
         return np.min([bin_width_estimator(x) for x in X], axis=0)
@@ -1019,7 +1019,7 @@ def optimal_transport(gridX, gridY, muX, muY, num_iter_max, normalization):
 
     References
     ----------
-    :cite:cts:`sdba-robin_2021`
+    :cite:cts:`robin_2021`
     """
     try:
         from ot import emd  # pylint: disable=import-outside-toplevel
@@ -1060,7 +1060,7 @@ def eps_cholesky(M, nit=26):
 
     References
     ----------
-    :cite:cts:`sdba-robin_2021,sdba-higham_1988,sdba-knol_1989`
+    :cite:cts:`robin_2021,sdba-higham_1988,sdba-knol_1989`
     """
     MC = None
     try:

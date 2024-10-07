@@ -86,9 +86,9 @@ def _loess_nb(
 
     References
     ----------
-    :cite:cts:`sdba-cleveland_robust_1979`
+    :cite:cts:`cleveland_robust_1979`
 
-    Code adapted from: :cite:cts:`sdba-gramfort_lowess_2015`
+    Code adapted from: :cite:cts:`gramfort_lowess_2015`
     """
     if skipna:
         nan = np.isnan(y)
@@ -232,9 +232,9 @@ def loess_smoothing(
 
     References
     ----------
-    :cite:cts:`sdba-cleveland_robust_1979`
+    :cite:cts:`cleveland_robust_1979`
 
-    Code adapted from: :cite:cts:`sdba-gramfort_lowess_2015`
+    Code adapted from: :cite:cts:`gramfort_lowess_2015`
     """
     x = da[dim]
     x = ((x - x[0]) / (x[-1] - x[0])).astype(float)
