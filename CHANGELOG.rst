@@ -9,11 +9,11 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * ``xs.io.make_toc`` now includes the global attributes of the dataset after the information about the variables. (:pull:`473`).
-* New function ``xs.get_warming_level_from_horizon` to get the warming level associated with a given time horizon. (:pull:`474`).
+* New function ``xs.get_warming_level_from_period` to get the warming level associated with a given time horizon. (:pull:`474`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* ``xs.get_warming_level`` has been renamed to ``xs.get_horizon_from_warming_level``. (:pull:`474`).
+* ``xs.get_warming_level`` has been renamed to ``xs.get_period_from_warming_level``. Its argument `return_horizon` was reversed and renamed `return_central_year` (:pull:`474`).
 
 Bug fixes
 ^^^^^^^^^
