@@ -959,7 +959,7 @@ def get_period_from_warming_level(  # noqa: C901
        the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
        and extra data for missing CMIP6 models and pilot models of CRCM5 and ClimEx.
     return_central_year: bool
-        If True, the output will be a string representing the middle of the period, using the IPCC convention in the case of an even window.
+        If True, the output will be a string representing the middle of the period, using IPCC conventions in the case of an even window (y-9, y+10).
         If False (default), the output will be a list following the format ['start_yr', 'end_yr']
 
     Returns
