@@ -187,6 +187,43 @@ def test_parse_directory_idcols():
     assert (df["id"] == "example-region_NCC").all()
 
 
+@pytest.mark.requires_netcdf
+def test_parse_directory_skipdirs():
+    df = cu.parse_directory(
+        directories=[str(SAMPLES_DIR)],
+        skip_dirs=[
+            str(SAMPLES_DIR) + "/ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126",
+            str(SAMPLES_DIR) + "/ScenarioMIP/example-region/NCC/NorESM2-MM/ssp245/",
+        ],
+        patterns=[
+            "{activity}/{domain}/{institution}/{source}/{experiment}/{member:rev}/{frequency}/{?:_}.nc"
+        ],
+        homogenous_info={
+            "mip_era": "CMIP6",
+            "type": "simulation",
+            "processing_level": "raw",
+        },
+        read_from_file=["variable", "date_start", "date_end", "version"],
+        xr_open_kwargs={"engine": "h5netcdf"},
+        cvs={
+            "domain": {"example-region": "exreg"},
+            "attributes": {"version_id": "version"},
+        },
+        file_checks=["readable", "ncvalid"],
+    )
+
+    assert len(df) == 4
+    assert (df["activity"] == "ScenarioMIP").all()
+    assert (df["mip_era"] == "CMIP6").all()
+    assert (df["domain"] == "exreg").all()  # CVS simple
+    assert (
+        df[df["frequency"] == "fx"]["variable"] == ("sftlf",)
+    ).all()  # Read from file
+    assert df.date_start.dtype == "<M8[ms]"
+    assert df.date_end.dtype == "<M8[ms]"
+    assert set(df.experiment.unique()) == {"ssp370", "ssp585"}
+
+
 def test_parse_from_ds():
     # Real ds
     ds = xr.tutorial.open_dataset("air_temperature")

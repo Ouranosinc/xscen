@@ -4,12 +4,13 @@ Changelog
 
 v0.11.0 (unreleased)
 --------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * ``xs.io.make_toc`` now includes the global attributes of the dataset after the information about the variables. (:pull:`473`).
 * New function ``xs.get_warming_level_from_period`` to get the warming level associated with a given time horizon. (:pull:`474`).
+* Added ability to skip whole folders to ``xs.parse_directory`` with argument ``skip_dirs``.
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
