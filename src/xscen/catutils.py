@@ -328,7 +328,7 @@ def _parse_dir(  # noqa: C901
     parsed = []
 
     root = Path(root)
-    if any([(skd in root.parents) or (skd == root) for skd in skip_dirs]):
+    if any([(skd in root.parents) or (skd == root) for skd in (skip_dirs or [])]):
         logger.debug("Skipping %s", root)
         return parsed
 
