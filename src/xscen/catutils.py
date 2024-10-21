@@ -148,10 +148,12 @@ def _find_assets(
         # Split zarr subdirectories from next iteration
         zarrs = []
         for dr in deepcopy(alldirs):
+            fdr = Path(top).joinpath(dr)
             if dr.endswith(".zarr"):
                 zarrs.append(dr)
                 alldirs.remove(dr)
-            if Path(top).joinpath(dr) in skip_dirs:
+            if fdr in skip_dirs:
+                logger.debug("Skipping %s", fdr)
                 alldirs.remove(dr)
 
         if (
@@ -323,6 +325,12 @@ def _parse_dir(  # noqa: C901
     exts = {Path(patt).suffix for patt in patterns}
     comp_patterns = list(map(_compile_pattern, patterns))
     checks = checks or []
+    parsed = []
+
+    root = Path(root)
+    if any([(skd in root.parents) or (skd == root) for skd in (skip_dirs or [])]):
+        logger.debug("Skipping %s", root)
+        return parsed
 
     # Multithread, communicating via FIFO queues.
     # This thread walks the directory
@@ -334,7 +342,6 @@ def _parse_dir(  # noqa: C901
     # Usually, the walking is the bottleneck.
     q_found = queue.Queue()
     q_checked = queue.Queue()
-    parsed = []
 
     def check_worker():
         # Worker that processes the checks.
@@ -517,7 +524,7 @@ def parse_directory(  # noqa: C901
         A glob pattern for path matching to accelerate the parsing of a directory tree if only a subtree is needed.
         Only folders matching the pattern are parsed to find datasets.
     skip_dirs : list of str or Paths, optional
-        A list of folders that will be removed from the search.
+        A list of folders that will be removed from the search, should be absolute.
     xr_open_kwargs: dict
         If needed, arguments to send xr.open_dataset() when opening the file to read the attributes.
     only_official_columns: bool
