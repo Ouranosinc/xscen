@@ -481,7 +481,7 @@ class DetrendedQuantileMapping(TrainAdjust):
         F^{-1}_{ref}\left\{F_{hist}\left[\frac{\overline{hist}\cdot sim}{\overline{sim}}\right]\right\}\frac{\overline{sim}}{\overline{hist}}
 
     where :math:`F` is the cumulative distribution function (CDF) and :math:`\overline{xyz}` is the linear trend of the data.
-    This equation is valid for multiplicative adjustment. Based on the DQM method of :cite:p:`sdba-cannon_bias_2015`.
+    This equation is valid for multiplicative adjustment. Based on the DQM method of :cite:p:`cannon_bias_2015`.
 
     Parameters
     ----------
@@ -592,7 +592,7 @@ class QuantileDeltaMapping(EmpiricalQuantileMapping):
         sim\frac{F^{-1}_{ref}\left[F_{sim}(sim)\right]}{F^{-1}_{hist}\left[F_{sim}(sim)\right]}
 
     where :math:`F` is the cumulative distribution function (CDF). This equation is valid for multiplicative adjustment.
-    The algorithm is based on the "QDM" method of :cite:p:`sdba-cannon_bias_2015`.
+    The algorithm is based on the "QDM" method of :cite:p:`cannon_bias_2015`.
 
     Parameters
     ----------
@@ -643,7 +643,7 @@ class ExtremeValues(TrainAdjust):
     r"""Adjustment correction for extreme values.
 
     The tail of the distribution of adjusted data is corrected according to the bias between the parametric Generalized
-    Pareto distributions of the simulated and reference data :cite:p:`sdba-roy_extremeprecip_2023`. The distributions are composed of the
+    Pareto distributions of the simulated and reference data :cite:p:`roy_extremeprecip_2023`. The distributions are composed of the
     maximal values of clusters of "large" values.  With "large" values being those above `cluster_thresh`. Only extreme
     values, whose quantile within the pool of large values are above `q_thresh`, are re-adjusted. See `Notes`.
 
@@ -704,7 +704,7 @@ class ExtremeValues(TrainAdjust):
         \tau = \left(\frac{1}{f}\frac{S - min(S)}{max(S) - min(S)}\right)^p
 
     Code based on an internal Matlab source and partly ib the `biascorrect_extremes` function of the julia package
-    "ClimateTools.jl" :cite:p:`sdba-roy_juliaclimateclimatetoolsjl_2021`.
+    "ClimateTools.jl" :cite:p:`roy_juliaclimateclimatetoolsjl_2021`.
 
     Because of limitations imposed by the lazy computing nature of the dask backend, it
     is not possible to know the number of cluster extremes in `ref` and `hist` at the
@@ -802,7 +802,7 @@ class LOCI(TrainAdjust):
     r"""Local Intensity Scaling (LOCI) bias-adjustment.
 
     This bias adjustment method is designed to correct daily precipitation time series by considering wet and dry days
-    separately :cite:p:`sdba-schmidli_downscaling_2006`.
+    separately :cite:p:`schmidli_downscaling_2006`.
 
     Multiplicative adjustment factors are computed such that the mean of `hist` matches the mean of `ref` for values
     above a threshold.
@@ -924,7 +924,7 @@ class PrincipalComponents(TrainAdjust):
     r"""Principal component adjustment.
 
     This bias-correction method maps model simulation values to the observation space through principal components
-    :cite:p:`sdba-hnilica_multisite_2017`. Values in the simulation space (multiple variables, or multiple sites) can be
+    :cite:p:`hnilica_multisite_2017`. Values in the simulation space (multiple variables, or multiple sites) can be
     thought of as coordinate along axes, such as variable, temperature, etc. Principal components (PC) are a
     linear combinations of the original variables where the coefficients are the eigenvectors of the covariance matrix.
     Values can then be expressed as coordinates along the PC axes. The method makes the assumption that bias-corrected
@@ -984,7 +984,7 @@ class PrincipalComponents(TrainAdjust):
 
     References
     ----------
-    :cite:cts:`hnilica_multisite_2017,sdba-alavoine_distinct_2022`
+    :cite:cts:`hnilica_multisite_2017,alavoine_distinct_2022`
     """
 
     @classmethod
@@ -1108,8 +1108,8 @@ class NpdfTransform(Adjust):
 
     This adjustment object combines both training and adjust steps in the `adjust` class method.
 
-    A multivariate bias-adjustment algorithm described by :cite:t:`sdba-cannon_multivariate_2018`, as part of the MBCn
-    algorithm, based on a color-correction algorithm described by :cite:t:`sdba-pitie_n-dimensional_2005`.
+    A multivariate bias-adjustment algorithm described by :cite:t:`cannon_multivariate_2018`, as part of the MBCn
+    algorithm, based on a color-correction algorithm described by :cite:t:`pitie_n-dimensional_2005`.
 
     This algorithm in itself, when used with QuantileDeltaMapping, is NOT trend-preserving.
     The full MBCn algorithm includes a reordering step provided here by :py:func:`xsdba.processing.reordering`.
@@ -1168,23 +1168,23 @@ class NpdfTransform(Adjust):
     These three steps are repeated a certain number of times, prescribed by argument ``n_iter``. At each
     iteration, a new random rotation matrix is generated.
 
-    The original algorithm :cite:p:`sdba-pitie_n-dimensional_2005`, stops the iteration when some distance score converges.
-    Following cite:t:`sdba-cannon_multivariate_2018` and the MBCn implementation in :cite:t:`sdba-cannon_mbc_2020`, we
+    The original algorithm :cite:p:`pitie_n-dimensional_2005`, stops the iteration when some distance score converges.
+    Following cite:t:`cannon_multivariate_2018` and the MBCn implementation in :cite:t:`cannon_mbc_2020`, we
     instead fix the number of iterations.
 
-    As done by cite:t:`sdba-cannon_multivariate_2018`, the distance score chosen is the "Energy distance" from
-    :cite:t:`sdba-szekely_testing_2004`. (see: :py:func:`xsdba.processing.escore`).
+    As done by cite:t:`cannon_multivariate_2018`, the distance score chosen is the "Energy distance" from
+    :cite:t:`szekely_testing_2004`. (see: :py:func:`xsdba.processing.escore`).
 
-    The random matrices are generated following a method laid out by :cite:t:`sdba-mezzadri_how_2007`.
+    The random matrices are generated following a method laid out by :cite:t:`mezzadri_how_2007`.
 
-    This is only part of the full MBCn algorithm, see :ref:`notebooks/sdba:Statistical Downscaling and Bias-Adjustment`
+    This is only part of the full MBCn algorithm, see :ref:`notebooks/example:Statistical Downscaling and Bias-Adjustment`
     for an example on how to replicate the full method with xsdba. This includes a standardization of the simulated data
     beforehand, an initial univariate adjustment and the reordering of those adjusted series according to the rank
     structure of the output of this algorithm.
 
     References
     ----------
-    :cite:cts:`cannon_multivariate_2018,sdba-cannon_mbc_2020,sdba-pitie_n-dimensional_2005,sdba-mezzadri_how_2007,sdba-szekely_testing_2004`
+    :cite:cts:`cannon_multivariate_2018,cannon_mbc_2020,pitie_n-dimensional_2005,mezzadri_how_2007,szekely_testing_2004`
     """
 
     @classmethod
@@ -1266,8 +1266,8 @@ class NpdfTransform(Adjust):
 class MBCn(TrainAdjust):
     r"""Multivariate bias correction function using the N-dimensional probability density function transform.
 
-    A multivariate bias-adjustment algorithm described by :cite:t:`sdba-cannon_multivariate_2018`
-    based on a color-correction algorithm described by :cite:t:`sdba-pitie_n-dimensional_2005`.
+    A multivariate bias-adjustment algorithm described by :cite:t:`cannon_multivariate_2018`
+    based on a color-correction algorithm described by :cite:t:`pitie_n-dimensional_2005`.
 
     This algorithm in itself, when used with QuantileDeltaMapping, is NOT trend-preserving.
     The full MBCn algorithm includes a reordering step provided here by :py:func:`xsdba.processing.reordering`.
@@ -1356,18 +1356,18 @@ class MBCn(TrainAdjust):
 
     3. Reorder the dataset found in step 2. according to the ranks of the dataset found in step 1.
 
-    The original algorithm :cite:p:`sdba-pitie_n-dimensional_2005`, stops the iteration when some distance score converges.
-    Following cite:t:`sdba-cannon_multivariate_2018` and the MBCn implementation in :cite:t:`sdba-cannon_mbc_2020`, we
+    The original algorithm :cite:p:`pitie_n-dimensional_2005`, stops the iteration when some distance score converges.
+    Following cite:t:`cannon_multivariate_2018` and the MBCn implementation in :cite:t:`cannon_mbc_2020`, we
     instead fix the number of iterations.
 
-    As done by cite:t:`sdba-cannon_multivariate_2018`, the distance score chosen is the "Energy distance" from
-    :cite:t:`sdba-szekely_testing_2004`. (see: :py:func:`xsdba.processing.escore`).
+    As done by cite:t:`cannon_multivariate_2018`, the distance score chosen is the "Energy distance" from
+    :cite:t:`szekely_testing_2004`. (see: :py:func:`xsdba.processing.escore`).
 
-    The random matrices are generated following a method laid out by :cite:t:`sdba-mezzadri_how_2007`.
+    The random matrices are generated following a method laid out by :cite:t:`mezzadri_how_2007`.
 
     References
     ----------
-    :cite:cts:`cannon_multivariate_2018,sdba-cannon_mbc_2020,sdba-pitie_n-dimensional_2005,sdba-mezzadri_how_2007,sdba-szekely_testing_2004`
+    :cite:cts:`cannon_multivariate_2018,cannon_mbc_2020,pitie_n-dimensional_2005,mezzadri_how_2007,szekely_testing_2004`
 
     Notes
     -----

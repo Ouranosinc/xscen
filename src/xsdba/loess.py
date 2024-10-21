@@ -61,7 +61,7 @@ def _loess_nb(
 
     The arrays x and y contain an equal number of elements; each pair (x[i], y[i]) defines
     a data point in the scatter plot. The function returns the estimated (smooth) values of y.
-    Originally proposed in :cite:t:`sdba-cleveland_robust_1979`.
+    Originally proposed in :cite:t:`cleveland_robust_1979`.
 
     Users should call `utils.loess_smoothing`. See that function for the main documentation.
 
@@ -189,7 +189,7 @@ def loess_smoothing(
 
     Returns a smoothed curve along given dimension. The regression is computed for each point using a subset of
     neighbouring points as given from evaluating the weighting function locally.
-    Follows the procedure of :cite:t:`sdba-cleveland_robust_1979`.
+    Follows the procedure of :cite:t:`cleveland_robust_1979`.
 
     Parameters
     ----------
@@ -218,7 +218,7 @@ def loess_smoothing(
 
     Notes
     -----
-    As stated in :cite:t:`sdba-cleveland_robust_1979`, the weighting function :math:`W(x)` should respect the following
+    As stated in :cite:t:`cleveland_robust_1979`, the weighting function :math:`W(x)` should respect the following
     conditions:
 
     - :math:`W(x) > 0` for :math:`|x| < 1`

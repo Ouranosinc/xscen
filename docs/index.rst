@@ -13,12 +13,22 @@ Welcome to xsdba's documentation!
    releasing
    authors
    changelog
+   references
+   notebooks/example
+   notebooks/advanced_example
 
 .. toctree::
    :maxdepth: 1
    :caption: All Modules
 
    apidoc/modules
+
+
+.. toctree::
+   :maxdepth: 2
+   :caption: User API
+
+   api
 
 Indices and tables
 ==================

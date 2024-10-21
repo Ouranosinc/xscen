@@ -55,7 +55,7 @@ def adapt_freq(
 
     This is useful when the dry-day frequency in the simulations is higher than in the references. This function
     will create new non-null values for `sim`/`hist`, so that adjustment factors are less wet-biased.
-    Based on :cite:t:`sdba-themesl_empirical-statistical_2012`.
+    Based on :cite:t:`themesl_empirical-statistical_2012`.
 
     Parameters
     ----------
@@ -385,7 +385,7 @@ def escore(
     N: int = 0,
     scale: bool = False,
 ) -> xr.DataArray:
-    r"""Energy score, or energy dissimilarity metric, based on :cite:t:`sdba-szekely_testing_2004` and :cite:t:`sdba-cannon_multivariate_2018`.
+    r"""Energy score, or energy dissimilarity metric, based on :cite:t:`szekely_testing_2004` and :cite:t:`cannon_multivariate_2018`.
 
     Parameters
     ----------
@@ -414,7 +414,7 @@ def escore(
     -----
     Explanation adapted from the "energy" R package documentation.
     The e-distance between two clusters :math:`C_i`, :math:`C_j` (tgt and sim) of size :math:`n_i,n_j`
-    proposed by :cite:t:`sdba-szekely_testing_2004` is defined by:
+    proposed by :cite:t:`szekely_testing_2004` is defined by:
 
     .. math::
 
@@ -429,13 +429,13 @@ def escore(
     :math:`\Vert\cdot\Vert` denotes Euclidean norm, :math:`X_{ip}` denotes the p-th observation in the i-th cluster.
 
     The input scaling and the factor :math:`\frac{1}{2}` in the first equation are additions of
-    :cite:t:`sdba-cannon_multivariate_2018` to the metric. With that factor, the test becomes identical to the one
-    defined by :cite:t:`sdba-baringhaus_new_2004`.
-    This version is tested against values taken from Alex Cannon's MBC R package :cite:p:`sdba-cannon_mbc_2020`.
+    :cite:t:`cannon_multivariate_2018` to the metric. With that factor, the test becomes identical to the one
+    defined by :cite:t:`baringhaus_new_2004`.
+    This version is tested against values taken from Alex Cannon's MBC R package :cite:p:`cannon_mbc_2020`.
 
     References
     ----------
-    :cite:cts:`baringhaus_new_2004,sdba-cannon_multivariate_2018,sdba-cannon_mbc_2020,sdba-szekely_testing_2004`.
+    :cite:cts:`baringhaus_new_2004,cannon_multivariate_2018,cannon_mbc_2020,szekely_testing_2004`.
     """
     pts_dim, obs_dim = dims
 
@@ -501,7 +501,7 @@ def to_additive_space(
 ):
     r"""Transform a non-additive variable into an additive space by the means of a log or logit transformation.
 
-    Based on :cite:t:`sdba-alavoine_distinct_2022`.
+    Based on :cite:t:`alavoine_distinct_2022`.
 
     Parameters
     ----------
@@ -594,7 +594,7 @@ def from_additive_space(
 ):
     r"""Transform back to the physical space a variable that was transformed with `to_additive_space`.
 
-    Based on :cite:t:`sdba-alavoine_distinct_2022`.
+    Based on :cite:t:`alavoine_distinct_2022`.
     If parameters are not present on the attributes of the data, they must be all given are arguments.
 
     Parameters

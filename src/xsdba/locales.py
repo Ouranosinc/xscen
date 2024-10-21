@@ -3,8 +3,7 @@ Internationalization
 ====================
 
 This module defines methods and object to help the internationalization of metadata for
-climate indicators computed by xsdba. Go to :ref:`notebooks/customize:Adding translated metadata` to see
-how to use this feature.
+climate indicators computed by xsdba.
 
 All the methods and objects in this module use localization data given in JSON files.
 These files are expected to be defined as in this example for French:

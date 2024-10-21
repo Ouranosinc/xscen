@@ -70,8 +70,7 @@ class InputKind(IntEnum):
 
        Annotation : ``str`` or ``str | None``. In most cases, this kind of parameter makes sense
        with choices indicated in the docstring's version of the annotation with curly braces.
-       # TOOO : what about this notebook?
-       See :ref:`notebooks/extendxclim:Defining new indices`.
+       # TOOO : what about this notebook? removed reference to extendxclim
     """
     DAY_OF_YEAR = 6
     """A date, but without a year, in the MM-DD format.

@@ -40,7 +40,7 @@ A generic bias adjustment process is laid out as follows:
 
 The train-adjust approach allows to inspect the trained adjustment object.
 The training information is stored in the underlying `Adj.ds` dataset and usually has a `af` variable with the adjustment factors.
-Its layout and the other available variables vary between the different algorithm, refer to :ref:`Adjustment methods <sdba-user-api>`.
+Its layout and the other available variables vary between the different algorithm, refer to :ref:`Adjustment methods <xsdba-user-api>`.
 
 Parameters needed by the training and the adjustment are saved to the ``Adj.ds`` dataset as a `adj_params` attribute.
 Parameters passed to the `adjust` call are written to the history attribute in the output scenario DataArray.
@@ -125,21 +125,19 @@ add them back on exit.
 User API
 ========
 
-See: :ref:`sdba-user-api`
+See: :ref:`xsdba-user-api`
 
 Developer API
 =============
 
-See: :ref:`sdba-developer-api`
+See: :ref:`xsdba-developer-api`
 
 .. only:: html or text
 
-    .. _sdba-footnotes:
+    _xsdba-footnotes:
 
     SDBA Footnotes
     ==============
 
     .. bibliography::
        :style: xcstyle
-       :labelprefix: SDBA-
-       :keyprefix: sdba-

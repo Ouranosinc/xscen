@@ -617,7 +617,7 @@ def best_pc_orientation_simple(
     Given an inverse transform `Hinv` and a transform `R`, this returns the orientation minimizing the projected
     distance for a test point far from the origin.
 
-    This trick is inspired by the one exposed in :cite:t:`sdba-hnilica_multisite_2017`. For each possible orientation vector,
+    This trick is inspired by the one exposed in :cite:t:`hnilica_multisite_2017`. For each possible orientation vector,
     the test point is reprojected and the distance from the original point is computed. The orientation
     minimizing that distance is chosen.
 
@@ -660,7 +660,7 @@ def best_pc_orientation_full(
     Hmean: np.ndarray,
     hist: np.ndarray,
 ) -> np.ndarray:
-    """Return best orientation vector for `A` according to the method of :cite:t:`sdba-alavoine_distinct_2022`.
+    """Return best orientation vector for `A` according to the method of :cite:t:`alavoine_distinct_2022`.
 
     Eigenvectors returned by `pc_matrix` do not have a defined orientation.
     Given an inverse transform `Hinv`, a transform `R`, the actual and target origins `Hmean` and `Rmean` and the matrix
@@ -668,7 +668,7 @@ def best_pc_orientation_full(
     that maximizes the Spearman correlation coefficient of all variables. The correlation is computed for each variable
     individually, then averaged.
 
-    This trick is explained in :cite:t:`sdba-alavoine_distinct_2022`.
+    This trick is explained in :cite:t:`alavoine_distinct_2022`.
     See docstring of :py:func:`sdba.adjustment.PrincipalComponentAdjustment`.
 
     Parameters
@@ -1060,7 +1060,7 @@ def eps_cholesky(M, nit=26):
 
     References
     ----------
-    :cite:cts:`robin_2021,sdba-higham_1988,sdba-knol_1989`
+    :cite:cts:`robin_2021,higham_1988,knol_1989`
     """
     MC = None
     try:
