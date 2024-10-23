@@ -9,7 +9,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Union
 
-
 import numpy as np
 import xarray as xr
 import xclim as xc
@@ -535,7 +534,7 @@ def measures_heatmap(
 
 
 def measures_improvement(
-    meas_datasets: Union[list[xr.Dataset], dict],
+    meas_datasets: list[xr.Dataset] | dict,
     dim: str | Sequence[str] | None = None,
     to_level: str = "diag-improved",
 ) -> xr.Dataset:
