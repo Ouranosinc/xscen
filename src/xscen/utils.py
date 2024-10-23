@@ -22,7 +22,7 @@ import pandas as pd
 import xarray as xr
 from xarray.coding import cftime_offsets as cfoff
 from xclim.core import units
-from xclim.core.calendar import convert_calendar, get_calendar, parse_offset
+from xclim.core.calendar import get_calendar, parse_offset
 from xclim.core.options import METADATA_LOCALES
 from xclim.core.options import OPTIONS as XC_OPTIONS
 from xclim.core.utils import uses_dask
@@ -768,12 +768,12 @@ def clean_up(  # noqa: C901
     variables_and_units : dict, optional
         Dictionary of variable to convert. e.g. {'tasmax': 'degC', 'pr': 'mm d-1'}
     convert_calendar_kwargs : dict, optional
-        Dictionary of arguments to feed to xclim.core.calendar.convert_calendar. This will be the same for all variables.
+        Dictionary of arguments to feed to xr.Dataset.convert_calendar. This will be the same for all variables.
         If missing_by_vars is given, it will override the 'missing' argument given here.
         Eg. {target': default, 'align_on': 'random'}
     missing_by_var : dict, optional
         Dictionary where the keys are the variables and the values are the argument to feed the `missing`
-        parameters of the xclim.core.calendar.convert_calendar for the given variable with the
+        parameters of the xr.Dataset.convert_calendar for the given variable with the
         `convert_calendar_kwargs`. When the value of an entry is 'interpolate', the missing values will be filled
         with NaNs, then linearly interpolated over time.
     maybe_unstack_dict : dict, optional
@@ -820,7 +820,7 @@ def clean_up(  # noqa: C901
 
     See Also
     --------
-    xclim.core.calendar.convert_calendar
+    xr.Dataset.convert_calendar
     """
     if variables_and_units:
         logger.info(f"Converting units: {variables_and_units}")
@@ -845,7 +845,7 @@ def clean_up(  # noqa: C901
             convert_calendar_kwargs["align_on"] = "random"
 
         logger.info(f"Converting calendar with {convert_calendar_kwargs} ")
-        ds = convert_calendar(ds, **convert_calendar_kwargs).where(~ocean)
+        ds = ds.convert_calendar(**convert_calendar_kwargs).where(~ocean)
 
         # convert each variable individually
         if missing_by_var:
