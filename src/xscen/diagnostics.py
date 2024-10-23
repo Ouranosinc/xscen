@@ -533,13 +533,9 @@ def measures_heatmap(
 
 
 def measures_improvement(
-<<<<<<< HEAD
     meas_datasets: Union[list[xr.Dataset], dict],
     dim: str | Sequence[str] | None = None,
     to_level: str = "diag-improved",
-=======
-    meas_datasets: list[xr.Dataset] | dict, to_level: str = "diag-improved"
->>>>>>> a5bea0f770a251626d96129b26d921be83cfa62e
 ) -> xr.Dataset:
     """
     Calculate the fraction of improved grid points for each property between two datasets of measures.
