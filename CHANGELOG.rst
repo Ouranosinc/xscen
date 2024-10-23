@@ -45,7 +45,6 @@ New features and enhancements
 * `xscen` now supports launches tests from `pytest` with the `--numprocesses` option. See the `pytest-xdist documentation <https://pytest-xdist.readthedocs.io/en/stable/>`_ for more information. (:pull:`464`).
 * Conservative regridding now supports oblique mercator projections. (:pull:`467`).
 * The automatic name for the weight file in ``regrid_dataset`` is now more explicit to avoid errors, but now requires `cat:id` and `cat:domain` arguments for both the source and target datasets. (:pull:`467`).
->>>>>>> a5bea0f770a251626d96129b26d921be83cfa62e
 
 Bug fixes
 ^^^^^^^^^
