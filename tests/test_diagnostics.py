@@ -448,6 +448,32 @@ class TestPropertiesMeasures:
         assert "mean-tas" in out.properties.values
         np.testing.assert_allclose(out["improved_grid_points"].values, 1)
 
+    def test_measures_improvement_dim(self):
+        p1, m1 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+            period=["2001", "2001"],
+        )
+
+        p2, m2 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+            dref_for_measure=p1,
+            period=["2001", "2001"],
+        )
+        m3 = xr.concat(
+            [
+                m2.quantile_98_tas.to_dataset().expand_dims({"dummy_dim": [i]})
+                for i in range(3)
+            ],
+            dim="dummy_dim",
+        )
+        out = xs.diagnostics.measures_improvement(
+            [m3, m3], dim="dummy_dim", to_level="test"
+        )
+        assert set(out.dims) == {"properties", "season"}
+        np.testing.assert_allclose(out["improved_grid_points"].values, 1)
+
     def test_measures_improvement_2d(self):
 
         p1, m1 = xs.properties_and_measures(

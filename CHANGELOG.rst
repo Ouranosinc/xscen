@@ -4,13 +4,15 @@ Changelog
 
 v0.11.0 (unreleased)
 --------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Éric Dupuis (:user:`coxipi`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * ``xs.io.make_toc`` now includes the global attributes of the dataset after the information about the variables. (:pull:`473`).
 * New function ``xs.get_warming_level_from_period`` to get the warming level associated with a given time horizon. (:pull:`474`).
 * Added ability to skip whole folders to ``xs.parse_directory`` with argument ``skip_dirs``. (:pull:`478`, :pull:`479`).
+* `diagnostics.measures_improvement` now accepts `dim`, which specifies `dimension(s)` on which the proportion of improved pixels are computed. (:pull:`416`)
+
 
 Breaking changes
 ^^^^^^^^^^^^^^^^

@@ -24,3 +24,4 @@ Contributors
 * Marco Braun <Braun.Marco@ouranos.ca> `@vindelico <https://github.com/vindelico>`_
 * Sarah-Claude Bourdeau-Goulet <bourdeau-goulet.sarah-claude@ouranos.ca> `@sarahclaude <https://github.com/sarahclaude>`_
 * Blaise Gauvin St-Denis <gauvin-st-denis.blaise@ouranos.ca> `@bstdenis <https://github.com/bstdenis>`_
+* Éric Dupuis <dupuis.eric@ouranos.ca> `@coxipi <https://github.com/coxipi>`_
