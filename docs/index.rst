@@ -2,8 +2,13 @@ Welcome to xsdba's documentation!
 =================================
 
 .. toctree::
+   :hidden:
+
+   self
+
+.. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Table of Contents:
 
    readme
    installation
@@ -11,11 +16,17 @@ Welcome to xsdba's documentation!
    xsdba
    contributing
    releasing
+   notebooks/index
+   notebooks/example
+   notebooks/advanced_example
+
+
+.. toctree::
+   :titlesonly:
+
    authors
    changelog
    references
-   notebooks/example
-   notebooks/advanced_example
 
 .. toctree::
    :maxdepth: 1

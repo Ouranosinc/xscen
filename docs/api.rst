@@ -5,7 +5,7 @@ API
 .. _xsdba-user-api:
 
 xsdba Module
-===========
+============
 
 .. automodule:: xsdba.adjustment
    :members:
@@ -54,7 +54,7 @@ xsdba Module
 .. _`xsdba-developer-api`:
 
 xsdba Utilities
---------------
+---------------
 
 .. automodule:: xsdba.base
    :members:

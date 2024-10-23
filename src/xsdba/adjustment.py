@@ -1177,7 +1177,7 @@ class NpdfTransform(Adjust):
 
     The random matrices are generated following a method laid out by :cite:t:`mezzadri_how_2007`.
 
-    This is only part of the full MBCn algorithm, see :ref:`notebooks/example:Statistical Downscaling and Bias-Adjustment`
+    This is only part of the full MBCn algorithm, see :`<notebooks/example.ipynb>`
     for an example on how to replicate the full method with xsdba. This includes a standardization of the simulated data
     beforehand, an initial univariate adjustment and the reordering of those adjusted series according to the rank
     structure of the output of this algorithm.
@@ -1263,6 +1263,7 @@ class NpdfTransform(Adjust):
         return out
 
 
+# TODO : Better document arguments of MBCn and its methods
 class MBCn(TrainAdjust):
     r"""Multivariate bias correction function using the N-dimensional probability density function transform.
 
@@ -1278,10 +1279,6 @@ class MBCn(TrainAdjust):
     ----------
     Train step
 
-    ref : xr.DataArray
-        Reference dataset.
-    hist : xr.DataArray
-        Historical dataset.
     base_kws : dict, optional
         Arguments passed to the training in the npdf transform.
     adj_kws : dict, optional
@@ -1301,18 +1298,8 @@ class MBCn(TrainAdjust):
 
     Adjust step
 
-    ref : xr.DataArray
-        Target reference dataset also needed for univariate bias correction preceding npdf transform
-    hist: xr.DataArray
-        Source dataset also needed for univariate bias correction preceding npdf transform
-    sim : xr.DataArray
-        Source dataset to adjust.
     base : BaseAdjustment
         Bias-adjustment class used for the univariate bias correction.
-    base_kws : dict, optional
-        Arguments passed to the training in the univariate bias correction
-    adj_kws : dict, optional
-        Arguments passed to the adjusting in the univariate bias correction
     period_dim : str, optional
         Name of the period dimension used when stacking time periods of `sim`  using :py:func:`xsdba.calendar.stack_periods`.
         If specified, the interpolation of the npdf transform is performed only once and applied on all periods simultaneously.

@@ -929,8 +929,6 @@ def uses_dask(*das: xr.DataArray | xr.Dataset) -> bool:
 def get_op(op: str, constrain: Sequence[str] | None = None) -> Callable:
     """Get python's comparing function according to its name of representation and validate allowed usage.
 
-    Accepted op string are keys and values of xclim.indices.generic.binary_ops.
-
     Parameters
     ----------
     op : str
@@ -938,6 +936,7 @@ def get_op(op: str, constrain: Sequence[str] | None = None) -> Callable:
     constrain : sequence of str, optional
         A tuple of allowed operators.
     """
+    # XC
     binary_ops = {">": "gt", "<": "lt", ">=": "ge", "<=": "le", "==": "eq", "!=": "ne"}
     if op in binary_ops:
         binary_op = binary_ops[op]
