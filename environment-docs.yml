@@ -14,3 +14,4 @@ dependencies:
   - sphinxcontrib-bibtex
   - sphinxcontrib-napoleon
   - typer >=0.12.3
+  - nbsphinx
