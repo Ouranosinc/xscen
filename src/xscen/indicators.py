@@ -136,8 +136,7 @@ def compute_indicators(  # noqa: C901
         If True, cut the time axis to be within the same years as the input.
         This is mostly useful for frequencies that do not start in January, such as QS-DEC.
         In that instance, `xclim` would start on previous_year-12-01 (DJF), with a NaN.
-        `restrict_years` will cut that first timestep.
-        This should have no effect on YS and MS indicators.
+        `restrict_years` will cut that first timestep. This should have no effect on YS and MS indicators.
     to_level : str, optional
         The processing level to assign to the output.
         If None, the processing level of the inputs is preserved.
@@ -262,11 +261,7 @@ def compute_indicators(  # noqa: C901
         key = freq
         if key not in out_dict:
             out_dict[key] = out
-            # TODO: Double-check History, units, attrs, add missing variables (grid_mapping), etc.
             out_dict[key].attrs = ds.attrs
-            out_dict[key].attrs["cat:variable"] = parse_from_ds(
-                out_dict[key], ["variable"]
-            )["variable"]
             out_dict[key].attrs["cat:xrfreq"] = freq
             out_dict[key].attrs["cat:frequency"] = CV.xrfreq_to_frequency(freq, None)
             if to_level is not None:
@@ -275,6 +270,10 @@ def compute_indicators(  # noqa: C901
         else:
             for v in out.data_vars:
                 out_dict[key][v] = out[v]
+    for key in out_dict:
+        out_dict[key].attrs["cat:variable"] = parse_from_ds(
+            out_dict[key], ["variable"]
+        )["variable"]
 
     return out_dict
 
