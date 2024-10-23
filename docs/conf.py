@@ -141,10 +141,8 @@ linkcheck_ignore = [
 # templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-#
-# source_suffix = ['.rst', '.md']
-source_suffix = [".rst"]
+# You can specify multiple suffix as a dictionary of suffix: filetype
+source_suffix = {'.rst': 'restructuredtext'}
 
 # The master toctree document.
 master_doc = "index"
@@ -213,14 +211,14 @@ html_logo = "_static/_images/xscen-logo.png"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
+if not os.path.exists("_static"):
+    os.makedirs("_static")
 html_static_path = ["_static"]
-
 
 # -- Options for HTMLHelp output ---------------------------------------
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = "xscendoc"
-
 
 # -- Options for LaTeX output ------------------------------------------
 
@@ -252,13 +250,11 @@ latex_documents = [
     ),
 ]
 
-
 # -- Options for manual page output ------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [(master_doc, "xscen", "xscen Documentation", [author], 1)]
-
 
 # -- Options for Texinfo output ----------------------------------------
 

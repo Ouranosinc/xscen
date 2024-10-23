@@ -58,6 +58,7 @@ clean-test: ## remove test and coverage artifacts
 lint/flake8: ## check style with flake8
 	python -m ruff check src/xscen tests
 	python -m flake8 --config=.flake8 src/xscen tests
+	# python -m numpydoc lint src/xscen/**.py  # FIXME: disabled until the codebase is fully numpydoc compliant
 
 lint/black: ## check style with black
 	python -m black --check src/xscen tests
@@ -70,7 +71,7 @@ test: ## run tests quickly with the default Python
 	python -m pytest
 
 test-all: ## run tests on every Python version with tox
-	tox
+	python -m tox
 
 initialize-translations: clean-docs ## initialize translations, ignoring autodoc-generated files
 	${MAKE} -C docs gettext
@@ -110,8 +111,18 @@ dev: clean ## install the package in editable mode with all development dependen
 	pre-commit install
 
 findfrench:  ## Extract phrases and update the French translation catalog (this doesn't translate)
-	python setup.py extract_messages
-	python setup.py update_catalog -l fr
+	pybabel extract -o src/xscen/data/messages.pot --omit-header --input-dirs=src/xscen/
+	pybabel update -l fr -D xscen -i src/xscen/data/messages.pot -d src/xscen/data/ --omit-header --no-location
 
 translate:   ## Compile the translation catalogs.
-	python setup.py compile_catalog
+	pybabel compile -f -D xscen -d src/xscen/data/
+
+MO_LAST_COMMIT = $(shell git log -n 1 --pretty=format:%H -- src/xscen/data/fr/LC_MESSAGES/xscen.mo)
+PO_LAST_COMMIT = $(shell git log -n 1 --pretty=format:%H -- src/xscen/data/fr/LC_MESSAGES/xscen.po)
+checkfrench:  ## Error if the catalog could be update or if the compilation is older than the catalog.
+	rm -f .check_messages.pot
+	pybabel extract -o .check_messages.pot --omit-header --input-dirs=src/xscen/ --no-location
+	pybabel update -l fr -D xscen -i .check_messages.pot -d src/xscen/data/ --omit-header --check
+	rm -f .check_messages.pot
+	# Last commit that touched the PO file must be an ancestor of the last that touched the MO
+	if git merge-base --is-ancestor $(PO_LAST_COMMIT) $(MO_LAST_COMMIT); then echo "ok"; else echo "Compilation is older than translations. Please compile with 'make translate'."; exit 1; fi

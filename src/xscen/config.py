@@ -131,7 +131,10 @@ def args_as_str(*args: tuple[Any, ...]) -> tuple[str, ...]:
 
 
 def load_config(
-    *elements, reset: bool = False, encoding: str = None, verbose: bool = False
+    *elements,
+    reset: bool = False,
+    encoding: str | None = None,
+    verbose: bool = False,
 ):
     """Load configuration from given files or key=value pairs.
 
@@ -151,12 +154,12 @@ def load_config(
         If a directory is passed, all `.yml` files of this directory are added, in alphabetical order.
         If a "key=value" string, "key" is a dotted name and value will be evaluated if possible.
         "key=value" pairs are set last, after all files are being processed.
-    reset: bool
-        If True, the current config is erased before loading files.
-    encoding: str, optional
+    reset : bool
+        If True, erases the current config before loading files.
+    encoding : str, optional
         The encoding to use when reading files.
     verbose: bool
-        if True, each element triggers a INFO log line.
+        If True, each element triggers a INFO log line.
 
     Example
     -------
@@ -178,7 +181,8 @@ def load_config(
             key, value = element.split("=")
             CONFIG.update_from_list([(key, value)])
             if verbose:
-                logger.info(f"Updated the config with {element}.")
+                msg = f"Updated the config with {element}."
+                logger.info(msg)
         else:
             file = Path(element)
             if file.is_dir():
@@ -191,7 +195,8 @@ def load_config(
                 with configfile.open(encoding=encoding) as f:
                     recursive_update(CONFIG, yaml.safe_load(f))
                     if verbose:
-                        logger.info(f"Updated the config with {configfile}.")
+                        msg = f"Updated the config with {configfile}."
+                        logger.info(msg)
 
     for module, old in zip(EXTERNAL_MODULES, old_external):
         if old != CONFIG.get(module, {}):
@@ -213,13 +218,14 @@ def parse_config(func_or_cls):  # noqa: D103
         from_config = CONFIG.get(module, {}).get(func.__name__, {})
         sig = inspect.signature(func)
         if CONFIG.get("print_it_all"):
-            logger.debug(f"For func {func}, found config {from_config}.")
-            logger.debug(f"Original kwargs : {kwargs}")
+            msg = f"For func {func}, found config {from_config}.\nOriginal kwargs : {kwargs}"
+            logger.debug(msg)
         for k, v in from_config.items():
             if k in sig.parameters:
                 kwargs.setdefault(k, v)
         if CONFIG.get("print_it_all"):
-            logger.debug(f"Modified kwargs : {kwargs}")
+            msg = f"Modified kwargs : {kwargs}"
+            logger.debug(msg)
 
         return func(*args, **kwargs)
 

@@ -267,21 +267,41 @@ class TestSearchDataCatalogs:
 
 class TestGetWarmingLevel:
     def test_list(self):
-        out = xs.get_warming_level(
-            ["CMIP6_CanESM5_ssp126_r1i1p1f1", "CMIP6_CanESM5_ssp245_r1i1p1f1"],
-            wl=2,
-            window=20,
-            return_horizon=False,
-        )
+        with pytest.warns(
+            FutureWarning, match="get_warming_level has been deprecated."
+        ):
+            out = xs.get_warming_level(
+                ["CMIP6_CanESM5_ssp126_r1i1p1f1", "CMIP6_CanESM5_ssp245_r1i1p1f1"],
+                wl=2,
+                window=20,
+                return_horizon=False,
+            )
         assert isinstance(out, list)
-        assert out[0] == "2026"
+        assert out == ["2026", "2024"]
+
+        period = [int(out[0]) - 9, int(out[0]) + 10]
+        out2 = xs.get_warming_level_from_period(
+            ["CMIP6_CanESM5_ssp126_r1i1p1f1", "CMIP6_CanESM5_ssp245_r1i1p1f1"],
+            period,
+        )
+        assert isinstance(out2, list)
+        np.testing.assert_array_almost_equal(out2, [2.0418553921, 2.1353053921])
+        assert (
+            xs.get_warming_level_from_period(
+                "CMIP6_CanESM5_ssp126_r1i1p1f1", list(np.array(period) - 1)
+            )
+            < 2
+        )
 
     def test_string_with_horizon(self):
-        out = xs.get_warming_level(
-            "CMIP6_CanESM5_ssp585_r1i1p1f1", wl=2, window=20, return_horizon=True
+        out = xs.get_period_from_warming_level(
+            "CMIP6_CanESM5_ssp585_r1i1p1f1", wl=2, window=20, return_central_year=False
         )
         assert isinstance(out, list)
         assert out == ["2013", "2032"]
+
+        out2 = xs.get_warming_level_from_period("CMIP6_CanESM5_ssp585_r1i1p1f1", out)
+        np.testing.assert_array_almost_equal(out2, 2.00547622)
 
     @pytest.mark.parametrize("attrs", ["global", "regional", "regional_w_institution"])
     def test_ds(self, attrs):
@@ -289,7 +309,7 @@ class TestGetWarmingLevel:
             np.tile(np.arange(1, 2), 30),
             variable="tas",
             start="2001-01-01",
-            freq="AS-JAN",
+            freq="YS-JAN",
             as_dataset=True,
         )
         attributes = {
@@ -313,65 +333,105 @@ class TestGetWarmingLevel:
 
         ds.attrs = attributes[deepcopy(attrs)]
         assert (
-            xs.get_warming_level(
-                ds, wl=2, window=20, ignore_member=True, return_horizon=False
+            xs.get_period_from_warming_level(
+                ds, wl=2, window=20, ignore_member=True, return_central_year=True
             )
             == "2026"
+        )
+        np.testing.assert_array_almost_equal(
+            xs.get_warming_level_from_period(
+                ds, [2026 - 9, 2026 + 10], ignore_member=True
+            ),
+            2.0418553,
         )
 
     def test_multiple_matches(self):
         # 55 instances of CanESM2-rcp85 in the CSV, but it should still return a single value
         assert (
-            xs.get_warming_level(
-                "CMIP5_CanESM2_rcp85_.*", wl=3.5, window=30, return_horizon=False
+            xs.get_period_from_warming_level(
+                "CMIP5_CanESM2_rcp85_.*", wl=3.5, window=30, return_central_year=True
             )
             == "2059"
         )
+        np.testing.assert_array_almost_equal(
+            xs.get_warming_level_from_period(
+                "CMIP5_CanESM2_rcp85_.*", [2059 - 14, 2059 + 15]
+            ),
+            3.545244,
+        )
 
     def test_odd_window(self):
-        assert xs.get_warming_level(
-            "CMIP6_CanESM5_ssp126_r1i1p1f1", wl=2, window=21, return_horizon=True
+        assert xs.get_period_from_warming_level(
+            "CMIP6_CanESM5_ssp126_r1i1p1f1", wl=2, window=21, return_central_year=False
         ) == ["2016", "2036"]
+        np.testing.assert_array_almost_equal(
+            xs.get_warming_level_from_period(
+                "CMIP6_CanESM5_ssp126_r1i1p1f1", [2016, 2036]
+            ),
+            2.019456,
+        )
 
     def test_none(self):
         assert (
-            xs.get_warming_level(
-                "CMIP6_CanESM5_ssp585_r1i1p1f1", wl=20, window=20, return_horizon=False
+            xs.get_period_from_warming_level(
+                "CMIP6_CanESM5_ssp585_r1i1p1f1",
+                wl=20,
+                window=20,
+                return_central_year=True,
             )
             is None
         )
         assert (
-            xs.get_warming_level(
-                "CMIP6_notreal_ssp585_r1i1p1f1", wl=20, window=20, return_horizon=False
+            xs.get_period_from_warming_level(
+                "CMIP6_notreal_ssp585_r1i1p1f1",
+                wl=20,
+                window=20,
+                return_central_year=True,
+            )
+            is None
+        )
+        with pytest.raises(ValueError, match="s not fully covered by the provided"):
+            xs.get_warming_level_from_period(
+                "CMIP6_CanESM5_ssp585_r1i1p1f1", ["2100", "2120"]
+            )
+        assert (
+            xs.get_warming_level_from_period(
+                "CMIP6_notreal_ssp585_r1i1p1f1", ["2010", "2020"]
             )
             is None
         )
 
     def test_wrong_types(self):
         with pytest.raises(ValueError):
-            xs.get_warming_level(
-                {"this": "is not valid."}, wl=2, window=20, return_horizon=True
+            xs.get_period_from_warming_level(
+                {"this": "is not valid."}, wl=2, window=20, return_central_year=False
             )
         with pytest.raises(ValueError):
-            xs.get_warming_level(
+            xs.get_period_from_warming_level(
                 "CMIP6_CanESM5_ssp585_r1i1p1f1_toomany_underscores",
                 wl=2,
                 window=20,
-                return_horizon=True,
+                return_central_year=False,
             )
         with pytest.raises(ValueError):
-            xs.get_warming_level(
-                "CMIP6_CanESM5_ssp585_r1i1p1f1", wl=2, window=3.85, return_horizon=True
+            xs.get_period_from_warming_level(
+                "CMIP6_CanESM5_ssp585_r1i1p1f1",
+                wl=2,
+                window=3.85,
+                return_central_year=False,
             )
 
-    def test_DataArray(self):
+    def test_DataArray(self):  # noqa: N802
         reals = xr.DataArray(
             ["CMIP6_CanESM5_ssp126_r1i1p1f1"], dims=("x",), coords={"x": [1]}
         )
-        out = xs.get_warming_level(reals, wl=2, return_horizon=False)
+        out = xs.get_period_from_warming_level(reals, wl=2, return_central_year=True)
         xr.testing.assert_identical(out, reals.copy(data=["2026"]))
 
-    def test_DataFrame(self):
+        out2 = xs.get_warming_level_from_period(reals, [2026 - 9, 2026 + 10])
+        np.testing.assert_array_almost_equal(out2, [2.0418553921])
+
+    def test_DataFrame(self):  # noqa: N802
         reals = pd.DataFrame.from_records(
             [
                 {
@@ -389,15 +449,18 @@ class TestGetWarmingLevel:
             ],
             index=["a", "b"],
         )
-        out = xs.get_warming_level(
+        out = xs.get_period_from_warming_level(
             reals,
             wl=2,
             window=20,
-            return_horizon=False,
+            return_central_year=True,
         )
         pd.testing.assert_series_equal(
             out, pd.Series(["2026", "2024"], index=["a", "b"])
         )
+
+        out2 = xs.get_warming_level_from_period(reals, [2026 - 9, 2026 + 10])
+        np.testing.assert_array_almost_equal(out2, [2.0418553921, 2.1353053921])
 
 
 class TestSubsetWarmingLevel:

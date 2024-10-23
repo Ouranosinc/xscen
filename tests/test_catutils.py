@@ -20,7 +20,7 @@ from xscen import catutils as cu
         [{".nc", ".zarr"}, {6, 7, 8}, "*ssp126*", 2],
     ),
 )
-def test_find_assets(exts, lens, dirglob, N):
+def test_find_assets(exts, lens, dirglob, N):  # noqa: N803
     finder = cu._find_assets(str(SAMPLES_DIR), exts=exts, lengths=lens, dirglob=dirglob)
     assert isinstance(finder, Generator)
     assert len(list(finder)) == N
@@ -187,6 +187,43 @@ def test_parse_directory_idcols():
     assert (df["id"] == "example-region_NCC").all()
 
 
+@pytest.mark.requires_netcdf
+def test_parse_directory_skipdirs():
+    df = cu.parse_directory(
+        directories=[str(SAMPLES_DIR)],
+        skip_dirs=[
+            str(SAMPLES_DIR) + "/ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126",
+            str(SAMPLES_DIR) + "/ScenarioMIP/example-region/NCC/NorESM2-MM/ssp245/",
+        ],
+        patterns=[
+            "{activity}/{domain}/{institution}/{source}/{experiment}/{member:rev}/{frequency}/{?:_}.nc"
+        ],
+        homogenous_info={
+            "mip_era": "CMIP6",
+            "type": "simulation",
+            "processing_level": "raw",
+        },
+        read_from_file=["variable", "date_start", "date_end", "version"],
+        xr_open_kwargs={"engine": "h5netcdf"},
+        cvs={
+            "domain": {"example-region": "exreg"},
+            "attributes": {"version_id": "version"},
+        },
+        file_checks=["readable", "ncvalid"],
+    )
+
+    assert len(df) == 4
+    assert (df["activity"] == "ScenarioMIP").all()
+    assert (df["mip_era"] == "CMIP6").all()
+    assert (df["domain"] == "exreg").all()  # CVS simple
+    assert (
+        df[df["frequency"] == "fx"]["variable"] == ("sftlf",)
+    ).all()  # Read from file
+    assert df.date_start.dtype == "<M8[ms]"
+    assert df.date_end.dtype == "<M8[ms]"
+    assert set(df.experiment.unique()) == {"ssp370", "ssp585"}
+
+
 def test_parse_from_ds():
     # Real ds
     ds = xr.tutorial.open_dataset("air_temperature")
@@ -226,6 +263,14 @@ def test_build_path(samplecat):
         "/test/simulation/raw/CMIP5/ScenarioMIP/example-region/NCC/NorESM2-MM/ssp585/r1i1p1f1/fx/sftlf/"  # pragma: allowlist secret
         "sftlf_fx_CMIP5_ScenarioMIP_example-region_NCC_NorESM2-MM_ssp585_r1i1p1f1_fx.nc"
     ) in df.new_path.values
+
+
+def test_pattern_from_schema(samplecat):
+    df = cu.build_path(samplecat, mip_era="CMIP5")
+    patts = cu.patterns_from_schema("original-sims-raw")
+    for p in df.new_path.values:
+        res = [cu._compile_pattern(patt).parse(p) for patt in patts]
+        assert any(res)
 
 
 def test_build_path_ds():
