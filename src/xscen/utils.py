@@ -812,20 +812,26 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
                 ).dimensionality.get("[time]")
 
                 if time_in_ds == time_in_out:
-                    ds[v] = units.convert_units_to(ds[v], variables_and_units[v])
+                    ds[v] = ds.assign(
+                        {v: units.convert_units_to(ds[v], variables_and_units[v])}
+                    )
                 elif time_in_ds - time_in_out == 1:
                     # ds is an amount
-                    ds[v] = units.amount2rate(ds[v], out_units=variables_and_units[v])
+                    ds[v] = ds.assign(
+                        {v: units.amount2rate(ds[v], out_units=variables_and_units[v])}
+                    )
                 elif time_in_ds - time_in_out == -1:
                     # ds is a rate
-                    ds[v] = units.rate2amount(ds[v], out_units=variables_and_units[v])
+                    ds[v] = ds.assign(
+                        {v: units.rate2amount(ds[v], out_units=variables_and_units[v])}
+                    )
                 else:
                     raise ValueError(
                         f"No known transformation between {ds[v].units} and {variables_and_units[v]} (temporal dimensionality mismatch)."
                     )
             elif (v in ds) and (ds[v].units != variables_and_units[v]):
                 # update unit name if physical units are equal but not their name (ex. degC vs °C)
-                ds[v] = ds[v].assign_attrs(units=variables_and_units[v])
+                ds[v] = ds.assign({v: ds[v].assign_attrs(units=variables_and_units[v])})
 
     return ds
 
