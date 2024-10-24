@@ -55,7 +55,10 @@ def _add_preprocessing_attr(scen, train_kwargs):
 
 # TODO: Place this somewhere else?
 def _parse_group(group):
-    if isinstance(group, dict):
+    # somehow, Grouper is seen as a dict, so we need an explicit condition
+    if isinstance(group, sdba.Grouper):
+        return group
+    elif isinstance(group, dict):
         # So we can specifiy window and add_dims in yaml.
         group = sdba.Grouper.from_kwargs(**group)["group"]
     elif isinstance(group, str):
