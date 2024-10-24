@@ -831,7 +831,7 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
                     )
             elif (v in ds) and (ds[v].units != variables_and_units[v]):
                 # update unit name if physical units are equal but not their name (ex. degC vs °C)
-                ds[v] = ds.assign({v: ds[v].assign_attrs(units=variables_and_units[v])})
+                ds = ds.assign({v: ds[v].assign_attrs(units=variables_and_units[v])})
 
     return ds
 
