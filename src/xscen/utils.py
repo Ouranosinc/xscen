@@ -817,7 +817,7 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
                     )
                 elif time_in_ds - time_in_out == 1:
                     # ds is an amount
-                    ds[v] = ds.assign(
+                    ds = ds.assign(
                         {v: units.amount2rate(ds[v], out_units=variables_and_units[v])}
                     )
                 elif time_in_ds - time_in_out == -1:
