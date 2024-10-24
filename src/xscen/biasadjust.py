@@ -77,7 +77,7 @@ def _harmonize_calendars(
       Maximal calendar `inputs[0]` can be. The hierarchy: 360_day < noleap < standard < all_leap.
       If `inputs[0]`'s calendar is higher than maximal calendar, it will be converted to the maximal calendar.
     align_on: str, optional
-      `align_on` argument for the function `xr.Dataset.convert_calendar`.
+      `align_on` argument for the function `xr.DataArray.convert_calendar`.
 
     Returns
     -------
@@ -140,7 +140,7 @@ def train(
     jitter_over: dict, optional
       If given, a dictionary of args to pass to `jitter_over_thresh`.
     align_on: str, optional
-      `align_on` argument for the function `xr.Dataset.convert_calendar`.
+      `align_on` argument for the function `xr.DataArray.convert_calendar`.
 
     Returns
     -------
@@ -253,7 +253,7 @@ def adjust(
     bias_adjust_project : str, optional
       The project to assign to the output.
     align_on: str, optional
-      `align_on` argument for the function `xr.Dataset.convert_calendar`.
+      `align_on` argument for the function `xr.DataArray.convert_calendar`.
     method : str, optional
       Adjustment class. Pass this argument for a method that has no training, and thus no `dtrain` (which should be set to `None`).
       If this is set to `None`, then a non-null `dtrain` is expected.
