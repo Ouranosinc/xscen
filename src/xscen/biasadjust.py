@@ -87,7 +87,7 @@ def _harmonize_calendars(
     """
     # convert to a list so that in-place changes are possible
     inputs = list(inputs)
-    cals = [get_calendar(inp) for inp in inputs]
+    cals = [inp.time.dt.calendar for inp in inputs]
     mincal = minimum_calendar(cals[0], maximal_calendar)
     for i, cal in enumerate(cals):
         if cal != mincal:
