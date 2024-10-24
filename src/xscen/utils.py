@@ -812,7 +812,7 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
                 ).dimensionality.get("[time]")
 
                 if time_in_ds == time_in_out:
-                    ds[v] = ds.assign(
+                    ds = ds.assign(
                         {v: units.convert_units_to(ds[v], variables_and_units[v])}
                     )
                 elif time_in_ds - time_in_out == 1:
