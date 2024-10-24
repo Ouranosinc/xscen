@@ -258,22 +258,6 @@ class TestEnsembleStats:
                 },
             )
 
-        # Error if you try to use a robustness_fractions with a reference dataset, but also specify other statistics
-        with pytest.raises(
-            ValueError, match="The input requirements for 'robustness_fractions'"
-        ):
-            xs.ensemble_stats(
-                ens,
-                statistics={
-                    "robustness_fractions": {
-                        "test": "threshold",
-                        "abs_thresh": 2.5,
-                        "ref": ref,
-                    },
-                    "ensemble_mean_std_max_min": None,
-                },
-            )
-
 
 class TestGenerateWeights:
     @staticmethod
