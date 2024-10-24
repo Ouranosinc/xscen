@@ -16,3 +16,4 @@ dependencies:
   - typer >=0.12.3
   - nbsphinx
   - ipython
+  - ipykernel
