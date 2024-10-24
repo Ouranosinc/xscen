@@ -342,15 +342,12 @@ def adjust(
     # do the adjustment for all the simulation_period lists
     periods = standardize_periods(periods)
     slices = []
-    if periods is not None:
-        for period in periods:
-            sim_sel = sim.sel(time=slice(period[0], period[1]))
-            out = ADJ.adjust(sim=sim_sel, **xclim_adjust_args)
-            slices.extend([out])
-        # put all the adjusted period back together
-        dscen = xr.concat(slices, dim="time")
-    else:
-        dscen = ADJ.adjust(sim, **xclim_adjust_args)
+    for period in periods:
+        sim_sel = sim.sel(time=slice(period[0], period[1]))
+        out = ADJ.adjust(sim=sim_sel, **xclim_adjust_args)
+        slices.extend([out])
+    # put all the adjusted period back together
+    dscen = xr.concat(slices, dim="time")
 
     if dtrain is not None:
         dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
