@@ -237,7 +237,7 @@ def adjust(
 
     Parameters
     ----------
-    dtrain : xr.Dataset |  (optional)
+    dtrain : xr.Dataset , optional
       A trained algorithm's dataset, as returned by `train`. If `None`, then `method` should be provided.
     dsim : xr.Dataset
       Simulated timeseries, projected period.
