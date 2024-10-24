@@ -47,9 +47,7 @@ class TestTrain:
 
     def test_preprocess(self):
 
-        dref360 = xc.core.calendar.convert_calendar(
-            self.dref, "360_day", align_on="year"
-        )
+        dref360 = self.dref.convert_calendar("360_day", align_on="year")
 
         out = xs.train(
             dref360,
@@ -131,7 +129,7 @@ class TestAdjust:
         self, periods, to_level, bias_adjust_institution, bias_adjust_project
     ):
         dtrain = xs.train(
-            self.dref,
+            self.dref.copy(),
             self.dsim.sel(time=slice("2001", "2003")),
             var="tas",
             period=["2001", "2003"],
@@ -139,7 +137,7 @@ class TestAdjust:
 
         out = xs.adjust(
             dtrain,
-            self.dsim,
+            self.dsim.copy(),
             periods=periods,
             to_level=to_level,
             bias_adjust_institution=bias_adjust_institution,
@@ -154,7 +152,7 @@ class TestAdjust:
             "name='time.dayofyear', window=31), kind='+'"
             ").adjust(sim, )"
         )
-        assert xc.core.calendar.get_calendar(out) == "noleap"
+        assert out.time.dt.calendar == "noleap"
 
         if bias_adjust_institution is not None:
             assert out.attrs["cat:bias_adjust_institution"] == "i"
@@ -177,9 +175,9 @@ class TestAdjust:
                 np.concatenate([np.ones(365 * 1) * 1, np.ones(365 * 1) * 3]),
             )
 
-    def test_write_train(self):
+    def test_write_train(self, tmpdir):
         dtrain = xs.train(
-            self.dref,
+            self.dref.copy(),
             self.dsim.sel(time=slice("2001", "2003")),
             var="tas",
             period=["2001", "2003"],
@@ -188,7 +186,7 @@ class TestAdjust:
             jitter_under={"thresh": "2 K"},
         )
 
-        root = str(notebooks / "_data")
+        root = str(tmpdir / "_data")
         xs.save_to_zarr(dtrain, f"{root}/test.zarr", mode="o")
         dtrain2 = xr.open_dataset(
             f"{root}/test.zarr", chunks={"dayofyear": 365, "quantiles": 15}
@@ -196,7 +194,7 @@ class TestAdjust:
 
         out = xs.adjust(
             dtrain,
-            self.dsim,
+            self.dsim.copy(),
             periods=["2001", "2006"],
             xclim_adjust_args={
                 "detrend": {
@@ -207,7 +205,7 @@ class TestAdjust:
 
         out2 = xs.adjust(
             dtrain2,
-            self.dsim,
+            self.dsim.copy(),
             periods=["2001", "2006"],
             xclim_adjust_args={
                 "detrend": {
@@ -291,15 +289,9 @@ class TestAdjust:
         with xc.set_options(sdba_extra_output=True):
             group = xc.sdba.Grouper(group="time.dayofyear", window=31)
 
-            drefx = xc.core.calendar.convert_calendar(
-                dref.sel(time=slice("2001", "2003")), "noleap"
-            )
-            dhistx = xc.core.calendar.convert_calendar(
-                dhist.sel(time=slice("2001", "2003")), "noleap"
-            )
-            dsimx = xc.core.calendar.convert_calendar(
-                dsim.sel(time=slice("2001", "2006")), "noleap"
-            )
+            drefx = dref.sel(time=slice("2001", "2003")).convert_calendar("noleap")
+            dhistx = dhist.sel(time=slice("2001", "2003")).convert_calendar("noleap")
+            dsimx = dsim.sel(time=slice("2001", "2006")).convert_calendar("noleap")
 
             dhist_ad, pth, dP0 = xc.sdba.processing.adapt_freq(
                 drefx["pr"], dhistx["pr"], group=group, thresh="1 mm d-1"

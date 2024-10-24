@@ -2,12 +2,10 @@
 
 import logging
 from copy import deepcopy
-from typing import Optional, Union
 
 import xarray as xr
 import xclim as xc
 from xclim import sdba
-from xclim.core.calendar import convert_calendar, get_calendar
 
 from .catutils import parse_from_ds
 from .config import parse_config
@@ -58,17 +56,17 @@ def _add_preprocessing_attr(scen, train_kwargs):
 def train(
     dref: xr.Dataset,
     dhist: xr.Dataset,
-    var: Union[str, list[str]],
+    var: str | list[str],
     period: list[str],
     *,
     method: str = "DetrendedQuantileMapping",
-    group: Optional[Union[sdba.Grouper, str, dict]] = None,
-    xclim_train_args: Optional[dict] = None,
+    group: sdba.Grouper | str | dict | None = None,
+    xclim_train_args: dict | None = None,
     maximal_calendar: str = "noleap",
-    adapt_freq: Optional[dict] = None,
-    jitter_under: Optional[dict] = None,
-    jitter_over: Optional[dict] = None,
-    align_on: Optional[str] = "year",
+    adapt_freq: dict | None = None,
+    jitter_under: dict | None = None,
+    jitter_over: dict | None = None,
+    align_on: str | None = "year",
 ) -> xr.Dataset:
     """
     Train a bias-adjustment.
@@ -100,7 +98,7 @@ def train(
     jitter_over: dict, optional
       If given, a dictionary of args to pass to `jitter_over_thresh`.
     align_on: str, optional
-      `align_on` argument for the function `xclim.core.calendar.convert_calendar`.
+      `align_on` argument for the function `xr.DataArray.convert_calendar`.
 
     Returns
     -------
@@ -137,13 +135,13 @@ def train(
     ref = ref.sel(time=slice(period[0], period[1]))
 
     # convert calendar if necessary
-    simcal = get_calendar(hist)
-    refcal = get_calendar(ref)
+    simcal = hist.time.dt.calendar
+    refcal = ref.time.dt.calendar
     mincal = minimum_calendar(simcal, maximal_calendar)
     if simcal != mincal:
-        hist = convert_calendar(hist, mincal, align_on=align_on)
+        hist = hist.convert_calendar(mincal, align_on=align_on)
     if refcal != mincal:
-        ref = convert_calendar(ref, mincal, align_on=align_on)
+        ref = ref.convert_calendar(mincal, align_on=align_on)
 
     if group:
         if isinstance(group, dict):
@@ -194,13 +192,13 @@ def train(
 def adjust(
     dtrain: xr.Dataset,
     dsim: xr.Dataset,
-    periods: Union[list[str], list[list[str]]],
+    periods: list[str] | list[list[str]],
     *,
-    xclim_adjust_args: Optional[dict] = None,
+    xclim_adjust_args: dict | None = None,
     to_level: str = "biasadjusted",
-    bias_adjust_institution: Optional[str] = None,
-    bias_adjust_project: Optional[str] = None,
-    align_on: Optional[str] = "year",
+    bias_adjust_institution: str | None = None,
+    bias_adjust_project: str | None = None,
+    align_on: str | None = "year",
 ) -> xr.Dataset:
     """
     Adjust a simulation.
@@ -223,7 +221,7 @@ def adjust(
     bias_adjust_project : str, optional
       The project to assign to the output.
     align_on: str, optional
-      `align_on` argument for the fonction `xclim.core.calendar.convert_calendar`.
+      `align_on` argument for the function `xr.DataArray.convert_calendar`.
 
     Returns
     -------
@@ -240,7 +238,8 @@ def adjust(
 
     # evaluate the dict that was stored as a string
     if not isinstance(dtrain.attrs["train_params"], dict):
-        dtrain.attrs["train_params"] = eval(dtrain.attrs["train_params"])
+        # FIXME: eval is bad. There has to be a better way!™
+        dtrain.attrs["train_params"] = eval(dtrain.attrs["train_params"])  # noqa: S307
 
     var = dtrain.attrs["train_params"]["var"]
     if len(var) != 1:
@@ -252,10 +251,10 @@ def adjust(
         sim = dsim[var]
 
     # get right calendar
-    simcal = get_calendar(sim)
+    simcal = sim.time.dt.calendar
     mincal = minimum_calendar(simcal, dtrain.attrs["train_params"]["maximal_calendar"])
     if simcal != mincal:
-        sim = convert_calendar(sim, mincal, align_on=align_on)
+        sim = sim.convert_calendar(mincal, align_on=align_on)
 
     # adjust
     ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)

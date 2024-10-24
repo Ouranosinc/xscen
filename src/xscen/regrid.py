@@ -3,14 +3,17 @@
 import datetime
 import operator
 import os
+import random
+import string
 import warnings
 from copy import deepcopy
-from typing import Optional, Union
+from pathlib import Path
 
 import cartopy.crs as ccrs
 import cf_xarray as cfxr
 import numpy as np
 import xarray as xr
+from xclim.core.units import convert_units_to
 
 try:
     import xesmf as xe
@@ -21,22 +24,17 @@ except ImportError:
 
 from .config import parse_config
 
-# TODO: Implement logging, warnings, etc.
-# TODO: Add an option to call xesmf.util.grid_2d or xesmf.util.grid_global
-# TODO: Implement support for an OBS2SIM kind of interpolation
-
-
-__all__ = ["create_mask", "regrid_dataset"]
+__all__ = ["create_bounds_gridmapping", "create_mask", "regrid_dataset"]
 
 
 @parse_config
 def regrid_dataset(  # noqa: C901
     ds: xr.Dataset,
     ds_grid: xr.Dataset,
-    weights_location: Union[str, os.PathLike],
     *,
-    regridder_kwargs: Optional[dict] = None,
-    intermediate_grids: Optional[dict] = None,
+    weights_location: str | os.PathLike | None = None,
+    regridder_kwargs: dict | None = None,
+    intermediate_grids: dict | None = None,
     to_level: str = "regridded",
 ) -> xr.Dataset:
     """Regrid a dataset according to weights and a reference grid.
@@ -48,11 +46,12 @@ def regrid_dataset(  # noqa: C901
     ds : xarray.Dataset
         Dataset to regrid. The Dataset needs to have lat/lon coordinates.
         Supports a 'mask' variable compatible with ESMF standards.
-    weights_location : Union[str, os.PathLike]
-        Path to the folder where weight file is saved.
     ds_grid : xr.Dataset
         Destination grid. The Dataset needs to have lat/lon coordinates.
         Supports a 'mask' variable compatible with ESMF standards.
+    weights_location : Union[str, os.PathLike], optional
+        Path to the folder where weight file is saved. Leave as None to force re-computation of weights.
+        Note that in order to reuse the weights, ds and ds_grid should both have the 'cat:id' and 'cat:domain' attributes.
     regridder_kwargs : dict, optional
         Arguments to send xe.Regridder(). If it contains `skipna` or `output_chunks`, those
         are passed to the regridder call directly.
@@ -85,54 +84,68 @@ def regrid_dataset(  # noqa: C901
         raise ImportError(
             "xscen's regridding functionality requires xESMF to work, please install that package."
         )
-
+    ds = ds.copy()
     regridder_kwargs = regridder_kwargs or {}
 
-    domain = ds_grid.attrs.get("cat:domain", "unknown")
+    # We modify the dataset later, so we need to keep track of whether it had lon_bounds and lat_bounds to begin with
+    has_lon_bounds = "lon_bounds" in ds
+    has_lat_bounds = "lat_bounds" in ds
 
-    ds_grids = []  # list of target grids
-    reg_arguments = []  # list of accompanying arguments for xe.Regridder()
+    # Generate unique IDs to name the weights file, but remove the member and experiment from the dataset ID
+    if weights_location is not None:
+        dsid = (
+            ds.attrs.get("cat:id", _generate_random_string(15))
+            .replace(ds.attrs.get("cat:member", ""), "")
+            .replace(ds.attrs.get("cat:experiment", ""), "")
+        )
+        dsid = f"{dsid}_{ds.attrs.get('cat:domain', _generate_random_string(15))}"
+        gridid = f"{ds_grid.attrs.get('cat:id', _generate_random_string(15))}_{ds_grid.attrs.get('cat:domain', _generate_random_string(15))}"
+
+    ds_grids = []  # List of target grids
+    reg_arguments = []  # List of accompanying arguments for xe.Regridder()
     if intermediate_grids:
         for name_inter, dict_inter in intermediate_grids.items():
             reg_arguments.append(dict_inter["regridder_kwargs"])
             ds_grids.append(xe.util.cf_grid_2d(**dict_inter["cf_grid_2d"]))
 
-    ds_grids.append(ds_grid)  # add final ds_grid
-    reg_arguments.append(regridder_kwargs)  # add final regridder_kwargs
+    ds_grids.append(ds_grid)  # Add the final ds_grid
+    reg_arguments.append(regridder_kwargs)  # Add the final regridder_kwargs
 
     out = None
 
-    # Whether regridding is required
+    # If the grid is the same, skip the call to xESMF
     if ds["lon"].equals(ds_grid["lon"]) & ds["lat"].equals(ds_grid["lat"]):
         out = ds
         if "mask" in out:
             out = out.where(out.mask == 1)
             out = out.drop_vars(["mask"])
+        if "mask" in ds_grid:
+            out = out.where(ds_grid.mask == 1)
 
     else:
         for i, (ds_grid, regridder_kwargs) in enumerate(zip(ds_grids, reg_arguments)):
-            # if this is not the first iteration (out != None),
-            # get result from last iteration (out) as input
+            # If this is not the first iteration (out != None),
+            # get the result from the last iteration (out) as input
             ds = out or ds
-
             kwargs = deepcopy(regridder_kwargs)
-            # if weights_location does no exist, create it
-            if not os.path.exists(weights_location):
-                os.makedirs(weights_location)
-            id = ds.attrs["cat:id"] if "cat:id" in ds.attrs else "weights"
-            # give unique name to weights file
-            weights_filename = os.path.join(
-                weights_location,
-                f"{id}_{domain}_regrid{i}"
-                f"{'_'.join(kwargs[k] for k in kwargs if isinstance(kwargs[k], str))}.nc",
-            )
 
-            # Re-use existing weight file if possible
-            if os.path.isfile(weights_filename) and not (
-                ("reuse_weights" in kwargs) and (kwargs["reuse_weights"] is False)
-            ):
-                kwargs["weights"] = weights_filename
-                kwargs["reuse_weights"] = True
+            # Prepare the weight file
+            if weights_location is not None:
+                Path(weights_location).mkdir(parents=True, exist_ok=True)
+                weights_filename = Path(
+                    weights_location,
+                    f"{dsid}_{gridid}_regrid{i}"
+                    f"{'_'.join(kwargs[k] for k in kwargs if isinstance(kwargs[k], str))}.nc",
+                )
+
+                # Re-use existing weight file if possible
+                if Path(weights_filename).is_file() and not (
+                    ("reuse_weights" in kwargs) and (kwargs["reuse_weights"] is False)
+                ):
+                    kwargs["weights"] = weights_filename
+                    kwargs["reuse_weights"] = True
+            else:
+                weights_filename = None
 
             # Extract args that are to be given at call time.
             # output_chunks is only valid for xesmf >= 0.8, so don't add it be default to the call_kwargs
@@ -150,49 +163,38 @@ def regrid_dataset(  # noqa: C901
 
             out = regridder(ds, keep_attrs=True, **call_kwargs)
 
-            # double-check that grid_mapping information is transferred
-            gridmap_out = any(
-                "grid_mapping" in ds_grid[da].attrs for da in ds_grid.data_vars
-            )
+            # Double-check that grid_mapping information is transferred
+            gridmap_out = _get_grid_mapping(ds_grid)
             if gridmap_out:
-                gridmap = np.unique(
-                    [
-                        ds_grid[da].attrs["grid_mapping"]
-                        for da in ds_grid.data_vars
-                        if "grid_mapping" in ds_grid[da].attrs
-                        and ds_grid[da].attrs["grid_mapping"] in ds_grid
-                    ]
-                )
-                if len(gridmap) != 1:
-                    warnings.warn(
-                        "Could not determine and transfer grid_mapping information."
-                    )
-                else:
-                    # Add the grid_mapping attribute
-                    for v in out.data_vars:
-                        out[v].attrs["grid_mapping"] = gridmap[0]
-                    # Add the grid_mapping coordinate
-                    if gridmap[0] not in out:
-                        out = out.assign_coords({gridmap[0]: ds_grid[gridmap[0]]})
-                    # Regridder seems to seriously mess up the rotated dimensions
-                    for d in out.lon.dims:
-                        out[d] = ds_grid[d]
-                        if d not in out.coords:
-                            out = out.assign_coords({d: ds_grid[d]})
+                # Regridder seems to seriously mess up the rotated dimensions
+                for d in out.lon.dims:
+                    out[d] = ds_grid[d]
+                    if d not in out.coords:
+                        out = out.assign_coords({d: ds_grid[d]})
+                # Add the grid_mapping attribute
+                for v in out.data_vars:
+                    if any(
+                        d in out[v].dims
+                        for d in [out.cf.axes["X"][0], out.cf.axes["Y"][0]]
+                    ):
+                        out[v].attrs["grid_mapping"] = gridmap_out
+                # Add the grid_mapping coordinate
+                if gridmap_out not in out:
+                    out = out.assign_coords({gridmap_out: ds_grid[gridmap_out]})
             else:
-                gridmap = np.unique(
-                    [
-                        ds[da].attrs["grid_mapping"]
-                        for da in ds.data_vars
-                        if "grid_mapping" in ds[da].attrs
-                    ]
-                )
+                gridmap_in = _get_grid_mapping(ds)
                 # Remove the original grid_mapping attribute
                 for v in out.data_vars:
                     if "grid_mapping" in out[v].attrs:
                         out[v].attrs.pop("grid_mapping")
                 # Remove the original grid_mapping coordinate if it is still in the output
-                out = out.drop_vars(set(gridmap).intersection(out.variables))
+                out = out.drop_vars(gridmap_in, errors="ignore")
+
+            # cf_grid_2d adds temporary variables that we don't want to keep
+            if "lon_bounds" in out and has_lon_bounds is False:
+                out = out.drop_vars("lon_bounds")
+            if "lat_bounds" in out and has_lat_bounds is False:
+                out = out.drop_vars("lat_bounds")
 
             # History
             kwargs_for_hist = deepcopy(regridder_kwargs)
@@ -227,27 +229,30 @@ def regrid_dataset(  # noqa: C901
 
 
 @parse_config
-def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.DataArray:
+def create_mask(
+    ds: xr.Dataset | xr.DataArray,
+    *,
+    variable: str | None = None,
+    where_operator: str | None = None,
+    where_threshold: float | str | None = None,
+    mask_nans: bool = True,
+) -> xr.DataArray:
     """Create a 0-1 mask based on incoming arguments.
 
     Parameters
     ----------
     ds : xr.Dataset or xr.DataArray
-        Dataset or DataArray to be evaluated
-    mask_args : dict
-        Instructions to build the mask (required fields listed in the Notes).
-
-    Note
-    ----
-    'mask' fields:
-        variable: str, optional
-            Variable on which to base the mask, if ds_mask is not a DataArray.
-        where_operator: str, optional
-            Conditional operator such as '>'
-        where_threshold: str, optional
-            Value threshold to be used in conjunction with where_operator.
-        mask_nans: bool
-            Whether to apply a mask on NaNs.
+        Dataset or DataArray to be evaluated. If a time dimension is present, the first time step will be used.
+    variable : str, optional
+        If using a Dataset, the variable on which to base the mask.
+    where_operator : str, optional
+        Operator to use for the threshold comparison. One of "<", "<=", "==", "!=", ">=", ">".
+        Needs to be used with `where_threshold`.
+    where_threshold : float or str, optional
+        Threshold value to use for the comparison. A string can be used to reference units, e.g. "10 mm/day".
+        Needs to be used with `where_operator`.
+    mask_nans : bool, optional
+        Whether to mask NaN values in the mask array. Default is True.
 
     Returns
     -------
@@ -268,32 +273,46 @@ def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.Data
         operation = ops.get(op)
         return operation(arg1, arg2)
 
-    mask_args = mask_args or {}
-    if isinstance(ds, xr.DataArray):
-        mask = ds
-    elif isinstance(ds, xr.Dataset) and "variable" in mask_args:
-        mask = ds[mask_args["variable"]]
+    if isinstance(ds, xr.Dataset):
+        if variable is None:
+            raise ValueError("A variable needs to be specified when passing a Dataset.")
+        ds = ds[variable].copy()
     else:
-        raise ValueError("Could not determine what to base the mask on.")
+        ds = ds.copy()
+    if "time" in ds.dims:
+        ds = ds.isel(time=0)
 
-    if "time" in mask.dims:
-        mask = mask.isel(time=0)
+    mask = xr.ones_like(ds)
+    mask.attrs = {"long_name": "Mask"}
+    mask.name = "mask"
 
-    if "where_operator" in mask_args:
+    # Create the mask based on the threshold
+    if (where_operator is not None and where_threshold is None) or (
+        where_operator is None and where_threshold is not None
+    ):
+        raise ValueError(
+            "'where_operator' and 'where_threshold' must be used together."
+        )
+    if where_threshold is not None:
+        mask.attrs["where_threshold"] = f"{variable} {where_operator} {where_threshold}"
+        if isinstance(where_threshold, str):
+            ds = convert_units_to(ds, where_threshold.split(" ")[1])
+            where_threshold = float(where_threshold.split(" ")[0])
+
         mask = xr.where(
-            cmp(mask, mask_args["where_operator"], mask_args["where_threshold"]), 1, 0
+            cmp(ds, where_operator, where_threshold), mask, 0, keep_attrs=True
         )
-    else:
-        mask = xr.ones_like(mask)
-    if ("mask_nans" in mask_args) & (mask_args["mask_nans"] is True):
-        mask = mask.where(np.isreal(mask), other=0)
 
-    # Attributes
-    if "where_operator" in mask_args:
-        mask.attrs["where_threshold"] = (
-            f"{mask_args['variable']} {mask_args['where_operator']} {mask_args['where_threshold']}"
-        )
-    mask.attrs["mask_nans"] = f"{mask_args['mask_nans']}"
+    # Mask NaNs
+    if mask_nans:
+        mask = xr.where(ds.notnull(), mask, 0, keep_attrs=True)
+        mask.attrs["mask_NaNs"] = "True"
+    else:
+        # The where clause above will mask NaNs, so we need to revert that
+        attrs = mask.attrs
+        mask = xr.where(ds.isnull(), 1, mask)
+        mask.attrs = attrs
+        mask.attrs["mask_NaNs"] = "False"
 
     return mask
 
@@ -301,10 +320,10 @@ def create_mask(ds: Union[xr.Dataset, xr.DataArray], mask_args: dict) -> xr.Data
 def _regridder(
     ds_in: xr.Dataset,
     ds_grid: xr.Dataset,
-    filename: Union[str, os.PathLike],
     *,
+    filename: str | os.PathLike | None = None,
     method: str = "bilinear",
-    unmapped_to_nan: Optional[bool] = True,
+    unmapped_to_nan: bool | None = True,
     **kwargs,
 ) -> Regridder:
     """Call to xesmf Regridder with a few default arguments.
@@ -315,7 +334,7 @@ def _regridder(
         Incoming grid. The Dataset needs to have lat/lon coordinates.
     ds_grid : xr.Dataset
         Destination grid. The Dataset needs to have lat/lon coordinates.
-    filename : str or os.PathLike
+    filename : str or os.PathLike, optional
         Path to the NetCDF file with weights information.
     method : str
         Interpolation method.
@@ -330,18 +349,21 @@ def _regridder(
         Regridder object
     """
     if method.startswith("conservative"):
+        gridmap_in = _get_grid_mapping(ds_in)
+        gridmap_grid = _get_grid_mapping(ds_grid)
+
         if (
             ds_in.cf["longitude"].ndim == 2
             and "longitude" not in ds_in.cf.bounds
-            and "rotated_pole" in ds_in
+            and gridmap_in in ds_in
         ):
-            ds_in = ds_in.update(create_bounds_rotated_pole(ds_in))
+            ds_in = ds_in.update(create_bounds_gridmapping(ds_in, gridmap_in))
         if (
             ds_grid.cf["longitude"].ndim == 2
             and "longitude" not in ds_grid.cf.bounds
-            and "rotated_pole" in ds_grid
+            and gridmap_grid in ds_grid
         ):
-            ds_grid = ds_grid.update(create_bounds_rotated_pole(ds_grid))
+            ds_grid = ds_grid.update(create_bounds_gridmapping(ds_grid, gridmap_grid))
 
     regridder = xe.Regridder(
         ds_in=ds_in,
@@ -350,53 +372,110 @@ def _regridder(
         unmapped_to_nan=unmapped_to_nan,
         **kwargs,
     )
-    if not os.path.isfile(filename):
+    if filename is not None and not Path(filename).is_file():
         regridder.to_netcdf(filename)
 
     return regridder
 
 
-def create_bounds_rotated_pole(ds: xr.Dataset):
+def create_bounds_rotated_pole(ds: xr.Dataset) -> xr.Dataset:
+    warnings.warn(
+        "This function is deprecated and will be removed in xscen v0.12.0. Use create_bounds_gridmapping instead.",
+        FutureWarning,
+    )
+    return create_bounds_gridmapping(ds, "rotated_pole")
+
+
+def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str) -> xr.Dataset:
     """Create bounds for rotated pole datasets."""
-    ds = ds.cf.add_bounds(["rlat", "rlon"])
+    xname = ds.cf.axes["X"][0]
+    yname = ds.cf.axes["Y"][0]
+
+    ds = ds.cf.add_bounds([yname, xname])
 
     # In "vertices" format then expand to 2D. From (N, 2) to (N+1,) to (N+1, M+1)
-    rlatv1D = cfxr.bounds_to_vertices(ds.rlat_bounds, "bounds")
-    rlonv1D = cfxr.bounds_to_vertices(ds.rlon_bounds, "bounds")
-    rlatv = rlatv1D.expand_dims(rlon_vertices=rlonv1D).transpose(
-        "rlon_vertices", "rlat_vertices"
+    yv1D = cfxr.bounds_to_vertices(ds[f"{yname}_bounds"], "bounds")
+    xv1D = cfxr.bounds_to_vertices(ds[f"{xname}_bounds"], "bounds")
+    yv = yv1D.expand_dims(dict([(f"{xname}_vertices", xv1D)])).transpose(
+        f"{xname}_vertices", f"{yname}_vertices"
     )
-    rlonv = rlonv1D.expand_dims(rlat_vertices=rlatv1D).transpose(
-        "rlon_vertices", "rlat_vertices"
+    xv = xv1D.expand_dims(dict([(f"{yname}_vertices", yv1D)])).transpose(
+        f"{xname}_vertices", f"{yname}_vertices"
     )
 
-    # Get cartopy's crs for the projection
-    RP = ccrs.RotatedPole(
-        pole_longitude=ds.rotated_pole.grid_north_pole_longitude,
-        pole_latitude=ds.rotated_pole.grid_north_pole_latitude,
-        central_rotated_longitude=ds.rotated_pole.north_pole_grid_longitude,
-    )
+    # Some CRS have additional attributes according to CF conventions
+    def _get_opt_attr_as_float(da: xr.DataArray, attr: str) -> float | None:
+        return float(da.attrs[attr]) if attr in da.attrs else None
+
+    if gridmap == "rotated_pole":
+        # Get cartopy's crs for the projection
+        RP = ccrs.RotatedPole(
+            pole_longitude=float(ds.rotated_pole.grid_north_pole_longitude),
+            pole_latitude=float(ds.rotated_pole.grid_north_pole_latitude),
+            central_rotated_longitude=_get_opt_attr_as_float(
+                ds.rotated_pole, "north_pole_grid_longitude"
+            ),
+        )
+    elif gridmap == "oblique_mercator":
+        RP = ccrs.ObliqueMercator(
+            central_longitude=float(ds.oblique_mercator.longitude_of_projection_origin),
+            central_latitude=float(ds.oblique_mercator.latitude_of_projection_origin),
+            false_easting=_get_opt_attr_as_float(ds.oblique_mercator, "false_easting"),
+            false_northing=_get_opt_attr_as_float(
+                ds.oblique_mercator, "false_northing"
+            ),
+            scale_factor=float(ds.oblique_mercator.scale_factor_at_projection_origin),
+            azimuth=float(ds.oblique_mercator.azimuth_of_central_line),
+        )
+    else:
+        raise NotImplementedError(f"Grid mapping {gridmap} not yet implemented.")
+
     PC = ccrs.PlateCarree()
 
     # Project points
-    pts = PC.transform_points(RP, rlonv.values, rlatv.values)
-    lonv = rlonv.copy(data=pts[..., 0]).rename("lon_vertices")
-    latv = rlatv.copy(data=pts[..., 1]).rename("lat_vertices")
+    pts = PC.transform_points(RP, xv.values, yv.values)
+    lonv = xv.copy(data=pts[..., 0]).rename("lon_vertices")
+    latv = yv.copy(data=pts[..., 1]).rename("lat_vertices")
 
     # Back to CF bounds format. From (N+1, M+1) to (4, N, M)
-    lonb = cfxr.vertices_to_bounds(lonv, ("bounds", "rlon", "rlat")).rename(
-        "lon_bounds"
-    )
-    latb = cfxr.vertices_to_bounds(latv, ("bounds", "rlon", "rlat")).rename(
-        "lat_bounds"
-    )
+    lonb = cfxr.vertices_to_bounds(lonv, ("bounds", xname, yname)).rename("lon_bounds")
+    latb = cfxr.vertices_to_bounds(latv, ("bounds", xname, yname)).rename("lat_bounds")
 
     # Create dataset, set coords and attrs
     ds_bnds = xr.merge([lonb, latb]).assign(
-        lon=ds.lon, lat=ds.lat, rotated_pole=ds.rotated_pole
+        dict([("lon", ds.lon), ("lat", ds.lat), (gridmap, ds[gridmap])])
     )
-    ds_bnds["rlat"] = ds.rlat
-    ds_bnds["rlon"] = ds.rlon
+    ds_bnds[yname] = ds[yname]
+    ds_bnds[xname] = ds[xname]
     ds_bnds.lat.attrs["bounds"] = "lat_bounds"
     ds_bnds.lon.attrs["bounds"] = "lon_bounds"
     return ds_bnds.transpose(*ds.lon.dims, "bounds")
+
+
+def _get_grid_mapping(ds: xr.Dataset) -> str:
+    """Get the grid_mapping attribute from the dataset."""
+    gridmap = [
+        ds[v].attrs["grid_mapping"]
+        for v in ds.data_vars
+        if "grid_mapping" in ds[v].attrs
+    ]
+    gridmap += [c for c in ds.coords if ds[c].attrs.get("grid_mapping_name", None)]
+    gridmap = list(np.unique(gridmap))
+
+    if len(gridmap) > 1:
+        warnings.warn(
+            f"There are conflicting grid_mapping attributes in the dataset. Assuming {gridmap[0]}."
+        )
+
+    return gridmap[0] if gridmap else ""
+
+
+def _generate_random_string(length: int):
+    characters = string.ascii_letters + string.digits
+
+    # Random seed based on the current time
+    random.seed(datetime.datetime.now().timestamp())
+    random_string = "".join(
+        random.choice(characters) for i in range(length)  # noqa: S311
+    )
+    return random_string
