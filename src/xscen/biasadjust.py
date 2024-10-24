@@ -260,7 +260,7 @@ def adjust(
     maximal_calendar: str, optional
       Maximal calendar dsim can be. The hierarchy: 360_day < noleap < standard < all_leap.
       If dsim's calendar is higher than maximal calendar, it will be converted to the maximal calendar.
-      This is only used if `dtrain` is `None`, other the `maximal_calendar` from `dtrain` will be used.
+      This is only used if `dtrain` is `None`, otherwise the `maximal_calendar` from `dtrain` will be used.
 
     Returns
     -------
@@ -283,8 +283,8 @@ def adjust(
     xclim_adjust_args = deepcopy(xclim_adjust_args)
     xclim_adjust_args = xclim_adjust_args or {}
     if dtrain is not None:
+        # evaluate the dict that was stored as a string
         if not isinstance(dtrain.attrs["train_params"], dict):
-            # evaluate the dict that was stored as a string
             # FIXME: eval is bad. There has to be a better way!™
             dtrain.attrs["train_params"] = ast.literal_eval(
                 dtrain.attrs["train_params"]
