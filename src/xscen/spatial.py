@@ -6,7 +6,6 @@ import logging
 import warnings
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Optional, Union
 
 import clisops.core.subset
 import dask
@@ -15,6 +14,7 @@ import numpy as np
 import sparse as sp
 import xarray as xr
 import xclim as xc
+from pyproj.crs import CRS
 
 from .config import parse_config
 
@@ -139,7 +139,7 @@ def subset(
     ds: xr.Dataset,
     method: str,
     *,
-    name: Optional[str] = None,
+    name: str | None = None,
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
@@ -204,10 +204,10 @@ def subset(
 
 def _subset_gridpoint(
     ds: xr.Dataset,
-    lon: Union[float, Sequence[float], xr.DataArray],
-    lat: Union[float, Sequence[float], xr.DataArray],
+    lon: float | Sequence[float] | xr.DataArray,
+    lat: float | Sequence[float] | xr.DataArray,
     *,
-    name: Optional[str] = None,
+    name: str | None = None,
     **kwargs,
 ) -> xr.Dataset:
     r"""Subset the data to a gridpoint.
@@ -253,10 +253,10 @@ def _subset_gridpoint(
 
 def _subset_bbox(
     ds: xr.Dataset,
-    lon_bnds: Union[tuple[float, float], list[float]],
-    lat_bnds: Union[tuple[float, float], list[float]],
+    lon_bnds: tuple[float, float] | list[float],
+    lat_bnds: tuple[float, float] | list[float],
     *,
-    name: Optional[str] = None,
+    name: str | None = None,
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
@@ -316,9 +316,9 @@ def _subset_bbox(
 
 def _subset_shape(
     ds: xr.Dataset,
-    shape: Union[str, Path, gpd.GeoDataFrame],
+    shape: str | Path | gpd.GeoDataFrame,
     *,
-    name: Optional[str] = None,
+    name: str | None = None,
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
@@ -357,20 +357,41 @@ def _subset_shape(
                 "Both tile_buffer and clisops' buffer were requested. Use only one."
             )
         lon_res, lat_res = _estimate_grid_resolution(ds)
+
+        # The buffer argument needs to be in the same units as the shapefile, so it's simpler to always project the shapefile to WGS84.
+        if isinstance(shape, str | Path):
+            shape = gpd.read_file(shape)
+
+        try:
+            shape_crs = shape.crs
+        except AttributeError:
+            shape_crs = None
+        if shape_crs is None:
+            warnings.warn(
+                "Shapefile does not have a CRS. Compatibility with the dataset is not guaranteed.",
+                category=UserWarning,
+            )
+        elif shape_crs != CRS(4326):  # WGS84
+            warnings.warn(
+                "Shapefile is not in EPSG:4326. Reprojecting to this CRS.",
+                UserWarning,
+            )
+            shape = shape.to_crs(4326)
+
         kwargs["buffer"] = np.max([lon_res, lat_res]) * tile_buffer
 
     ds_subset = clisops.core.subset_shape(ds, shape=shape, **kwargs)
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"shape spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
-        f", shape={Path(shape).name if isinstance(shape, (str, Path)) else 'gpd.GeoDataFrame'}"
+        f", shape={Path(shape).name if isinstance(shape, str | Path) else 'gpd.GeoDataFrame'}"
         f" - clisops v{clisops.__version__}"
     )
 
     return update_history_and_name(ds_subset, new_history, name)
 
 
-def _subset_sel(ds: xr.Dataset, *, name: Optional[str] = None, **kwargs) -> xr.Dataset:
+def _subset_sel(ds: xr.Dataset, *, name: str | None = None, **kwargs) -> xr.Dataset:
     r"""Subset the data using the .sel() method.
 
     Parameters

@@ -2,22 +2,99 @@
 Changelog
 =========
 
-v0.9.2 (unreleased)
--------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`).
+v0.11.0 (unreleased)
+--------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* ``xs.io.make_toc`` now includes the global attributes of the dataset after the information about the variables. (:pull:`473`).
+* New function ``xs.get_warming_level_from_period`` to get the warming level associated with a given time horizon. (:pull:`474`).
+* Added ability to skip whole folders to ``xs.parse_directory`` with argument ``skip_dirs``. (:pull:`478`, :pull:`479`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* ``xs.get_warming_level`` has been renamed to ``xs.get_period_from_warming_level``. Its argument `return_horizon` was reversed and renamed `return_central_year` (:pull:`474`).
+
+Bug fixes
+^^^^^^^^^
+* ``xs.io.save_to_table`` now correctly handles the case where the input is a `DataArray` or a `Dataset` with a single variable. (:pull:`473`).
+
+v0.10.0 (2024-09-30)
+--------------------
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* The `mask` argument in ``stack_drop_nans`` can now be a list of dimensions. In that case, a `dropna(how='all')` operation will be used to create the mask on-the-fly. (:pull:`450`).
+* Few changes to ``clean_up``:
+    * The `convert_calendar` function now uses `xarray` instead of `xclim`. (:pull:`450`).
+    * The `attrs_to_remove` and `remove_all_attrs_except` arguments now use real regex. (:pull:`450`).
+    * Multiple entries can now be given for `change_attr_prefix`. (:pull:`450`).
+* ``minimum_calendar`` now accepts a list as input. (:pull:`450`).
+* More calendars are now recognized in ``translate_time_chunk``. (:pull:`450`).
+* `new_dim` in ``unstack_dates`` is now None by default and changes depending on the frequency. It becomes `month` if the data is exactly monthly, and keep the old default of `season` otherwise. (:pull:`450`).
+* Updated the list of libraries in `show_versions` to reflect our current environment. (:pull:`450`).
+* New ``xscen.catutils.patterns_from_schema`` to generate all possible patterns from a given schema (or one of xscen's default), to use with :py:func:`parse_directory`. (:pull:`431`).
+* New ``DataCatalog.copy_files`` to copy all files of catalog to a new destination, unzipping if needed and returning a new catalog. (:pull:`431`).
+* Convenience functions ``xs.io.zip_directory`` and ``xs.io.unzip_directory`` (for zarrs). (:pull:`431`).
+* New argument ``compute_indicators``: ``rechunk_input`` to rechunk the inputs to resample-appropriate chunks before calling xclim. (:pull:`431`).
+* New ``xs.indicators.get_indicator_outputs`` to retrieve what variable name(s) and frequency to expect from an xclim indicator. (:pull:`431`).
+* `xscen` now supports launches tests from `pytest` with the `--numprocesses` option. See the `pytest-xdist documentation <https://pytest-xdist.readthedocs.io/en/stable/>`_ for more information. (:pull:`464`).
+* Conservative regridding now supports oblique mercator projections. (:pull:`467`).
+* The automatic name for the weight file in ``regrid_dataset`` is now more explicit to avoid errors, but now requires `cat:id` and `cat:domain` arguments for both the source and target datasets. (:pull:`467`).
 
 Bug fixes
 ^^^^^^^^^
 * Fixed bug with reusing weights. (:issue:`411`, :pull:`414`).
 * Fixed bug in `update_from_ds` when "time" is a coordinate, but not a dimension. (:pull: `417`).
 * Avoid modification of mutable arguments in ``search_data_catalogs`` (:pull:`413`).
+* ``ensure_correct_time`` now correctly handles cases where timesteps are missing. (:pull:`440`).
+* If using the argument `tile_buffer` with a `shape` method in ``spatial.subset``, the shapefile will now be reprojected to a WGS84 grid before the buffer is applied. (:pull:`440`).
+* ``maybe_unstack`` now works if the dimension name is not the default. (:pull:`450`).
+* ``unstack_fill_nan`` now works if given a dictionary that contains both dimensions and coordinates. (:pull:`450`).
+* ``clean_up`` no longer modifies the original dataset. (:pull:`450`).
+* ``unstack_dates`` now works correctly for yearly datasets when `winter_starts_year=True`, as well as multi-year datasets. (:pull:`450`).
+* Fix ``xs.catalog.concat_data_catalogs`` for catalogs that have not been search yet. (:pull:`431`).
+* Fix indicator computation using ``freq=2Q*`` by assuming this means a semiannual frequency anchored at the given month (pandas assumes 2 quarter steps, any of them anchored at the given month). (:pull:`431`).
+* ``create_bounds_rotated_pole`` now uses the default value if the dataset has no `north_pole_grid_longitude` attribute, instead of crashing. (:pull:`455`).
+* Rewrote the global tas data file with latest HDF5/h5py to avoid errors when using h5py 3.11 and hdf5 1.14.2. (:pull:`1861`).
+* Remove reference of deprecated xclim functions (``convert_calendar``, ``get_calendar``) and adapt the code for supporting xclim 0.52.2 and its subsequent development version. (:pull:`465`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* `convert_calendar` in ``clean_up`` now uses `xarray` instead of `xclim`. Keywords aren't compatible between the two, but given that `xclim` will abandon its function, no backwards compatibility was sought. (:pull:`450`).
+* `attrs_to_remove` and `remove_all_attrs_except` in ``clean_up`` now use real regex. It should not be too breaking since a `fullmatch()` is used, but `*` is now `.*`. (:pull:`450`).
+* Python 3.9 is no longer supported. (:pull:`456`).
+* Functions and arguments that were deprecated in `xscen` v0.8.0 or earlier have been removed. (:pull:`461`).
+* `pytest-xdist` is now a development dependency. (:pull:`464`).
+* ``xs.regrid.create_bounds_rotated_pole`` has been renamed to ``xs.regrid.create_bounds_gridmapping``. (:pull:`467`).
+* The `weights_location` argument in ``regrid_dataset`` is no longer positional. (:pull:`467`).
+* The ``xs.regrid.create_mask`` function now requires explicit arguments instead of a dictionary. (:pull:`467`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
+* ``DataCatalog.to_dataset`` can now accept a ``preprocess`` argument even if ``create_ensemble_on`` is given. The user assumes calendar handling. (:pull:`431`).
 * Include domain in `weight_location` in ``regrid_dataset``. (:pull:`414`).
 * Added pins to `xarray`, `xclim`, `h5py`, and `netcdf4`. (:pull:`414`).
 * Add ``.zip`` and ``.zarr.zip`` as possible file extensions for Zarr datasets. (:pull:`426`).
 * Explicitly assign coords of multiindex in `xs.unstack_fill_nan`. (:pull:`427`).
+* French translations are compiled offline. A new check ensures no PR are merged with missing messages. (:issue:`342`, :pull:`443`).
+* Continued work to add tests. (:pull:`450`).
+* Updated the cookiecutter template via `cruft`: (:pull:`452`)
+    * GitHub Workflows that use rely on `PyPI`-based dependencies now use commit hashes.
+    * `Dependabot` will now group updates by type.
+    * Dependencies have been updated and synchronized.
+    * Contributor guidance documentation has been adjusted.
+    * `numpydoc-validate` has been added to the linting tools.
+    * Linting checks are more reliant on `ruff` suggestions and stricter.
+    * `flake8-alphabetize` has been replaced by `ruff`.
+    * License information has been updated in the library top-level `__init__.py`.
+* Docstrings have been adjusted to meet the `numpydoc` standard. (:pull:`452`).
+
+CI changes
+^^^^^^^^^^
+* The `bump-version.yml` workflow now uses the Ouranosinc GitHub Helper Bot to sign bump version commits. (:pull:`462`).
 
 v0.9.1 (2024-06-04)
 -------------------

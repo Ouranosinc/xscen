@@ -1,13 +1,12 @@
 """Functions to train and adjust a dataset using a bias-adjustment algorithm."""
 
+import ast
 import logging
 from copy import deepcopy
-from typing import Optional, Union
 
 import xarray as xr
 import xclim as xc
 from xclim import sdba
-from xclim.core.calendar import get_calendar
 
 from .catutils import parse_from_ds
 from .config import parse_config
@@ -99,17 +98,17 @@ def _harmonize_calendars(
 def train(
     dref: xr.Dataset,
     dhist: xr.Dataset,
-    var: Union[str, list[str]],
+    var: str | list[str],
     period: list[str],
     *,
     method: str = "DetrendedQuantileMapping",
-    group: Optional[Union[sdba.Grouper, str, dict]] = None,
-    xclim_train_args: Optional[dict] = None,
+    group: sdba.Grouper | str | dict | None = None,
+    xclim_train_args: dict | None = None,
     maximal_calendar: str = "noleap",
-    adapt_freq: Optional[dict] = None,
-    jitter_under: Optional[dict] = None,
-    jitter_over: Optional[dict] = None,
-    align_on: Optional[str] = "year",
+    adapt_freq: dict | None = None,
+    jitter_under: dict | None = None,
+    jitter_over: dict | None = None,
+    align_on: str | None = "year",
 ) -> xr.Dataset:
     """
     Train a bias-adjustment.
@@ -177,7 +176,6 @@ def train(
     hist = hist.sel(time=slice(period[0], period[1]))
     ref = ref.sel(time=slice(period[0], period[1]))
 
-    #  convert calendar if necessary
     hist, ref = _harmonize_calendars(
         hist, ref, maximal_calendar=maximal_calendar, align_on=align_on
     )
@@ -224,13 +222,13 @@ def train(
 def adjust(
     dtrain: xr.Dataset | None,
     dsim: xr.Dataset,
-    periods: Union[list[str], list[list[str]]],
+    periods: list[str] | list[list[str]],
     *,
-    xclim_adjust_args: Optional[dict] = None,
+    xclim_adjust_args: dict | None = None,
     to_level: str = "biasadjusted",
-    bias_adjust_institution: Optional[str] = None,
-    bias_adjust_project: Optional[str] = None,
-    align_on: Optional[str] = "year",
+    bias_adjust_institution: str | None = None,
+    bias_adjust_project: str | None = None,
+    align_on: str | None = "year",
     method: str | None = None,
     maximal_calendar: str = "noleap",
 ) -> xr.Dataset:
@@ -255,7 +253,7 @@ def adjust(
     bias_adjust_project : str, optional
       The project to assign to the output.
     align_on: str, optional
-      `align_on` argument for the fonction `xr.Dataset.convert_calendar`.
+      `align_on` argument for the function `xr.Dataset.convert_calendar`.
     method : str, optional
       Adjustment class. Pass this argument for a method that has no training, and thus no `dtrain` (which should be set to `None`).
       If this is set to `None`, then a non-null `dtrain` is expected.
@@ -284,10 +282,13 @@ def adjust(
 
     xclim_adjust_args = deepcopy(xclim_adjust_args)
     xclim_adjust_args = xclim_adjust_args or {}
-    # evaluate the dict that was stored as a string
     if dtrain is not None:
         if not isinstance(dtrain.attrs["train_params"], dict):
-            dtrain.attrs["train_params"] = eval(dtrain.attrs["train_params"])
+            # evaluate the dict that was stored as a string
+            # FIXME: eval is bad. There has to be a better way!™
+            dtrain.attrs["train_params"] = ast.literal_eval(
+                dtrain.attrs["train_params"]
+            )
 
         var = dtrain.attrs["train_params"]["var"]
         if len(var) != 1:
@@ -297,6 +298,7 @@ def adjust(
         else:
             var = var[0]
             sim = dsim[var]
+
         (sim,) = _harmonize_calendars(
             sim,
             maximal_calendar=dtrain.attrs["train_params"]["maximal_calendar"],

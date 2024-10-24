@@ -14,21 +14,8 @@ except ImportError:
     xe = None
 
 
-class TestClimatologicalMean:
-    def test_future_warning(self):
-        ds = timeseries(
-            np.tile(np.arange(1, 13), 3),
-            variable="tas",
-            start="2001-01-01",
-            freq="MS",
-            as_dataset=True,
-        )
-        with pytest.warns(FutureWarning):
-            xs.climatological_mean(ds)
-
-
 class TestComputeDeltas:
-    ds = xs.climatological_mean(
+    ds = xs.climatological_op(
         timeseries(
             np.repeat(np.arange(1, 5), 30).astype(float),
             variable="tas",
@@ -36,8 +23,10 @@ class TestComputeDeltas:
             freq="YS",
             as_dataset=True,
         ),
+        op="mean",
         window=30,
-        interval=30,
+        stride=30,
+        rename_variables=False,
     )
 
     @pytest.mark.parametrize(
@@ -108,7 +97,7 @@ class TestComputeDeltas:
     def test_freqs(self, xrfreq):
         o = 12 if xrfreq == "MS" else 4 if xrfreq == "QS" else 1
 
-        ds = xs.climatological_mean(
+        ds = xs.climatological_op(
             timeseries(
                 np.repeat(np.arange(1, 5), 30 * o).astype(float),
                 variable="tas",
@@ -116,8 +105,10 @@ class TestComputeDeltas:
                 freq=xrfreq,
                 as_dataset=True,
             ),
+            op="mean",
             window=30,
-            interval=30,
+            stride=30,
+            rename_variables=False,
         )
 
         out = xs.compute_deltas(
@@ -376,12 +367,6 @@ class TestProduceHorizon:
         assert out.attrs["cat:processing_level"] == "warminglevel+1Cvs1851-1901"
 
     def test_errors(self):
-        # FutureWarning
-        with pytest.warns(FutureWarning, match="The 'period' argument is deprecated"):
-            xs.produce_horizon(
-                self.ds, indicators=self.yaml_file, period=["1982", "1988"]
-            )
-
         # Bad input
         with pytest.raises(
             ValueError, match="Could not understand the format of warminglevels"
