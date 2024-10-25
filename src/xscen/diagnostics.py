@@ -7,8 +7,6 @@ from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
-from typing import Union
-
 
 import numpy as np
 import xarray as xr
@@ -332,7 +330,7 @@ def properties_and_measures(  # noqa: C901
     ----------
     ds : xr.Dataset
         Input dataset.
-    properties : Union[str, os.PathLike, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType]
+    properties : str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType
         Path to a YAML file that instructs on how to calculate properties.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
         tuples (indicator name, indicator) as returned by `iter_indicators()`.
@@ -535,7 +533,7 @@ def measures_heatmap(
 
 
 def measures_improvement(
-    meas_datasets: Union[list[xr.Dataset], dict],
+    meas_datasets: list[xr.Dataset] | dict,
     dim: str | Sequence[str] | None = None,
     to_level: str = "diag-improved",
 ) -> xr.Dataset:
@@ -544,7 +542,7 @@ def measures_improvement(
 
     Parameters
     ----------
-    meas_datasets: list of xr.Dataset or dict
+    meas_datasets: list[xr.Dataset] | dict
         List of 2 datasets: Initial dataset of measures and final (improved) dataset of measures.
         Both datasets must have the same variables.
         It is also possible to pass a dictionary where the values are the datasets and the key are not used.
