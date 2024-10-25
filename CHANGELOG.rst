@@ -11,14 +11,17 @@ New features and enhancements
 * ``xs.io.make_toc`` now includes the global attributes of the dataset after the information about the variables. (:pull:`473`).
 * New function ``xs.get_warming_level_from_period`` to get the warming level associated with a given time horizon. (:pull:`474`).
 * Added ability to skip whole folders to ``xs.parse_directory`` with argument ``skip_dirs``. (:pull:`478`, :pull:`479`).
+* The argument `indicators` in ``xs.produce_horizon`` is now optional. Added an argument `op` to control the climatological operation. (:pull:`483`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * ``xs.get_warming_level`` has been renamed to ``xs.get_period_from_warming_level``. Its argument `return_horizon` was reversed and renamed `return_central_year` (:pull:`474`).
+* The argument `indicators` in ``xs.produce_horizon`` is no longer positional. (:pull:`483`).
 
 Bug fixes
 ^^^^^^^^^
 * ``xs.io.save_to_table`` now correctly handles the case where the input is a `DataArray` or a `Dataset` with a single variable. (:pull:`473`).
+* Fixed a bug in ``xs.compute_indicators`` where the `cat:variable` attribute was not correctly set. (:pull:`483`).
 
 v0.10.0 (2024-09-30)
 --------------------
