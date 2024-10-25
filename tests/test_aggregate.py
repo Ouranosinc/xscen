@@ -338,6 +338,39 @@ class TestProduceHorizon:
         assert len(out.horizon) == 1
         np.testing.assert_array_equal(out.horizon, ["1982-1988"])
 
+    def test_op(self):
+        ds = self.ds.copy()
+        ds.tas.loc["1995-01-01":"1995-12-31"] = 2
+        out = xs.produce_horizon(
+            ds, indicators=self.yaml_file, periods=[["1995", "2007"]]
+        )
+        np.testing.assert_array_almost_equal(out["tg_min"], [1.077])
+        out2 = xs.produce_horizon(
+            ds, indicators=self.yaml_file, periods=[["1995", "2007"]], op="max"
+        )
+        np.testing.assert_array_almost_equal(out2["tg_min"], [2])
+
+    def test_precomputed(self):
+        ds = timeseries(
+            np.arange(30),
+            variable="tas",
+            start="1981-01-01",
+            freq="YS-JAN",
+            as_dataset=True,
+        )
+        ds = ds.rename({"tas": "tg_min"})
+        ds.attrs["cat:source"] = "CanESM5"
+        ds.attrs["cat:experiment"] = "ssp585"
+        ds.attrs["cat:member"] = "r1i1p1f1"
+        ds.attrs["cat:mip_era"] = "CMIP6"
+
+        out = xs.produce_horizon(ds, periods=[["1981", "1985"], ["1991", "1995"]])
+        assert len(out.horizon) == 2
+        assert "time" not in out.dims
+        np.testing.assert_array_almost_equal(
+            out["tg_min"], [np.mean(np.arange(5)), np.mean(np.arange(10, 15))]
+        )
+
     def test_warminglevel_in_ds(self):
         ds = self.ds.copy().expand_dims({"warminglevel": ["+1Cvs1850-1900"]})
         out = xs.produce_horizon(

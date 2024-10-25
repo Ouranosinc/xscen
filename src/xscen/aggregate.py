@@ -1054,7 +1054,9 @@ def produce_horizon(  # noqa: C901
                 if "warminglevel" in ds_mean.coords:
                     wl = np.array([ds_mean["warminglevel"].item()])
                     wl_attrs = ds_mean["warminglevel"].attrs
-                    ds_mean = ds_mean.squeeze("warminglevel").drop_vars("warminglevel")
+                    if "warminglevel" in ds_mean.dims:
+                        ds_mean = ds_mean.squeeze("warminglevel")
+                    ds_mean = ds_mean.drop_vars("warminglevel")
                     ds_mean["horizon"] = wl
                     ds_mean["horizon"].attrs.update(wl_attrs)
 
@@ -1072,7 +1074,7 @@ def produce_horizon(  # noqa: C901
                 [
                     all(
                         [
-                            out[0][v].attrs[attr] == out[i][v].attrs[attr]
+                            out[0][v].attrs.get(attr) == out[i][v].attrs.get(attr)
                             for i in range(1, len(out))
                         ]
                     )
