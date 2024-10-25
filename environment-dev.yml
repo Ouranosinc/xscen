@@ -17,6 +17,7 @@ dependencies:
   - scipy >=1.9.0
   - statsmodels
   - xarray >=2023.11.0
+  - xclim >= 0.53
   - yamale
   # Dev tools and testing
   - netcdf4
