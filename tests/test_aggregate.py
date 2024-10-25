@@ -344,7 +344,7 @@ class TestProduceHorizon:
         out = xs.produce_horizon(
             ds, indicators=self.yaml_file, periods=[["1995", "2007"]]
         )
-        np.testing.assert_array_almost_equal(out["tg_min"], [1.077])
+        np.testing.assert_array_almost_equal(out["tg_min"], [14 / 13])
         out2 = xs.produce_horizon(
             ds, indicators=self.yaml_file, periods=[["1995", "2007"]], op="max"
         )
