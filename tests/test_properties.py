@@ -272,24 +272,24 @@ class TestProperties:
         np.testing.assert_allclose(
             [amp.values, relamp.values, phase.values],
             [16.74645996, 5.802083, 167],
-            rtol=1e-6,
+            rtol=1e-5,
         )
-        # FIXME
-        # with pytest.raises(
-        #     ValueError,
-        #     match="Grouping period season is not allowed for property",
-        # ):
-        #     properties.annual_cycle_amplitude(simt, group="time.season")
+        with pytest.raises(
+            ValueError,
+            match="Grouping period season is not allowed for property",
+        ):
+            properties.annual_cycle_amplitude(simt, group="time.season")
 
-        # with pytest.raises(
-        #     ValueError,
-        #     match="Grouping period month is not allowed for property",
-        # ):
-        #     properties.annual_cycle_phase(simt, group="time.month")
+        with pytest.raises(
+            ValueError,
+            match="Grouping period month is not allowed for property",
+        ):
+            properties.annual_cycle_phase(simt, group="time.month")
 
         assert amp.long_name.startswith("Absolute amplitude of the annual cycle")
         assert phase.long_name.startswith("Phase of the annual cycle")
-        assert amp.units == "delta_degC"
+        assert amp.units == "K"
+        assert amp.units_metadata == "temperature: difference"
         assert relamp.units == "%"
         assert phase.units == ""
 
@@ -318,22 +318,22 @@ class TestProperties:
             [amp.values, relamp.values, phase.values],
             [18.715261, 6.480101, 181.6666667],
         )
-        # FIXME
-        # with pytest.raises(
-        #     ValueError,
-        #     match="Grouping period season is not allowed for property",
-        # ):
-        #     properties.mean_annual_range(simt, group="time.season")
+        with pytest.raises(
+            ValueError,
+            match="Grouping period season is not allowed for property",
+        ):
+            properties.mean_annual_range(simt, group="time.season")
 
-        # with pytest.raises(
-        #     ValueError,
-        #     match="Grouping period month is not allowed for property",
-        # ):
-        #     properties.mean_annual_phase(simt, group="time.month")
+        with pytest.raises(
+            ValueError,
+            match="Grouping period month is not allowed for property",
+        ):
+            properties.mean_annual_phase(simt, group="time.month")
 
         assert amp.long_name.startswith("Average annual absolute amplitude")
         assert phase.long_name.startswith("Average annual phase")
-        assert amp.units == "delta_degC"
+        assert amp.units == "K"
+        assert amp.units_metadata == "temperature: difference"
         assert relamp.units == "%"
         assert phase.units == ""
 

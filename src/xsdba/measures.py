@@ -18,7 +18,7 @@ from xclim.core.indicator import Indicator, base_registry
 
 from .base import Grouper
 from .typing import InputKind
-from .units import convert_units_to, ensure_delta
+from .units import convert_units_to, pint2cfattrs, units2pint
 from .utils import _pairwise_spearman
 
 
@@ -128,9 +128,9 @@ class StatisticalPropertyMeasure(Indicator):
         """Squeeze `group` dim if needed."""
         outs = super()._postprocess(outs, das, params)
 
-        for i in range(len(outs)):
-            if "group" in outs[i].dims:
-                outs[i] = outs[i].squeeze("group", drop=True)
+        for ii, out in enumerate(outs):
+            if "group" in out.dims:
+                outs[ii] = out.squeeze("group", drop=True)
 
         return outs
 
@@ -157,8 +157,7 @@ def _bias(sim: xr.DataArray, ref: xr.DataArray) -> xr.DataArray:
       Absolute bias.
     """
     out = sim - ref
-
-    out.attrs["units"] = ensure_delta(ref.attrs["units"])
+    out.attrs.update(pint2cfattrs(units2pint(ref.attrs["units"]), is_difference=True))
     return out
 
 
@@ -281,7 +280,7 @@ def _rmse(
         input_core_dims=[["time"], ["time"]],
         dask="parallelized",
     )
-    out = out.assign_attrs(units=ensure_delta(ref.units))
+    out = out.assign_attrs(pint2cfattrs(units2pint(ref.units), is_difference=True))
     return out
 
 
@@ -328,7 +327,7 @@ def _mae(
         input_core_dims=[["time"], ["time"]],
         dask="parallelized",
     )
-    out = out.assign_attrs(units=ensure_delta(ref.units))
+    out = out.assign_attrs(pint2cfattrs(units2pint(ref.units), is_difference=True))
     return out
 
 

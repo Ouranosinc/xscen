@@ -84,15 +84,21 @@ class TestUnitConversion:
         ("", "sum", "count", 365, "d"),
         ("", "sum", "count", 365, "d"),
         ("kg m-2", "var", "var", 0, "kg2 m-4"),
-        ("°C", "argmax", "doymax", 0, ("", "1")),  # dependent on numpy/pint version
+        (
+            "°C",
+            "argmax",
+            "doymax",
+            0,
+            "1",
+        ),
         (
             "°C",
             "sum",
             "integral",
             365,
-            ("K d", "d K"),
+            ("degC d", "d degC"),
         ),  # dependent on numpy/pint version
-        ("°F", "sum", "integral", 365, "d °R"),  # not sure why the order is different
+        ("°F", "sum", "integral", 365, "d degF"),  # not sure why the order is different
     ],
 )
 def test_to_agg_units(in_u, opfunc, op, exp, exp_u):
@@ -102,15 +108,14 @@ def test_to_agg_units(in_u, opfunc, op, exp, exp_u):
         coords={"time": xr.cftime_range("1993-01-01", periods=365, freq="D")},
         attrs={"units": in_u},
     )
+    if units(in_u).dimensionality == "[temperature]":
+        da.attrs["units_metadata"] = "temperature: difference"
 
+    # FIXME: This is emitting warnings from deprecated DataArray.argmax() usage.
     out = to_agg_units(getattr(da, opfunc)(), da, op)
     np.testing.assert_allclose(out, exp)
-
     if isinstance(exp_u, tuple):
-        if Version(__cfxr_version__) < Version("0.9.3"):
-            assert out.attrs["units"] == exp_u[0]
-        else:
-            assert out.attrs["units"] == exp_u[1]
+        assert out.attrs["units"] in exp_u
     else:
         assert out.attrs["units"] == exp_u
 

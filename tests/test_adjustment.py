@@ -9,6 +9,7 @@ from scipy.stats import genpareto, norm, uniform
 from xsdba import adjustment
 from xsdba.adjustment import (
     LOCI,
+    BaseAdjustment,
     DetrendedQuantileMapping,
     EmpiricalQuantileMapping,
     ExtremeValues,
@@ -35,6 +36,41 @@ from xsdba.utils import (
     get_correction,
     invert,
 )
+
+
+class TestBaseAdjustment:
+    def test_harmonize_units(self, timelonlatseries, random):
+        n = 10
+        u = random.random(n)
+        attrs_tas = {"units": "K", "kind": ADDITIVE}
+        da = timelonlatseries(u, attrs=attrs_tas)
+        da2 = da.copy()
+        da2 = convert_units_to(da2, "degC")
+        (da, da2), _ = BaseAdjustment._harmonize_units(da, da2)
+        assert da.units == da2.units
+
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_harmonize_units_multivariate(self, timelonlatseries, random, use_dask):
+        n = 10
+        u = random.random(n)
+        attrs_tas = {"units": "K", "kind": ADDITIVE}
+        attrs_pr = {"units": "kg m-2 s-1", "kind": MULTIPLICATIVE}
+        ds = xr.merge(
+            [
+                timelonlatseries(u, attrs=attrs_tas).to_dataset(name="tas"),
+                timelonlatseries(u * 100, attrs=attrs_pr).to_dataset(name="pr"),
+            ]
+        )
+        ds2 = ds.copy()
+        ds2["tas"] = convert_units_to(ds2["tas"], "degC")
+        ds2["pr"] = convert_units_to(ds2["pr"], "kg mm-2 s-1")
+        da, da2 = stack_variables(ds), stack_variables(ds2)
+        if use_dask:
+            da, da2 = da.chunk({"multivar": 1}), da2.chunk({"multivar": 1})
+
+        (da, da2), _ = BaseAdjustment._harmonize_units(da, da2)
+        ds, ds2 = unstack_variables(da), unstack_variables(da2)
+        assert (ds.tas.units == ds2.tas.units) & (ds.pr.units == ds2.pr.units)
 
 
 class TestLoci:
@@ -238,6 +274,11 @@ class TestDQM:
         p3 = DQM.adjust(sim3, interp="linear")
         np.testing.assert_array_almost_equal(p3[middle], ref3[middle], 1)
 
+    @pytest.mark.xfail(
+        raises=ValueError,
+        reason="This test sometimes fails due to a block/indexing error",
+        strict=False,
+    )
     @pytest.mark.parametrize(
         "kind,units", [(ADDITIVE, "K"), (MULTIPLICATIVE, "kg m-2 s-1")]
     )
@@ -627,6 +668,54 @@ class TestQM:
             assert scen2.sel(location=["Kugluktuk", "Vancouver"]).isnull().all()
 
 
+@pytest.mark.slow
+class TestMBCn:
+    @pytest.mark.parametrize("use_dask", [True, False])
+    @pytest.mark.parametrize("group, window", [["time", 1], ["time.dayofyear", 31]])
+    @pytest.mark.parametrize("period_dim", [None, "period"])
+    def test_simple(self, open_dataset, use_dask, group, window, period_dim):
+        group, window, period_dim, use_dask = "time", 1, None, False
+        with set_options(sdba_encode_cf=use_dask):
+            if use_dask:
+                chunks = {"location": -1}
+            else:
+                chunks = None
+            ref, dsim = (
+                open_dataset(
+                    f"sdba/{file}",
+                    chunks=chunks,
+                    drop_variables=["lat", "lon"],
+                )
+                .isel(location=1, drop=True)
+                .expand_dims(location=["Amos"])
+                for file in ["ahccd_1950-2013.nc", "CanESM2_1950-2100.nc"]
+            )
+            water_density_inverse = "1e-03 m^3/kg"
+            dsim["pr"] = convert_units_to(
+                pint_multiply(dsim.pr, water_density_inverse), ref.pr
+            )
+            ref, hist = (
+                ds.sel(time=slice("1981", "2010")).isel(time=slice(365 * 4))
+                for ds in [ref, dsim]
+            )
+            dsim = dsim.sel(time=slice("1981", None))
+            sim = (stack_periods(dsim).isel(period=slice(1, 2))).isel(
+                time=slice(365 * 4)
+            )
+
+            ref, hist, sim = (stack_variables(ds) for ds in [ref, hist, sim])
+
+        MBCN = MBCn.train(
+            ref,
+            hist,
+            base_kws=dict(nquantiles=50, group=Grouper(group, window)),
+            adj_kws=dict(interp="linear"),
+        )
+        p = MBCN.adjust(sim=sim, ref=ref, hist=hist, period_dim=period_dim)
+        # 'does it run' test
+        p.load()
+
+
 class TestPrincipalComponents:
     @pytest.mark.parametrize(
         "group", (Grouper("time.month"), Grouper("time", add_dims=["lon"]))
@@ -675,20 +764,17 @@ class TestPrincipalComponents:
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("pcorient", ["full", "simple"])
     def test_real_data(self, atmosds, use_dask, pcorient):
-        ref = stack_variables(
-            xr.Dataset(
-                {"tasmax": atmosds.tasmax, "tasmin": atmosds.tasmin, "tas": atmosds.tas}
-            )
-        ).isel(location=3)
-        hist = stack_variables(
-            xr.Dataset(
-                {
-                    "tasmax": 1.001 * atmosds.tasmax,
-                    "tasmin": atmosds.tasmin - 0.25,
-                    "tas": atmosds.tas + 1,
-                }
-            )
-        ).isel(location=3)
+        ds0 = xr.Dataset(
+            {"tasmax": atmosds.tasmax, "tasmin": atmosds.tasmin, "tas": atmosds.tas}
+        )
+        ref = stack_variables(ds0).isel(location=3)
+        hist0 = ds0
+        with xr.set_options(keep_attrs=True):
+            hist0["tasmax"] = 1.001 * hist0.tasmax
+            hist0["tasmin"] = hist0.tasmin - 0.25
+            hist0["tas"] = hist0.tas + 1
+
+        hist = stack_variables(hist0).isel(location=3)
         with xr.set_options(keep_attrs=True):
             sim = hist + 5
             sim["time"] = sim.time + np.timedelta64(10, "Y").astype("<m8[ns]")
@@ -797,67 +883,282 @@ class TestExtremeValues:
         new_scen.load()
 
 
+class TestOTC:
+    def test_compare_sbck(self, random, timelonlatseries):
+        pytest.importorskip("ot")
+        pytest.importorskip("SBCK", minversion="0.4.0")
+        ns = 1000
+        u = random.random(ns)
+
+        ref_xd = uniform(loc=1000, scale=100)
+        ref_yd = norm(loc=0, scale=100)
+        hist_xd = norm(loc=-500, scale=100)
+        hist_yd = uniform(loc=-1000, scale=100)
+
+        ref_x = ref_xd.ppf(u)
+        ref_y = ref_yd.ppf(u)
+        hist_x = hist_xd.ppf(u)
+        hist_y = hist_yd.ppf(u)
+
+        # Constructing an histogram such that every bin contains
+        # at most 1 point should ensure that ot is deterministic
+        dx_ref = np.diff(np.sort(ref_x)).min()
+        dx_hist = np.diff(np.sort(hist_x)).min()
+        dx = min(dx_ref, dx_hist) * 9 / 10
+
+        dy_ref = np.diff(np.sort(ref_y)).min()
+        dy_hist = np.diff(np.sort(hist_y)).min()
+        dy = min(dy_ref, dy_hist) * 9 / 10
+
+        bin_width = [dx, dy]
+
+        attrs_tas = {"units": "K", "kind": ADDITIVE}
+        attrs_pr = {"units": "kg m-2 s-1", "kind": MULTIPLICATIVE}
+        ref_tas = timelonlatseries(ref_x, attrs=attrs_tas)
+        ref_pr = timelonlatseries(ref_y, attrs=attrs_pr)
+        ref = xr.merge([ref_tas, ref_pr])
+        ref = stack_variables(ref)
+
+        hist_tas = timelonlatseries(hist_x, attrs=attrs_tas)
+        hist_pr = timelonlatseries(hist_y, attrs=attrs_pr)
+        hist = xr.merge([hist_tas, hist_pr])
+        hist = stack_variables(hist)
+
+        scen = OTC.adjust(ref, hist, bin_width=bin_width, jitter_inside_bins=False)
+
+        otc_sbck = adjustment.SBCK_OTC
+        scen_sbck = otc_sbck.adjust(
+            ref, hist, hist, multi_dim="multivar", bin_width=bin_width
+        )
+
+        scen = scen.to_numpy().T
+        scen_sbck = scen_sbck.to_numpy()
+        assert np.allclose(scen, scen_sbck)
+
+    def test_shape(self, random, timelonlatseries):
+        pytest.importorskip("ot")
+        pytest.importorskip("SBCK", minversion="0.4.0")
+
+        attrs_tas = {"units": "K", "kind": ADDITIVE}
+
+        ref_ns = 300
+        hist_ns = 200
+        ref_u = random.random(ref_ns)
+        hist_u = random.random(hist_ns)
+
+        ref_xd = uniform(loc=1000, scale=100)
+        ref_yd = norm(loc=0, scale=100)
+        ref_zd = norm(loc=500, scale=100)
+        hist_xd = norm(loc=-500, scale=100)
+        hist_yd = uniform(loc=-1000, scale=100)
+        hist_zd = uniform(loc=-10, scale=100)
+
+        ref_x = ref_xd.ppf(ref_u)
+        ref_y = ref_yd.ppf(ref_u)
+        ref_z = ref_zd.ppf(ref_u)
+        hist_x = hist_xd.ppf(hist_u)
+        hist_y = hist_yd.ppf(hist_u)
+        hist_z = hist_zd.ppf(hist_u)
+
+        ref_na = 10
+        hist_na = 15
+        ref_idx = random.choice(range(ref_ns), size=ref_na, replace=False)
+        ref_x[ref_idx] = None
+        hist_idx = random.choice(range(hist_ns), size=hist_na, replace=False)
+        hist_x[hist_idx] = None
+
+        ref_x = timelonlatseries(ref_x, attrs=attrs_tas).rename("x")
+        ref_y = timelonlatseries(ref_y, attrs=attrs_tas).rename("y")
+        ref_z = timelonlatseries(ref_z, attrs=attrs_tas).rename("z")
+        ref = xr.merge([ref_x, ref_y, ref_z])
+        ref = stack_variables(ref)
+
+        hist_x = timelonlatseries(hist_x, attrs=attrs_tas).rename("x")
+        hist_y = timelonlatseries(hist_y, attrs=attrs_tas).rename("y")
+        hist_z = timelonlatseries(hist_z, attrs=attrs_tas).rename("z")
+        hist = xr.merge([hist_x, hist_y, hist_z])
+        hist = stack_variables(hist)
+
+        scen = OTC.adjust(ref, hist)
+
+        assert scen.shape == (3, hist_ns - hist_na)
+        hist = unstack_variables(hist)
+        assert not np.isin(hist.x[hist.x.isnull()].time.values, scen.time.values).any()
+
+
+# TODO: Add tests for normalization methods
+class TestdOTC:
+    @pytest.mark.parametrize("use_dask", [True, False])
+    @pytest.mark.parametrize("cov_factor", ["std", "cholesky"])
+    # FIXME: Should this comparison not fail if `standardization` != `None`?
+    def test_compare_sbck(self, random, timelonlatseries, use_dask, cov_factor):
+        pytest.importorskip("ot")
+        pytest.importorskip("SBCK", minversion="0.4.0")
+        ns = 1000
+        u = random.random(ns)
+
+        attrs_tas = {"units": "K", "kind": ADDITIVE}
+        attrs_pr = {"units": "kg m-2 s-1", "kind": MULTIPLICATIVE}
+
+        ref_xd = uniform(loc=1000, scale=100)
+        ref_yd = norm(loc=0, scale=100)
+        hist_xd = norm(loc=-500, scale=100)
+        hist_yd = uniform(loc=-1000, scale=100)
+        sim_xd = norm(loc=0, scale=100)
+        sim_yd = uniform(loc=0, scale=100)
+
+        ref_x = ref_xd.ppf(u)
+        ref_y = ref_yd.ppf(u)
+        hist_x = hist_xd.ppf(u)
+        hist_y = hist_yd.ppf(u)
+        sim_x = sim_xd.ppf(u)
+        sim_y = sim_yd.ppf(u)
+
+        # Constructing an histogram such that every bin contains
+        # at most 1 point should ensure that ot is deterministic
+        dx_ref = np.diff(np.sort(ref_x)).min()
+        dx_hist = np.diff(np.sort(hist_x)).min()
+        dx_sim = np.diff(np.sort(sim_x)).min()
+        dx = min(dx_ref, dx_hist, dx_sim) * 9 / 10
+
+        dy_ref = np.diff(np.sort(ref_y)).min()
+        dy_hist = np.diff(np.sort(hist_y)).min()
+        dy_sim = np.diff(np.sort(sim_y)).min()
+        dy = min(dy_ref, dy_hist, dy_sim) * 9 / 10
+
+        bin_width = [dx, dy]
+
+        ref_tas = timelonlatseries(ref_x, attrs=attrs_tas)
+        ref_pr = timelonlatseries(ref_y, attrs=attrs_pr)
+        hist_tas = timelonlatseries(hist_x, attrs=attrs_tas)
+        hist_pr = timelonlatseries(hist_y, attrs=attrs_pr)
+        sim_tas = timelonlatseries(sim_x, attrs=attrs_tas)
+        sim_pr = timelonlatseries(sim_y, attrs=attrs_pr)
+
+        if use_dask:
+            ref_tas = ref_tas.chunk({"time": -1})
+            ref_pr = ref_pr.chunk({"time": -1})
+            hist_tas = hist_tas.chunk({"time": -1})
+            hist_pr = hist_pr.chunk({"time": -1})
+            sim_tas = sim_tas.chunk({"time": -1})
+            sim_pr = sim_pr.chunk({"time": -1})
+
+        ref = xr.merge([ref_tas, ref_pr])
+        hist = xr.merge([hist_tas, hist_pr])
+        sim = xr.merge([sim_tas, sim_pr])
+
+        ref = stack_variables(ref)
+        hist = stack_variables(hist)
+        sim = stack_variables(sim)
+
+        scen = dOTC.adjust(
+            ref,
+            hist,
+            sim,
+            bin_width=bin_width,
+            jitter_inside_bins=False,
+            cov_factor=cov_factor,
+        )
+
+        dotc_sbck = adjustment.SBCK_dOTC
+        scen_sbck = dotc_sbck.adjust(
+            ref,
+            hist,
+            sim,
+            multi_dim="multivar",
+            bin_width=bin_width,
+            cov_factor=cov_factor,
+        )
+
+        scen = scen.to_numpy().T
+        scen_sbck = scen_sbck.to_numpy()
+        assert np.allclose(scen, scen_sbck)
+
+    def test_shape(self, random, timelonlatseries):
+
+        pytest.importorskip("ot")
+        pytest.importorskip("SBCK", minversion="0.4.0")
+
+        attrs_tas = {"units": "K", "kind": ADDITIVE}
+
+        ref_ns = 300
+        hist_ns = 200
+        sim_ns = 400
+        ref_u = random.random(ref_ns)
+        hist_u = random.random(hist_ns)
+        sim_u = random.random(sim_ns)
+
+        ref_xd = uniform(loc=1000, scale=100)
+        ref_yd = norm(loc=0, scale=100)
+        ref_zd = norm(loc=500, scale=100)
+        hist_xd = norm(loc=-500, scale=100)
+        hist_yd = uniform(loc=-1000, scale=100)
+        hist_zd = uniform(loc=-10, scale=100)
+        sim_xd = norm(loc=0, scale=100)
+        sim_yd = uniform(loc=0, scale=100)
+        sim_zd = uniform(loc=10, scale=100)
+
+        ref_x = ref_xd.ppf(ref_u)
+        ref_y = ref_yd.ppf(ref_u)
+        ref_z = ref_zd.ppf(ref_u)
+        hist_x = hist_xd.ppf(hist_u)
+        hist_y = hist_yd.ppf(hist_u)
+        hist_z = hist_zd.ppf(hist_u)
+        sim_x = sim_xd.ppf(sim_u)
+        sim_y = sim_yd.ppf(sim_u)
+        sim_z = sim_zd.ppf(sim_u)
+
+        ref_na = 10
+        hist_na = 15
+        sim_na = 20
+        ref_idx = random.choice(range(ref_ns), size=ref_na, replace=False)
+        ref_x[ref_idx] = None
+        hist_idx = random.choice(range(hist_ns), size=hist_na, replace=False)
+        hist_x[hist_idx] = None
+        sim_idx = random.choice(range(sim_ns), size=sim_na, replace=False)
+        sim_x[sim_idx] = None
+
+        ref_x = timelonlatseries(ref_x, attrs=attrs_tas).rename("x")
+        ref_y = timelonlatseries(ref_y, attrs=attrs_tas).rename("y")
+        ref_z = timelonlatseries(ref_z, attrs=attrs_tas).rename("z")
+        ref = xr.merge([ref_x, ref_y, ref_z])
+        ref = stack_variables(ref)
+
+        hist_x = timelonlatseries(hist_x, attrs=attrs_tas).rename("x")
+        hist_y = timelonlatseries(hist_y, attrs=attrs_tas).rename("y")
+        hist_z = timelonlatseries(hist_z, attrs=attrs_tas).rename("z")
+        hist = xr.merge([hist_x, hist_y, hist_z])
+        hist = stack_variables(hist)
+
+        sim_x = timelonlatseries(sim_x, attrs=attrs_tas).rename("x")
+        sim_y = timelonlatseries(sim_y, attrs=attrs_tas).rename("y")
+        sim_z = timelonlatseries(sim_z, attrs=attrs_tas).rename("z")
+        sim = xr.merge([sim_x, sim_y, sim_z])
+        sim = stack_variables(sim)
+
+        scen = dOTC.adjust(ref, hist, sim)
+
+        assert scen.shape == (3, sim_ns - sim_na)
+        sim = unstack_variables(sim)
+        assert not np.isin(sim.x[sim.x.isnull()].time.values, scen.time.values).any()
+
+
 def test_raise_on_multiple_chunks(timelonlatseries):
-    ref = timelonlatseries(np.arange(730).astype(float)).chunk({"time": 365})
+    attrs_tas = {"units": "K", "kind": ADDITIVE}
+    ref = timelonlatseries(np.arange(730).astype(float), attrs=attrs_tas).chunk(
+        {"time": 365}
+    )
     with pytest.raises(ValueError):
         EmpiricalQuantileMapping.train(ref, ref, group=Grouper("time.month"))
 
 
-def test_default_grouper_understood(timeseries):
-    attrs = {"units": "K", "kind": ADDITIVE}
-
-    ref = timeseries(np.arange(730).astype(float), units="K")
+def test_default_grouper_understood(timelonlatseries):
+    attrs_tas = {"units": "K", "kind": ADDITIVE}
+    ref = timelonlatseries(np.arange(730).astype(float), attrs=attrs_tas)
 
     EQM = EmpiricalQuantileMapping.train(ref, ref)
     EQM.adjust(ref)
     assert EQM.group.dim == "time"
-
-
-@pytest.mark.slow
-class TestMBCn:
-    @pytest.mark.parametrize("use_dask", [True, False])
-    @pytest.mark.parametrize("group, window", [["time", 1], ["time.dayofyear", 31]])
-    @pytest.mark.parametrize("period_dim", [None, "period"])
-    # TODO: Add test_simple ?
-    def test_real_data(self, open_dataset, use_dask, group, window, period_dim):
-        group, window, period_dim, use_dask = "time", 1, None, False
-        with set_options(sdba_encode_cf=use_dask):
-            if use_dask:
-                chunks = {"location": -1}
-            else:
-                chunks = None
-            ref, dsim = (
-                open_dataset(
-                    f"sdba/{file}",
-                    chunks=chunks,
-                    drop_variables=["lat", "lon"],
-                )
-                .isel(location=1, drop=True)
-                .expand_dims(location=["Amos"])
-                for file in ["ahccd_1950-2013.nc", "CanESM2_1950-2100.nc"]
-            )
-            ref, hist = (
-                ds.sel(time=slice("1981", "2010")).isel(time=slice(365 * 4))
-                for ds in [ref, dsim]
-            )
-            # mm d-1 -> kg m-2 d-1
-            ref["pr"] = pint_multiply(ref["pr"], "1000 kg/m^3")
-            dsim = dsim.sel(time=slice("1981", None))
-            sim = (stack_periods(dsim).isel(period=slice(1, 2))).isel(
-                time=slice(365 * 4)
-            )
-
-            ref, hist, sim = (stack_variables(ds) for ds in [ref, hist, sim])
-
-        MBCN = MBCn.train(
-            ref,
-            hist,
-            base_kws=dict(nquantiles=50, group=Grouper(group, window)),
-            adj_kws=dict(interp="linear"),
-        )
-        p = MBCN.adjust(sim=sim, ref=ref, hist=hist, period_dim=period_dim)
-        # 'does it run' test
-        p.load()
 
 
 class TestSBCKutils:

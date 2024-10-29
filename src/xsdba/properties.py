@@ -23,7 +23,7 @@ from xclim.indices.stats import fit, parametric_quantile
 
 from xsdba.units import (
     convert_units_to,
-    ensure_delta,
+    pint2cfattrs,
     pint2str,
     to_agg_units,
     units2pint,
@@ -74,7 +74,9 @@ class StatisticalProperty(Indicator):
         return super()._ensure_correct_parameters(parameters)
 
     def _preprocess_and_checks(self, das, params):
-        """Check if group is allowed."""
+        """Perform parent's checks and also check if group is allowed."""
+        das, params = super()._preprocess_and_checks(das, params)
+
         # Convert grouping and check if allowed:
         if isinstance(params["group"], str):
             params["group"] = Grouper(params["group"])
@@ -93,9 +95,9 @@ class StatisticalProperty(Indicator):
         """Squeeze `group` dim if needed."""
         outs = super()._postprocess(outs, das, params)
 
-        for i in range(len(outs)):
-            if "group" in outs[i].dims:
-                outs[i] = outs[i].squeeze("group", drop=True)
+        for ii, out in enumerate(outs):
+            if "group" in out.dims:
+                outs[ii] = out.squeeze("group", drop=True)
 
         return outs
 
@@ -519,7 +521,7 @@ def _acf(
         return out_last[-1]
 
     @map_groups(out=[Grouper.PROP], main_only=True)
-    def __acf(ds, *, dim, lag, freq):
+    def _acf(ds, *, dim, lag, freq):
         out = xr.apply_ufunc(
             acf_last,
             ds.data.resample({dim: freq}),
@@ -530,7 +532,7 @@ def _acf(
         out = out.mean("__resample_dim__")
         return out.rename("out").to_dataset()
 
-    out = __acf(
+    out = _acf(
         da.rename("data").to_dataset(), group=group, lag=lag, freq=group.freq
     ).out
     out.attrs["units"] = ""
@@ -594,7 +596,7 @@ def _annual_cycle(
     # TODO: In April 2024, use a match-case.
     if stat == "absamp":
         out = ac.max("dayofyear") - ac.min("dayofyear")
-        out.attrs["units"] = ensure_delta(units)
+        out.attrs.update(pint2cfattrs(units2pint(units), is_difference=True))
     elif stat == "relamp":
         out = (ac.max("dayofyear") - ac.min("dayofyear")) * 100 / ac.mean("dayofyear")
         out.attrs["units"] = "%"
@@ -711,7 +713,7 @@ def _annual_statistic(
 
     if stat == "absamp":
         out = yrs.max() - yrs.min()
-        out.attrs["units"] = ensure_delta(units)
+        out.attrs.update(pint2cfattrs(units2pint(units), is_difference=True))
     elif stat == "relamp":
         out = (yrs.max() - yrs.min()) * 100 / yrs.mean()
         out.attrs["units"] = "%"

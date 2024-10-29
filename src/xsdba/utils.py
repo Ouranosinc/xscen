@@ -83,16 +83,16 @@ def ecdf(x: xr.DataArray, value: float, dim: str = "time") -> xr.DataArray:
     Parameters
     ----------
     x : array
-      Sample.
+        Sample.
     value : float
-      The value within the support of `x` for which to compute the CDF value.
+        The value within the support of `x` for which to compute the CDF value.
     dim : str
-      Dimension name.
+        Dimension name.
 
     Returns
     -------
     xr.DataArray
-      Empirical CDF.
+        Empirical CDF.
     """
     return (x <= value).sum(dim) / x.notnull().sum(dim)
 
@@ -193,15 +193,15 @@ def broadcast(
     Parameters
     ----------
     grouped : xr.DataArray
-      The grouped array to broadcast like `x`.
+        The grouped array to broadcast like `x`.
     x : xr.DataArray
-      The array to broadcast grouped to.
+        The array to broadcast grouped to.
     group : str or Grouper
-      Grouping information. See :py:class:`xsdba.base.Grouper` for details.
+        Grouping information. See :py:class:`xsdba.base.Grouper` for details.
     interp : {'nearest', 'linear', 'cubic'}
-      The interpolation method to use,
+        The interpolation method to use.
     sel : dict[str, xr.DataArray]
-      Mapping of grouped coordinates to x coordinates (other than the grouping one).
+        Mapping of grouped coordinates to x coordinates (other than the grouping one).
 
     Returns
     -------
@@ -250,14 +250,14 @@ def equally_spaced_nodes(n: int, eps: float | None = None) -> np.ndarray:
     Parameters
     ----------
     n : int
-      Number of equally spaced nodes.
+        Number of equally spaced nodes.
     eps : float, optional
-      Distance from 0 and 1 of added end nodes. If None (default), do not add endpoints.
+        Distance from 0 and 1 of added end nodes. If None (default), do not add endpoints.
 
     Returns
     -------
     np.array
-      Nodes between 0 and 1. Nodes can be seen as the middle points of `n` equal bins.
+        Nodes between 0 and 1. Nodes can be seen as the middle points of `n` equal bins.
 
     Warnings
     --------
@@ -1089,6 +1089,7 @@ def eps_cholesky(M, nit=26):
     return MC
 
 
+# XC
 # ADAPT: Maybe this is not the best place
 def copy_all_attrs(ds: xr.Dataset | xr.DataArray, ref: xr.Dataset | xr.DataArray):
     """Copy all attributes of ds to ref, including attributes of shared coordinates, and variables in the case of Datasets."""
@@ -1100,6 +1101,7 @@ def copy_all_attrs(ds: xr.Dataset | xr.DataArray, ref: xr.Dataset | xr.DataArray
             var.attrs.update(ref[name].attrs)
 
 
+# XC
 # ADAPT: Maybe this is not the best place
 def load_module(path: os.PathLike, name: str | None = None):
     """Load a python module from a python file, optionally changing its name.
