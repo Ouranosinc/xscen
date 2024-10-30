@@ -760,10 +760,11 @@ class TestPrincipalComponents:
 
         group.apply(_group_assert, {"ref": ref, "sim": sim, "scen": scen})
 
-    @pytest.mark.requires_atmosds
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("pcorient", ["full", "simple"])
-    def test_real_data(self, atmosds, use_dask, pcorient):
+    def test_real_data(self, open_dataset, use_dask, pcorient):
+        atmosds = open_dataset("ERA5/daily_surface_cancities_1990-1993.nc")
+
         ds0 = xr.Dataset(
             {"tasmax": atmosds.tasmax, "tasmin": atmosds.tasmin, "tas": atmosds.tas}
         )

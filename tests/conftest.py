@@ -189,18 +189,6 @@ def is_matplotlib_installed(xdoctest_namespace) -> None:
     ns["is_matplotlib_installed"] = _is_matplotlib_installed
 
 
-# ADAPT or REMOVE?
-@pytest.mark.requires_atmosds
-@pytest.fixture(scope="function")
-def atmosds(threadsafe_data_dir) -> xr.Dataset:
-    return _open_dataset(
-        threadsafe_data_dir.joinpath("atmosds.nc"),
-        cache_dir=threadsafe_data_dir,
-        branch=TESTDATA_BRANCH,
-        engine="h5netcdf",
-    ).load()
-
-
 @pytest.fixture(scope="session")
 def threadsafe_data_dir(tmp_path_factory):
     return Path(tmp_path_factory.getbasetemp().joinpath("data"))
@@ -246,8 +234,6 @@ def gather_session_data(request, nimbus, worker_id):
     Due to the lack of UNIX sockets on Windows, the lockfile mechanism is not supported, requiring users on
     Windows to run `$ xclim prefetch_testing_data` before running any tests for the first time to populate the
     default cache dir.
-
-    Additionally, this fixture is also used to generate the `atmosds` synthetic testing dataset.
     """
     gather_testing_data(worker_cache_dir=nimbus.path, worker_id=worker_id)
 

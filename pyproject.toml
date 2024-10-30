@@ -302,8 +302,7 @@ strict_markers = true
 testpaths = "tests"
 usefixtures = "xdoctest_namespace"
 markers = [
-  "slow: mark test as slow",
-  "requires_atmosds: mark test as requiring access to the atmosds data"
+  "slow: mark test as slow"
 ]
 
 [tool.ruff]
