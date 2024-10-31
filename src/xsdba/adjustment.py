@@ -17,7 +17,6 @@ from xarray.core.dataarray import DataArray
 from xsdba.formatting import gen_call_string, update_history
 from xsdba.options import OPTIONS, XSDBA_EXTRA_OUTPUT, set_options
 from xsdba.units import convert_units_to
-from xsdba.utils import uses_dask
 
 from ._adjustment import (
     dqm_adjust,
@@ -35,7 +34,7 @@ from ._adjustment import (
     scaling_adjust,
     scaling_train,
 )
-from .base import Grouper, ParametrizableWithDataset, parse_group
+from .base import Grouper, ParametrizableWithDataset, parse_group, uses_dask
 from .processing import grouped_time_indexes
 from .utils import (
     ADDITIVE,

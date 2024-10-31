@@ -28,9 +28,8 @@ from xsdba.units import (
     units,
     units2pint,
 )
-from xsdba.utils import uses_dask
 
-from .base import Grouper, map_groups, parse_group, parse_offset
+from .base import Grouper, map_groups, parse_group, parse_offset, uses_dask
 from .nbutils import _pairwise_haversine_and_bins
 from .utils import _pairwise_spearman, copy_all_attrs
 
