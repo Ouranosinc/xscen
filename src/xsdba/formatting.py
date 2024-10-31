@@ -193,62 +193,6 @@ default_formatter = AttrFormatter(
 
 
 # XC
-def prefix_attrs(source: dict, keys: Sequence, prefix: str) -> dict:
-    """Rename some keys of a dictionary by adding a prefix.
-
-    Parameters
-    ----------
-    source : dict
-        Source dictionary, for example data attributes.
-    keys : sequence
-        Names of keys to prefix.
-    prefix : str
-        Prefix to prepend to keys.
-
-    Returns
-    -------
-    dict
-        Dictionary of attributes with some keys prefixed.
-    """
-    out = {}
-    for key, val in source.items():
-        if key in keys:
-            out[f"{prefix}{key}"] = val
-        else:
-            out[key] = val
-    return out
-
-
-# XC
-def unprefix_attrs(source: dict, keys: Sequence, prefix: str) -> dict:
-    """Remove prefix from keys in a dictionary.
-
-    Parameters
-    ----------
-    source : dict
-        Source dictionary, for example data attributes.
-    keys : sequence
-        Names of original keys for which prefix should be removed.
-    prefix : str
-        Prefix to remove from keys.
-
-    Returns
-    -------
-    dict
-        Dictionary of attributes whose keys were prefixed, with prefix removed.
-    """
-    out = {}
-    n = len(prefix)
-    for key, val in source.items():
-        k = key[n:]
-        if (k in keys) and key.startswith(prefix):
-            out[k] = val
-        elif key not in out:
-            out[key] = val
-    return out
-
-
-# XC
 def merge_attributes(
     attribute: str,
     *inputs_list: xr.DataArray | xr.Dataset,

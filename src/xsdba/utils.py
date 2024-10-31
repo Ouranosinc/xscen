@@ -19,8 +19,8 @@ from scipy.spatial import distance
 from scipy.stats import spearmanr
 from xarray.core.utils import get_temp_dimname
 
-from .base import Grouper, ensure_chunk_size, parse_group, uses_dask
-from .nbutils import _extrapolate_on_quantiles, _linear_interpolation
+from .base import Grouper, _interpolate_doy_calendar, ensure_chunk_size, parse_group
+from .nbutils import _extrapolate_on_quantiles
 
 MULTIPLICATIVE = "*"
 ADDITIVE = "+"
