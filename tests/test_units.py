@@ -6,14 +6,7 @@ import xarray as xr
 from cf_xarray import __version__ as __cfxr_version__
 from packaging.version import Version
 
-from xsdba.units import (
-    harmonize_units,
-    pint2str,
-    str2pint,
-    to_agg_units,
-    units,
-    units2pint,
-)
+from xsdba.units import harmonize_units, str2pint, units, units2pint
 
 
 class TestUnits:
@@ -45,27 +38,27 @@ class TestUnitConversion:
     def test_pint2str(self):
         pytest.importorskip("cf-xarray")
         u = units("mm/d")
-        assert pint2str(u.units) == "mm d-1"
+        assert str(u.units) == "mm d-1"
 
         u = units("percent")
-        assert pint2str(u.units) == "%"
+        assert str(u.units) == "%"
 
         u = units("pct")
-        assert pint2str(u.units) == "%"
+        assert str(u.units) == "%"
 
     def test_units2pint(self, timelonlatseries):
         pytest.importorskip("cf-xarray")
         u = units2pint(timelonlatseries([1, 2], attrs={"units": "kg m-2 s-1"}))
-        assert pint2str(u) == "kg m-2 s-1"
+        assert str(u) == "kg m-2 s-1"
 
         u = units2pint("m^3 s-1")
-        assert pint2str(u) == "m3 s-1"
+        assert str(u) == "m3 s-1"
 
         u = units2pint("%")
-        assert pint2str(u) == "%"
+        assert str(u) == "%"
 
         u = units2pint("1")
-        assert pint2str(u) == ""
+        assert str(u) == ""
 
     def test_str2pint(self):
         Q_ = units.Quantity
@@ -73,51 +66,6 @@ class TestUnitConversion:
         assert str2pint("m kg/s") == Q_(1, units="meter kilogram/second")
         assert str2pint("11.8 degC days") == Q_(11.8, units="delta_degree_Celsius days")
         assert str2pint("nan m^2 K^-3").units == Q_(1, units="m²/K³").units
-
-
-@pytest.mark.parametrize(
-    "in_u,opfunc,op,exp,exp_u",
-    [
-        ("m/h", "sum", "integral", 8760, "m"),
-        ("m/h", "sum", "sum", 365, "m/h"),
-        ("K", "mean", "mean", 1, "K"),
-        ("", "sum", "count", 365, "d"),
-        ("", "sum", "count", 365, "d"),
-        ("kg m-2", "var", "var", 0, "kg2 m-4"),
-        (
-            "°C",
-            "argmax",
-            "doymax",
-            0,
-            "1",
-        ),
-        (
-            "°C",
-            "sum",
-            "integral",
-            365,
-            ("degC d", "d degC"),
-        ),  # dependent on numpy/pint version
-        ("°F", "sum", "integral", 365, "d degF"),  # not sure why the order is different
-    ],
-)
-def test_to_agg_units(in_u, opfunc, op, exp, exp_u):
-    da = xr.DataArray(
-        np.ones((365,)),
-        dims=("time",),
-        coords={"time": xr.cftime_range("1993-01-01", periods=365, freq="D")},
-        attrs={"units": in_u},
-    )
-    if units(in_u).dimensionality == "[temperature]":
-        da.attrs["units_metadata"] = "temperature: difference"
-
-    # FIXME: This is emitting warnings from deprecated DataArray.argmax() usage.
-    out = to_agg_units(getattr(da, opfunc)(), da, op)
-    np.testing.assert_allclose(out, exp)
-    if isinstance(exp_u, tuple):
-        assert out.attrs["units"] in exp_u
-    else:
-        assert out.attrs["units"] == exp_u
 
 
 class TestHarmonizeUnits:

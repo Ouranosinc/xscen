@@ -1101,40 +1101,6 @@ def copy_all_attrs(ds: xr.Dataset | xr.DataArray, ref: xr.Dataset | xr.DataArray
             var.attrs.update(ref[name].attrs)
 
 
-# XC
-# ADAPT: Maybe this is not the best place
-def load_module(path: os.PathLike, name: str | None = None):
-    """Load a python module from a python file, optionally changing its name.
-
-    Examples
-    --------
-    Given a path to a module file (.py):
-
-    .. code-block:: python
-
-        from pathlib import Path
-        import os
-
-        path = Path("path/to/example.py")
-
-    The two following imports are equivalent, the second uses this method.
-
-    .. code-block:: python
-
-        os.chdir(path.parent)
-        import example as mod1
-
-        os.chdir(previous_working_dir)
-        mod2 = load_module(path)
-        mod1 == mod2
-    """
-    path = Path(path)
-    spec = importlib.util.spec_from_file_location(name or path.stem, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)  # This executes code, effectively loading the module
-    return mod
-
-
 # XC : redundancy
 # Fit the parameters.
 # This would also be the place to impose constraints on the series minimum length if needed.

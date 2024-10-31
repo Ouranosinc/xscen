@@ -200,7 +200,7 @@ class Grouper(Parametrizable):
             )
         if self.prop == "dayofyear":
             if ds is not None:
-                cal = get_calendar(ds, dim=self.dim)
+                cal = ds.time.dt.calendar
                 mdoy = max(
                     xr.coding.calendar_ops._days_in_year(yr, cal)
                     for yr in np.unique(ds[self.dim].dt.year)
@@ -1082,49 +1082,6 @@ def compare_offsets(freqA: str, op: str, freqB: str) -> bool:
 
 
 # XC: calendar
-def get_calendar(obj: Any, dim: str = "time") -> str:
-    """Return the calendar of an object.
-
-    Parameters
-    ----------
-    obj : Any
-        An object defining some date.
-        If `obj` is an array/dataset with a datetime coordinate, use `dim` to specify its name.
-        Values must have either a datetime64 dtype or a cftime dtype.
-        `obj` can also be a python datetime.datetime, a cftime object or a pandas Timestamp
-        or an iterable of those, in which case the calendar is inferred from the first value.
-    dim : str
-        Name of the coordinate to check (if `obj` is a DataArray or Dataset).
-
-    Raises
-    ------
-    ValueError
-        If no calendar could be inferred.
-
-    Returns
-    -------
-    str
-        The Climate and Forecasting (CF) calendar name.
-        Will always return "standard" instead of "gregorian", following CF conventions 1.9.
-    """
-    if isinstance(obj, xr.DataArray | xr.Dataset):
-        return obj[dim].dt.calendar
-    if isinstance(obj, xr.CFTimeIndex):
-        obj = obj.values[0]
-    else:
-        obj = np.take(obj, 0)
-        # Take zeroth element, overcome cases when arrays or lists are passed.
-    if isinstance(obj, pydt.datetime):  # Also covers pandas Timestamp
-        return "standard"
-    if isinstance(obj, cftime.datetime):
-        if obj.calendar == "gregorian":
-            return "standard"
-        return obj.calendar
-
-    raise ValueError(f"Calendar could not be inferred from object of type {type(obj)}.")
-
-
-# XC: calendar
 def construct_offset(mult: int, base: str, start_anchored: bool, anchor: str | None):
     """Reconstruct an offset string from its parts.
 
@@ -1251,9 +1208,9 @@ def stack_periods(
         The coordinate of `period` is the first timestep of each window.
     """
     # Import in function to avoid cyclical imports
-    from xclim.core.units import (  # pylint: disable=import-outside-toplevel
-        ensure_cf_units,
+    from xsdba.units import (  # pylint: disable=import-outside-toplevel
         infer_sampling_units,
+        units2str,
     )
 
     stride = stride or window
@@ -1357,7 +1314,7 @@ def stack_periods(
     # Length as a pint-ready array : with proper units, but values are not usable as indexes anymore
     m, u = infer_sampling_units(da)
     lengths = lengths * m
-    lengths.attrs["units"] = ensure_cf_units(u)
+    lengths.attrs["units"] = units2str(u)
     # Start points for each period and remember parameters for unstacking
     starts = xr.DataArray(
         [da.time[slc.start].item() for slc in periods],
@@ -1429,7 +1386,7 @@ def unstack_periods(da: xr.DataArray | xr.Dataset, dim: str = "period"):
          0   o   o   o   x   x
         === === === === === === === ===
     """
-    from xclim.core.units import (  # pylint: disable=import-outside-toplevel
+    from xsdba.units import (  # pylint: disable=import-outside-toplevel
         infer_sampling_units,
     )
 

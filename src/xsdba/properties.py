@@ -23,9 +23,9 @@ from xclim.indices.stats import fit, parametric_quantile
 
 from xsdba.units import (
     convert_units_to,
+    infer_sampling_units,
     pint2cfattrs,
-    pint2str,
-    to_agg_units,
+    units,
     units2pint,
 )
 from xsdba.utils import uses_dask
@@ -130,11 +130,11 @@ def _mean(da: xr.DataArray, *, group: str | Grouper = "time") -> xr.DataArray:
     xr.DataArray, [same as input]
       Mean of the variable.
     """
-    units = da.units
+    u = da.units
     if group.prop != "group":
         da = da.groupby(group.name)
     out = da.mean(dim=group.dim)
-    return out.assign_attrs(units=units)
+    return out.assign_attrs(units=u)
 
 
 mean = StatisticalProperty(
@@ -164,12 +164,11 @@ def _var(da: xr.DataArray, *, group: str | Grouper = "time") -> xr.DataArray:
     xr.DataArray, [square of the input units]
         Variance of the variable.
     """
-    units = da.units
+    u = da.units
     if group.prop != "group":
         da = da.groupby(group.name)
     out = da.var(dim=group.dim)
-    u2 = units2pint(units) ** 2
-    out.attrs["units"] = pint2str(u2)
+    out.attrs["units"] = str((units(u) ** 2).units)
     return out
 
 
@@ -201,11 +200,11 @@ def _std(da: xr.DataArray, *, group: str | Grouper = "time") -> xr.DataArray:
     xr.DataArray,
         Standard deviation of the variable.
     """
-    units = da.units
+    u = da.units
     if group.prop != "group":
         da = da.groupby(group.name)
     out = da.std(dim=group.dim)
-    out.attrs["units"] = units
+    out.attrs["units"] = u
     return out
 
 
@@ -282,11 +281,11 @@ def _quantile(
     xr.DataArray, [same as input]
         Quantile {q} of the variable.
     """
-    units = da.units
+    u = da.units
     if group.prop != "group":
         da = da.groupby(group.name)
     out = da.quantile(q, dim=group.dim, keep_attrs=True).drop_vars("quantile")
-    return out.assign_attrs(units=units)
+    return out.assign_attrs(units=u)
 
 
 quantile = StatisticalProperty(
@@ -406,7 +405,12 @@ def _spell_length_distribution(
         stat=stat,
         stat_resample=stat_resample or stat,
     ).out
-    return to_agg_units(out, da, op="count")
+    # in xclim this was managed by to_agg_units
+    # will hard-code this part for now
+    m, freq_u_raw = infer_sampling_units(da["time"])
+    with xr.set_options(keep_attrs=True):
+        out = (out * m).assign_attrs({"units": freq_u_raw})
+    return out
 
 
 spell_length_distribution = StatisticalProperty(
@@ -581,7 +585,7 @@ def _annual_cycle(
         {stat} of the annual cycle.
     """
     group = group if isinstance(group, Grouper) else Grouper(group)
-    units = da.units
+    u = da.units
 
     ac = da.groupby("time.dayofyear").mean()
     if window > 1:  # smooth the cycle
@@ -596,7 +600,7 @@ def _annual_cycle(
     # TODO: In April 2024, use a match-case.
     if stat == "absamp":
         out = ac.max("dayofyear") - ac.min("dayofyear")
-        out.attrs.update(pint2cfattrs(units2pint(units), is_difference=True))
+        out.attrs.update(pint2cfattrs(units2pint(u), is_difference=True))
     elif stat == "relamp":
         out = (ac.max("dayofyear") - ac.min("dayofyear")) * 100 / ac.mean("dayofyear")
         out.attrs["units"] = "%"
@@ -605,10 +609,10 @@ def _annual_cycle(
         out.attrs.update(units="", is_dayofyear=np.int32(1))
     elif stat == "min":
         out = ac.min("dayofyear")
-        out.attrs["units"] = units
+        out.attrs["units"] = u
     elif stat == "max":
         out = ac.max("dayofyear")
-        out.attrs["units"] = units
+        out.attrs["units"] = u
     elif stat == "asymmetry":
         out = (ac.idxmax("dayofyear") - ac.idxmin("dayofyear")) % 365 / 365
         out.attrs["units"] = "yr"
@@ -704,7 +708,7 @@ def _annual_statistic(
     xr.DataArray, [same units as input or dimensionless]
         Average annual {stat}.
     """
-    units = da.units
+    u = da.units
 
     if window > 1:
         da = da.rolling(time=window, center=True).mean()
@@ -713,7 +717,7 @@ def _annual_statistic(
 
     if stat == "absamp":
         out = yrs.max() - yrs.min()
-        out.attrs.update(pint2cfattrs(units2pint(units), is_difference=True))
+        out.attrs.update(pint2cfattrs(units2pint(u), is_difference=True))
     elif stat == "relamp":
         out = (yrs.max() - yrs.min()) * 100 / yrs.mean()
         out.attrs["units"] = "%"
@@ -971,7 +975,12 @@ def _bivariate_spell_length_distribution(
         stat=stat,
         stat_resample=stat_resample or stat,
     ).out
-    return to_agg_units(out, da1, op="count")
+    # in xclim this was managed by to_agg_units
+    # will hard-code this part for now
+    m, freq_u_raw = infer_sampling_units(da["time"])
+    with xr.set_options(keep_attrs=True):
+        out = (out * m).assign_attrs({"units": freq_u_raw})
+    return out
 
 
 bivariate_spell_length_distribution = StatisticalProperty(
@@ -1229,7 +1238,7 @@ def _trend(
 
     numpy.polyfit
     """
-    units = da.units
+    u = da.units
 
     da = da.resample({group.dim: group.freq})  # separate all the {group}
     da_mean = da.mean(dim=group.dim)  # avg over all {group}
@@ -1250,7 +1259,7 @@ def _trend(
         vectorize=True,
         dask="parallelized",
     )
-    out.attrs["units"] = f"{units}/year"
+    out.attrs["units"] = f"{u}/year"
     return out
 
 

@@ -14,10 +14,9 @@ import xarray as xr
 from scipy import stats
 from xarray.core.dataarray import DataArray
 
-from xsdba.base import get_calendar
 from xsdba.formatting import gen_call_string, update_history
 from xsdba.options import OPTIONS, XSDBA_EXTRA_OUTPUT, set_options
-from xsdba.units import convert_units_to, pint2str, units2str
+from xsdba.units import convert_units_to
 from xsdba.utils import uses_dask
 
 from ._adjustment import (
@@ -94,7 +93,7 @@ class BaseAdjustment(ParametrizableWithDataset):
                 )
 
         # All calendars used by the inputs
-        calendars = {get_calendar(inda, group.dim) for inda in inputs}
+        calendars = {inda.time.dt.calendar for inda in inputs}
         if not cls._allow_diff_calendars and len(calendars) > 1:
             raise ValueError(
                 "Inputs are defined on different calendars,"
@@ -246,7 +245,7 @@ class TrainAdjust(BaseAdjustment):
         ds, params = cls._train(ref, hist, **kwargs)
         obj = cls(
             _trained=True,
-            hist_calendar=get_calendar(hist),
+            hist_calendar=hist.time.dt.calendar,
             train_units=train_units,
             **params,
         )
