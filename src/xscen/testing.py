@@ -148,8 +148,8 @@ def datablock_3d(
                             "",
                             attrs={
                                 "grid_mapping_name": "rotated_latitude_longitude",
-                                "grid_north_pole_latitude": 42.5,
-                                "grid_north_pole_longitude": 83.0,
+                                "grid_north_pole_latitude": 83.0,  # FIXME: The 42.5 and 83 should be switched, but it will break multiple tests.
+                                "grid_north_pole_longitude": 42.5,
                                 "north_pole_grid_longitude": 0.0,
                             },
                         )

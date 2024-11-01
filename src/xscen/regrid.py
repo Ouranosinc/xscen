@@ -386,8 +386,13 @@ def create_bounds_rotated_pole(ds: xr.Dataset) -> xr.Dataset:
     return create_bounds_gridmapping(ds, "rotated_pole")
 
 
-def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str) -> xr.Dataset:
+def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str | None = None) -> xr.Dataset:
     """Create bounds for rotated pole datasets."""
+    if gridmap is None:
+        gridmap = _get_grid_mapping(ds)
+        if gridmap == "":
+            raise ValueError("Grid mapping could not be inferred from the dataset.")
+
     xname = ds.cf.axes["X"][0]
     yname = ds.cf.axes["Y"][0]
 
