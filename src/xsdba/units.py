@@ -134,12 +134,12 @@ def _parse_str(value: str) -> tuple[str, str]:
     tuple[str, str]
         Magntitude and unit strings. If no magntiude is found, "1" is used by default.
     """
-    mstr, *ustr = val.split(" ", maxsplit=1)
+    mstr, *ustr = value.split(" ", maxsplit=1)
     try:
         mstr = str(float(mstr))
     except ValueError:
         mstr = "1"
-        ustr = [val]
+        ustr = [value]
     ustr = "dimensionless" if len(ustr) == 0 else ustr[0]
     return mstr, ustr
 
