@@ -121,7 +121,7 @@ def infer_sampling_units(
     return out
 
 
-def parse_str(value: str) -> tuple[str, str]:
+def _parse_str(value: str) -> tuple[str, str]:
     """Parse a str as a number and a unit.
 
     Parameters
@@ -178,7 +178,7 @@ def units2pint(
         value = value.attrs
 
     if isinstance(value, str):
-        _, unit = parse_str(value)
+        _, unit = _parse_str(value)
         metadata = None
     elif isinstance(value, dict):
         unit = value["units"]
@@ -242,7 +242,7 @@ def str2pint(val: str) -> pint.Quantity:
     pint.Quantity
         Magnitude is 1 if no magnitude was present in the string.
     """
-    mstr, ustr = parse_str(val)
+    mstr, ustr = _parse_str(val)
     return units.Quantity(float(mstr), units=units2pint(ustr))
 
 
