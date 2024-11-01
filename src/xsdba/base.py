@@ -24,6 +24,8 @@ from xsdba.options import OPTIONS, SDBA_ENCODE_CF
 
 from .typing import InputKind
 
+# TODO : Redistributes some functions in existing/new scripts
+
 
 # ## Base class for the sdba module
 class Parametrizable(dict):

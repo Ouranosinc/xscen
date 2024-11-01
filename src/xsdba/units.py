@@ -121,6 +121,29 @@ def infer_sampling_units(
     return out
 
 
+def parse_str(value: str) -> tuple[str, str]:
+    """Parse a str as a number and a unit.
+
+    Parameters
+    ----------
+    value : str
+        Input string representing a unit (may contain a magnitude or not).
+
+    Returns
+    -------
+    tuple[str, str]
+        Magntitude and unit strings. If no magntiude is found, "1" is used by default.
+    """
+    mstr, *ustr = val.split(" ", maxsplit=1)
+    try:
+        mstr = str(float(mstr))
+    except ValueError:
+        mstr = "1"
+        ustr = [val]
+    ustr = "dimensionless" if len(ustr) == 0 else ustr[0]
+    return mstr, ustr
+
+
 # XC
 def units2pint(
     value: xr.DataArray | units.Unit | units.Quantity | dict | str,
@@ -130,7 +153,7 @@ def units2pint(
     Parameters
     ----------
     value : xr.DataArray or pint.Unit or pint.Quantity or dict or str
-        Input data array or string representing a unit (with no magnitude).
+        Input data array or string representing a unit (may contain a magnitude).
 
     Returns
     -------
@@ -155,7 +178,7 @@ def units2pint(
         value = value.attrs
 
     if isinstance(value, str):
-        unit = value
+        _, unit = parse_str(value)
         metadata = None
     elif isinstance(value, dict):
         unit = value["units"]
@@ -201,7 +224,7 @@ def units2str(value: xr.DataArray | str | units.Quantity | units.Unit) -> str:
     pint.Unit
         Units of the data array.
     """
-    return value if isinstance(value, str) else str(units2pint(value))
+    return str(units2pint(value))
 
 
 # XC
@@ -219,13 +242,8 @@ def str2pint(val: str) -> pint.Quantity:
     pint.Quantity
         Magnitude is 1 if no magnitude was present in the string.
     """
-    mstr, *ustr = val.split(" ", maxsplit=1)
-    try:
-        if ustr:
-            return units.Quantity(float(mstr), units=units2pint(ustr[0]))
-        return units.Quantity(float(mstr))
-    except ValueError:
-        return units.Quantity(1, units2pint(val))
+    mstr, ustr = parse_str(val)
+    return units.Quantity(float(mstr), units=units2pint(ustr))
 
 
 # XC
@@ -344,23 +362,20 @@ def extract_units(arg):
 
     Wrapper that can also yield `None`.
     """
-    if not (
-        isinstance(arg, (str | xr.DataArray | pint.Unit | units.Unit))
-        or np.isscalar(arg)
-    ):
-        raise TypeError(
-            f"Argument must be a str, DataArray, or scalar. Got {type(arg)}"
-        )
     if isinstance(arg, xr.DataArray):
-        # arg becomes a str or None
+        # arg becomes str | None
         arg = arg.attrs.get("units", None)
-    if isinstance(arg, (pint.Unit | units.Unit)):
-        ustr = units2str(arg)
-    elif isinstance(arg, str):
-        ustr = str(units(arg).units)
-    else:  # (scalar case, or DataArray without units attribute)
-        ustr = None
-    return ustr
+    # "2" is assumed to be "2 dimensionless", like a DataArray with units ""
+    if isinstance(arg, pint.Unit | units.Unit | str):
+        arg = units2str(arg)
+    # 2 is assumed to be 2, no dimension (None), like a DataArray without units attribute
+    elif np.isscalar(arg):
+        arg = None
+    if isinstance(arg, str | None):
+        return arg
+    raise TypeError(
+        f"Argument must be a str | DataArray | pint.Unit | units.Unit | scalar. Got {type(arg)}"
+    )
 
 
 def _add_default_kws(params_dict, params_to_check, func):
