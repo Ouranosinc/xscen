@@ -24,7 +24,7 @@ Bug fixes
 
 Internal changes
 ^^^^^^^^^^^^^^^^
-* Bumped the version of `xclim` to 0.53.1. (:pull:`482`).
+* Bumped the version of `xclim` to 0.53.2. (:pull:`482`).
 
 v0.10.0 (2024-09-30)
 --------------------
