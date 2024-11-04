@@ -4,28 +4,33 @@ Changelog
 
 v0.11.0 (unreleased)
 --------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Éric Dupuis (:user:`coxipi`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * ``xs.io.make_toc`` now includes the global attributes of the dataset after the information about the variables. (:pull:`473`).
 * New function ``xs.get_warming_level_from_period`` to get the warming level associated with a given time horizon. (:pull:`474`).
 * Added ability to skip whole folders to ``xs.parse_directory`` with argument ``skip_dirs``. (:pull:`478`, :pull:`479`).
+* `diagnostics.measures_improvement` now accepts `dim`, which specifies `dimension(s)` on which the proportion of improved pixels are computed. (:pull:`416`)
+* The argument `indicators` in ``xs.produce_horizon`` is now optional. Added an argument `op` to control the climatological operation. (:pull:`483`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * ``xs.get_warming_level`` has been renamed to ``xs.get_period_from_warming_level``. Its argument `return_horizon` was reversed and renamed `return_central_year` (:pull:`474`).
 * Removed support for the deprecated `xclim` function `change_significance` in `ensemble_stats`. (:pull:`482`).
+* The argument `indicators` in ``xs.produce_horizon`` is no longer positional. (:pull:`483`).
 
 Bug fixes
 ^^^^^^^^^
 * ``xs.io.save_to_table`` now correctly handles the case where the input is a `DataArray` or a `Dataset` with a single variable. (:pull:`473`).
 * Fixed a bug in ``xs.utils.change_units`` where the original dataset was also getting modified. (:pull:`482`).
+* Fixed a bug in ``xs.compute_indicators`` where the `cat:variable` attribute was not correctly set. (:pull:`483`).
 * Fixed a bug in ``xs.climatological_op`` where kwargs were not passed to the operation function. (:pull:`486`).
 * Fixed a bug in ``xs.climatological_op`` where `min_periods` was not passed when the operation was `linregress`. (:pull:`486`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
+* Include CF convention for temperature differences and on scale (:pull:`428`, :issue:`428`).
 * Bumped the version of `xclim` to 0.53.2. (:pull:`482`).
 * More tests added. (:pull:`486`).
 * Fixed a bug in ``xs.testing.datablock_3d`` where some attributes of the rotated pole got reversed half-way through the creation of the dataset. (:pull:`486`).
