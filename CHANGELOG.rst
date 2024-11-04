@@ -36,10 +36,6 @@ Internal changes
 * Fixed a bug in ``xs.testing.datablock_3d`` where some attributes of the rotated pole got reversed half-way through the creation of the dataset. (:pull:`486`).
 * The function ``xs.regrid._get_grid_mapping`` was moved to ``xs.spatial.get_grid_mapping`` and is now a public function. (:pull:`486`).
 
-Internal changes
-^^^^^^^^^^^^^^^^
-* Bumped the version of `xclim` to 0.53.1. (:pull:`481`).
-
 v0.10.0 (2024-09-30)
 --------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
