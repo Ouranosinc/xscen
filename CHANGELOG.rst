@@ -15,10 +15,16 @@ New features and enhancements
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * ``xs.get_warming_level`` has been renamed to ``xs.get_period_from_warming_level``. Its argument `return_horizon` was reversed and renamed `return_central_year` (:pull:`474`).
+* Removed support for the deprecated `xclim` function `change_significance` in `ensemble_stats`. (:pull:`482`).
 
 Bug fixes
 ^^^^^^^^^
 * ``xs.io.save_to_table`` now correctly handles the case where the input is a `DataArray` or a `Dataset` with a single variable. (:pull:`473`).
+* Fixed a bug in ``xs.utils.change_units`` where the original dataset was also getting modified. (:pull:`482`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Bumped the version of `xclim` to 0.53.2. (:pull:`482`).
 
 v0.10.0 (2024-09-30)
 --------------------
