@@ -30,7 +30,7 @@ dependencies:
   - sparse
   - toolz
   - xarray >=2023.11.0, !=2024.6.0
-  - xclim >=0.53.1, <0.54
+  - xclim >=0.53.2, <0.54
   - xesmf >=0.7
   - zarr >=2.13
   # Opt
@@ -40,13 +40,13 @@ dependencies:
   - babel
   - black ==24.8.0
   - blackdoc ==0.3.9
-  - bump-my-version >=0.25.1
+  - bump-my-version >=0.26.8
   - coverage>=7.5.0
   - coveralls>=4.0.1
-  - flake8 >=6.1.0
+  - flake8 >=7.1.0
   - flake8-rst-docstrings>=0.3.0
   - ipykernel
-  - ipython
+  - ipython >=8.5.0
   - isort ==5.13.2
   - jupyter_client
   - nbsphinx

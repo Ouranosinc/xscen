@@ -65,7 +65,7 @@ dependencies = [
   "sparse",
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0",
-  "xclim >=0.53.1, <0.54",
+  "xclim >=0.53.2, <0.54",
   "zarr >=2.13"
 ]
 
@@ -74,7 +74,7 @@ dev = [
   # Dev tools and testing
   "pip >=24.2.0",
   "babel",
-  "black[jupyter] ==24.8.0",
+  "black[jupyter] ==24.10.0",
   "blackdoc ==0.3.9",
   "bump-my-version >=0.26.0",
   "coverage >=7.5.0",
@@ -84,7 +84,7 @@ dev = [
   "isort ==5.13.2",
   "mypy",
   "numpydoc >=1.8.0",
-  "pooch",
+  "pooch >=1.8.0",
   "pre-commit >=3.3.2",
   "pytest-cov >=5.0.0",
   "pytest >=8.3.2",
@@ -97,7 +97,7 @@ dev = [
 docs = [
   # Documentation and examples
   "ipykernel",
-  "ipython",
+  "ipython >=8.5.0",
   "jupyter_client",
   "nbsphinx",
   "nbval",
