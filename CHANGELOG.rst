@@ -21,10 +21,14 @@ Bug fixes
 ^^^^^^^^^
 * ``xs.io.save_to_table`` now correctly handles the case where the input is a `DataArray` or a `Dataset` with a single variable. (:pull:`473`).
 * Fixed a bug in ``xs.utils.change_units`` where the original dataset was also getting modified. (:pull:`482`).
+* Fixed a bug in ``xs.climatological_op`` where kwargs were not passed to the operation function. (:pull:`486`).
+* Fixed a bug in ``xs.climatological_op`` where `min_periods` was not passed when the operation was `linregress`. (:pull:`486`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Bumped the version of `xclim` to 0.53.2. (:pull:`482`).
+* More tests added. (:pull:`486`).
+* Fixed a bug in ``xs.testing.datablock_3d`` where some attributes of the rotated pole got reversed half-way through the creation of the dataset. (:pull:`486`).
 
 v0.10.0 (2024-09-30)
 --------------------
