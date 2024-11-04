@@ -21,24 +21,24 @@ dependencies:
   - yamale
   # Dev tools and testing
   - netcdf4
-  - pip >=24.2.0
-  - bump-my-version >=0.25.1
+  - pip >=24.3.1
+  - bump-my-version >=0.28.0
   - watchdog >=4.0.0
   - flake8 >=7.1.1
   - flake8-rst-docstrings >=0.3.0
   - flit >=3.9.0,<4.0
-  - tox >=4.17.1
+  - tox >=4.23.2
   - coverage >=7.5.0
   - coveralls >=4.0.1
   - typer >=0.12.3
   - pytest <8.0.0
   - pytest-cov >=5.0.0
   - pytest-xdist >=3.2.0
-  - black ==24.8.0
+  - black ==24.10.0
   - blackdoc ==0.3.9
   - isort ==5.13.2
   - numpydoc >=1.8.0
   - pooch >=1.8.0
   - pre-commit >=3.5.0
-  - ruff >=0.5.7
+  - ruff >=0.7.0
   - xdoctest>=1.1.5

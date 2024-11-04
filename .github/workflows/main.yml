@@ -59,7 +59,7 @@ jobs:
           - "3.10"
           - "3.11"
           - "3.12"
-          # - "3.13.0-rc.2"
+          # - "3.13"
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
