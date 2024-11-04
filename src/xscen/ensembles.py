@@ -108,7 +108,7 @@ def ensemble_stats(  # noqa: C901
     # if input files are .zarr, change the engine automatically
     if isinstance(datasets, list) and isinstance(datasets[0], str | os.PathLike):
         path = Path(datasets[0])
-        if path.suffix == ".zarr":
+        if path.suffix in [".zarr", ".zip"]:
             create_kwargs.setdefault("engine", "zarr")
 
     if not isinstance(datasets, xr.Dataset):
@@ -137,6 +137,7 @@ def ensemble_stats(  # noqa: C901
 
         # Workaround for robustness_categories
         real_stat = None
+        categories_kwargs = {}
         if stat == "robustness_categories":
             real_stat = "robustness_categories"
             stat = "robustness_fractions"
@@ -155,20 +156,10 @@ def ensemble_stats(  # noqa: C901
                     f"Weighting is not supported for '{stat}'. The results may be incorrect."
                 )
 
-        # FIXME: change_significance is deprecated and will be removed in xclim 0.49.
         if stat in [
-            "change_significance",
             "robustness_fractions",
             "robustness_categories",
         ]:
-            # FIXME: This can be removed once change_significance is removed.
-            #  It's here because the 'ref' default was removed for change_significance in xclim 0.47.
-            stats_kwargs.setdefault("ref", None)
-            if (stats_kwargs.get("ref") is not None) and len(statistics_to_compute) > 1:
-                raise ValueError(
-                    f"The input requirements for '{stat}' when 'ref' is specified are not compatible with other statistics."
-                )
-
             # These statistics only work on DataArrays
             for v in ens.data_vars:
                 with xr.set_options(keep_attrs=True):
@@ -187,22 +178,6 @@ def ensemble_stats(  # noqa: C901
 
                     # Call the function
                     tmp = getattr(ensembles, stat)(ens_v, **stats_kwargs)
-
-                    # Manage the multiple outputs of change_significance
-                    # FIXME: change_significance is deprecated and will be removed in xclim 0.49.
-                    if (
-                        stat == "change_significance"
-                        and stats_kwargs.get("p_vals", False) is False
-                    ):
-                        ens_stats[f"{v}_change_frac"], ens_stats[f"{v}_pos_frac"] = tmp
-                    elif stat == "change_significance" and stats_kwargs.get(
-                        "p_vals", False
-                    ):
-                        (
-                            ens_stats[f"{v}_change_frac"],
-                            ens_stats[f"{v}_pos_frac"],
-                            ens_stats[f"{v}_p_vals"],
-                        ) = tmp
 
                     # Robustness categories
                     if real_stat == "robustness_categories":
