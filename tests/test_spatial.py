@@ -200,7 +200,7 @@ class TestGetGrid:
         with pytest.warns(
             UserWarning, match="There are conflicting grid_mapping attributes"
         ):
-            assert xs.regrid._get_grid_mapping(ds) == "lambert_conformal_conic"
+            assert xs.spatial.get_grid_mapping(ds) == "lambert_conformal_conic"
 
 
 class TestSubset:
