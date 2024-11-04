@@ -955,7 +955,7 @@ def produce_horizon(  # noqa: C901
     ds : xr.Dataset
         Input dataset with a time dimension.
         If 'indicators' is None, the dataset should contain the precomputed indicators.
-    indicators :  Union[str, os.PathLike, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType], optional
+    indicators :  str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]] | ModuleType, optional
         Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start_year, end_year] for the period(s) to be evaluated.
