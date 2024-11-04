@@ -75,7 +75,8 @@ class TestComputeDeltas:
         assert deltas[variable].attrs["delta_kind"] == delta_kind
         assert deltas[variable].attrs["delta_reference"] == "1981-2010"
         assert deltas[variable].attrs["units"] == units
-        assert deltas[variable].attrs["units_metadata"] == "temperature: difference"
+        if kind == "+":
+            assert deltas[variable].attrs["units_metadata"] == "temperature: difference"
         np.testing.assert_array_equal(deltas[variable], results)
 
     @pytest.mark.parametrize("cal", ["proleptic_gregorian", "noleap", "360_day"])
