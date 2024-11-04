@@ -27,7 +27,7 @@ from xclim.core.indicator import Indicator
 from .config import parse_config
 from .extract import subset_warming_level
 from .indicators import compute_indicators
-from .spatial import subset
+from .spatial import get_grid_mapping, subset
 from .utils import standardize_periods, unstack_dates, update_attr
 
 logger = logging.getLogger(__name__)
@@ -870,6 +870,13 @@ def spatial_mean(  # noqa: C901
         raise ValueError(
             "Subsetting method should be ['cos-lat', 'interp_centroid', 'xesmf']"
         )
+
+    # If the dataset had a projection, remove it
+    grid_mapping = get_grid_mapping(ds)
+    if grid_mapping:
+        ds_agg = ds_agg.drop_vars(grid_mapping)
+        for v in ds_agg.data_vars:
+            ds_agg[v].attrs.pop("grid_mapping", None)
 
     # History
     history = (

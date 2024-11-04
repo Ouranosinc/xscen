@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "creep_fill",
     "creep_weights",
+    "get_grid_mapping",
     "subset",
 ]
 
@@ -433,6 +434,24 @@ def _load_lon_lat(ds: xr.Dataset) -> xr.Dataset:
         (ds[ds.cf["latitude"].name],) = dask.compute(ds[ds.cf["latitude"].name])
 
     return ds
+
+
+def get_grid_mapping(ds: xr.Dataset) -> str:
+    """Get the grid_mapping attribute from the dataset."""
+    gridmap = [
+        ds[v].attrs["grid_mapping"]
+        for v in ds.data_vars
+        if "grid_mapping" in ds[v].attrs
+    ]
+    gridmap += [c for c in ds.coords if ds[c].attrs.get("grid_mapping_name", None)]
+    gridmap = list(np.unique(gridmap))
+
+    if len(gridmap) > 1:
+        warnings.warn(
+            f"There are conflicting grid_mapping attributes in the dataset. Assuming {gridmap[0]}."
+        )
+
+    return gridmap[0] if gridmap else ""
 
 
 def _estimate_grid_resolution(ds: xr.Dataset) -> tuple[float, float]:

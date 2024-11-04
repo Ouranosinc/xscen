@@ -445,7 +445,9 @@ class TestSpatialMean:
             as_dataset=True,
         )
         out = xs.aggregate.spatial_mean(ds, method="cos-lat")
-        np.testing.assert_allclose(out.tas, 1.63506615)
+        assert "rotated_pole" not in out
+        assert "grid_mapping" not in out.tas.attrs
+        np.testing.assert_allclose(out.tas, 1.623069, rtol=1e-6)
         assert "weighted mean(dim=('rlat', 'rlon'))" in out.attrs["history"]
 
     def test_cos_lat_errors(self):
@@ -562,7 +564,7 @@ class TestSpatialMean:
             as_dataset=True,
         )
         poly = gpd.GeoDataFrame(
-            geometry=[Polygon([(-100, 50), (-65, 50), (-65, 60), (-100, 60)])]
+            geometry=[Polygon([(60, 50), (30, 50), (30, 60), (60, 60)])]
         )
         region = {"method": "shape", "shape": poly}
 
@@ -575,17 +577,19 @@ class TestSpatialMean:
             to_domain="for_testing2",
         )
         if simplify_tolerance is None:
-            np.testing.assert_allclose(avg.tas, 2.060884, rtol=1e-6)
+            np.testing.assert_allclose(avg.tas, 3.302546, rtol=1e-6)
             assert avg.attrs["regrid_method"] == "conservative"
+            assert "rotated_pole" not in avg
+            assert "grid_mapping" not in avg.tas.attrs
             assert all(c in avg.coords for c in ["lon_bounds", "lat_bounds"])
-            np.testing.assert_array_equal(avg["lon"], np.mean([-100, -65]))
+            np.testing.assert_array_equal(avg["lon"], np.mean([60, 30]))
             np.testing.assert_array_equal(avg["lat"], np.mean([50, 60]))
             assert avg.attrs["cat:processing_level"] == "for_testing"
             assert avg.attrs["cat:domain"] == "for_testing2"
         else:
             # Essentially just test that it changes the results
-            np.testing.assert_allclose(avg.tas, 2.619263, rtol=1e-6)
-            np.testing.assert_array_almost_equal(avg["lon"], -76.66666667)
+            np.testing.assert_allclose(avg.tas, 2.967405, rtol=1e-6)
+            np.testing.assert_array_almost_equal(avg["lon"], 40)
             np.testing.assert_array_almost_equal(avg["lat"], 56.66666667)
 
     def test_errors(self):
