@@ -778,7 +778,7 @@ class ProjectCatalog(DataCatalog):
 
         Parameters
         ----------
-        df : Union[DataCatalog, intake_esm.esm_datastore, pd.DataFrame, pd.Series, Sequence[pd.Series]], optional
+        df : DataCatalog | intake_esm.esm_datastore | pd.DataFrame | pd.Series  | Sequence[pd.Series], optional
             Data to be added to the catalog. If None, nothing is added, but the catalog is still updated.
         """
         # Append the new DataFrame or Series
@@ -999,7 +999,7 @@ def unstack_id(df: pd.DataFrame | ProjectCatalog | DataCatalog) -> dict:
 
     Parameters
     ----------
-    df : Union[pd.DataFrame, ProjectCatalog, DataCatalog]
+    df : pd.DataFrame | ProjectCatalog | DataCatalog
         Either a Project/DataCatalog or a pandas DataFrame.
 
     Returns

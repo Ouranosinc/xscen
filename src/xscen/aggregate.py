@@ -23,11 +23,12 @@ try:
 except ImportError:
     xe = None
 from xclim.core.indicator import Indicator
+from xclim.core.units import pint2cfattrs, units2pint
 
 from .config import parse_config
 from .extract import subset_warming_level
 from .indicators import compute_indicators
-from .spatial import subset
+from .spatial import get_grid_mapping, subset
 from .utils import standardize_periods, unstack_dates, update_attr
 
 logger = logging.getLogger(__name__)
@@ -68,8 +69,8 @@ def climatological_op(  # noqa: C901
         Operation to perform over time.
         The operation can be any method name of xarray.core.rolling.DatasetRolling, 'linregress', or a dictionary.
         If 'op' is a dictionary, the key is the operation name and the value is a dict of kwargs
-        accepted by the operation. While other operations are technically possible,
-        the following are recommended and tested:
+        accepted by the equivalent NumPy function. See the Notes for more information.
+        While other operations are technically possible, the following are recommended and tested:
         ['max', 'mean', 'median', 'min', 'std', 'sum', 'var', 'linregress'].
         Operations beyond methods of xarray.core.rolling.DatasetRolling include:
 
@@ -111,6 +112,13 @@ def climatological_op(  # noqa: C901
     xr.Dataset
         Dataset with the results from the climatological operation.
 
+    Notes
+    -----
+    xarray.core.rolling.DatasetRolling functions do not support kwargs other than 'keep_attrs'. In order to pass
+    additional arguments to the operation, we instead use the 'reduce' method and pass the operation as a numpy function.
+    If possible, a function that handles NaN values will be used (e.g. op='mean' will use np.nanmean), as the 'min_periods'
+    argument already decides how many NaN values are acceptable.
+
     """
     # Daily data is not supported
     if len(ds.time) > 3 and xr.infer_freq(ds.time) == "D":
@@ -124,28 +132,18 @@ def climatological_op(  # noqa: C901
         )
 
     # unstack 1D time in coords (day, month, and year) to make climatological mean faster
-    try:
-        mindex_coords = xr.Coordinates.from_pandas_multiindex(
-            pd.MultiIndex.from_arrays(
-                [
-                    ds.time.dt.year.values,
-                    ds.time.dt.month.values,
-                    ds.time.dt.day.values,
-                ],
-                names=["year", "month", "day"],
-            ),
-            dim="time",
-        )
-        ds_unstack = ds.assign_coords(coords=mindex_coords).unstack("time")
-    except (
-        AttributeError,
-        ValueError,
-    ):  # Fixme when xscen is pinned to xarray >= 2023.11.0
-        ind = pd.MultiIndex.from_arrays(
-            [ds.time.dt.year.values, ds.time.dt.month.values, ds.time.dt.day.values],
+    mindex_coords = xr.Coordinates.from_pandas_multiindex(
+        pd.MultiIndex.from_arrays(
+            [
+                ds.time.dt.year.values,
+                ds.time.dt.month.values,
+                ds.time.dt.day.values,
+            ],
             names=["year", "month", "day"],
-        )
-        ds_unstack = ds.assign(time=ind).unstack("time")
+        ),
+        dim="time",
+    )
+    ds_unstack = ds.assign_coords(coords=mindex_coords).unstack("time")
 
     # Rolling will ignore gaps in time, so raise an exception beforehand
     if (not all(ds_unstack.year.diff(dim="year", n=1) == 1)) & (periods is None):
@@ -225,7 +223,18 @@ def climatological_op(  # noqa: C901
                 warnings.warn(
                     f"The requested operation '{op}' has not been tested and may produce unexpected results."
                 )
-            ds_rolling = getattr(ds_rolling, op)(**op_kwargs)
+            if len(set(op_kwargs.keys()).difference(["keep_attrs"])) > 0:
+                # Reduce allows for kwargs to be passed to the operation, but it is less efficient
+                try:
+                    numpy_op = getattr(np, f"nan{op}")
+                except AttributeError:
+                    warnings.warn(
+                        f"The requested operation '{op}' has no NaN handling in numpy. Results may ignore the 'min_periods' argument."
+                    )
+                    numpy_op = getattr(np, op)
+                ds_rolling = ds_rolling.reduce(numpy_op, **op_kwargs)
+            else:
+                ds_rolling = getattr(ds_rolling, op)(**op_kwargs)
 
             # revert variance to std, where applicable
             if op == "mean" and ds_has_std:
@@ -243,6 +252,8 @@ def climatological_op(  # noqa: C901
                 valid_y = ~np.isnan(y)
                 mask = valid_x & valid_y
                 if np.sum(mask) >= kwargs.get("min_periods", 1):
+                    x = x[mask]
+                    y = y[mask]
                     reg = scipy.stats.linregress(
                         x, y, alternative=kwargs.get("alternative", "two-sided")
                     )
@@ -507,47 +518,27 @@ def compute_deltas(  # noqa: C901
             )
 
         # Remove references to 'year' in REF
-        try:
-            mindex_coords_1 = xr.Coordinates.from_pandas_multiindex(
-                pd.MultiIndex.from_arrays(
-                    [ref.time.dt.month.values, ref.time.dt.day.values],
-                    names=["month", "day"],
-                ),
-                dim="time",
-            )
-            ref = ref.assign_coords(coords=mindex_coords_1).unstack("time")
-
-            mindex_coords_2 = xr.Coordinates.from_pandas_multiindex(
-                pd.MultiIndex.from_arrays(
-                    [
-                        ds.time.dt.year.values,
-                        ds.time.dt.month.values,
-                        ds.time.dt.day.values,
-                    ],
-                    names=["year", "month", "day"],
-                ),
-                dim="time",
-            )
-            other_hz = ds.assign_coords(coords=mindex_coords_2).unstack("time")
-        except (
-            AttributeError,
-            ValueError,
-        ):  # Fixme when xscen is pinned to xarray >= 2023.11.0
-            ind = pd.MultiIndex.from_arrays(
+        mindex_coords_1 = xr.Coordinates.from_pandas_multiindex(
+            pd.MultiIndex.from_arrays(
                 [ref.time.dt.month.values, ref.time.dt.day.values],
                 names=["month", "day"],
-            )
-            ref = ref.assign(time=ind).unstack("time")
+            ),
+            dim="time",
+        )
+        ref = ref.assign_coords(coords=mindex_coords_1).unstack("time")
 
-            ind = pd.MultiIndex.from_arrays(
+        mindex_coords_2 = xr.Coordinates.from_pandas_multiindex(
+            pd.MultiIndex.from_arrays(
                 [
                     ds.time.dt.year.values,
                     ds.time.dt.month.values,
                     ds.time.dt.day.values,
                 ],
                 names=["year", "month", "day"],
-            )
-            other_hz = ds.assign(time=ind).unstack("time")
+            ),
+            dim="time",
+        )
+        other_hz = ds.assign_coords(coords=mindex_coords_2).unstack("time")
 
     else:
         other_hz = ds
@@ -565,6 +556,10 @@ def compute_deltas(  # noqa: C901
             if (isinstance(kind, dict) and kind[vv] == "+") or kind == "+":
                 _kind = "abs."
                 deltas[v_name] = other_hz[vv] - ref[vv]
+                unit = pint2cfattrs(
+                    units2pint(other_hz[vv].attrs["units"]), is_difference=True
+                )
+                deltas[v_name].attrs.update(unit)
             elif (isinstance(kind, dict) and kind[vv] == "/") or kind == "/":
                 _kind = "rel."
                 deltas[v_name] = other_hz[vv] / ref[vv]
@@ -643,14 +638,13 @@ def spatial_mean(  # noqa: C901
     method: str,
     *,
     spatial_subset: bool | None = None,
-    call_clisops: bool | None = False,
     region: dict | str | None = None,
-    kwargs: dict | None = None,
     simplify_tolerance: float | None = None,
+    kwargs: dict | None = None,
     to_domain: str | None = None,
     to_level: str | None = None,
 ) -> xr.Dataset:
-    """Compute the spatial mean using a variety of available methods.
+    r"""Compute the spatial mean using a variety of available methods.
 
     Parameters
     ----------
@@ -658,26 +652,23 @@ def spatial_mean(  # noqa: C901
         Dataset to use for the computation.
     method : str
         'cos-lat' will weight the area covered by each pixel using an approximation based on latitude.
-        'interp_centroid' will find the region's centroid (if coordinates are not fed through kwargs),
-        then perform a .interp() over the spatial dimensions of the Dataset.
-        The coordinate can also be directly fed to .interp() through the 'kwargs' argument below.
         'xesmf' will make use of xESMF's SpatialAverager. This will typically be more precise,
         especially for irregular regions, but can be much slower than other methods.
     spatial_subset : bool, optional
         If True, xscen.spatial.subset will be called prior to the other operations. This requires the 'region' argument.
-        If None, this will automatically become True if 'region' is provided and the subsetting method is either 'cos-lat' or 'mean'.
+        If None, this will automatically become True if 'region' is provided and the subsetting method is 'cos-lat'.
     region : dict or str, optional
         Description of the region and the subsetting method (required fields listed in the Notes).
-        If method=='interp_centroid', this is used to find the region's centroid.
         If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
         Can also be "global", for global averages.
-        This is simply a shortcut for `{'name': 'global', 'method': 'bbox', 'lon_bnds' [-180, 180], 'lat_bnds': [-90, 90]}`.
-    kwargs : dict, optional
-        Arguments to send to either mean(), interp() or SpatialAverager().
-        For SpatialAverager, one can give `skipna` or  `output_chunks` here, to be passed to the averager call itself.
+        The latter is simply a shortcut for `{'name': 'global', 'method': 'bbox', 'lon_bnds' [-180, 180], 'lat_bnds': [-90, 90]}`.
     simplify_tolerance : float, optional
-        Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
+        Only used with 'xesmf' method. Precision (in degree) used to simplify a shapefile before sending it to SpatialAverager().
         The simpler the polygons, the faster the averaging, but it will lose some precision.
+    kwargs : dict, optional
+        Arguments to send to SpatialAverager().
+        In addition, also for SpatialAverager, one can give `skipna` or  `output_chunks` here, to be passed to the averager call itself.
+        Additionally, for all methods, the 'latitude_name' and 'longitude_name' can be passed here to specify the names of those coordinates.
     to_domain : str, optional
         The domain to assign to the output.
         If None, the domain of the inputs is preserved.
@@ -699,14 +690,40 @@ def spatial_mean(  # noqa: C901
             ['gridpoint', 'bbox', shape', 'sel']
         tile_buffer: float, optional
             Multiplier to apply to the model resolution. Only used if spatial_subset==True.
-        kwargs
+        \*\*kwargs
             Arguments specific to the method used.
 
     See Also
     --------
-    xarray.Dataset.mean, xarray.Dataset.interp, xesmf.SpatialAverager
+    xesmf.SpatialAverager
     """
-    kwargs = kwargs or {}
+    kwargs = (kwargs or {}).copy()
+
+    # Determine the coordinates
+    i = 0
+    while (
+        "latitude" not in ds.cf.coordinates or "longitude" not in ds.cf.coordinates
+    ) and i < 2:
+        if i == 0:
+            # First, try to guess the latitude coordinate using CF conventions
+            ds = ds.cf.guess_coord_axis()
+        elif i == 1:
+            missing_coords = [
+                f"{coord}_name"
+                for coord in ["latitude", "longitude"]
+                if coord not in ds.cf.coordinates
+            ]
+            # If the coordinates are still not found, use the 'kwargs' argument
+            if any(coord not in kwargs for coord in missing_coords):
+                raise ValueError(
+                    "Could not determine the spatial coordinate names using CF conventions. "
+                    "Use kwargs = {latitude_name: str, longitude_name: str} to specify them."
+                )
+            for coord in missing_coords:
+                ds[kwargs[coord]].attrs["standard_name"] = coord.split("_")[0]
+        i += 1
+    kwargs.pop("latitude_name", None)
+    kwargs.pop("longitude_name", None)
 
     if region == "global":
         region = {
@@ -720,11 +737,7 @@ def spatial_mean(  # noqa: C901
         else:
             region["lon_bnds"] = [-180, 180]
 
-    if (
-        (region is not None)
-        and (spatial_subset is None)
-        and (method in ["mean", "cos-lat"])
-    ):
+    if (region is not None) and (spatial_subset is None) and (method == "cos-lat"):
         logger.info("Automatically turning spatial_subset to True based on inputs.")
         spatial_subset = True
 
@@ -733,26 +746,16 @@ def spatial_mean(  # noqa: C901
         ds = subset(ds, **region)
 
     if method == "cos-lat":
-        if "latitude" not in ds.cf.coordinates:
-            raise ValueError(
-                "Could not determine the latitude name using CF conventions. "
-                "Use kwargs = {lat: str} to specify the coordinate name."
+        if ds.cf["latitude"].attrs.get("units", "") != "degrees_north":
+            warnings.warn(
+                f"Latitude units are '{ds.cf['latitude'].attrs.get('units', '')}', expected 'degrees_north'. "
+                f"Make sure that the computation is right."
             )
-
-        if "units" not in ds.cf["latitude"].attrs:
-            msg = f"{ds.attrs.get('cat:id', '')}: Latitude does not appear to have units. Make sure that the computation is right."
-            logger.warning(msg)
-        elif ds.cf["latitude"].attrs["units"] != "degrees_north":
-            msg = (
-                f"{ds.attrs.get('cat:id', '')}: Latitude units is '{ds.cf['latitude'].attrs['units']}', expected 'degrees_north'. "
-                "Make sure that the computation is right."
-            )
-            logger.warning(msg)
 
         if ((ds.cf["longitude"].min() < -160) & (ds.cf["longitude"].max() > 160)) or (
             (ds.cf["longitude"].min() < 20) & (ds.cf["longitude"].max() > 340)
         ):
-            logger.warning(
+            warnings.warn(
                 "The region appears to be crossing the -180/180° meridian. Bounds computation is currently bugged in cf_xarray. "
                 "Make sure that the computation is right."
             )
@@ -777,53 +780,13 @@ def spatial_mean(  # noqa: C901
         # Prepare the History field
         new_history = (
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"weighted mean(dim={[d for d in ds.cf.axes['X'] + ds.cf.axes['Y']]}) using a 'cos-lat' approximation of areacella (in deg2)"
+            f"weighted mean(dim={dims}) using a 'cos-lat' approximation of areacella (in deg2)"
         )
 
-    # This calls .interp() to a pair of coordinates
     elif method == "interp_centroid":
-        # Find the centroid
-        if region is None:
-            if ds.cf.axes["X"][0] not in kwargs:
-                kwargs[ds.cf.axes["X"][0]] = ds[ds.cf.axes["X"][0]].mean().values
-            if ds.cf.axes["Y"][0] not in kwargs:
-                kwargs[ds.cf.axes["Y"][0]] = ds[ds.cf.axes["Y"][0]].mean().values
-        else:
-            if region["method"] == "gridpoint":
-                if len(region["lon"]) != 1:
-                    raise ValueError(
-                        "Only a single location should be used with interp_centroid."
-                    )
-                centroid = {
-                    "lon": region["lon"],
-                    "lat": region["lat"],
-                }
-
-            elif region["method"] == "bbox":
-                centroid = {
-                    "lon": np.mean(region["lon_bnds"]),
-                    "lat": np.mean(region["lat_bnds"]),
-                }
-
-            elif region["method"] == "shape":
-                if not isinstance(region["shape"], gpd.GeoDataFrame):
-                    s = gpd.read_file(region["shape"])
-                else:
-                    s = region["shape"]
-                if len(s != 1):
-                    raise ValueError(
-                        "Only a single polygon should be used with interp_centroid."
-                    )
-                centroid = {"lon": s.centroid[0].x, "lat": s.centroid[0].y}
-            else:
-                raise ValueError("'method' not understood.")
-            kwargs.update(centroid)
-
-        ds_agg = ds.interp(**kwargs)
-
-        new_history = (
-            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-            f"xarray.interp(**{kwargs}) - xarray v{xr.__version__}"
+        # FIXME: No backward compatibility for this method since it produced incorrect results, but we want a specific error message for now.
+        raise ValueError(
+            "Method 'interp_centroid' has been removed, since it produced incorrect results."
         )
 
     # Uses xesmf.SpatialAverager
@@ -861,6 +824,7 @@ def spatial_mean(  # noqa: C901
             # Simplify the geometries to a given tolerance, if needed.
             # The simpler the polygons, the faster the averaging, but it will lose some precision.
             if simplify_tolerance is not None:
+                polygon = polygon.copy()
                 polygon["geometry"] = polygon.simplify(
                     tolerance=simplify_tolerance, preserve_topology=True
                 )
@@ -887,9 +851,9 @@ def spatial_mean(  # noqa: C901
             and "longitude" not in ds.cf.bounds
             and "rotated_pole" in ds
         ):
-            from .regrid import create_bounds_rotated_pole
+            from .regrid import create_bounds_gridmapping
 
-            ds = ds.update(create_bounds_rotated_pole(ds))
+            ds = ds.update(create_bounds_gridmapping(ds))
 
         savg = xe.SpatialAverager(ds, geoms, **kwargs_copy)
         ds_agg = savg(ds, keep_attrs=True, **call_kwargs)
@@ -902,11 +866,22 @@ def spatial_mean(  # noqa: C901
         ds_agg = ds_agg.assign_coords(**extra_coords)
         if len(polygon) == 1:
             ds_agg = ds_agg.squeeze("geom")
+        if "lon_bounds" in ds_agg:
+            ds_agg = ds_agg.assign_coords(
+                {"lon_bounds": ds_agg.lon_bounds, "lat_bounds": ds_agg.lat_bounds}
+            )
 
     else:
         raise ValueError(
             "Subsetting method should be ['cos-lat', 'interp_centroid', 'xesmf']"
         )
+
+    # If the dataset had a projection, remove it
+    grid_mapping = get_grid_mapping(ds)
+    if grid_mapping:
+        ds_agg = ds_agg.drop_vars(grid_mapping)
+        for v in ds_agg.data_vars:
+            ds_agg[v].attrs.pop("grid_mapping", None)
 
     # History
     history = (
@@ -928,16 +903,18 @@ def spatial_mean(  # noqa: C901
 @parse_config
 def produce_horizon(  # noqa: C901
     ds: xr.Dataset,
+    *,
     indicators: (
         str
         | os.PathLike
         | Sequence[Indicator]
         | Sequence[tuple[str, Indicator]]
         | ModuleType
-    ),
-    *,
+        | None
+    ) = None,
     periods: list[str] | list[list[str]] | None = None,
     warminglevels: dict | None = None,
+    op: str | dict = "mean",
     to_level: str | None = "horizons",
 ) -> xr.Dataset:
     """
@@ -952,7 +929,8 @@ def produce_horizon(  # noqa: C901
     ----------
     ds : xr.Dataset
         Input dataset with a time dimension.
-    indicators :  Union[str, os.PathLike, Sequence[Indicator], Sequence[Tuple[str, Indicator]], ModuleType]
+        If 'indicators' is None, the dataset should contain the precomputed indicators.
+    indicators :  str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]] | ModuleType, optional
         Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start_year, end_year] for the period(s) to be evaluated.
@@ -961,6 +939,8 @@ def produce_horizon(  # noqa: C901
         Dictionary of arguments to pass to `py:func:xscen.subset_warming_level`.
         If 'wl' is a list, the function will be called for each value and produce multiple horizons.
         If both periods and warminglevels are None, the full time series will be used.
+    op : str or dict
+        Operation to perform over the time dimension. See `py:func:xscen.climatological_op` for details. Default is 'mean'.
     to_level : str, optional
         The processing level to assign to the output.
         If there is only one horizon, you can use "{wl}", "{period0}" and "{period1}" in the string to dynamically
@@ -1014,15 +994,18 @@ def produce_horizon(  # noqa: C901
             ds_sub = subset_warming_level(ds, **period)
 
         if ds_sub is not None:
-            # compute indicators
-            ind_dict = compute_indicators(
-                ds=(
-                    ds_sub.squeeze(dim="warminglevel")
-                    if "warminglevel" in ds_sub.dims
-                    else ds_sub
-                ),
-                indicators=indicators,
-            )
+            if indicators is not None:
+                # compute indicators
+                ind_dict = compute_indicators(
+                    ds=(
+                        ds_sub.squeeze(dim="warminglevel")
+                        if "warminglevel" in ds_sub.dims
+                        else ds_sub
+                    ),
+                    indicators=indicators,
+                )
+            else:
+                ind_dict = {"skipped": ds_sub}
 
             # Compute the window-year mean
             ds_merge = xr.Dataset()
@@ -1030,7 +1013,7 @@ def produce_horizon(  # noqa: C901
                 if freq != "fx":
                     ds_mean = climatological_op(
                         ds_ind,
-                        op="mean",  # ToDo: make op an argument of produce_horizon
+                        op=op,
                         rename_variables=False,
                         horizons_as_dim=True,
                     ).drop_vars("time")
@@ -1047,6 +1030,8 @@ def produce_horizon(  # noqa: C901
                 if "warminglevel" in ds_mean.coords:
                     wl = np.array([ds_mean["warminglevel"].item()])
                     wl_attrs = ds_mean["warminglevel"].attrs
+                    if "warminglevel" in ds_mean.dims:
+                        ds_mean = ds_mean.squeeze("warminglevel")
                     ds_mean = ds_mean.drop_vars("warminglevel")
                     ds_mean["horizon"] = wl
                     ds_mean["horizon"].attrs.update(wl_attrs)
@@ -1065,7 +1050,7 @@ def produce_horizon(  # noqa: C901
                 [
                     all(
                         [
-                            out[0][v].attrs[attr] == out[i][v].attrs[attr]
+                            out[0][v].attrs.get(attr) == out[i][v].attrs.get(attr)
                             for i in range(1, len(out))
                         ]
                     )

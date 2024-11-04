@@ -119,7 +119,7 @@ def datablock_3d(
         PC = ccrs.PlateCarree()
         if x == "rlon":  # rotated pole
             GM = ccrs.RotatedPole(
-                pole_longitude=42.5, pole_latitude=83.0, central_rotated_longitude=0.0
+                pole_longitude=83.0, pole_latitude=42.5, central_rotated_longitude=0.0
             )
             da.attrs["grid_mapping"] = "rotated_pole"
         else:
