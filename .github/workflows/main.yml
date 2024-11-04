@@ -82,7 +82,7 @@ jobs:
           key: ${{ matrix.os }}-Python${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'tox.ini') }}
       - name: Test with tox
         run: |
-          python -m tox
+          python -m tox -e ${{ matrix.python-version }}-coveralls
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: run-${{ matrix.python-version }}
