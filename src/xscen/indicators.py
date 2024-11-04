@@ -123,7 +123,7 @@ def compute_indicators(  # noqa: C901
     ----------
     ds : xr.Dataset
         Dataset to use for the indicators.
-    indicators : Union[str, os.PathLike, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType]
+    indicators : str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType
         Path to a YAML file that instructs on how to calculate missing variables.
         Can also be only the "stem", if translations and custom indices are implemented.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
@@ -349,7 +349,7 @@ def select_inds_for_avail_vars(
     ----------
     ds : xr.Dataset
         Dataset to use for the indicators.
-    indicators : Union[str, os.PathLike, Sequence[Indicator], Sequence[Tuple[str, Indicator]]]
+    indicators : str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]]
         Path to a YAML file that instructs on how to calculate indicators.
         Can also be only the "stem", if translations and custom indices are implemented.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
