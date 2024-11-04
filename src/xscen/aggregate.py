@@ -933,16 +933,18 @@ def spatial_mean(  # noqa: C901
 @parse_config
 def produce_horizon(  # noqa: C901
     ds: xr.Dataset,
+    *,
     indicators: (
         str
         | os.PathLike
         | Sequence[Indicator]
         | Sequence[tuple[str, Indicator]]
         | ModuleType
-    ),
-    *,
+        | None
+    ) = None,
     periods: list[str] | list[list[str]] | None = None,
     warminglevels: dict | None = None,
+    op: str | dict = "mean",
     to_level: str | None = "horizons",
 ) -> xr.Dataset:
     """
@@ -957,7 +959,8 @@ def produce_horizon(  # noqa: C901
     ----------
     ds : xr.Dataset
         Input dataset with a time dimension.
-    indicators :  str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]] | ModuleType
+        If 'indicators' is None, the dataset should contain the precomputed indicators.
+    indicators :  str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]] | ModuleType, optional
         Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start_year, end_year] for the period(s) to be evaluated.
@@ -966,6 +969,8 @@ def produce_horizon(  # noqa: C901
         Dictionary of arguments to pass to `py:func:xscen.subset_warming_level`.
         If 'wl' is a list, the function will be called for each value and produce multiple horizons.
         If both periods and warminglevels are None, the full time series will be used.
+    op : str or dict
+        Operation to perform over the time dimension. See `py:func:xscen.climatological_op` for details. Default is 'mean'.
     to_level : str, optional
         The processing level to assign to the output.
         If there is only one horizon, you can use "{wl}", "{period0}" and "{period1}" in the string to dynamically
@@ -1019,15 +1024,18 @@ def produce_horizon(  # noqa: C901
             ds_sub = subset_warming_level(ds, **period)
 
         if ds_sub is not None:
-            # compute indicators
-            ind_dict = compute_indicators(
-                ds=(
-                    ds_sub.squeeze(dim="warminglevel")
-                    if "warminglevel" in ds_sub.dims
-                    else ds_sub
-                ),
-                indicators=indicators,
-            )
+            if indicators is not None:
+                # compute indicators
+                ind_dict = compute_indicators(
+                    ds=(
+                        ds_sub.squeeze(dim="warminglevel")
+                        if "warminglevel" in ds_sub.dims
+                        else ds_sub
+                    ),
+                    indicators=indicators,
+                )
+            else:
+                ind_dict = {"skipped": ds_sub}
 
             # Compute the window-year mean
             ds_merge = xr.Dataset()
@@ -1035,7 +1043,7 @@ def produce_horizon(  # noqa: C901
                 if freq != "fx":
                     ds_mean = climatological_op(
                         ds_ind,
-                        op="mean",  # ToDo: make op an argument of produce_horizon
+                        op=op,
                         rename_variables=False,
                         horizons_as_dim=True,
                     ).drop_vars("time")
@@ -1052,6 +1060,8 @@ def produce_horizon(  # noqa: C901
                 if "warminglevel" in ds_mean.coords:
                     wl = np.array([ds_mean["warminglevel"].item()])
                     wl_attrs = ds_mean["warminglevel"].attrs
+                    if "warminglevel" in ds_mean.dims:
+                        ds_mean = ds_mean.squeeze("warminglevel")
                     ds_mean = ds_mean.drop_vars("warminglevel")
                     ds_mean["horizon"] = wl
                     ds_mean["horizon"].attrs.update(wl_attrs)
@@ -1070,7 +1080,7 @@ def produce_horizon(  # noqa: C901
                 [
                     all(
                         [
-                            out[0][v].attrs[attr] == out[i][v].attrs[attr]
+                            out[0][v].attrs.get(attr) == out[i][v].attrs.get(attr)
                             for i in range(1, len(out))
                         ]
                     )
