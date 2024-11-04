@@ -2,7 +2,7 @@
 Changelog
 =========
 
-v0.10.1 (2024-10-24)
+v0.10.1 (2024-11-04)
 --------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Éric Dupuis (:user:`coxipi`).
 
