@@ -1,8 +1,10 @@
+import geopandas as gpd
 import numpy as np
 import pytest
 import xarray as xr
 import xclim
 from conftest import notebooks
+from shapely.geometry import Polygon
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
@@ -78,6 +80,15 @@ class TestComputeDeltas:
         if kind == "+":
             assert deltas[variable].attrs["units_metadata"] == "temperature: difference"
         np.testing.assert_array_equal(deltas[variable], results)
+
+    def test_ref_ds(self):
+        ref = self.ds.where(self.ds.horizon == "1981-2010", drop=True)
+        out = xs.compute_deltas(self.ds, reference_horizon=ref)
+        np.testing.assert_array_equal(out["tas_delta_1981_2010"], np.arange(0, 4))
+
+        ref = ref.drop_vars("horizon")
+        out = xs.compute_deltas(self.ds, reference_horizon=ref)
+        np.testing.assert_array_equal(out["tas_delta_unknown_horizon"], np.arange(0, 4))
 
     @pytest.mark.parametrize("cal", ["proleptic_gregorian", "noleap", "360_day"])
     def test_calendars(self, cal):
@@ -456,6 +467,185 @@ class TestSpatialMean:
         avg = xs.aggregate.spatial_mean(ds, method=method, region="global")
         np.testing.assert_allclose(avg.tas, exp)
 
+    def test_coslat_2d(self):
+        ds = datablock_3d(
+            np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 3, "float"),
+            "tas",
+            "rlon",
+            0,
+            "rlat",
+            15,
+            30,
+            30,
+            as_dataset=True,
+        )
+        out = xs.aggregate.spatial_mean(ds, method="cos-lat")
+        assert "rotated_pole" not in out
+        assert "grid_mapping" not in out.tas.attrs
+        np.testing.assert_allclose(out.tas, 1.623069, rtol=1e-6)
+        assert "weighted mean(dim=('rlat', 'rlon'))" in out.attrs["history"]
+
+    def test_cos_lat_errors(self):
+        ds = datablock_3d(
+            np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 3, "float"),
+            "tas",
+            "lon",
+            -70,
+            "lat",
+            15,
+            30,
+            30,
+            as_dataset=True,
+        )
+
+        ds_no_attrs = ds.copy()
+        ds_no_attrs["lat"].attrs = {}
+        ds_no_attrs["lon"].attrs = {}
+        out0 = xs.aggregate.spatial_mean(
+            ds_no_attrs, method="cos-lat"
+        )  # Should not raise, since 'lat' is in the coords
+        with pytest.raises(
+            ValueError, match="Could not determine the spatial coordinate names"
+        ):
+            xs.aggregate.spatial_mean(
+                ds_no_attrs.rename({"lat": "some_other_name"}), method="cos-lat"
+            )
+        out1 = xs.aggregate.spatial_mean(
+            ds_no_attrs.rename({"lat": "some_other_name"}),
+            method="cos-lat",
+            kwargs={"latitude_name": "some_other_name"},
+        )
+        np.testing.assert_array_almost_equal(out0.tas, out1.tas)
+
+        ds_no_units = ds.copy()
+        ds_no_units["lat"].attrs.pop("units")
+        with pytest.warns(UserWarning, match="Latitude units are "):
+            out2 = xs.aggregate.spatial_mean(ds_no_units, method="cos-lat")
+        np.testing.assert_array_almost_equal(out0.tas, out2.tas)
+
+        ds2 = datablock_3d(
+            np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 3, "float"),
+            "tas",
+            "lon",
+            170,
+            "lat",
+            15,
+            10,
+            30,
+            as_dataset=True,
+        )
+        with xr.set_options(keep_attrs=True):
+            ds2["lon"] = xr.where(ds2["lon"] > 180, ds2["lon"] - 360, ds2["lon"])
+        with pytest.warns(
+            UserWarning, match="The region appears to be crossing the -180/180"
+        ):
+            xs.aggregate.spatial_mean(ds2, method="cos-lat")
+
+    def test_interp(self):
+        ds = datablock_3d(
+            np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 3, "float"),
+            "tas",
+            "rlon",
+            0,
+            "rlat",
+            15,
+            30,
+            30,
+            as_dataset=True,
+        )
+
+        with pytest.raises(
+            ValueError, match="has been removed, since it produced incorrect results."
+        ):
+            xs.aggregate.spatial_mean(ds, method="interp_centroid")
+
+    def test_xesmf_shape(self):
+        if xe is None:
+            pytest.skip("xesmf needed for testing averaging with method xesmf")
+        ds = datablock_3d(
+            np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 3, "float"),
+            "tas",
+            "lon",
+            -70,
+            "lat",
+            45,
+            30,
+            10,
+            as_dataset=True,
+        )
+        poly = gpd.GeoDataFrame(
+            geometry=[Polygon([(-60, 50), (-35, 50), (-35, 60), (-60, 60)])]
+        )
+        region = {"method": "shape", "shape": poly}
+
+        avg = xs.aggregate.spatial_mean(ds, method="xesmf", region=region)
+        np.testing.assert_allclose(avg.tas, 1.729156)
+        assert avg.attrs["regrid_method"] == "conservative"
+        assert "xesmf.SpatialAverager over 1 polygon" in avg.attrs["history"]
+
+    @pytest.mark.parametrize("simplify_tolerance", [None, 50])
+    def test_xesmf_rot_shape(self, simplify_tolerance):
+        if xe is None:
+            pytest.skip("xesmf needed for testing averaging with method xesmf")
+        ds = datablock_3d(
+            np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 3, "float"),
+            "tas",
+            "rlon",
+            0,
+            "rlat",
+            45,
+            30,
+            10,
+            as_dataset=True,
+        )
+        poly = gpd.GeoDataFrame(
+            geometry=[Polygon([(60, 50), (30, 50), (30, 60), (60, 60)])]
+        )
+        region = {"method": "shape", "shape": poly}
+
+        avg = xs.aggregate.spatial_mean(
+            ds,
+            method="xesmf",
+            region=region,
+            simplify_tolerance=simplify_tolerance,
+            to_level="for_testing",
+            to_domain="for_testing2",
+        )
+        if simplify_tolerance is None:
+            np.testing.assert_allclose(avg.tas, 3.302546, rtol=1e-6)
+            assert avg.attrs["regrid_method"] == "conservative"
+            assert "rotated_pole" not in avg
+            assert "grid_mapping" not in avg.tas.attrs
+            assert all(c in avg.coords for c in ["lon_bounds", "lat_bounds"])
+            np.testing.assert_array_equal(avg["lon"], np.mean([60, 30]))
+            np.testing.assert_array_equal(avg["lat"], np.mean([50, 60]))
+            assert avg.attrs["cat:processing_level"] == "for_testing"
+            assert avg.attrs["cat:domain"] == "for_testing2"
+        else:
+            # Essentially just test that it changes the results
+            np.testing.assert_allclose(avg.tas, 2.967405, rtol=1e-6)
+            np.testing.assert_array_almost_equal(avg["lon"], 40)
+            np.testing.assert_array_almost_equal(avg["lat"], 56.66666667)
+
+    def test_errors(self):
+        if xe is None:
+            pytest.skip("xesmf needed for testing averaging with method xesmf")
+        ds = datablock_3d(
+            np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 3, "float"),
+            "tas",
+            "lon",
+            -70,
+            "lat",
+            45,
+            30,
+            10,
+            as_dataset=True,
+        )
+        with pytest.raises(ValueError, match="should be one of"):
+            xs.aggregate.spatial_mean(ds, method="xesmf", region={"method": "foo"})
+        with pytest.raises(ValueError, match="Subsetting method should be"):
+            xs.aggregate.spatial_mean(ds, method="foo")
+
 
 class TestClimatologicalOp:
     @staticmethod
@@ -602,6 +792,64 @@ class TestClimatologicalOp:
         )
         assert out.attrs["cat:processing_level"] == "for_testing"
 
+    @pytest.mark.parametrize("ddof", [0, 1])
+    def test_dict(self, ddof):
+        ds = timeseries(
+            np.arange(1, 31),
+            variable="tas",
+            start="2001-01-01",
+            freq="YS",
+            as_dataset=True,
+        )
+        ds["tas"] = ds["tas"].astype(float)
+        ds["tas"].values[0] = np.nan
+        op = {"std": {"ddof": ddof}}
+
+        # Test with NaNs
+        np.testing.assert_array_almost_equal(
+            xs.climatological_op(ds, op=op).tas_clim_std, np.nan
+        )
+
+        out = xs.climatological_op(ds, op=op, min_periods=29)
+        if ddof == 0:
+            np.testing.assert_array_almost_equal(
+                out["tas_clim_std"], 8.366600, decimal=6
+            )
+            np.testing.assert_array_almost_equal(
+                out["tas_clim_std"],
+                xs.climatological_op(ds, op="std", min_periods=29)["tas_clim_std"],
+            )
+        else:
+            np.testing.assert_array_almost_equal(
+                out["tas_clim_std"], 8.514693, decimal=6
+            )
+
+    def test_op_not_implemented(self):
+        ds = timeseries(
+            np.arange(1, 31),
+            variable="tas",
+            start="2001-01-01",
+            freq="YS",
+            as_dataset=True,
+        )
+        with pytest.warns(UserWarning, match="has not been tested"):
+            xs.climatological_op(ds, op="argmax")
+
+    def test_std_mean(self):
+        ds = timeseries(
+            np.arange(1, 31),
+            variable="tas",
+            start="2001-01-01",
+            freq="YS",
+            as_dataset=True,
+        )
+        ds = ds.rename({"tas": "tas_std"})
+
+        out = xs.climatological_op(ds, op="mean")
+        np.testing.assert_array_almost_equal(
+            out["tas_std_clim_mean"], np.sqrt(np.square(np.arange(1, 31)).mean())
+        )
+
     @pytest.mark.parametrize("op", ["mean", "linregress"])
     def test_minperiods(self, op):
         ds = timeseries(
@@ -613,15 +861,27 @@ class TestClimatologicalOp:
         )
         ds = ds.where(ds["time"].dt.strftime("%Y-%m-%d") != "2030-12-01")
 
-        op = "mean"
         out = xs.climatological_op(ds, op=op, window=30)
-        assert all(np.isreal(out[f"tas_clim_{op}"]))
+        assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == 0
         assert len(out.time) == 4
-        np.testing.assert_array_equal(out[f"tas_clim_{op}"], np.arange(1, 5))
+        if op == "mean":
+            np.testing.assert_array_equal(out[f"tas_clim_{op}"], np.arange(1, 5))
+        else:
+            np.testing.assert_array_almost_equal(
+                out[f"tas_clim_{op}"],
+                np.array(
+                    [
+                        [0.0, 1.0, 0.0, 1.0, 0.0, 0.0],
+                        [0.0, 2.0, 0.0, 1.0, 0.0, 0.0],
+                        [0.0, 3.0, 0.0, 1.0, 0.0, 0.0],
+                        [0.0, 4.0, 0.0, 1.0, 0.0, 0.0],
+                    ]
+                ),
+            )
 
         # min_periods as int
         out = xs.climatological_op(ds, op=op, window=30, min_periods=30)
-        assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == 1
+        assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == 1 if op == "mean" else 6
 
         # min_periods as float
         out = xs.climatological_op(ds, op=op, window=30, min_periods=0.5)
@@ -630,6 +890,9 @@ class TestClimatologicalOp:
 
         with pytest.raises(ValueError):
             xs.climatological_op(ds, op=op, window=5, min_periods=6)
+
+        with pytest.raises(ValueError, match="it must be between 0 and 1"):
+            xs.climatological_op(ds, op=op, window=30, min_periods=6.5)
 
     @pytest.mark.parametrize("op", ["mean", "linregress"])
     def test_periods(self, op):
@@ -734,3 +997,21 @@ class TestClimatologicalOp:
                 out[next(iter(freq.get(xrfreq)))].values
                 == freq_coords[next(iter(freq.get(xrfreq)))]
             ).all()
+
+    def test_errors(self):
+        ds = timeseries(
+            np.arange(1, 31),
+            variable="tas",
+            start="2001-01-01",
+            freq="YS",
+            as_dataset=True,
+        )
+
+        with pytest.raises(
+            NotImplementedError,
+            match="xs.climatological_op does not currently support more than one operation per call.",
+        ):
+            xs.climatological_op(ds, op={"mean": {}, "std": {}})
+
+        with pytest.raises(ValueError, match="not implemented."):
+            xs.climatological_op(ds, op="unknown")

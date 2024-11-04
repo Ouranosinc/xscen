@@ -374,65 +374,6 @@ class TestRegridDataset:
         assert out.pr.attrs["grid_mapping"] == "rotated_pole"
 
 
-class TestGetGrid:
-    def test_none(self):
-        ds = datablock_3d(
-            np.zeros((20, 10, 10)),
-            "tas",
-            "lon",
-            -142,
-            "lat",
-            0,
-            2,
-            2,
-            "2000-01-01",
-            as_dataset=True,
-        )
-        assert xs.regrid._get_grid_mapping(ds) == ""
-
-    def test_rotated_pole(self):
-        ds = datablock_3d(
-            np.zeros((20, 10, 10)),
-            "tas",
-            "rlon",
-            -142,
-            "rlat",
-            0,
-            2,
-            2,
-            "2000-01-01",
-            as_dataset=True,
-        )
-        assert xs.regrid._get_grid_mapping(ds) == "rotated_pole"
-
-        ds_no_coord = ds.copy()
-        ds_no_coord = ds_no_coord.drop_vars("rotated_pole")
-        assert xs.regrid._get_grid_mapping(ds_no_coord) == "rotated_pole"
-
-        ds_no_var = ds.copy()
-        ds_no_var = ds_no_var.drop_vars("tas")
-        assert xs.regrid._get_grid_mapping(ds_no_var) == "rotated_pole"
-
-    def test_error(self):
-        ds = datablock_3d(
-            np.zeros((20, 10, 10)),
-            "tas",
-            "x",
-            -5000,
-            "y",
-            5000,
-            100000,
-            100000,
-            "2000-01-01",
-            as_dataset=True,
-        )
-        ds["tas"].attrs["grid_mapping"] = "lambert_conformal_conic"
-        with pytest.warns(
-            UserWarning, match="There are conflicting grid_mapping attributes"
-        ):
-            assert xs.regrid._get_grid_mapping(ds) == "lambert_conformal_conic"
-
-
 class TestMask:
     ds = datablock_3d(
         np.tile(np.arange(6), (1, 4, 1)),
