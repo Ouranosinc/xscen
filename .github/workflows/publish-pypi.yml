@@ -24,6 +24,7 @@ jobs:
           egress-policy: block
           allowed-endpoints: >
             files.pythonhosted.org:443
+            fulcio.sigstore.dev:443
             github.com:443
             pypi.org:443
             tuf-repo-cdn.sigstore.dev:443
