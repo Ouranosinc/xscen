@@ -28,6 +28,7 @@ Bug fixes
 
 Internal changes
 ^^^^^^^^^^^^^^^^
+* Include CF convention for temperature differences and on scale (:pull:`428`, :issue:`428`).
 * Bumped the version of `xclim` to 0.53.2. (:pull:`482`).
 
 v0.10.0 (2024-09-30)

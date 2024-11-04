@@ -23,6 +23,7 @@ try:
 except ImportError:
     xe = None
 from xclim.core.indicator import Indicator
+from xclim.core.units import pint2cfattrs, units2pint
 
 from .config import parse_config
 from .extract import subset_warming_level
@@ -565,6 +566,10 @@ def compute_deltas(  # noqa: C901
             if (isinstance(kind, dict) and kind[vv] == "+") or kind == "+":
                 _kind = "abs."
                 deltas[v_name] = other_hz[vv] - ref[vv]
+                unit = pint2cfattrs(
+                    units2pint(other_hz[vv].attrs["units"]), is_difference=True
+                )
+                deltas[v_name].attrs.update(unit)
             elif (isinstance(kind, dict) and kind[vv] == "/") or kind == "/":
                 _kind = "rel."
                 deltas[v_name] = other_hz[vv] / ref[vv]
