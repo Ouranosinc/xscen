@@ -110,7 +110,6 @@ class TestProperties:
         )
         assert out_season.long_name.startswith("Quantile 0.2")
 
-    # TODO: test theshold_count? it's the same a test_spell_length_distribution
     def test_spell_length_distribution(self, open_dataset):
         ds = (
             open_dataset("sdba/CanESM2_1950-2100.nc")
