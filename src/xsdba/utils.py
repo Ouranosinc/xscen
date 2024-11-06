@@ -19,7 +19,12 @@ from scipy.spatial import distance
 from scipy.stats import spearmanr
 from xarray.core.utils import get_temp_dimname
 
-from xsdba.base import Grouper, _interpolate_doy_calendar, ensure_chunk_size, parse_group
+from xsdba.base import (
+    Grouper,
+    _interpolate_doy_calendar,
+    ensure_chunk_size,
+    parse_group,
+)
 from xsdba.nbutils import _extrapolate_on_quantiles
 
 MULTIPLICATIVE = "*"
