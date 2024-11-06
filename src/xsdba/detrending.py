@@ -7,10 +7,10 @@ from __future__ import annotations
 
 import xarray as xr
 
-from .base import Grouper, ParametrizableWithDataset, map_groups, parse_group
-from .loess import loess_smoothing
-from .units import harmonize_units
-from .utils import ADDITIVE, apply_correction, invert
+from xsdba.base import Grouper, ParametrizableWithDataset, map_groups, parse_group
+from xsdba.loess import loess_smoothing
+from xsdba.units import harmonize_units
+from xsdba.utils import ADDITIVE, apply_correction, invert
 
 
 class BaseDetrend(ParametrizableWithDataset):

@@ -19,7 +19,7 @@ from typing import Any
 import xarray as xr
 from boltons.funcutils import wraps
 
-from .typing import KIND_ANNOTATION, InputKind
+from xsdba.typing import KIND_ANNOTATION, InputKind
 
 
 class AttrFormatter(string.Formatter):

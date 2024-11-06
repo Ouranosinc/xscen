@@ -112,7 +112,7 @@ some bugs or inconsistencies might exist. To see how one can install that packag
 
 Notes for Developers
 ====================
-To be scalable and performant, the sdba module makes use of the special decorators :py:func`xsdba.base.map_blocks`
+To be scalable and performant, the sdba module makes use of the special decorators :py:func:`xsdba.base.map_blocks`
 and :py:func:`xsdba.base.map_groups`. However, they have the inconvenient that functions wrapped by them are unable
 to manage xarray attributes (including units) correctly and their signatures are sometime wrong and often unclear. For
 this reason, the module is often divided in two parts : the (decorated) compute functions in a "private" file

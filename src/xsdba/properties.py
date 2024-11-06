@@ -29,9 +29,9 @@ from xsdba.units import (
     units2pint,
 )
 
-from .base import Grouper, map_groups, parse_group, parse_offset, uses_dask
-from .nbutils import _pairwise_haversine_and_bins
-from .utils import _pairwise_spearman, copy_all_attrs
+from xsdba.base import Grouper, map_groups, parse_group, parse_offset, uses_dask
+from xsdba.nbutils import _pairwise_haversine_and_bins
+from xsdba.utils import _pairwise_spearman, copy_all_attrs
 
 
 # TODO: Reduce redundancy between this submodule and generic
@@ -313,7 +313,7 @@ def _spell_length_distribution(
     ----------
     da : xr.DataArray
         Variable on which to calculate the diagnostic.
-    method: {'amount', 'quantile'}
+    method : {'amount', 'quantile'}
         Method to choose the threshold.
         'amount': The threshold is directly the quantity in {thresh}. It needs to have the same units as {da}.
         'quantile': The threshold is calculated as the quantile {thresh} of the distribution.
@@ -695,7 +695,7 @@ def _annual_statistic(
 
     Parameters
     ----------
-    da: xr.DataArray
+    da : xr.DataArray
         Data.
     stat : {'absamp', 'relamp', 'phase'}
         The statistic to return.

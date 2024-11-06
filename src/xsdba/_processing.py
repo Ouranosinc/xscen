@@ -13,9 +13,9 @@ from collections.abc import Sequence
 import numpy as np
 import xarray as xr
 
-from . import nbutils as nbu
-from .base import Grouper, map_groups
-from .utils import ADDITIVE, apply_correction, ecdf, invert, rank
+from xsdba import nbutils as nbu
+from xsdba.base import Grouper, map_groups
+from xsdba.utils import ADDITIVE, apply_correction, ecdf, invert, rank
 
 
 @map_groups(
