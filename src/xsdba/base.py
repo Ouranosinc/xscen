@@ -1100,7 +1100,7 @@ def construct_offset(mult: int, base: str, start_anchored: bool, anchor: str | N
     Returns
     -------
     str
-      An offset string, conformant to pandas-like naming conventions.
+        An offset string, conformant to pandas-like naming conventions.
 
     Notes
     -----
