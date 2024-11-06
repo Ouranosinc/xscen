@@ -424,21 +424,21 @@ def interp_on_quantiles(
     Parameters
     ----------
     newx : xr.DataArray
-      The values at which to evaluate `yq`. If `group` has group information,
-      `new` should have a coordinate with the same name as the group name
-      In that case, 2D interpolation is used.
+        The values at which to evaluate `yq`. If `group` has group information,
+        `new` should have a coordinate with the same name as the group name
+        In that case, 2D interpolation is used.
     xq, yq : xr.DataArray
-      Coordinates and values on which to interpolate. The interpolation is done
-      along the "quantiles" dimension if `group` has no group information.
-      If it does, interpolation is done in 2D on "quantiles" and on the group dimension.
+        Coordinates and values on which to interpolate. The interpolation is done
+        along the "quantiles" dimension if `group` has no group information.
+        If it does, interpolation is done in 2D on "quantiles" and on the group dimension.
     group : str or Grouper
-      The dimension and grouping information. (ex: "time" or "time.month").
-      Defaults to "time".
+        The dimension and grouping information. (ex: "time" or "time.month").
+        Defaults to "time".
     method : {'nearest', 'linear', 'cubic'}
-      The interpolation method.
+        The interpolation method.
     extrapolation : {'constant', 'nan'}
-      The extrapolation method used for values of `newx` outside the range of `xq`.
-      See notes.
+        The extrapolation method used for values of `newx` outside the range of `xq`.
+        See notes.
 
     Notes
     -----
