@@ -49,7 +49,6 @@ or setting the variable at runtime:
 logger = logging.getLogger("xsdba")
 
 
-
 def test_cannon_2015_dist():  # noqa: D103
     # ref ~ gamma(k=4, theta=7.5)  mu: 30, sigma: 15
     ref = gamma(4, scale=7.5)
