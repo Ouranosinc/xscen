@@ -290,6 +290,7 @@ override_SS05 = [
 [tool.pytest.ini_options]
 addopts = [
   "--color=yes",
+  "--cov=xsdba",
   "--numprocesses=0",
   "--maxprocesses=8",
   "--dist=worksteal"

@@ -386,15 +386,6 @@ class Adjust(BaseAdjustment):
 class EmpiricalQuantileMapping(TrainAdjust):
     """Empirical Quantile Mapping bias-adjustment.
 
-    Adjustment factors are computed between the quantiles of `ref` and `sim`.
-    Values of `sim` are matched to the corresponding quantiles of `hist` and corrected accordingly.
-
-    .. math::
-
-      F^{-1}_{ref} (F_{hist}(sim))
-
-    where :math:`F` is the cumulative distribution function (CDF) and `mod` stands for model data.
-
     Attributes
     ----------
     Train step
@@ -417,6 +408,17 @@ class EmpiricalQuantileMapping(TrainAdjust):
         The interpolation method to use when interpolating the adjustment factors. Defaults to "nearest".
     extrapolation : {'constant', 'nan'}
         The type of extrapolation to use. Defaults to "constant".
+
+    Notes
+    -----
+    Adjustment factors are computed between the quantiles of `ref` and `sim`.
+    Values of `sim` are matched to the corresponding quantiles of `hist` and corrected accordingly.
+
+    .. math::
+
+      F^{-1}_{ref} (F_{hist}(sim))
+
+    where :math:`F` is the cumulative distribution function (CDF) and `mod` stands for model data.
 
     References
     ----------
@@ -474,24 +476,7 @@ class EmpiricalQuantileMapping(TrainAdjust):
 class DetrendedQuantileMapping(TrainAdjust):
     r"""Detrended Quantile Mapping bias-adjustment.
 
-    The algorithm follows these steps, 1-3 being the 'train' and 4-6, the 'adjust' steps.
-
-    1. A scaling factor that would make the mean of `hist` match the mean of `ref` is computed.
-    2. `ref` and `hist` are normalized by removing the "dayofyear" mean.
-    3. Adjustment factors are computed between the quantiles of the normalized `ref` and `hist`.
-    4. `sim` is corrected by the scaling factor, and either normalized by "dayofyear" and  detrended group-wise
-       or directly detrended per "dayofyear", using a linear fit (modifiable).
-    5. Values of detrended `sim` are matched to the corresponding quantiles of normalized `hist` and corrected accordingly.
-    6. The trend is put back on the result.
-
-    .. math::
-
-        F^{-1}_{ref}\left\{F_{hist}\left[\frac{\overline{hist}\cdot sim}{\overline{sim}}\right]\right\}\frac{\overline{sim}}{\overline{hist}}
-
-    where :math:`F` is the cumulative distribution function (CDF) and :math:`\overline{xyz}` is the linear trend of the data.
-    This equation is valid for multiplicative adjustment. Based on the DQM method of :cite:p:`cannon_bias_2015`.
-
-    Parameters
+    Attributes
     ----------
     Train step:
 
@@ -516,6 +501,25 @@ class DetrendedQuantileMapping(TrainAdjust):
         Defaults to 1 (linear detrending).
     extrapolation : {'constant', 'nan'}
         The type of extrapolation to use. Defaults to "constant".
+
+    Notes
+    -----
+    The algorithm follows these steps, 1-3 being the 'train' and 4-6, the 'adjust' steps.
+
+    1. A scaling factor that would make the mean of `hist` match the mean of `ref` is computed.
+    2. `ref` and `hist` are normalized by removing the "dayofyear" mean.
+    3. Adjustment factors are computed between the quantiles of the normalized `ref` and `hist`.
+    4. `sim` is corrected by the scaling factor, and either normalized by "dayofyear" and  detrended group-wise
+       or directly detrended per "dayofyear", using a linear fit (modifiable).
+    5. Values of detrended `sim` are matched to the corresponding quantiles of normalized `hist` and corrected accordingly.
+    6. The trend is put back on the result.
+
+    .. math::
+
+        F^{-1}_{ref}\left\{F_{hist}\left[\frac{\overline{hist}\cdot sim}{\overline{sim}}\right]\right\}\frac{\overline{sim}}{\overline{hist}}
+
+    where :math:`F` is the cumulative distribution function (CDF) and :math:`\overline{xyz}` is the linear trend of the data.
+    This equation is valid for multiplicative adjustment. Based on the DQM method of :cite:p:`cannon_bias_2015`.
 
     References
     ----------
@@ -602,7 +606,7 @@ class QuantileDeltaMapping(EmpiricalQuantileMapping):
     where :math:`F` is the cumulative distribution function (CDF). This equation is valid for multiplicative adjustment.
     The algorithm is based on the "QDM" method of :cite:p:`cannon_bias_2015`.
 
-    Parameters
+    Attributes
     ----------
     Train step:
 
