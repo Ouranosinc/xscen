@@ -48,10 +48,6 @@ or setting the variable at runtime:
 
 logger = logging.getLogger("xsdba")
 
-try:
-    from pytest_socket import SocketBlockedError
-except ImportError:
-    SocketBlockedError = None
 
 
 def test_cannon_2015_dist():  # noqa: D103

@@ -520,14 +520,14 @@ def rank(
 
     Parameters
     ----------
-    da: xr.DataArray
-      Source array.
+    da : xr.DataArray
+        Source array.
     dim : str | list[str], hashable
-      Dimension(s) over which to compute rank.
+        Dimension(s) over which to compute rank.
     pct : bool, optional
-      If True, compute percentage ranks, otherwise compute integer ranks.
-      Percentage ranks range from 0 to 1, in opposition to xarray's implementation,
-      where they range from 1/N to 1.
+        If True, compute percentage ranks, otherwise compute integer ranks.
+        Percentage ranks range from 0 to 1, in opposition to xarray's implementation,
+        where they range from 1/N to 1.
 
     Returns
     -------
@@ -583,12 +583,12 @@ def pc_matrix(arr: np.ndarray | dsk.Array) -> np.ndarray | dsk.Array:
     Parameters
     ----------
     arr : numpy.ndarray or dask.array.Array
-      2D array (M, N) of the M coordinates of N points.
+        2D array (M, N) of the M coordinates of N points.
 
     Returns
     -------
     numpy.ndarray or dask.array.Array
-      MxM Array of the same type as arr.
+        MxM Array of the same type as arr.
     """
     # Get appropriate math module
     mod = dsk if isinstance(arr, dsk.Array) else np
@@ -624,17 +624,17 @@ def best_pc_orientation_simple(
     Parameters
     ----------
     R : np.ndarray
-      MxM Matrix defining the final transformation.
+        MxM Matrix defining the final transformation.
     Hinv : np.ndarray
-      MxM Matrix defining the (inverse) first transformation.
+        MxM Matrix defining the (inverse) first transformation.
     val : float
-      The coordinate of the test point (same for all axes). It should be much
-      greater than the largest furthest point in the array used to define B.
+        The coordinate of the test point (same for all axes). It should be much
+        greater than the largest furthest point in the array used to define B.
 
     Returns
     -------
     np.ndarray
-      Mx1 vector of orientation correction (1 or -1).
+        Mx1 vector of orientation correction (1 or -1).
 
     See Also
     --------
@@ -674,20 +674,20 @@ def best_pc_orientation_full(
     Parameters
     ----------
     R : np.ndarray
-      MxM Matrix defining the final transformation.
+        MxM Matrix defining the final transformation.
     Hinv : np.ndarray
-      MxM Matrix defining the (inverse) first transformation.
+        MxM Matrix defining the (inverse) first transformation.
     Rmean : np.ndarray
-      M vector defining the target distribution center point.
+        M vector defining the target distribution center point.
     Hmean : np.ndarray
-      M vector defining the original distribution center point.
+        M vector defining the original distribution center point.
     hist : np.ndarray
-      MxN matrix of all training observations of the M variables/sites.
+        MxN matrix of all training observations of the M variables/sites.
 
     Returns
     -------
     np.ndarray
-      M vector of orientation correction (1 or -1).
+        M vector of orientation correction (1 or -1).
 
     References
     ----------
