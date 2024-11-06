@@ -1012,7 +1012,7 @@ def parse_offset(freq: str) -> tuple[int, str, bool, str | None]:
     Parameters
     ----------
     freq : str
-      Frequency offset.
+        Frequency offset.
 
     Returns
     -------
