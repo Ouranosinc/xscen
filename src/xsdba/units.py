@@ -28,9 +28,9 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from .base import parse_offset
-from .typing import Quantified
-from .utils import copy_all_attrs
+from xsdba.base import parse_offset
+from xsdba.typing import Quantified
+from xsdba.utils import copy_all_attrs
 
 __all__ = [
     "convert_units_to",

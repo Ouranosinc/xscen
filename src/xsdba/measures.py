@@ -16,10 +16,10 @@ import numpy as np
 import xarray as xr
 from xclim.core.indicator import Indicator, base_registry
 
-from .base import Grouper
-from .typing import InputKind
-from .units import convert_units_to, pint2cfattrs, units2pint
-from .utils import _pairwise_spearman
+from xsdba.base import Grouper
+from xsdba.typing import InputKind
+from xsdba.units import convert_units_to, pint2cfattrs, units2pint
+from xsdba.utils import _pairwise_spearman
 
 
 class StatisticalMeasure(Indicator):

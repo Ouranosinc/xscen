@@ -19,8 +19,13 @@ from scipy.spatial import distance
 from scipy.stats import spearmanr
 from xarray.core.utils import get_temp_dimname
 
-from .base import Grouper, _interpolate_doy_calendar, ensure_chunk_size, parse_group
-from .nbutils import _extrapolate_on_quantiles
+from xsdba.base import (
+    Grouper,
+    _interpolate_doy_calendar,
+    ensure_chunk_size,
+    parse_group,
+)
+from xsdba.nbutils import _extrapolate_on_quantiles
 
 MULTIPLICATIVE = "*"
 ADDITIVE = "+"
@@ -419,21 +424,21 @@ def interp_on_quantiles(
     Parameters
     ----------
     newx : xr.DataArray
-      The values at which to evaluate `yq`. If `group` has group information,
-      `new` should have a coordinate with the same name as the group name
-      In that case, 2D interpolation is used.
+        The values at which to evaluate `yq`. If `group` has group information,
+        `new` should have a coordinate with the same name as the group name
+        In that case, 2D interpolation is used.
     xq, yq : xr.DataArray
-      Coordinates and values on which to interpolate. The interpolation is done
-      along the "quantiles" dimension if `group` has no group information.
-      If it does, interpolation is done in 2D on "quantiles" and on the group dimension.
+        Coordinates and values on which to interpolate. The interpolation is done
+        along the "quantiles" dimension if `group` has no group information.
+        If it does, interpolation is done in 2D on "quantiles" and on the group dimension.
     group : str or Grouper
-      The dimension and grouping information. (ex: "time" or "time.month").
-      Defaults to "time".
+        The dimension and grouping information. (ex: "time" or "time.month").
+        Defaults to "time".
     method : {'nearest', 'linear', 'cubic'}
-      The interpolation method.
+        The interpolation method.
     extrapolation : {'constant', 'nan'}
-      The extrapolation method used for values of `newx` outside the range of `xq`.
-      See notes.
+        The extrapolation method used for values of `newx` outside the range of `xq`.
+        See notes.
 
     Notes
     -----
@@ -520,14 +525,14 @@ def rank(
 
     Parameters
     ----------
-    da: xr.DataArray
-      Source array.
+    da : xr.DataArray
+        Source array.
     dim : str | list[str], hashable
-      Dimension(s) over which to compute rank.
+        Dimension(s) over which to compute rank.
     pct : bool, optional
-      If True, compute percentage ranks, otherwise compute integer ranks.
-      Percentage ranks range from 0 to 1, in opposition to xarray's implementation,
-      where they range from 1/N to 1.
+        If True, compute percentage ranks, otherwise compute integer ranks.
+        Percentage ranks range from 0 to 1, in opposition to xarray's implementation,
+        where they range from 1/N to 1.
 
     Returns
     -------
@@ -583,12 +588,12 @@ def pc_matrix(arr: np.ndarray | dsk.Array) -> np.ndarray | dsk.Array:
     Parameters
     ----------
     arr : numpy.ndarray or dask.array.Array
-      2D array (M, N) of the M coordinates of N points.
+        2D array (M, N) of the M coordinates of N points.
 
     Returns
     -------
     numpy.ndarray or dask.array.Array
-      MxM Array of the same type as arr.
+        MxM Array of the same type as arr.
     """
     # Get appropriate math module
     mod = dsk if isinstance(arr, dsk.Array) else np
@@ -624,17 +629,17 @@ def best_pc_orientation_simple(
     Parameters
     ----------
     R : np.ndarray
-      MxM Matrix defining the final transformation.
+        MxM Matrix defining the final transformation.
     Hinv : np.ndarray
-      MxM Matrix defining the (inverse) first transformation.
+        MxM Matrix defining the (inverse) first transformation.
     val : float
-      The coordinate of the test point (same for all axes). It should be much
-      greater than the largest furthest point in the array used to define B.
+        The coordinate of the test point (same for all axes). It should be much
+        greater than the largest furthest point in the array used to define B.
 
     Returns
     -------
     np.ndarray
-      Mx1 vector of orientation correction (1 or -1).
+        Mx1 vector of orientation correction (1 or -1).
 
     See Also
     --------
@@ -674,20 +679,20 @@ def best_pc_orientation_full(
     Parameters
     ----------
     R : np.ndarray
-      MxM Matrix defining the final transformation.
+        MxM Matrix defining the final transformation.
     Hinv : np.ndarray
-      MxM Matrix defining the (inverse) first transformation.
+        MxM Matrix defining the (inverse) first transformation.
     Rmean : np.ndarray
-      M vector defining the target distribution center point.
+        M vector defining the target distribution center point.
     Hmean : np.ndarray
-      M vector defining the original distribution center point.
+        M vector defining the original distribution center point.
     hist : np.ndarray
-      MxN matrix of all training observations of the M variables/sites.
+        MxN matrix of all training observations of the M variables/sites.
 
     Returns
     -------
     np.ndarray
-      M vector of orientation correction (1 or -1).
+        M vector of orientation correction (1 or -1).
 
     References
     ----------

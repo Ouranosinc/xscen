@@ -21,8 +21,7 @@ from boltons.funcutils import wraps
 from xarray.core import dtypes
 
 from xsdba.options import OPTIONS, SDBA_ENCODE_CF
-
-from .typing import InputKind
+from xsdba.typing import InputKind
 
 # TODO : Redistributes some functions in existing/new scripts
 
@@ -1013,7 +1012,7 @@ def parse_offset(freq: str) -> tuple[int, str, bool, str | None]:
     Parameters
     ----------
     freq : str
-      Frequency offset.
+        Frequency offset.
 
     Returns
     -------
@@ -1101,7 +1100,7 @@ def construct_offset(mult: int, base: str, start_anchored: bool, anchor: str | N
     Returns
     -------
     str
-      An offset string, conformant to pandas-like naming conventions.
+        An offset string, conformant to pandas-like naming conventions.
 
     Notes
     -----
