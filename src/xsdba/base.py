@@ -21,7 +21,6 @@ from boltons.funcutils import wraps
 from xarray.core import dtypes
 
 from xsdba.options import OPTIONS, SDBA_ENCODE_CF
-
 from xsdba.typing import InputKind
 
 # TODO : Redistributes some functions in existing/new scripts
