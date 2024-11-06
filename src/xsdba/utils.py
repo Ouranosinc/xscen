@@ -777,26 +777,26 @@ def get_clusters(data: xr.DataArray, u1, u2, dim: str = "time") -> xr.Dataset:
     Parameters
     ----------
     data: 1D ndarray
-      Values to get clusters from.
+        Values to get clusters from.
     u1 : float
-      Extreme value threshold, at least one value in the cluster must exceed this.
+        Extreme value threshold, at least one value in the cluster must exceed this.
     u2 : float
-      Cluster threshold, values above this can be part of a cluster.
+        Cluster threshold, values above this can be part of a cluster.
     dim : str
-      Dimension name.
+        Dimension name.
 
     Returns
     -------
     xr.Dataset
-      With variables,
-        - `nclusters` : Number of clusters for each point (with `dim` reduced), int
-        - `start` : First index in the cluster (`dim` reduced, new `cluster`), int
-        - `end` : Last index in the cluster, inclusive (`dim` reduced, new `cluster`), int
-        - `maxpos` : Index of the maximal value within the cluster (`dim` reduced, new `cluster`), int
-        - `maximum` : Maximal value within the cluster (`dim` reduced, new `cluster`), same dtype as data.
+        With variables,
+            - `nclusters` : Number of clusters for each point (with `dim` reduced), int
+            - `start` : First index in the cluster (`dim` reduced, new `cluster`), int
+            - `end` : Last index in the cluster, inclusive (`dim` reduced, new `cluster`), int
+            - `maxpos` : Index of the maximal value within the cluster (`dim` reduced, new `cluster`), int
+            - `maximum` : Maximal value within the cluster (`dim` reduced, new `cluster`), same dtype as data.
 
-      For `start`, `end` and `maxpos`, -1 means nan and should always correspond to a `nan` in `maximum`.
-      The length along `cluster` is half the size of "dim", the maximal theoretical number of clusters.
+        For `start`, `end` and `maxpos`, -1 means nan and should always correspond to a `nan` in `maximum`.
+        The length along `cluster` is half the size of "dim", the maximal theoretical number of clusters.
     """
 
     def _get_clusters(arr, u1, u2, N):
