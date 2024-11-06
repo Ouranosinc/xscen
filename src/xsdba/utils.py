@@ -723,11 +723,11 @@ def get_clusters_1d(
     Parameters
     ----------
     data : 1D ndarray
-      Values to get clusters from.
+        Values to get clusters from.
     u1 : float
-      Extreme value threshold, at least one value in the cluster must exceed this.
+        Extreme value threshold, at least one value in the cluster must exceed this.
     u2 : float
-      Cluster threshold, values above this can be part of a cluster.
+        Cluster threshold, values above this can be part of a cluster.
 
     Returns
     -------
