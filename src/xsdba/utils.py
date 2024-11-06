@@ -1146,9 +1146,9 @@ def _fit_start(x, dist: str, **fitkwargs: Any) -> tuple[tuple, dict]:
     ----------
     x : array-like
         Input data.
-    dist : str
-        Name of the univariate distribution, e.g. `beta`, `expon`, `genextreme`, `gamma`, `gumbel_r`, `lognorm`, `norm`.
-        (see :py:mod:scipy.stats). Only `genextreme` and `weibull_exp` distributions are supported.
+    dist : {"genextreme",  "genpareto", "weibull_min", "gamma", "fisk"}
+        Name of the univariate distribution following ``scipy`` format (see :py:mod:scipy.stats). Other values than the
+        supported distributions will return empty arrays for the parameters.
     \*\*fitkwargs
         Kwargs passed to fit.
 
