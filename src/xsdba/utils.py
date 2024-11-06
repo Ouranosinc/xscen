@@ -860,19 +860,19 @@ def rand_rot_matrix(
 
     Parameters
     ----------
-    crd: xr.DataArray
-      1D coordinate DataArray along which the rotation occurs.
-      The output will be square with the same coordinate replicated,
-      the second renamed to `new_dim`.
+    crd : xr.DataArray
+        1D coordinate DataArray along which the rotation occurs.
+        The output will be square with the same coordinate replicated,
+        the second renamed to `new_dim`.
     num : int
-      If larger than 1 (default), the number of matrices to generate, stacked along a "matrices" dimension.
+        If larger than 1 (default), the number of matrices to generate, stacked along a "matrices" dimension.
     new_dim : str
-      Name of the new "prime" dimension, defaults to the same name as `crd` + "_prime".
+        Name of the new "prime" dimension, defaults to the same name as `crd` + "_prime".
 
     Returns
     -------
     xr.DataArray
-      Float, NxN if num = 1, numxNxN otherwise, where N is the length of crd.
+        Float, NxN if num = 1, numxNxN otherwise, where N is the length of crd.
 
     References
     ----------
