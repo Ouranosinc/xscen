@@ -18,7 +18,7 @@ from xsdba.formatting import gen_call_string, update_history
 from xsdba.options import OPTIONS, XSDBA_EXTRA_OUTPUT, set_options
 from xsdba.units import convert_units_to
 
-from ._adjustment import (
+from xsdba._adjustment import (
     dqm_adjust,
     dqm_train,
     eqm_train,
@@ -34,9 +34,9 @@ from ._adjustment import (
     scaling_adjust,
     scaling_train,
 )
-from .base import Grouper, ParametrizableWithDataset, parse_group, uses_dask
-from .processing import grouped_time_indexes
-from .utils import (
+from xsdba.base import Grouper, ParametrizableWithDataset, parse_group, uses_dask
+from xsdba.processing import grouped_time_indexes
+from xsdba.utils import (
     ADDITIVE,
     best_pc_orientation_full,
     best_pc_orientation_simple,
