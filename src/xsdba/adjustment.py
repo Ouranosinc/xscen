@@ -14,10 +14,6 @@ import xarray as xr
 from scipy import stats
 from xarray.core.dataarray import DataArray
 
-from xsdba.formatting import gen_call_string, update_history
-from xsdba.options import OPTIONS, XSDBA_EXTRA_OUTPUT, set_options
-from xsdba.units import convert_units_to
-
 from xsdba._adjustment import (
     dqm_adjust,
     dqm_train,
@@ -35,7 +31,10 @@ from xsdba._adjustment import (
     scaling_train,
 )
 from xsdba.base import Grouper, ParametrizableWithDataset, parse_group, uses_dask
+from xsdba.formatting import gen_call_string, update_history
+from xsdba.options import OPTIONS, XSDBA_EXTRA_OUTPUT, set_options
 from xsdba.processing import grouped_time_indexes
+from xsdba.units import convert_units_to
 from xsdba.utils import (
     ADDITIVE,
     best_pc_orientation_full,

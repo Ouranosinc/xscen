@@ -14,10 +14,9 @@ import numpy as np
 import xarray as xr
 from xarray.core.utils import get_temp_dimname
 
-from xsdba.formatting import update_xsdba_history
-
 from xsdba._processing import _adapt_freq, _normalize, _reordering
 from xsdba.base import Grouper, parse_offset, uses_dask
+from xsdba.formatting import update_xsdba_history
 from xsdba.nbutils import _escore
 from xsdba.units import convert_units_to, harmonize_units
 from xsdba.utils import ADDITIVE, copy_all_attrs
