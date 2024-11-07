@@ -596,16 +596,6 @@ class DetrendedQuantileMapping(TrainAdjust):
 class QuantileDeltaMapping(EmpiricalQuantileMapping):
     r"""Quantile Delta Mapping bias-adjustment.
 
-    Adjustment factors are computed between the quantiles of `ref` and `hist`.
-    Quantiles of `sim` are matched to the corresponding quantiles of `hist` and corrected accordingly.
-
-    .. math::
-
-        sim\frac{F^{-1}_{ref}\left[F_{sim}(sim)\right]}{F^{-1}_{hist}\left[F_{sim}(sim)\right]}
-
-    where :math:`F` is the cumulative distribution function (CDF). This equation is valid for multiplicative adjustment.
-    The algorithm is based on the "QDM" method of :cite:p:`cannon_bias_2015`.
-
     Attributes
     ----------
     Train step:
@@ -631,6 +621,18 @@ class QuantileDeltaMapping(EmpiricalQuantileMapping):
     In adjustment:
 
     quantiles : The quantile of each value of `sim`. The adjustment factor is interpolated using this as the "quantile" axis on `ds.af`.
+
+    Notes
+    -----
+    Adjustment factors are computed between the quantiles of `ref` and `hist`.
+    Quantiles of `sim` are matched to the corresponding quantiles of `hist` and corrected accordingly.
+
+    .. math::
+
+        sim\frac{F^{-1}_{ref}\left[F_{sim}(sim)\right]}{F^{-1}_{hist}\left[F_{sim}(sim)\right]}
+
+    where :math:`F` is the cumulative distribution function (CDF). This equation is valid for multiplicative adjustment.
+    The algorithm is based on the "QDM" method of :cite:p:`cannon_bias_2015`.
 
     References
     ----------
