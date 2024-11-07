@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import numpy as np
 import pytest
 import xarray as xr
-from cf_xarray import __version__ as __cfxr_version__
-from packaging.version import Version
 
 from xsdba.units import harmonize_units, str2pint, units, units2pint
 

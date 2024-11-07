@@ -11,9 +11,9 @@ from xsdba.units import convert_units_to, pint_multiply
 
 
 class TestProperties:
-    def test_mean(self, open_dataset):
+    def test_mean(self, gosset):
         sim = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1980"), location="Vancouver")
             .pr
         ).load()
@@ -29,9 +29,9 @@ class TestProperties:
 
         assert out_season.long_name.startswith("Mean")
 
-    def test_var(self, open_dataset):
+    def test_var(self, gosset):
         sim = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1980"), location="Vancouver")
             .pr
         ).load()
@@ -47,9 +47,9 @@ class TestProperties:
         assert out_season.long_name.startswith("Variance")
         assert out_season.units == "kg2 m-4 s-2"
 
-    def test_std(self, open_dataset):
+    def test_std(self, gosset):
         sim = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1980"), location="Vancouver")
             .pr
         ).load()
@@ -65,9 +65,9 @@ class TestProperties:
         assert out_season.long_name.startswith("Standard deviation")
         assert out_season.units == "kg m-2 s-1"
 
-    def test_skewness(self, open_dataset):
+    def test_skewness(self, gosset):
         sim = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1980"), location="Vancouver")
             .pr
         ).load()
@@ -88,9 +88,9 @@ class TestProperties:
         assert out_season.long_name.startswith("Skewness")
         assert out_season.units == ""
 
-    def test_quantile(self, open_dataset):
+    def test_quantile(self, gosset):
         sim = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1980"), location="Vancouver")
             .pr
         ).load()
@@ -110,9 +110,9 @@ class TestProperties:
         )
         assert out_season.long_name.startswith("Quantile 0.2")
 
-    def test_spell_length_distribution(self, open_dataset):
+    def test_spell_length_distribution(self, gosset):
         ds = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1952"), location="Vancouver")
             .load()
         )
@@ -155,12 +155,12 @@ class TestProperties:
             == "Average of spell length distribution when the variable is >= the quantile 0.9 for 1 consecutive day(s)."
         )
 
-    def test_spell_length_distribution_mixed_stat(self, open_dataset):
+    def test_spell_length_distribution_mixed_stat(self, gosset):
 
         time = pd.date_range("2000-01-01", periods=2 * 365, freq="D")
         tas = xr.DataArray(
             np.array([0] * 365 + [40] * 365),
-            dims=("time"),
+            dims="time",
             coords={"time": time},
             attrs={"units": "degC"},
         )
@@ -185,10 +185,10 @@ class TestProperties:
         ],
     )
     def test_bivariate_spell_length_distribution(
-        self, open_dataset, window, expected_amount, expected_quantile
+        self, window, expected_amount, expected_quantile, gosset
     ):
         ds = (
-            open_dataset("sdba/CanESM2_1950-2100.nc").sel(
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc")).sel(
                 time=slice("1950", "1952"), location="Vancouver"
             )
         ).load()
@@ -240,9 +240,9 @@ class TestProperties:
             [outd[k] for k in ["mean", "max", "min"]], expected_quantile
         )
 
-    def test_acf(self, open_dataset):
+    def test_acf(self, gosset):
         sim = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1952"), location="Vancouver")
             .pr
         ).load()
@@ -257,9 +257,9 @@ class TestProperties:
         assert out.long_name.startswith("Lag-1 autocorrelation")
         assert out.units == ""
 
-    def test_annual_cycle(self, open_dataset):
+    def test_annual_cycle(self, gosset):
         simt = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1952"), location="Vancouver")
             .tasmax
         ).load()
@@ -292,9 +292,9 @@ class TestProperties:
         assert relamp.units == "%"
         assert phase.units == ""
 
-    def test_annual_range(self, open_dataset):
+    def test_annual_range(self, gosset):
         simt = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1952"), location="Vancouver")
             .tasmax
         ).load()
@@ -336,15 +336,15 @@ class TestProperties:
         assert relamp.units == "%"
         assert phase.units == ""
 
-    def test_corr_btw_var(self, open_dataset):
+    def test_corr_btw_var(self, gosset):
         simt = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1952"), location="Vancouver")
             .tasmax
         ).load()
 
         sim = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1952"), location="Vancouver")
             .pr
         ).load()
@@ -381,9 +381,9 @@ class TestProperties:
         ):
             properties.corr_btw_var(sim, simt, group="time", corr_type="pear")
 
-    def test_relative_frequency(self, open_dataset):
+    def test_relative_frequency(self, gosset):
         sim = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1952"), location="Vancouver")
             .pr
         ).load()
@@ -402,9 +402,9 @@ class TestProperties:
         assert test.long_name == "Relative frequency of values >= 2.8925e-04 kg/m^2/s."
         assert test.units == ""
 
-    def test_transition(self, open_dataset):
+    def test_transition(self, gosset):
         sim = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1952"), location="Vancouver")
             .pr
         ).load()
@@ -420,9 +420,9 @@ class TestProperties:
         )
         assert test.units == ""
 
-    def test_trend(self, open_dataset):
+    def test_trend(self, gosset):
         simt = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "1952"), location="Vancouver")
             .tasmax
         ).load()
@@ -490,9 +490,9 @@ class TestProperties:
         assert slope.long_name.startswith("Slope of the interannual linear trend")
         assert slope.units == "K/year"
 
-    def test_return_value(self, open_dataset):
+    def test_return_value(self, gosset):
         simt = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1950", "2010"), location="Vancouver")
             .tasmax
         ).load()
@@ -511,11 +511,11 @@ class TestProperties:
         assert out_y.long_name.startswith("20-year maximal return level")
 
     @pytest.mark.slow
-    def test_spatial_correlogram(self, open_dataset):
+    def test_spatial_correlogram(self, gosset):
         # This also tests sdba.utils._pairwise_spearman and sdba.nbutils._pairwise_haversine_and_bins
         # Test 1, does it work with 1D data?
         sim = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1981", "2010"))
             .tasmax
         ).load()
@@ -524,7 +524,9 @@ class TestProperties:
         np.testing.assert_allclose(out, [-1, np.nan, 0], atol=1e-6)
 
         # Test 2, not very exhaustive, this is more of a detect-if-we-break-it test.
-        sim = open_dataset("NRCANdaily/nrcan_canada_daily_tasmax_1990.nc").tasmax
+        sim = xr.open_dataset(
+            gosset.fetch("NRCANdaily/nrcan_canada_daily_tasmax_1990.nc")
+        ).tasmax
         out = properties.spatial_correlogram(
             sim.isel(lon=slice(0, 50)), dims=["lon", "lat"], bins=20
         )
@@ -539,9 +541,11 @@ class TestProperties:
         )
 
     @pytest.mark.slow
-    def test_decorrelation_length(self, open_dataset):
+    def test_decorrelation_length(self, gosset):
         sim = (
-            open_dataset("NRCANdaily/nrcan_canada_daily_tasmax_1990.nc")
+            xr.open_dataset(
+                gosset.fetch("NRCANdaily/nrcan_canada_daily_tasmax_1990.nc")
+            )
             .tasmax.isel(lon=slice(0, 5), lat=slice(0, 1))
             .load()
         )
@@ -555,15 +559,15 @@ class TestProperties:
         )
 
     # ADAPT? The plan was not to allow mm/d -> kg m-2 s-1 in xsdba
-    def test_get_measure(self, open_dataset):
+    def test_get_measure(self, gosset):
         sim = (
-            open_dataset("sdba/CanESM2_1950-2100.nc")
+            xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
             .sel(time=slice("1981", "2010"), location="Vancouver")
             .pr
         ).load()
 
         ref = (
-            open_dataset("sdba/ahccd_1950-2013.nc")
+            xr.open_dataset(gosset.fetch("sdba/ahccd_1950-2013.nc"))
             .sel(time=slice("1981", "2010"), location="Vancouver")
             .pr
         ).load()

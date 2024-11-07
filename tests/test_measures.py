@@ -7,16 +7,32 @@ import xarray as xr
 from xsdba import measures
 
 
-def test_bias(open_dataset):
-    sim = open_dataset("sdba/CanESM2_1950-2100.nc").sel(time="1950-01-01").tasmax
-    ref = open_dataset("sdba/nrcan_1950-2013.nc").sel(time="1950-01-01").tasmax
+def test_bias(gosset):
+    sim = (
+        xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
+        .sel(time="1950-01-01")
+        .tasmax
+    )
+    ref = (
+        xr.open_dataset(gosset.fetch("sdba/nrcan_1950-2013.nc"))
+        .sel(time="1950-01-01")
+        .tasmax
+    )
     test = measures.bias(sim, ref).values
     np.testing.assert_array_almost_equal(test, [[6.430237, 39.088974, 5.2402344]])
 
 
-def test_relative_bias(open_dataset):
-    sim = open_dataset("sdba/CanESM2_1950-2100.nc").sel(time="1950-01-01").tasmax
-    ref = open_dataset("sdba/nrcan_1950-2013.nc").sel(time="1950-01-01").tasmax
+def test_relative_bias(gosset):
+    sim = (
+        xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
+        .sel(time="1950-01-01")
+        .tasmax
+    )
+    ref = (
+        xr.open_dataset(gosset.fetch("sdba/nrcan_1950-2013.nc"))
+        .sel(time="1950-01-01")
+        .tasmax
+    )
     test = measures.relative_bias(sim, ref).values
     np.testing.assert_array_almost_equal(test, [[0.02366494, 0.16392256, 0.01920133]])
 
@@ -32,36 +48,62 @@ def test_circular_bias():
     np.testing.assert_array_almost_equal(test, [1, 1, 66, -1, -1, -66])
 
 
-def test_ratio(open_dataset):
-    sim = open_dataset("sdba/CanESM2_1950-2100.nc").sel(time="1950-01-01").tasmax
-    ref = open_dataset("sdba/nrcan_1950-2013.nc").sel(time="1950-01-01").tasmax
+def test_ratio(gosset):
+    sim = (
+        xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
+        .sel(time="1950-01-01")
+        .tasmax
+    )
+    ref = (
+        xr.open_dataset(gosset.fetch("sdba/nrcan_1950-2013.nc"))
+        .sel(time="1950-01-01")
+        .tasmax
+    )
     test = measures.ratio(sim, ref).values
     np.testing.assert_array_almost_equal(test, [[1.023665, 1.1639225, 1.0192013]])
 
 
-def test_rmse(open_dataset):
+def test_rmse(gosset):
     sim = (
-        open_dataset("sdba/CanESM2_1950-2100.nc").sel(time=slice("1950", "1953")).tasmax
+        xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
+        .sel(time=slice("1950", "1953"))
+        .tasmax
     )
-    ref = open_dataset("sdba/nrcan_1950-2013.nc").sel(time=slice("1950", "1953")).tasmax
+    ref = (
+        xr.open_dataset(gosset.fetch("sdba/nrcan_1950-2013.nc"))
+        .sel(time=slice("1950", "1953"))
+        .tasmax
+    )
     test = measures.rmse(sim, ref).values
     np.testing.assert_array_almost_equal(test, [5.4499755, 18.124086, 12.387193], 4)
 
 
-def test_mae(open_dataset):
+def test_mae(gosset):
     sim = (
-        open_dataset("sdba/CanESM2_1950-2100.nc").sel(time=slice("1950", "1953")).tasmax
+        xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
+        .sel(time=slice("1950", "1953"))
+        .tasmax
     )
-    ref = open_dataset("sdba/nrcan_1950-2013.nc").sel(time=slice("1950", "1953")).tasmax
+    ref = (
+        xr.open_dataset(gosset.fetch("sdba/nrcan_1950-2013.nc"))
+        .sel(time=slice("1950", "1953"))
+        .tasmax
+    )
     test = measures.mae(sim, ref).values
     np.testing.assert_array_almost_equal(test, [4.159672, 14.2148, 9.768536], 4)
 
 
-def test_annual_cycle_correlation(open_dataset):
+def test_annual_cycle_correlation(gosset):
     sim = (
-        open_dataset("sdba/CanESM2_1950-2100.nc").sel(time=slice("1950", "1953")).tasmax
+        xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
+        .sel(time=slice("1950", "1953"))
+        .tasmax
     )
-    ref = open_dataset("sdba/nrcan_1950-2013.nc").sel(time=slice("1950", "1953")).tasmax
+    ref = (
+        xr.open_dataset(gosset.fetch("sdba/nrcan_1950-2013.nc"))
+        .sel(time=slice("1950", "1953"))
+        .tasmax
+    )
     test = (
         measures.annual_cycle_correlation(sim, ref, window=31)
         .sel(location="Vancouver")
@@ -71,22 +113,26 @@ def test_annual_cycle_correlation(open_dataset):
 
 
 @pytest.mark.slow
-def test_scorr(open_dataset):
-    ref = open_dataset("NRCANdaily/nrcan_canada_daily_tasmin_1990.nc").tasmin
-    sim = open_dataset("NRCANdaily/nrcan_canada_daily_tasmax_1990.nc").tasmax
+def test_scorr(gosset):
+    ref = xr.open_dataset(
+        gosset.fetch("NRCANdaily/nrcan_canada_daily_tasmin_1990.nc")
+    ).tasmin
+    sim = xr.open_dataset(
+        gosset.fetch("NRCANdaily/nrcan_canada_daily_tasmax_1990.nc")
+    ).tasmax
     scorr = measures.scorr(sim.isel(lon=slice(0, 50)), ref.isel(lon=slice(0, 50)))
 
     np.testing.assert_allclose(scorr, [97374.2146243])
 
 
-def test_taylordiagram(open_dataset):
+def test_taylordiagram(gosset):
     sim = (
-        open_dataset("sdba/CanESM2_1950-2100.nc")
+        xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
         .sel(time=slice("1950", "1953"), location="Amos")
         .tasmax
     )
     ref = (
-        open_dataset("sdba/nrcan_1950-2013.nc")
+        xr.open_dataset(gosset.fetch("sdba/nrcan_1950-2013.nc"))
         .sel(time=slice("1950", "1953"), location="Amos")
         .tasmax
     )

@@ -1,5 +1,4 @@
 # noqa: D104
-# XC: Many things deactivated, not sure what will be necessary
 from __future__ import annotations
 
 from pathlib import Path
