@@ -825,39 +825,6 @@ class TestAttrs:
             }
 
 
-class TestPublish:
-    @pytest.mark.requires_netcdf
-    @pytest.mark.parametrize("fmt", ["md", "rst"])
-    def test_normal(self, fmt):
-        out = xs.utils.publish_release_notes(
-            fmt, changes=Path(__file__).parent.parent.joinpath("CHANGELOG.rst")
-        )
-        if fmt == "md":
-            assert out.startswith("# Changelog\n\n")
-            assert "[PR/413](https://github.com/Ouranosinc/xscen/pull/413)" in out
-        elif fmt == "rst":
-            assert out.startswith("=========\nChangelog\n=========\n\n")
-            assert "`PR/413 <https://github.com/Ouranosinc/xscen/pull/\\>`_" in out
-
-    def test_error(self):
-        with pytest.raises(FileNotFoundError):
-            xs.utils.publish_release_notes("md", changes="foo")
-        with pytest.raises(NotImplementedError):
-            xs.utils.publish_release_notes(
-                "foo", changes=Path(__file__).parent.parent.joinpath("CHANGELOG.rst")
-            )
-
-    @pytest.mark.requires_netcdf
-    def test_file(self, tmpdir):
-        xs.utils.publish_release_notes(
-            "md",
-            file=tmpdir / "foo.md",
-            changes=Path(__file__).parent.parent.joinpath("CHANGELOG.rst"),
-        )
-        with Path(tmpdir).joinpath("foo.md").open(encoding="utf-8") as f:
-            assert f.read().startswith("# Changelog\n\n")
-
-
 class TestUnstackDates:
     @pytest.mark.parametrize(
         "freq", ["MS", "2MS", "3MS", "QS-DEC", "QS", "2QS", "YS", "YS-DEC", "4YS"]
@@ -1041,20 +1008,6 @@ class TestUnstackDates:
             ValueError, match="Only periods that divide the year evenly are supported."
         ):
             xs.utils.unstack_dates(ds)
-
-
-def test_show_version(tmpdir):
-    xs.utils.show_versions(file=tmpdir / "versions.txt")
-    with Path(tmpdir).joinpath("versions.txt").open(encoding="utf-8") as f:
-        out = f.read()
-    assert "xscen" in out
-    assert "xclim" in out
-    assert "xarray" in out
-    assert "numpy" in out
-    assert "pandas" in out
-    assert "dask" in out
-    assert "cftime" in out
-    assert "netCDF4" in out
 
 
 class TestEnsureTime:

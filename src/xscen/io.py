@@ -99,58 +99,30 @@ def estimate_chunks(  # noqa: C901
         A dictionary mapping dimensions to chunk sizes.
     """
 
-    def _estimate_chunks(ds, target_mb, size_of_slice, rechunk_dims):
-        # Approximate size of the chunks (equal across dims)
+    def _estimate_chunks(da, target_mb, size_of_slice, rechunk_dims):
+        # Divide the dimensions by the smallest dimension
+        min_dim = np.min([da[d].shape[0] for d in rechunk_dims])
+        ratio = {d: da[d].shape[0] / min_dim for d in rechunk_dims}
+
+        # Get the approximate number of chunks, supposing the chunks are cubes
         approx_chunks = np.power(target_mb / size_of_slice, 1 / len(rechunk_dims))
 
-        chunks_per_dim = dict()
-        if len(rechunk_dims) == 1:
-            rounding = (
-                1
-                if ds[rechunk_dims[0]].shape[0] <= 15
-                else 5 if ds[rechunk_dims[0]].shape[0] <= 250 else 10
-            )
-            chunks_per_dim[rechunk_dims[0]] = np.max(
-                [
-                    np.min(
-                        [
-                            int(rounding * np.round(approx_chunks / rounding)),
-                            ds[rechunk_dims[0]].shape[0],
-                        ]
-                    ),
-                    1,
-                ]
-            )
-        elif len(rechunk_dims) == 2:
-            # Adjust approx_chunks based on the ratio of the rectangle sizes
-            for d in rechunk_dims:
-                rounding = (
-                    1 if ds[d].shape[0] <= 15 else 5 if ds[d].shape[0] <= 250 else 10
-                )
-                adjusted_chunk = int(
-                    rounding
-                    * np.round(
-                        approx_chunks
-                        * (
-                            ds[d].shape[0]
-                            / np.prod(
-                                [
-                                    ds[dd].shape[0]
-                                    for dd in rechunk_dims
-                                    if dd not in [d]
-                                ]
-                            )
-                        )
-                        / rounding
-                    )
-                )
-                chunks_per_dim[d] = np.max(
-                    [np.min([adjusted_chunk, ds[d].shape[0]]), 1]
-                )
-        else:
-            raise NotImplementedError(
-                "estimating chunks on more than 2 dimensions is not implemented yet."
-            )
+        # Redistribute the chunks based on the ratio of the dimensions
+        x = (approx_chunks ** len(rechunk_dims) / np.prod(list(ratio.values()))) ** (
+            1 / len(rechunk_dims)
+        )
+        rounding_per_dim = {
+            d: 1 if da[d].shape[0] <= 15 else 5 if da[d].shape[0] <= 250 else 10
+            for d in rechunk_dims
+        }
+        chunks_per_dim = {
+            d: int(rounding_per_dim[d] * np.round(x * ratio[d] / rounding_per_dim[d]))
+            for d in rechunk_dims
+        }
+        chunks_per_dim = {
+            d: np.max([np.min([chunks_per_dim[d], da[d].shape[0]]), 1])
+            for d in rechunk_dims
+        }
 
         return chunks_per_dim
 
@@ -163,7 +135,7 @@ def estimate_chunks(  # noqa: C901
         for v in ds.variables:
             # Find dimensions to chunk
             rechunk_dims = list(set(dims).intersection(ds.variables[v].dimensions))
-            if not rechunk_dims:
+            if not rechunk_dims or v in ds.dimensions:
                 continue
 
             dtype_size = ds.variables[v].datatype.itemsize
@@ -219,7 +191,7 @@ def estimate_chunks(  # noqa: C901
 def subset_maxsize(
     ds: xr.Dataset,
     maxsize_gb: float,
-) -> list:
+) -> list[xr.Dataset]:
     """Estimate a dataset's size and, if higher than the given limit, subset it alongside the 'time' dimension.
 
     Parameters
@@ -232,7 +204,7 @@ def subset_maxsize(
 
     Returns
     -------
-    list
+    list of xr.Dataset
         List of xr.Dataset subsetted alongside 'time' to limit the filesize to the requested maximum.
     """
     # Estimate the size of the dataset
@@ -247,11 +219,11 @@ def subset_maxsize(
         logger.info(msg)
         return [ds]
 
-    elif "time" in ds:
+    elif "time" in ds.dims:
         years = np.unique(ds.time.dt.year)
-        ratio = int(len(years) / (size_of_file / maxsize_gb))
+        ratio = np.max([int(len(years) / (size_of_file / maxsize_gb)), 1])
         ds_sub = []
-        for y in range(years[0], years[-1], ratio):
+        for y in range(years[0], years[-1] + 1, ratio):
             ds_sub.extend([ds.sel({"time": slice(str(y), str(y + ratio - 1))})])
         return ds_sub
 
@@ -261,7 +233,11 @@ def subset_maxsize(
         )
 
 
-def clean_incomplete(path: str | os.PathLike, complete: Sequence[str]) -> None:
+def clean_incomplete(
+    path: str | os.PathLike,
+    complete: Sequence[str] | None = None,
+    incomplete: Sequence[str] | None = None,
+) -> None:
     """Delete un-catalogued variables from a zarr folder.
 
     The goal of this function is to clean up an incomplete calculation.
@@ -272,22 +248,42 @@ def clean_incomplete(path: str | os.PathLike, complete: Sequence[str]) -> None:
     ----------
     path : str, Path
         A path to a zarr folder.
-    complete : sequence of strings
-        Name of variables that were completed.
+    complete : sequence of strings, optional
+        Name of variables that were completed. All other variables (except coordinates) will be removed.
+        Use either `complete` or `incomplete`, not both.
+    incomplete : sequence of strings, optional
+        Name of variables that should be removed.
+        Use either `complete` or `incomplete`, not both.
 
     Returns
     -------
     None
     """
     path = Path(path)
-    with xr.open_zarr(path) as ds:
-        complete = set(complete).union(ds.coords.keys())
 
-    for fold in filter(lambda p: p.is_dir(), path.iterdir()):
-        if fold.name not in complete:
-            msg = f"Removing {fold} from disk"
-            logger.warning(msg)
-            sh.rmtree(fold)
+    if complete is not None and incomplete is not None:
+        raise ValueError("Use either `complete` or `incomplete`, not both.")
+
+    if complete is not None:
+        with xr.open_zarr(path) as ds:
+            complete = set(complete).union(ds.coords.keys())
+
+        for fold in filter(lambda p: p.is_dir(), path.iterdir()):
+            if fold.name not in complete:
+                msg = f"Removing {fold} from disk"
+                logger.warning(msg)
+                sh.rmtree(fold)
+
+    elif incomplete is not None:
+        for fold in filter(lambda p: p.is_dir(), path.iterdir()):
+            if fold.name in incomplete:
+                msg = f"Removing {fold} from disk"
+                logger.warning(msg)
+                sh.rmtree(fold)
+
+    # Remove .zmetadata to avoid issues with zarr and xarray
+    if (path / ".zmetadata").exists():
+        Path.unlink(path / ".zmetadata")
 
 
 def _coerce_attrs(attrs):
@@ -319,9 +315,11 @@ def round_bits(da: xr.DataArray, keepbits: int):
     keepbits : int
         The number of bits of the mantissa to keep.
     """
+    encoding = da.encoding
     da = xr.apply_ufunc(
         _np_bitround, da, keepbits, dask="parallelized", keep_attrs=True
     )
+    da.encoding = encoding
     da.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] = keepbits
     new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Data compressed with BitRound by keeping {keepbits} bits."
     history = (
@@ -510,10 +508,7 @@ def save_to_zarr(  # noqa: C901
 
         if mode == "o":
             if exists:
-                var_path = path / var
-                msg = f"Removing {var_path} to overwrite."
-                logger.warning(msg)
-                sh.rmtree(var_path)
+                clean_incomplete(path, incomplete=[var])
             return False
 
         if mode == "a":
@@ -562,9 +557,7 @@ def save_to_zarr(  # noqa: C901
                 )
             except TimeoutException:
                 if timeout_cleanup:
-                    msg = f"Removing incomplete {name}."
-                    logger.info(msg)
-                    sh.rmtree(path / name)
+                    clean_incomplete(path, incomplete=[name])
                 raise
 
     else:
@@ -576,10 +569,7 @@ def save_to_zarr(  # noqa: C901
             )
         except TimeoutException:
             if timeout_cleanup:
-                msg = f"Removing incomplete {list(ds.data_vars.keys())} for {filename}."
-                logger.info(msg)
-                for name in ds.data_vars:
-                    sh.rmtree(path / name)
+                clean_incomplete(path, incomplete=list(ds.data_vars.keys()))
             raise
 
 
@@ -952,7 +942,7 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
             for d in ds[rechunk_var].dims
         )
         ds[rechunk_var].encoding.pop("chunks", None)
-        ds[rechunk_var].encoding.pop("preferred_chunks", None)
+        ds[rechunk_var].encoding["preferred_chunks"] = rechunk_dims
 
     return ds
 

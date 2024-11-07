@@ -1,9 +1,147 @@
+import os
+from pathlib import Path
+
 import numpy as np
 import pytest
 import xarray as xr
 import xclim as xc
+from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
+from xscen.testing import datablock_3d
+
+
+@pytest.mark.parametrize("suffix", [".zarr", ".zarr.zip", "h5", "nc"])
+def test_get_engine(tmpdir, suffix):
+    if suffix in [".zarr", ".zarr.zip"]:
+        path = "some/path" + suffix
+        assert xs.io.get_engine(path) == "zarr"
+    else:
+        ds = timeseries(
+            np.zeros(60),
+            variable="tas",
+            as_dataset=True,
+        )
+        ds.to_netcdf(
+            Path(tmpdir) / f"test.nc",
+            engine="netcdf4" if suffix == "nc" else "h5netcdf",
+        )
+        assert xs.io.get_engine(Path(tmpdir) / f"test.nc") in [
+            "netcdf4",
+            "h5netcdf",
+        ]  # Hard to predict which one
+
+
+class TestEstimateChunks:
+    ds = datablock_3d(
+        np.zeros((50, 100, 150)),
+        variable="tas",
+        x="lon",
+        x_start=-70,
+        x_step=0.1,
+        y="lat",
+        y_start=45,
+        y_step=-0.1,
+        as_dataset=True,
+    )
+    ds2 = ds.copy()
+    ds2["tas"] = ds2["tas"].astype(np.float32)
+
+    def test_normal(self):
+        out1 = xs.io.estimate_chunks(self.ds, dims=["time", "lat", "lon"], target_mb=1)
+        assert out1 == {"time": 30, "lat": 55, "lon": 85}
+        out2 = xs.io.estimate_chunks(self.ds2, dims=["time", "lat", "lon"], target_mb=1)
+        assert out2 == {"time": 35, "lat": 70, "lon": 105}
+        out3 = xs.io.estimate_chunks(self.ds, dims=["lat", "lon"], target_mb=1)
+        assert out3 == {"lon": 65, "lat": 40, "time": -1}
+        out4 = xs.io.estimate_chunks(self.ds2, dims=["time"], target_mb=1)
+        assert out4 == {"time": 15, "lat": -1, "lon": -1}
+
+    @pytest.mark.parametrize("chunk_per_variable", [True, False])
+    @pytest.mark.parametrize("as_file", [True, False])
+    def test_multiple_vars(self, tmpdir, chunk_per_variable, as_file):
+        ds = self.ds.copy()
+        ds["pr"] = ds["tas"].isel(time=0)
+
+        if as_file:
+            ds.to_netcdf(Path(tmpdir) / "test.nc")
+            ds = Path(tmpdir) / "test.nc"
+
+        out = xs.io.estimate_chunks(
+            ds, dims=["lat", "lon"], target_mb=1, chunk_per_variable=chunk_per_variable
+        )
+        if chunk_per_variable is False:
+            assert out == {"lon": 65, "lat": 40, "time": -1}
+        else:
+            assert out == {
+                "tas": {"lon": 65, "lat": 40, "time": -1},
+                "pr": {"lon": 150, "lat": 100},
+            }
+
+
+class TestSubsetMaxsize:
+    def test_normal(self):
+        ds = datablock_3d(
+            np.zeros((1500, 5, 5)),
+            variable="tas",
+            x="lon",
+            x_start=-70,
+            x_step=0.1,
+            y="lat",
+            y_start=45,
+            y_step=-0.1,
+            as_dataset=True,
+        )
+        ds["pr"] = ds["tas"]
+        # First, test with a dataset that is already small enough
+        out = xs.io.subset_maxsize(ds, maxsize_gb=1)
+        assert len(out) == 1
+        assert out[0].equals(ds)
+
+        out = xs.io.subset_maxsize(ds, maxsize_gb=0.0005)
+        assert len(out) == 2
+        assert xr.concat(out, dim="time").equals(ds)
+
+    def test_error(self):
+        ds = datablock_3d(
+            np.zeros((1, 50, 10)),
+            variable="tas",
+            x="lon",
+            x_start=-70,
+            x_step=0.1,
+            y="lat",
+            y_start=45,
+            y_step=-0.1,
+            as_dataset=True,
+        )
+        ds = ds.isel(time=0)
+
+        with pytest.raises(NotImplementedError, match="does not contain a"):
+            xs.io.subset_maxsize(ds, maxsize_gb=1e-15)
+
+
+def test_clean_incomplete(tmpdir):
+    ds = datablock_3d(
+        np.ones((5, 5, 5)),
+        variable="tas",
+        x="lon",
+        x_start=-70,
+        x_step=0.1,
+        y="lat",
+        y_start=45,
+        y_step=-0.1,
+        as_dataset=True,
+    )
+    ds["pr"] = ds["tas"].copy()
+    ds.to_zarr(Path(tmpdir) / "test.zarr")
+
+    xs.io.clean_incomplete(Path(tmpdir) / "test.zarr", complete=["tas"])
+    assert Path.exists(Path(tmpdir) / "test.zarr/tas")
+    assert not Path.exists(Path(tmpdir) / "test.zarr/pr")
+
+    ds2 = xr.open_zarr(Path(tmpdir) / "test.zarr")
+    assert "pr" not in ds2
+    assert ds2.equals(ds[["tas"]])
 
 
 class TestRechunkForSaving:
@@ -205,7 +343,7 @@ class TestToTable:
             assert toc.loc["tas", "Unités"] == "K"
 
 
-def test_round_bits(datablock_3d):
+def test_round_bits():
     da = datablock_3d(
         np.random.random((30, 30, 50)),
         variable="tas",
@@ -241,3 +379,41 @@ class TestSaveToZarr:
                 xs.io._get_keepbits(bitr, vname, vtype)
         else:
             assert xs.io._get_keepbits(bitr, vname, vtype) == exp
+
+
+class TestSaveToNetcdf:
+    def test_normal(self, tmpdir):
+        ds = datablock_3d(
+            np.tile(np.arange(1111, 1121), 15).reshape(15, 5, 2) * 1e-7,
+            variable="tas",
+            x="lon",
+            x_start=-70,
+            y="lat",
+            y_start=45,
+            as_dataset=True,
+        )
+        ds["pr"] = ds["tas"].copy()
+        ds["other"] = ds["tas"].copy()
+
+        xs.save_to_netcdf(
+            ds,
+            Path(tmpdir) / "test.nc",
+            rechunk={"time": 5, "lon": 2, "lat": 2},
+            bitround={"tas": 2, "pr": 3},
+        )
+
+        ds2 = xr.open_dataset(Path(tmpdir) / "test.nc", chunks={})
+        assert ds2.tas.chunks == ((5, 5, 5), (2, 2, 1), (2,))
+
+        np.testing.assert_array_almost_equal(
+            ds2.tas.isel(time=0, lat=0, lon=0), [0.00010681], decimal=8
+        )
+        assert ds2.tas.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] == 2
+        np.testing.assert_array_almost_equal(
+            ds2.pr.isel(time=0, lat=0, lon=0), [0.00011444], decimal=8
+        )
+        assert ds2.pr.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] == 3
+        np.testing.assert_array_almost_equal(
+            ds2.other.isel(time=0, lat=0, lon=0), [0.0001111], decimal=8
+        )
+        assert ds2.other.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] == 12
