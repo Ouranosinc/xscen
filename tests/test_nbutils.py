@@ -9,10 +9,9 @@ from xsdba import nbutils as nbu
 
 class TestQuantiles:
     @pytest.mark.parametrize("uses_dask", [True, False])
-    def test_quantile(self, open_dataset, uses_dask):
-        da = (
-            open_dataset("sdba/CanESM2_1950-2100.nc").sel(time=slice("1950", "1955")).pr
-        ).load()
+    def test_quantile(self, uses_dask, gosset):
+        file = gosset.fetch("sdba/CanESM2_1950-2100.nc")
+        da = (xr.open_dataset(file).sel(time=slice("1950", "1955")).pr).load()
         if uses_dask:
             da = da.chunk({"location": 1})
         else:

@@ -2,65 +2,33 @@
 # XC: Many things deactivated, not sure what will be necessary
 from __future__ import annotations
 
-import os
-import re
-import time
-import warnings
-from datetime import datetime as dt
 from pathlib import Path
 
 import numpy as np
 import pytest
 import xarray as xr
-from packaging.version import Version
-from xclim.testing.utils import (
-    TESTDATA_BRANCH,
-    TESTDATA_CACHE_DIR,
-    TESTDATA_REPO_URL,
-    default_testdata_cache,
-    gather_testing_data,
-)
-from xclim.testing.utils import nimbus as _nimbus
-from xclim.testing.utils import open_dataset as _open_dataset
 
-import xsdba
-from xsdba import __version__ as __xsdba_version__
 from xsdba.testing import (
     test_cannon_2015_dist,
     test_cannon_2015_rvs,
     test_timelonlatseries,
     test_timeseries,
 )
+from xsdba.testing.utils import (
+    TESTDATA_BRANCH,
+    TESTDATA_CACHE_DIR,
+    TESTDATA_REPO_URL,
+    default_testdata_cache,
+    gather_testing_data,
+)
+from xsdba.testing.utils import gosset as _gosset
+from xsdba.testing.utils import testing_setup_warnings
 from xsdba.utils import apply_correction
 
-# ADAPT
-if re.match(r"^\d+\.\d+\.\d+$", __xsdba_version__) and TESTDATA_BRANCH == "main":
-    # This does not need to be emitted on GitHub Workflows and ReadTheDocs
-    if not os.getenv("CI") and not os.getenv("READTHEDOCS"):
-        warnings.warn(
-            f'`xsdba` {__xsdba_version__} is running tests against the "main" branch of `Ouranosinc/xclim-testdata`. '
-            "It is possible that changes in xclim-testdata may be incompatible with test assertions in this version. "
-            "Please be sure to check https://github.com/Ouranosinc/xclim-testdata for more information.",
-            UserWarning,
-        )
 
-if re.match(r"^v\d+\.\d+\.\d+", TESTDATA_BRANCH):
-    # Find the date of last modification of xclim source files to generate a calendar version
-    install_date = dt.strptime(
-        time.ctime(Path(xsdba.__file__).stat().st_mtime),
-        "%a %b %d %H:%M:%S %Y",
-    )
-    install_calendar_version = (
-        f"{install_date.year}.{install_date.month}.{install_date.day}"
-    )
-
-    if Version(TESTDATA_BRANCH) > Version(install_calendar_version):
-        warnings.warn(
-            f"Installation date of `xsdba` ({install_date.ctime()}) "
-            f"predates the last release of `xclim-testdata` ({TESTDATA_BRANCH}). "
-            "It is very likely that the testing data is incompatible with this build of `xsdba`.",
-            UserWarning,
-        )
+@pytest.fixture
+def cannon_2015_dist():
+    return test_cannon_2015_dist
 
 
 @pytest.fixture
@@ -69,8 +37,13 @@ def cannon_2015_rvs():
 
 
 @pytest.fixture
-def cannon_2015_dist():
-    return test_cannon_2015_dist
+def timelonlatseries():
+    return test_timelonlatseries
+
+
+@pytest.fixture
+def timeseries():
+    return test_timeseries
 
 
 @pytest.fixture
@@ -135,11 +108,6 @@ def mon_timelonlatseries(timelonlatseries, mon_triangular):
 
 
 @pytest.fixture
-def timelonlatseries():
-    return test_timelonlatseries
-
-
-@pytest.fixture
 def areacella() -> xr.DataArray:
     """Return a rectangular grid of grid cell area."""
     r = 6100000
@@ -175,28 +143,14 @@ def add_example_dataarray(xdoctest_namespace, timeseries) -> None:
     ns["da"] = timeseries(np.random.rand(365) * 20 + 253.15)
 
 
-@pytest.fixture(autouse=True, scope="session")
-def is_matplotlib_installed(xdoctest_namespace) -> None:
-    def _is_matplotlib_installed():
-        try:
-            import matplotlib
-
-            return
-        except ImportError:
-            return pytest.skip("This doctest requires matplotlib to be installed.")
-
-    ns = xdoctest_namespace
-    ns["is_matplotlib_installed"] = _is_matplotlib_installed
-
-
 @pytest.fixture(scope="session")
 def threadsafe_data_dir(tmp_path_factory):
     return Path(tmp_path_factory.getbasetemp().joinpath("data"))
 
 
 @pytest.fixture(scope="session")
-def nimbus(threadsafe_data_dir, worker_id):
-    return _nimbus(
+def gosset(threadsafe_data_dir, worker_id):
+    return _gosset(
         repo=TESTDATA_REPO_URL,
         branch=TESTDATA_BRANCH,
         cache_dir=(
@@ -210,49 +164,21 @@ def tmp_netcdf_filename(tmpdir) -> Path:
     yield Path(tmpdir).joinpath("testfile.nc")
 
 
-@pytest.fixture(scope="session")
-def open_dataset(threadsafe_data_dir):
-    def _open_session_scoped_file(
-        file: str | os.PathLike, branch: str = TESTDATA_BRANCH, **xr_kwargs
-    ):
-        xr_kwargs.setdefault("engine", "h5netcdf")
-        return _open_dataset(
-            file, cache_dir=threadsafe_data_dir, branch=branch, **xr_kwargs
-        )
-
-    return _open_session_scoped_file
-
-
 @pytest.fixture(autouse=True, scope="session")
-def gather_session_data(request, nimbus, worker_id):
+def gather_session_data(request, gosset, worker_id):
     """Gather testing data on pytest run.
 
     When running pytest with multiple workers, one worker will copy data remotely to default cache dir while
     other workers wait using lockfile. Once the lock is released, all workers will then copy data to their local
     threadsafe_data_dir. As this fixture is scoped to the session, it will only run once per pytest run.
-
-    Due to the lack of UNIX sockets on Windows, the lockfile mechanism is not supported, requiring users on
-    Windows to run `$ xclim prefetch_testing_data` before running any tests for the first time to populate the
-    default cache dir.
     """
-    gather_testing_data(worker_cache_dir=nimbus.path, worker_id=worker_id)
-
-
-@pytest.fixture(scope="session", autouse=True)
-def cleanup(request):
-    """Cleanup a testing file once we are finished.
-
-    This flag prevents remote data from being downloaded multiple times in the same pytest run.
-    """
+    testing_setup_warnings()
+    gather_testing_data(worker_cache_dir=gosset.path, worker_id=worker_id)
 
     def remove_data_written_flag():
+        """Cleanup cache folder once we are finished."""
         flag = default_testdata_cache.joinpath(".data_written")
         if flag.exists():
             flag.unlink()
 
     request.addfinalizer(remove_data_written_flag)
-
-
-@pytest.fixture
-def timeseries():
-    return test_timeseries

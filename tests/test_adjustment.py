@@ -26,7 +26,6 @@ from xsdba.processing import (
     uniform_noise_like,
     unstack_variables,
 )
-from xsdba.testing import nancov
 from xsdba.units import convert_units_to, pint_multiply
 from xsdba.utils import (
     ADDITIVE,
@@ -36,6 +35,12 @@ from xsdba.utils import (
     get_correction,
     invert,
 )
+
+
+def nancov(x):
+    """Drop observations with NaNs from Numpy's cov."""
+    x_na = np.isnan(x).any(axis=0)
+    return np.cov(x[:, ~x_na])
 
 
 class TestBaseAdjustment:

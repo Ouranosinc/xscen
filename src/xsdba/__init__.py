@@ -23,7 +23,7 @@ from __future__ import annotations
 import importlib.util
 import warnings
 
-from . import adjustment, base, detrending, processing, testing, units, utils
+from xsdba import adjustment, base, detrending, processing, units, utils
 
 xclim_installed = importlib.util.find_spec("xclim") is not None
 if not xclim_installed:
@@ -31,15 +31,15 @@ if not xclim_installed:
         "Sub-modules `properties` and `measures` depend on `xclim`. Run `pip install xsdba['extras']` to install it."
     )
 else:
-    from . import (
+    from xsdba import (
         measures,
         properties,
     )
 
-from .adjustment import *
-from .base import Grouper
-from .options import set_options
-from .processing import stack_variables, unstack_variables
+from xsdba.adjustment import *
+from xsdba.base import Grouper
+from xsdba.options import set_options
+from xsdba.processing import stack_variables, unstack_variables
 
 # TODO: ISIMIP ? Used for precip freq adjustment in biasCorrection.R
 # Hempel, S., Frieler, K., Warszawski, L., Schewe, J., & Piontek, F. (2013). A trend-preserving bias correction &ndash;
