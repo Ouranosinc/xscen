@@ -1,7 +1,8 @@
-import os
+import datetime
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 import xarray as xr
 import xclim as xc
@@ -46,6 +47,7 @@ class TestEstimateChunks:
     )
     ds2 = ds.copy()
     ds2["tas"] = ds2["tas"].astype(np.float32)
+    ds["just_a_variable"] = xr.DataArray(np.zeros(50), dims="new_dim")
 
     def test_normal(self):
         out1 = xs.io.estimate_chunks(self.ds, dims=["time", "lat", "lon"], target_mb=1)
@@ -120,28 +122,53 @@ class TestSubsetMaxsize:
             xs.io.subset_maxsize(ds, maxsize_gb=1e-15)
 
 
-def test_clean_incomplete(tmpdir):
-    ds = datablock_3d(
-        np.ones((5, 5, 5)),
-        variable="tas",
-        x="lon",
-        x_start=-70,
-        x_step=0.1,
-        y="lat",
-        y_start=45,
-        y_step=-0.1,
-        as_dataset=True,
-    )
-    ds["pr"] = ds["tas"].copy()
-    ds.to_zarr(Path(tmpdir) / "test.zarr")
+class TestCleanIncomplete:
+    @pytest.mark.parametrize("which", ["complete", "incomplete"])
+    def test_complete(self, tmpdir, which):
+        ds = datablock_3d(
+            np.ones((5, 5, 5)),
+            variable="tas",
+            x="lon",
+            x_start=-70,
+            x_step=0.1,
+            y="lat",
+            y_start=45,
+            y_step=-0.1,
+            as_dataset=True,
+        )
+        ds["pr"] = ds["tas"].copy()
+        ds.to_zarr(Path(tmpdir) / "test.zarr")
 
-    xs.io.clean_incomplete(Path(tmpdir) / "test.zarr", complete=["tas"])
-    assert Path.exists(Path(tmpdir) / "test.zarr/tas")
-    assert not Path.exists(Path(tmpdir) / "test.zarr/pr")
+        if which == "complete":
+            xs.io.clean_incomplete(Path(tmpdir) / "test.zarr", complete=["tas"])
+        else:
+            xs.io.clean_incomplete(Path(tmpdir) / "test.zarr", incomplete=["pr"])
+        assert (Path(tmpdir) / "test.zarr/tas").exists()
+        assert not (Path(tmpdir) / "test.zarr/pr").exists()
 
-    ds2 = xr.open_zarr(Path(tmpdir) / "test.zarr")
-    assert "pr" not in ds2
-    assert ds2.equals(ds[["tas"]])
+        ds2 = xr.open_zarr(Path(tmpdir) / "test.zarr")
+        assert "pr" not in ds2
+        assert ds2.equals(ds[["tas"]])
+
+    def test_error(self, tmpdir):
+        ds = datablock_3d(
+            np.ones((5, 5, 5)),
+            variable="tas",
+            x="lon",
+            x_start=-70,
+            x_step=0.1,
+            y="lat",
+            y_start=45,
+            y_step=-0.1,
+            as_dataset=True,
+        )
+        ds["pr"] = ds["tas"].copy()
+        ds.to_zarr(Path(tmpdir) / "test.zarr")
+
+        with pytest.raises(ValueError, match="Use either"):
+            xs.io.clean_incomplete(
+                Path(tmpdir) / "test.zarr", complete=["tas"], incomplete=["pr"]
+            )
 
 
 class TestRechunkForSaving:
@@ -154,7 +181,7 @@ class TestRechunkForSaving:
             (["rlon", "rlat"], False),
         ],
     )
-    def test_options(self, datablock_3d, dims, xy):
+    def test_options(self, dims, xy):
         ds = datablock_3d(
             np.random.random((30, 30, 50)),
             variable="tas",
@@ -176,7 +203,7 @@ class TestRechunkForSaving:
             )
             assert chunks[0] == new_chunks[dim]
 
-    def test_variables(self, datablock_3d):
+    def test_variables(self):
         ds = datablock_3d(
             np.random.random((30, 30, 50)),
             variable="tas",
@@ -211,7 +238,7 @@ class TestToTable:
         xr.merge(
             [
                 xs.testing.datablock_3d(
-                    np.random.random_sample((20, 3, 2)),
+                    np.ones((20, 3, 2)),
                     v,
                     "lon",
                     0,
@@ -234,7 +261,7 @@ class TestToTable:
     @pytest.mark.parametrize(
         "multiple, as_dataset", [(True, True), (False, True), (False, False)]
     )
-    def test_normal(self, multiple, as_dataset):
+    def test_normal(self, tmpdir, multiple, as_dataset):
         if multiple is False:
             if as_dataset:
                 ds = self.ds[["tas"]].copy()
@@ -244,9 +271,25 @@ class TestToTable:
             ds = self.ds.copy()
 
         # Default
+        xs.save_to_table(ds, Path(tmpdir) / "test.csv")
+        saved = pd.read_csv(Path(tmpdir) / "test.csv")
         tab = xs.io.to_table(ds)
-        assert tab.shape == (120, 5 if multiple else 3)  # 3 vars + 2 aux coords
+
+        assert tab.shape == (
+            120,
+            5 if multiple else 3,
+        )  # 3 variables + 2 coords that are not dimensions
+        assert saved.shape == (
+            120,
+            8 if multiple else 6,
+        )  # everything gets mapped, so dimensions are included in the columns
         assert tab.columns.names == ["variable"] if multiple else [None]
+        assert (
+            set(saved.columns)
+            == {"season", "time", "site", "lat", "lon", "pr", "snw", "tas"}
+            if multiple
+            else {"season", "time", "site", "tas"}
+        )
         assert tab.index.names == ["season", "time", "site"]
         # Season order is chronological, rather than alphabetical
         np.testing.assert_array_equal(
@@ -255,13 +298,24 @@ class TestToTable:
             .index.get_level_values("season"),
             ["JFM", "AMJ", "JAS", "OND"],
         )
+        np.testing.assert_array_equal(saved.loc[0, "season"], "JFM")
 
         if multiple:
             # Variable in the index, thus no coords
+            xs.save_to_table(
+                ds,
+                Path(tmpdir) / "test.xlsx",
+                row=["time", "variable"],
+                column=["season", "site"],
+                coords=False,
+            )
             tab = xs.io.to_table(
                 ds, row=["time", "variable"], column=["season", "site"], coords=False
             )
+            saved = pd.read_excel(Path(tmpdir) / "test.xlsx")
+
             assert tab.shape == (15, 24)
+            assert saved.shape == (17, 26)  # Because of the headers
             assert tab.columns.names == ["season", "site"]
             np.testing.assert_array_equal(
                 tab.loc[("1993", "pr"), ("JFM",)], ds.pr.sel(time="1993", season="JFM")
@@ -275,8 +329,23 @@ class TestToTable:
                 )
                 == 0
             )
+            # Excel is not the prettiest thing to test
+            np.testing.assert_array_equal(saved.iloc[2, 2:], np.tile([1], 24))
+            assert saved.iloc[0, 2] == "a"
+            assert saved.iloc[2, 0] == datetime.datetime(1993, 1, 1, 0, 0)
 
-    def test_sheet(self):
+    def test_sheet(self, tmpdir):
+        xs.save_to_table(
+            self.ds,
+            Path(tmpdir) / "test.xlsx",
+            row=["time", "variable"],
+            column=["season"],
+            sheet="site",
+            coords=False,
+        )
+        saved = pd.read_excel(
+            Path(tmpdir) / "test.xlsx", sheet_name=["a", "b", "c", "d", "e", "f"]
+        )  # This is a test by itself
         tab = xs.io.to_table(
             self.ds,
             row=["time", "variable"],
@@ -284,31 +353,77 @@ class TestToTable:
             sheet="site",
             coords=False,
         )
+
         assert set(tab.keys()) == {("a",), ("b",), ("c",), ("d",), ("e",), ("f",)}
         assert tab[("a",)].shape == (15, 4)  # 5 time * 3 variable X 4 season
+        assert saved["a"].shape == (15, 6)  # Because of the headers
 
-    def test_error(self):
+    def test_kwargs(self, tmpdir):
+        xs.save_to_table(
+            self.ds,
+            Path(tmpdir) / "test.xlsx",
+            row=["time", "variable"],
+            column=["season", "site"],
+            coords=False,
+            datetime_format="dd/mm/yyyy",
+        )
+        saved = pd.read_excel(Path(tmpdir) / "test.xlsx")
+        assert saved.iloc[2, 0] == datetime.datetime(
+            1993, 1, 1, 0, 0
+        )  # No real way to test the format
+
+    def test_multiindex(self, tmpdir):
+        xs.save_to_table(
+            self.ds,
+            Path(tmpdir) / "test.csv",
+            row=["time", "variable"],
+            column=["season", "site"],
+            coords=False,
+            row_sep="|",
+            col_sep=";",
+        )
+        out = pd.read_csv(Path(tmpdir) / "test.csv")
+        assert out.shape == (15, 25)
+        assert out.columns[0] == "time|variable"
+        assert out.columns[1] == "JFM;a"
+
+    def test_error(self, tmpdir):
         with pytest.raises(ValueError, match="Repeated dimension names."):
-            xs.io.to_table(
-                self.ds, row=["time", "variable"], column=["season", "site", "time"]
+            xs.save_to_table(
+                self.ds,
+                Path(tmpdir) / "test.xlsx",
+                row=["time", "variable"],
+                column=["season", "site", "time"],
             )
         with pytest.raises(ValueError, match="Passed row, column and sheet"):
-            xs.io.to_table(
-                self.ds, row=["time", "variable"], column=["season", "site", "foo"]
+            xs.save_to_table(
+                self.ds,
+                Path(tmpdir) / "test.xlsx",
+                row=["time", "variable"],
+                column=["season", "site", "foo"],
             )
         with pytest.raises(
             NotImplementedError,
             match="Keeping auxiliary coords is not implemented when",
         ):
-            xs.io.to_table(
+            xs.save_to_table(
                 self.ds,
+                Path(tmpdir) / "test.xlsx",
                 row=["time", "variable"],
                 column=["season", "site"],
                 coords=True,
             )
+        with pytest.raises(ValueError, match="Output format could not be inferred"):
+            xs.save_to_table(self.ds, Path(tmpdir) / "test")
+        with pytest.raises(
+            ValueError, match="is only valid with excel as the output format"
+        ):
+            xs.save_to_table(self.ds, Path(tmpdir) / "test.csv", sheet="site")
+        with pytest.raises(ValueError, match="but the output format is not Excel."):
+            xs.save_to_table(self.ds, Path(tmpdir) / "test.csv", add_toc=True)
 
     @pytest.mark.parametrize("as_dataset", [True, False])
-    def test_make_toc(self, as_dataset):
+    def test_make_toc(self, tmpdir, as_dataset):
         ds = self.ds.copy()
         for v in ds.data_vars:
             ds[v].attrs["long_name"] = f"Long name for {v}"
@@ -318,7 +433,10 @@ class TestToTable:
             ds = ds["tas"]
 
         with xc.set_options(metadata_locales="fr"):
-            toc = xs.io.make_toc(ds)
+            xs.save_to_table(ds, Path(tmpdir) / "test.xlsx", add_toc=True)
+
+        toc = pd.read_excel(Path(tmpdir) / "test.xlsx", sheet_name="Contenu")
+        toc = toc.set_index("Unnamed: 0" if as_dataset else "Variable")
 
         if as_dataset:
             assert toc.shape == (8, 2)
@@ -327,7 +445,7 @@ class TestToTable:
                 "tas",
                 "pr",
                 "snw",
-                "",
+                np.nan,
                 "Attributs globaux",
                 "foo",
                 "baz",
@@ -380,11 +498,63 @@ class TestSaveToZarr:
         else:
             assert xs.io._get_keepbits(bitr, vname, vtype) == exp
 
+    @pytest.mark.parametrize("mode", ["f", "o", "a"])
+    @pytest.mark.parametrize("itervar", [True, False])
+    def test_mode(self, tmpdir, mode, itervar):
+        ds1 = timeseries(
+            np.arange(1, 5),
+            variable="tas",
+            as_dataset=True,
+        )
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test.zarr")
 
-class TestSaveToNetcdf:
-    def test_normal(self, tmpdir):
-        ds = datablock_3d(
-            np.tile(np.arange(1111, 1121), 15).reshape(15, 5, 2) * 1e-7,
+        ds2 = timeseries(
+            np.arange(10, 14),
+            variable="tas",
+            as_dataset=True,
+        )
+        ds2["pr"] = ds2["tas"].copy()
+        ds2 = ds2[["pr", "tas"]]
+
+        if mode == "f":
+            with pytest.raises(ValueError, match="exists in dataset"):
+                xs.save_to_zarr(
+                    ds2, Path(tmpdir) / "test.zarr", mode=mode, itervar=itervar
+                )
+            assert not (Path(tmpdir) / "test.zarr/pr").exists()
+            if itervar:
+                # Essentially just to reach 100% coverage and make sure the function doesn't crash with mode="f" and itervar=True
+                xs.save_to_zarr(
+                    ds2, Path(tmpdir) / "test2.zarr", mode=mode, itervar=itervar
+                )
+                ds3 = xr.open_zarr(Path(tmpdir) / "test2.zarr")
+                np.testing.assert_array_almost_equal(ds3.tas.isel(time=0), [10])
+                np.testing.assert_array_almost_equal(ds3.pr.isel(time=0), [10])
+
+        elif mode == "o":
+            xs.save_to_zarr(ds2, Path(tmpdir) / "test.zarr", mode=mode, itervar=itervar)
+            ds3 = xr.open_zarr(Path(tmpdir) / "test.zarr")
+            np.testing.assert_array_almost_equal(ds3.tas.isel(time=0), [10])
+            np.testing.assert_array_almost_equal(ds3.pr.isel(time=0), [10])
+
+        elif mode == "a":
+            # First, try only with variables that are already in the dataset
+            xs.save_to_zarr(
+                ds2[["tas"]], Path(tmpdir) / "test.zarr", mode=mode, itervar=itervar
+            )
+            ds3 = xr.open_zarr(Path(tmpdir) / "test.zarr")
+            np.testing.assert_array_almost_equal(ds3.tas.isel(time=0), [1])
+
+            # Now, try with a new variable
+            xs.save_to_zarr(ds2, Path(tmpdir) / "test.zarr", mode=mode, itervar=itervar)
+            ds3 = xr.open_zarr(Path(tmpdir) / "test.zarr")
+            np.testing.assert_array_almost_equal(ds3.tas.isel(time=0), [1])
+            np.testing.assert_array_almost_equal(ds3.pr.isel(time=0), [10])
+
+    @pytest.mark.parametrize("append", [True, False])
+    def test_append(self, tmpdir, append):
+        ds1 = datablock_3d(
+            np.array([[[1, 2], [3, 4]]]),
             variable="tas",
             x="lon",
             x_start=-70,
@@ -392,28 +562,141 @@ class TestSaveToNetcdf:
             y_start=45,
             as_dataset=True,
         )
-        ds["pr"] = ds["tas"].copy()
-        ds["other"] = ds["tas"].copy()
+        ds2 = datablock_3d(
+            np.array([[[11, 12], [13, 14]]]),
+            variable="tas",
+            x="lon",
+            x_start=-70,
+            y="lat",
+            y_start=45,
+            start="2005-01-01",
+            as_dataset=True,
+        )
+        ds2["pr"] = ds2["tas"].copy()
+        xs.save_to_zarr(
+            ds1, Path(tmpdir) / "test.zarr", encoding={"tas": {"dtype": "float32"}}
+        )
 
+        encoding = {
+            "tas": {"dtype": "int32"}
+        }  # This should be ignored, as the variable is already in the dataset
+        if append:
+            with pytest.raises(
+                ValueError,
+                match="is set in zarr_kwargs, all variables must already exist in the dataset.",
+            ):
+                xs.save_to_zarr(
+                    ds2,
+                    Path(tmpdir) / "test.zarr",
+                    mode="a",
+                    zarr_kwargs={"append_dim": "time"},
+                    encoding=encoding,
+                )
+            xs.save_to_zarr(
+                ds2[["tas"]],
+                Path(tmpdir) / "test.zarr",
+                mode="a",
+                zarr_kwargs={"append_dim": "time"},
+                encoding=encoding,
+            )
+            out = xr.open_zarr(Path(tmpdir) / "test.zarr")
+            np.testing.assert_array_equal(
+                out.tas, np.array([[[1, 2], [3, 4]], [[11, 12], [13, 14]]])
+            )
+        else:
+            xs.save_to_zarr(
+                ds2, Path(tmpdir) / "test.zarr", mode="a", encoding=encoding
+            )
+            out = xr.open_zarr(Path(tmpdir) / "test.zarr")
+            np.testing.assert_array_equal(out.tas, np.array([[[1, 2], [3, 4]]]))
+            np.testing.assert_array_equal(out.pr, np.array([[[11, 12], [13, 14]]]))
+        assert out.tas.dtype == np.float32
+
+    def test_skip(self, tmpdir):
+        ds1 = timeseries(
+            np.arange(1, 5),
+            variable="tas",
+            as_dataset=True,
+        )
+        ds2 = timeseries(
+            np.arange(10, 14),
+            variable="tas",
+            as_dataset=True,
+        )
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test.zarr")
+        xs.save_to_zarr(ds2, Path(tmpdir) / "test.zarr", mode="a")
+        ds3 = xr.open_zarr(Path(tmpdir) / "test.zarr")
+        np.testing.assert_array_almost_equal(ds3.tas.isel(time=0), [1])
+
+
+@pytest.mark.parametrize("engine", ["netcdf", "zarr"])
+def test_savefuncs_normal(tmpdir, engine):
+    ds = datablock_3d(
+        np.tile(np.arange(1111, 1121), 15).reshape(15, 5, 2) * 1e-7,
+        variable="tas",
+        x="lon",
+        x_start=-70,
+        y="lat",
+        y_start=45,
+        as_dataset=True,
+    )
+    ds["pr"] = ds["tas"].copy()
+    ds["other"] = ds["tas"].copy()
+    ds["other"].encoding = {"dtype": "float32"}
+    ds.attrs["foo"] = {"bar": 1}
+    ds["pr"].attrs["foo"] = {"bar": 2}
+
+    ds = ds.assign_coords(
+        some_coord=("lat", np.array(["hi", "how", "are", "you", "doing"]))
+    )
+    ds["some_coord"] = ds["some_coord"].astype(object)
+    ds["some_coord"].encoding = {"source": "this is a source"}
+
+    rechunk = {"time": 5, "lon": 2, "lat": 2}
+    bitround = {"tas": 2, "pr": 3}
+    if engine == "netcdf":
         xs.save_to_netcdf(
             ds,
             Path(tmpdir) / "test.nc",
-            rechunk={"time": 5, "lon": 2, "lat": 2},
-            bitround={"tas": 2, "pr": 3},
+            rechunk=rechunk,
+            bitround=bitround,
         )
-
         ds2 = xr.open_dataset(Path(tmpdir) / "test.nc", chunks={})
-        assert ds2.tas.chunks == ((5, 5, 5), (2, 2, 1), (2,))
+    else:
+        xs.save_to_zarr(
+            ds,
+            Path(tmpdir) / "test.zarr",
+            rechunk=rechunk,
+            bitround=bitround,
+        )
+        ds2 = xr.open_zarr(Path(tmpdir) / "test.zarr")
 
-        np.testing.assert_array_almost_equal(
-            ds2.tas.isel(time=0, lat=0, lon=0), [0.00010681], decimal=8
-        )
-        assert ds2.tas.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] == 2
-        np.testing.assert_array_almost_equal(
-            ds2.pr.isel(time=0, lat=0, lon=0), [0.00011444], decimal=8
-        )
-        assert ds2.pr.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] == 3
-        np.testing.assert_array_almost_equal(
-            ds2.other.isel(time=0, lat=0, lon=0), [0.0001111], decimal=8
-        )
-        assert ds2.other.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] == 12
+    # Chunks
+    assert ds2.tas.chunks == ((5, 5, 5), (2, 2, 1), (2,))
+
+    # Dtype
+    assert ds2.tas.dtype == np.float64
+    assert ds2.other.dtype == np.float32
+
+    # Bitround
+    np.testing.assert_array_almost_equal(
+        ds2.tas.isel(time=0, lat=0, lon=0), [0.00010681], decimal=8
+    )
+    assert ds2.tas.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] == 2
+    np.testing.assert_array_almost_equal(
+        ds2.pr.isel(time=0, lat=0, lon=0), [0.00011444], decimal=8
+    )
+    assert ds2.pr.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] == 3
+    np.testing.assert_array_almost_equal(
+        ds2.other.isel(time=0, lat=0, lon=0), [0.0001111], decimal=8
+    )
+    assert ds2.other.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] == 12
+
+    # Attributes
+    assert ds2.attrs["foo"] == "{'bar': 1}"
+    assert ds2.pr.attrs["foo"] == "{'bar': 2}"
+
+    if engine == "netcdf":
+        assert ds.some_coord.encoding == {"source": "this is a source"}
+    else:
+        assert ds.some_coord.encoding == {}
