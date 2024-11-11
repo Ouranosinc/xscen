@@ -700,3 +700,92 @@ def test_savefuncs_normal(tmpdir, engine):
         assert ds.some_coord.encoding == {"source": "this is a source"}
     else:
         assert ds.some_coord.encoding == {}
+
+
+class TestRechunk:
+    @pytest.mark.parametrize("engine", ["nc", "zarr"])
+    def test_rechunk(self, tmpdir, engine):
+        ds = datablock_3d(
+            np.tile(np.arange(1111, 1121), 15).reshape(15, 5, 2) * 1e-7,
+            variable="tas",
+            x="lon",
+            x_start=-70,
+            y="lat",
+            y_start=45,
+            as_dataset=True,
+        )
+        ds["pr"] = ds["tas"].copy()
+
+        if engine == "nc":
+            xs.save_to_netcdf(
+                ds,
+                Path(tmpdir) / "test.nc",
+            )
+        else:
+            xs.save_to_zarr(
+                ds,
+                Path(tmpdir) / "test.zarr",
+            )
+
+        (Path(tmpdir) / f"test2.zarr").mkdir()
+
+        xs.io.rechunk(
+            Path(tmpdir) / f"test.{engine}",
+            Path(tmpdir) / "test2.zarr",
+            chunks_over_dim={"time": 5, "lon": 2, "lat": 2},
+            overwrite=True,
+            worker_mem="1GB",
+            temp_store=Path(tmpdir) / "temp",
+        )
+        xs.io.rechunk(
+            Path(tmpdir) / f"test.{engine}",
+            Path(tmpdir) / "test3.zarr",
+            chunks_over_var={"tas": {"time": 5, "lon": 2, "lat": 2}},
+            overwrite=True,
+            worker_mem="1GB",
+            temp_store=Path(tmpdir) / "temp",
+        )
+
+        ds2 = xr.open_zarr(Path(tmpdir) / "test2.zarr")
+        ds3 = xr.open_zarr(Path(tmpdir) / "test3.zarr")
+        assert ds2.tas.chunks == ((5, 5, 5), (2, 2, 1), (2,))
+        assert ds2.pr.chunks == ((5, 5, 5), (2, 2, 1), (2,))
+        assert ds3.tas.chunks == ((5, 5, 5), (2, 2, 1), (2,))
+        assert ds3.pr.chunks == ((15,), (5,), (2,))
+
+    def test_error(self, tmpdir):
+        ds = datablock_3d(
+            np.tile(np.arange(1111, 1121), 15).reshape(15, 5, 2) * 1e-7,
+            variable="tas",
+            x="lon",
+            x_start=-70,
+            y="lat",
+            y_start=45,
+            as_dataset=True,
+        )
+        with pytest.raises(ValueError, match="No chunks given. "):
+            xs.io.rechunk(ds, Path(tmpdir) / "test.nc", worker_mem="1GB")
+
+
+def test_zip_zip(tmpdir):
+    ds = datablock_3d(
+        np.tile(np.arange(1111, 1121), 15).reshape(15, 5, 2) * 1e-7,
+        variable="tas",
+        x="lon",
+        x_start=-70,
+        y="lat",
+        y_start=45,
+        as_dataset=True,
+    )
+    xs.save_to_zarr(ds, Path(tmpdir) / "test.zarr")
+    xs.io.zip_directory(
+        Path(tmpdir) / "test.zarr", Path(tmpdir) / "test.zarr.zip", delete=True
+    )
+    assert not (Path(tmpdir) / "test.zarr").exists()
+
+    with xr.open_zarr(Path(tmpdir) / "test.zarr.zip") as ds2:
+        assert ds2.equals(ds)
+
+    xs.io.unzip_directory(Path(tmpdir) / "test.zarr.zip", Path(tmpdir) / "test2.zarr")
+    with xr.open_zarr(Path(tmpdir) / "test2.zarr") as ds3:
+        assert ds3.equals(ds)
