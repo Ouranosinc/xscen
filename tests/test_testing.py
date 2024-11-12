@@ -10,7 +10,9 @@ class TestPublish:
     @pytest.mark.parametrize("fmt", ["md", "rst"])
     def test_normal(self, fmt):
         out = xs.testing.publish_release_notes(
-            fmt, changes=Path(__file__).parent.parent.joinpath("CHANGELOG.rst")
+            fmt,
+            changes=Path(__file__).parent.parent.joinpath("CHANGELOG.rst"),
+            latest=False,
         )
         if fmt == "md":
             assert out.startswith("# Changelog\n\n")
@@ -42,7 +44,6 @@ class TestPublish:
     def test_latest(self, tmpdir, latest):
         out = xs.testing.publish_release_notes(
             "md",
-            file=tmpdir / "foo.md",
             changes=Path(__file__).parent.parent.joinpath("CHANGELOG.rst"),
             latest=latest,
         )

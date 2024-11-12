@@ -71,7 +71,7 @@ class TestDateParser:
             ("2001", True, "datetime", pd.Timestamp("2001-12-31 23:59:59")),
             ("150004", True, "datetime", pd.Timestamp("1500-04-30 23:59:59")),
             ("31231212", None, "datetime", pd.Timestamp("3123-12-12")),
-            ("2001-07-08", None, "period", pd.Period("2001-07-08", "H")),
+            ("2001-07-08", None, "period", pd.Period("2001-07-08", "h")),
             (pd.Timestamp("1993-05-20T12:07"), None, "str", "1993-05-20"),
             (
                 cftime.Datetime360Day(1981, 2, 30),
@@ -94,7 +94,7 @@ class TestDateParser:
             ("abc", None, "datetime", pd.Timestamp("NaT")),
             ("", True, "datetime", pd.Timestamp("NaT")),
             (
-                pd.Period("2001-07-08", "H"),
+                pd.Period("2001-07-08", "h"),
                 None,
                 "datetime",
                 pd.Timestamp("2001-07-08"),
