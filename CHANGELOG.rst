@@ -2,6 +2,35 @@
 Changelog
 =========
 
+v0.11.0 (unreleased)
+--------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* N/A
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* ``xs.utils.publish_release_notes`` and ``xs.utils.show_versions`` have been moved to ``xs.testing``. (:pull:`492`).
+
+Bug fixes
+^^^^^^^^^
+* Added a missing library (``openpyxl``) to the requirements. (:pull:`492`).
+* Fixed a bug in ``xs.io.subset_maxsize`` where the function would drop the last year. (:pull:`492`).
+* Fixed a bug in ``xs.io.clean_incomplete`` where the `.zmetadata` file was not removed. (:pull:`492`).
+* Fixed a bug in the saving of datasets where encoding was sometimes not applied, resulting for example in rechunking not being respected. (:pull:`492`).
+* Fixed multiple bugs in ``xs.io.save_to_zarr`` with `mode='a'`. (:pull:`492`).
+* Fixed a few minor bugs in ``xs.io.save_to_table``. (:pull:`492`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Added a new parameter `latest` to ``xs.testing.publish_release_notes`` to only print the latest release notes. (:pull:`492`).
+* The estimation method in ``xs.io.estimate_chunks`` has been improved. (:pull:`492`).
+* A new parameter `incomplete` has been added to ``xs.io.clean_incomplete`` to remove incomplete variables. (:pull:`492`).
+* Continued work on adding tests. (:pull:`492`).
+
+
 v0.10.1 (2024-11-04)
 --------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Éric Dupuis (:user:`coxipi`).
