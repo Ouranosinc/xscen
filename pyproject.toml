@@ -44,7 +44,7 @@ dependencies = [
   "cf_xarray >=0.7.6",
   "clisops >=0.10",
   "dask",
-  "flox",
+  "flox !=0.9.14",
   "fsspec",
   "geopandas",
   "h5netcdf",
