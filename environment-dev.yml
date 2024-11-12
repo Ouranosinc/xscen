@@ -10,8 +10,8 @@ dependencies:
   - cftime
   - cf_xarray >=0.7.6
   - clisops >=0.10
-  - dask
-  - flox !=0.9.14
+  - dask !=2024.11  # FIXME: https://github.com/Ouranosinc/xclim/issues/1992
+  - flox !=0.9.14  # FIXME: Remove this line once _datetime_nanmin() in flox.xrutils is fixed
   - fsspec
   - geopandas
   - h5netcdf
