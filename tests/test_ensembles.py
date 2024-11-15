@@ -11,19 +11,11 @@ try:
     import xesmf as xe
 except ImportError:
     xe = None
-# temp fix for changes to xclim-testdata
-from functools import partial
 
-from xclim.testing import open_dataset
 from xclim.testing.helpers import test_timeseries as timeseries
+from xclim.testing.utils import nimbus
 
 import xscen as xs
-
-# FIXME: Remove if-else when updating minimum xclim version to 0.53
-if Version(xc.__version__) < Version("0.53.0"):
-    # Hack to revert to old testdata with old xclim
-    open_dataset = partial(open_dataset, branch="v2023.12.14")
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -1103,7 +1095,7 @@ class TestEnsemblePartition:
 
 class TestReduceEnsemble:
     def test_with_criteria(self):
-        ds = open_dataset("EnsembleReduce/TestEnsReduceCriteria.nc")
+        ds = xr.open_dataset(nimbus().fetch("EnsembleReduce/TestEnsReduceCriteria.nc"))
         selected, clusters, fig_data = xs.reduce_ensemble(
             ds["data"], method="kmeans", max_clusters=3
         )
@@ -1122,7 +1114,9 @@ class TestReduceEnsemble:
             "CNRM-CM5": "EnsembleStats/BCCAQv2+ANUSPLIN300_CNRM-CM5_historical+rcp45_r1i1p1_1970-2050_tg_mean_YS.nc",
         }
         for d in datasets:
-            ds = open_dataset(datasets[d]).isel(lon=slice(0, 4), lat=slice(0, 4))
+            ds = xr.open_dataset(nimbus().fetch(datasets[d])).isel(
+                lon=slice(0, 4), lat=slice(0, 4)
+            )
             ds = xs.climatological_op(
                 ds,
                 op="mean",
@@ -1146,7 +1140,7 @@ class TestReduceEnsemble:
         assert fig_data == {}
 
     def test_errors(self):
-        ds = open_dataset("EnsembleReduce/TestEnsReduceCriteria.nc")
+        ds = xr.open_dataset(nimbus().fetch("EnsembleReduce/TestEnsReduceCriteria.nc"))
         with pytest.raises(
             ValueError, match="Data must have a 'horizon' dimension to be subsetted."
         ):
