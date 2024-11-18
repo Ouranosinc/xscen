@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 import xarray as xr
 import xclim as xc
-from packaging.version import Version
 
 try:
     import xesmf as xe

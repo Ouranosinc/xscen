@@ -1,6 +1,7 @@
 """Input/Output functions for xscen."""
 
 import datetime
+import json
 import logging
 import os
 import shutil as sh
@@ -252,7 +253,7 @@ def clean_incomplete(
         Name of variables that were completed. All other variables (except coordinates) will be removed.
         Use either `complete` or `incomplete`, not both.
     incomplete : sequence of strings, optional
-        Name of variables that should be removed.
+        Name of variables that should be removed. Coordinates and dimensions will never be removed through this function.
         Use either `complete` or `incomplete`, not both.
 
     Returns
@@ -260,6 +261,22 @@ def clean_incomplete(
     None
     """
     path = Path(path)
+
+    def _del_var(pth):
+        msg = f"Removing {pth} from disk"
+        logger.warning(msg)
+        sh.rmtree(pth)
+
+        # Update the .zmetadata file
+        with (Path(path) / ".zmetadata").open("r") as f:
+            metadata = json.load(f)
+        [
+            metadata["metadata"].pop(k)
+            for k in list(metadata["metadata"].keys())
+            if k.startswith(f"{pth.name}/.")
+        ]
+        with (Path(path) / ".zmetadata").open("w") as f:
+            json.dump(metadata, f, indent=2)
 
     if complete is not None and incomplete is not None:
         raise ValueError("Use either `complete` or `incomplete`, not both.")
@@ -270,20 +287,17 @@ def clean_incomplete(
 
         for fold in filter(lambda p: p.is_dir(), path.iterdir()):
             if fold.name not in complete:
-                msg = f"Removing {fold} from disk"
-                logger.warning(msg)
-                sh.rmtree(fold)
+                _del_var(fold)
 
     elif incomplete is not None:
+        with xr.open_zarr(path) as ds:
+            incomplete = [
+                v for v in incomplete if (v not in ds.coords) and (v not in ds.dims)
+            ]
+
         for fold in filter(lambda p: p.is_dir(), path.iterdir()):
             if fold.name in incomplete:
-                msg = f"Removing {fold} from disk"
-                logger.warning(msg)
-                sh.rmtree(fold)
-
-    # Remove .zmetadata to avoid issues with zarr and xarray
-    if (path / ".zmetadata").exists():
-        Path.unlink(path / ".zmetadata")
+                _del_var(fold)
 
 
 def _coerce_attrs(attrs):

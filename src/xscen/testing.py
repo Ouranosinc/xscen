@@ -1,5 +1,6 @@
 """Testing utilities for xscen."""
 
+import importlib.metadata
 import os
 import re
 from io import StringIO
@@ -357,77 +358,23 @@ def show_versions(
     -------
     str or None
     """
-    if deps is None:
-        deps = [
-            "xscen",
-            # Main packages
-            "cartopy",
-            "cftime",
-            "cf_xarray",
-            "clisops",
-            "dask",
-            "flox",
-            "fsspec",
-            "geopandas",
-            "h5netcdf",
-            "h5py",
-            "intake_esm",
-            "matplotlib",
-            "netCDF4",
-            "numcodecs",
-            "numpy",
-            "pandas",
-            "parse",
-            "pyyaml",
-            "rechunker",
-            "scipy",
-            "shapely",
-            "sparse",
-            "toolz",
-            "xarray",
-            "xclim",
-            "xesmf",
-            "zarr",
-            # Opt
-            "nc-time-axis",
-            "pyarrow",
-            # Dev
-            "babel",
-            "black",
-            "blackdoc",
-            "bump-my-version",
-            "coverage",
-            "coveralls",
-            "flake8",
-            "flake8-rst-docstrings",
-            "ipykernel",
-            "ipython",
-            "isort",
-            "jupyter_client",
-            "nbsphinx",
-            "nbval",
-            "pandoc",
-            "pooch",
-            "pre-commit",
-            "pytest",
-            "pytest-cov",
-            "ruff",
-            "setuptools",
-            "setuptools-scm",
-            "sphinx",
-            "sphinx-autoapi",
-            "sphinx-rtd-theme",
-            "sphinxcontrib-napoleon",
-            "sphinx-codeautolink",
-            "sphinx-copybutton",
-            "sphinx-mdinclude",
-            "watchdog",
-            "xdoctest",
-            "tox",
-            "build",
-            "wheel",
-            "pip",
-            "flake8-alphabetize",
+
+    def _get_xscen_dependencies():
+        xscen_metadata = importlib.metadata.metadata("xscen")
+        requires = xscen_metadata.get_all("Requires-Dist")
+        requires = [
+            req.split("[")[0]
+            .split(";")[0]
+            .split(">")[0]
+            .split("<")[0]
+            .split("=")[0]
+            .split("!")[0]
+            for req in requires
         ]
+
+        return ["xscen"] + requires
+
+    if deps is None:
+        deps = _get_xscen_dependencies()
 
     return _show_versions(file=file, deps=deps)

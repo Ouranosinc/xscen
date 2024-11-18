@@ -145,6 +145,7 @@ class TestCleanIncomplete:
             xs.io.clean_incomplete(Path(tmpdir) / "test.zarr", incomplete=["pr"])
         assert (Path(tmpdir) / "test.zarr/tas").exists()
         assert not (Path(tmpdir) / "test.zarr/pr").exists()
+        assert (Path(tmpdir) / "test.zarr/.zmetadata").exists()
 
         ds2 = xr.open_zarr(Path(tmpdir) / "test.zarr")
         assert "pr" not in ds2
