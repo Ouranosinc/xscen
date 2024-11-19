@@ -1,6 +1,6 @@
 """Testing utilities for xscen."""
 
-import importlib.metadata
+# import importlib.metadata
 import os
 import re
 from io import StringIO
@@ -358,23 +358,23 @@ def show_versions(
     -------
     str or None
     """
-
-    def _get_xscen_dependencies():
-        xscen_metadata = importlib.metadata.metadata("xscen")
-        requires = xscen_metadata.get_all("Requires-Dist")
-        requires = [
-            req.split("[")[0]
-            .split(";")[0]
-            .split(">")[0]
-            .split("<")[0]
-            .split("=")[0]
-            .split("!")[0]
-            for req in requires
-        ]
-
-        return ["xscen"] + requires
-
-    if deps is None:
-        deps = _get_xscen_dependencies()
-
-    return _show_versions(file=file, deps=deps)
+    # def _get_xscen_dependencies():
+    #     xscen_metadata = importlib.metadata.metadata("xscen")
+    #     requires = xscen_metadata.get_all("Requires-Dist")
+    #     requires = [
+    #         req.split("[")[0]
+    #         .split(";")[0]
+    #         .split(">")[0]
+    #         .split("<")[0]
+    #         .split("=")[0]
+    #         .split("!")[0]
+    #         for req in requires
+    #     ]
+    #
+    #     return ["xscen"] + requires
+    #
+    # if deps is None:
+    #     deps = _get_xscen_dependencies()
+    #
+    # return _show_versions(file=file, deps=deps)
+    pass
