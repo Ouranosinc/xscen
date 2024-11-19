@@ -267,16 +267,16 @@ def clean_incomplete(
         logger.warning(msg)
         sh.rmtree(pth)
 
-        # Update the .zmetadata file
-        with (Path(path) / ".zmetadata").open("r") as f:
-            metadata = json.load(f)
-        [
-            metadata["metadata"].pop(k)
-            for k in list(metadata["metadata"].keys())
-            if k.startswith(f"{pth.name}/.")
-        ]
-        with (Path(path) / ".zmetadata").open("w") as f:
-            json.dump(metadata, f, indent=2)
+        # # Update the .zmetadata file
+        # with (Path(path) / ".zmetadata").open("r") as f:
+        #     metadata = json.load(f)
+        # [
+        #     metadata["metadata"].pop(k)
+        #     for k in list(metadata["metadata"].keys())
+        #     if k.startswith(f"{pth.name}/.")
+        # ]
+        # with (Path(path) / ".zmetadata").open("w") as f:
+        #     json.dump(metadata, f, indent=2)
 
     if complete is not None and incomplete is not None:
         raise ValueError("Use either `complete` or `incomplete`, not both.")
@@ -290,10 +290,10 @@ def clean_incomplete(
                 _del_var(fold)
 
     elif incomplete is not None:
-        with xr.open_zarr(path) as ds:
-            incomplete = [
-                v for v in incomplete if (v not in ds.coords) and (v not in ds.dims)
-            ]
+        # with xr.open_zarr(path) as ds:
+        #     incomplete = [
+        #         v for v in incomplete if (v not in ds.coords) and (v not in ds.dims)
+        #     ]
 
         for fold in filter(lambda p: p.is_dir(), path.iterdir()):
             if fold.name in incomplete:
