@@ -32,7 +32,7 @@ dependencies:
   - toolz
   - xarray >=2023.11.0, !=2024.6.0
   - xclim >=0.53.2, <0.54
-  - xesmf >=0.7
+  - xesmf >=0.7, <0.8.8  # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
   - zarr >=2.13
   # To install from source
   - setuptools >=65.0.0

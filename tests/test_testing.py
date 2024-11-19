@@ -59,6 +59,7 @@ def test_show_version(tmpdir):
         out = f.read()
     assert "xscen" in out
     assert "xclim" in out
+    assert "xesmf" in out
     assert "xarray" in out
     assert "numpy" in out
     assert "pandas" in out
