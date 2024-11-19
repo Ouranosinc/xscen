@@ -262,24 +262,9 @@ def clean_incomplete(
     """
     path = Path(path)
 
-    # def _del_var(pth):
-    #     msg = f"Removing {pth} from disk"
-    #     logger.warning(msg)
-    #     sh.rmtree(pth)
-    #
-    #     # Update the .zmetadata file
-    #     with (Path(path) / ".zmetadata").open("r") as f:
-    #         metadata = json.load(f)
-    #     [
-    #         metadata["metadata"].pop(k)
-    #         for k in list(metadata["metadata"].keys())
-    #         if k.startswith(f"{pth.name}/.")
-    #     ]
-    #     with (Path(path) / ".zmetadata").open("w") as f:
-    #         json.dump(metadata, f, indent=2)
-
     if complete is not None and incomplete is not None:
         raise ValueError("Use either `complete` or `incomplete`, not both.")
+    v_to_rm = []
 
     if complete is not None:
         with xr.open_zarr(path) as ds:
@@ -287,21 +272,35 @@ def clean_incomplete(
 
         for fold in filter(lambda p: p.is_dir(), path.iterdir()):
             if fold.name not in complete:
+                v_to_rm.append(fold.name)
                 msg = f"Removing {fold} from disk"
                 logger.warning(msg)
                 sh.rmtree(fold)
 
     elif incomplete is not None:
-        # with xr.open_zarr(path) as ds:
-        #     incomplete = [
-        #         v for v in incomplete if (v not in ds.coords) and (v not in ds.dims)
-        #     ]
+        with xr.open_zarr(path) as ds:
+            incomplete = [
+                v for v in incomplete if (v not in ds.coords) and (v not in ds.dims)
+            ]
 
         for fold in filter(lambda p: p.is_dir(), path.iterdir()):
             if fold.name in incomplete:
+                v_to_rm.append(fold.name)
                 msg = f"Removing {fold} from disk"
                 logger.warning(msg)
                 sh.rmtree(fold)
+
+    # Update the .zmetadata file
+    with (path / ".zmetadata").open("r") as f:
+        metadata = json.load(f)
+    for v in v_to_rm:
+        [
+            metadata["metadata"].pop(k)
+            for k in list(metadata["metadata"].keys())
+            if k.startswith(f"{v}/.")
+        ]
+    with (path / ".zmetadata").open("w") as f:
+        json.dump(metadata, f, indent=2)
 
 
 def _coerce_attrs(attrs):
