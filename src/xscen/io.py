@@ -262,21 +262,21 @@ def clean_incomplete(
     """
     path = Path(path)
 
-    def _del_var(pth):
-        msg = f"Removing {pth} from disk"
-        logger.warning(msg)
-        sh.rmtree(pth)
-
-        # # Update the .zmetadata file
-        # with (Path(path) / ".zmetadata").open("r") as f:
-        #     metadata = json.load(f)
-        # [
-        #     metadata["metadata"].pop(k)
-        #     for k in list(metadata["metadata"].keys())
-        #     if k.startswith(f"{pth.name}/.")
-        # ]
-        # with (Path(path) / ".zmetadata").open("w") as f:
-        #     json.dump(metadata, f, indent=2)
+    # def _del_var(pth):
+    #     msg = f"Removing {pth} from disk"
+    #     logger.warning(msg)
+    #     sh.rmtree(pth)
+    #
+    #     # Update the .zmetadata file
+    #     with (Path(path) / ".zmetadata").open("r") as f:
+    #         metadata = json.load(f)
+    #     [
+    #         metadata["metadata"].pop(k)
+    #         for k in list(metadata["metadata"].keys())
+    #         if k.startswith(f"{pth.name}/.")
+    #     ]
+    #     with (Path(path) / ".zmetadata").open("w") as f:
+    #         json.dump(metadata, f, indent=2)
 
     if complete is not None and incomplete is not None:
         raise ValueError("Use either `complete` or `incomplete`, not both.")
@@ -287,7 +287,9 @@ def clean_incomplete(
 
         for fold in filter(lambda p: p.is_dir(), path.iterdir()):
             if fold.name not in complete:
-                _del_var(fold)
+                msg = f"Removing {fold} from disk"
+                logger.warning(msg)
+                sh.rmtree(fold)
 
     elif incomplete is not None:
         # with xr.open_zarr(path) as ds:
@@ -297,7 +299,9 @@ def clean_incomplete(
 
         for fold in filter(lambda p: p.is_dir(), path.iterdir()):
             if fold.name in incomplete:
-                _del_var(fold)
+                msg = f"Removing {fold} from disk"
+                logger.warning(msg)
+                sh.rmtree(fold)
 
 
 def _coerce_attrs(attrs):
