@@ -11,7 +11,7 @@ dependencies:
   - cf_xarray >=0.7.6
   - clisops >=0.10
   - dask >=2024.8.1,<2024.11  # FIXME: https://github.com/Ouranosinc/xclim/issues/1992
-  - esmpy <8.7.0
+  - esmpy !=8.7.0  # FIXME: 8.7.0 produces a segfault in xesmf
   - flox !=0.9.14  # FIXME: 0.9.14 is a broken version. This pin could be removed eventually.
   - fsspec
   - geopandas
@@ -33,7 +33,7 @@ dependencies:
   - toolz
   - xarray >=2023.11.0, !=2024.6.0
   - xclim >=0.53.2, <0.54
-  - xesmf >=0.7, <0.8.8
+  - xesmf >=0.7
   - zarr >=2.13
   # Opt
   - nc-time-axis >=1.3.1
