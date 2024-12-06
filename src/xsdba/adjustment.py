@@ -15,6 +15,7 @@ from scipy import stats
 from xarray.core.dataarray import DataArray
 
 from xsdba._adjustment import (
+    dotc_adjust,
     dqm_adjust,
     dqm_train,
     eqm_train,
@@ -25,6 +26,7 @@ from xsdba._adjustment import (
     mbcn_adjust,
     mbcn_train,
     npdf_transform,
+    otc_adjust,
     qdm_adjust,
     qm_adjust,
     scaling_adjust,
@@ -46,6 +48,7 @@ from xsdba.utils import (
 
 __all__ = [
     "LOCI",
+    "OTC",
     "BaseAdjustment",
     "DetrendedQuantileMapping",
     "EmpiricalQuantileMapping",
@@ -55,6 +58,7 @@ __all__ = [
     "PrincipalComponents",
     "QuantileDeltaMapping",
     "Scaling",
+    "dOTC",
 ]
 
 
