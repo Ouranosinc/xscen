@@ -1148,7 +1148,7 @@ class NpdfTransform(Adjust):
         The number of iterations to perform. Defaults to 20.
     pts_dim : str
         The name of the "multivariate" dimension. Defaults to "multivar", which is the
-        normal case when using :py:func:`xsdba.base.stack_variables`.
+        normal case when using :py:func:`xsdba.stack_variables`.
     adj_kws : dict, optional
         Dictionary of arguments to pass to the adjust method of the univariate adjustment.
     rot_matrices : xr.DataArray, optional
@@ -1632,7 +1632,7 @@ class MBCn(TrainAdjust):
         The number of iterations to perform. Defaults to 20.
     pts_dim : str
         The name of the "multivariate" dimension. Defaults to "multivar", which is the
-        normal case when using :py:func:`xsdba.base.stack_variables`.
+        normal case when using :py:func:`xsdba.stack_variables`.
     rot_matrices: xr.DataArray, optional
         The rotation matrices as a 3D array ('iterations', <pts_dim>, <anything>), with shape (n_iter, <N>, <N>).
         If left empty, random rotation matrices will be automatically generated.
@@ -1642,7 +1642,7 @@ class MBCn(TrainAdjust):
     base : BaseAdjustment
         Bias-adjustment class used for the univariate bias correction.
     period_dim : str, optional
-        Name of the period dimension used when stacking time periods of `sim`  using :py:func:`xsdba.calendar.stack_periods`.
+        Name of the period dimension used when stacking time periods of `sim`  using :py:func:`xsdba.stack_periods`.
         If specified, the interpolation of the npdf transform is performed only once and applied on all periods simultaneously.
         This should be more performant, but also more memory intensive.
 
@@ -1701,7 +1701,7 @@ class MBCn(TrainAdjust):
     -----
     * Only  "time" and "time.dayofyear" (with a suitable window) are implemented as possible values for `group`.
     * The historical reference (:math:`T`, for "target"), simulated historical (:math:`H`) and simulated projected (:math:`S`)
-      datasets are constructed by stacking the timeseries of N variables together using ``xsdba.base.stack_variables``.
+      datasets are constructed by stacking the timeseries of N variables together using ``xsdba.stack_variables``.
     """
 
     @classmethod

@@ -227,7 +227,7 @@ def mbcn_train(
         The rotation matrices as a 3D array ('iterations', <pts_dims[0]>, <pts_dims[1]>), with shape (n_iter, <N>, <N>).
     pts_dims : sequence of str
         The name of the "multivariate" dimension and its primed counterpart. Defaults to "multivar", which
-        is the normal case when using :py:func:`xsdba.base.stack_variables`, and "multivar_prime".
+        is the normal case when using :py:func:`xsdba.stack_variables`, and "multivar_prime".
     quantiles : array-like
         The quantiles to compute.
     gw_idxs : xr.DataArray
@@ -373,7 +373,7 @@ def mbcn_adjust(
             gw_idxs: Indices of the times in each windowed time group
     pts_dims : [str, str]
         The name of the "multivariate" dimension and its primed counterpart. Defaults to "multivar", which
-        is the normal case when using :py:func:`xsdba.base.stack_variables`, and "multivar_prime".
+        is the normal case when using :py:func:`xsdba.stack_variables`, and "multivar_prime".
     interp : str
         Interpolation method for the npdf transform (same as in the training step).
     extrapolation : str
@@ -387,7 +387,7 @@ def mbcn_adjust(
     adj_kws : Dict
         Options for univariate adjust for the scenario that is reordered with the output of npdf transform.
     period_dim : str, optional
-        Name of the period dimension used when stacking time periods of `sim`  using :py:func:`xsdba.processing.stack_periods`.
+        Name of the period dimension used when stacking time periods of `sim`  using :py:func:`xsdba.stack_periods`.
         If specified, the interpolation of the npdf transform is performed only once and applied on all periods simultaneously.
         This should be more performant, but also more memory intensive. Defaults to `None`: No optimization will be attempted.
 

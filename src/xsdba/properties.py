@@ -33,7 +33,6 @@ from xsdba.units import (
 from xsdba.utils import _pairwise_spearman, copy_all_attrs
 
 
-# TODO: Reduce redundancy between this submodule and generic
 class StatisticalProperty(Indicator):
     """Base indicator class for statistical properties used for validating bias-adjusted outputs.
 
@@ -595,27 +594,29 @@ def _annual_cycle(
             .mean()
             .isel(dayofyear=slice(window // 2, -(window // 2)))
         )
-    # TODO: In April 2024, use a match-case.
-    if stat == "absamp":
-        out = ac.max("dayofyear") - ac.min("dayofyear")
-        out.attrs.update(pint2cfattrs(units2pint(u), is_difference=True))
-    elif stat == "relamp":
-        out = (ac.max("dayofyear") - ac.min("dayofyear")) * 100 / ac.mean("dayofyear")
-        out.attrs["units"] = "%"
-    elif stat == "phase":
-        out = ac.idxmax("dayofyear")
-        out.attrs.update(units="", is_dayofyear=np.int32(1))
-    elif stat == "min":
-        out = ac.min("dayofyear")
-        out.attrs["units"] = u
-    elif stat == "max":
-        out = ac.max("dayofyear")
-        out.attrs["units"] = u
-    elif stat == "asymmetry":
-        out = (ac.idxmax("dayofyear") - ac.idxmin("dayofyear")) % 365 / 365
-        out.attrs["units"] = "yr"
-    else:
-        raise NotImplementedError(f"{stat} is not a valid annual cycle statistic.")
+    match stat:
+        case "absamp":
+            out = ac.max("dayofyear") - ac.min("dayofyear")
+            out.attrs.update(pint2cfattrs(units2pint(u), is_difference=True))
+        case "relamp":
+            out = (
+                (ac.max("dayofyear") - ac.min("dayofyear")) * 100 / ac.mean("dayofyear")
+            )
+            out.attrs["units"] = "%"
+        case "phase":
+            out = ac.idxmax("dayofyear")
+            out.attrs.update(units="", is_dayofyear=np.int32(1))
+        case "min":
+            out = ac.min("dayofyear")
+            out.attrs["units"] = u
+        case "max":
+            out = ac.max("dayofyear")
+            out.attrs["units"] = u
+        case "asymmetry":
+            out = (ac.idxmax("dayofyear") - ac.idxmin("dayofyear")) % 365 / 365
+            out.attrs["units"] = "yr"
+        case _:
+            raise NotImplementedError(f"{stat} is not a valid annual cycle statistic.")
     return out
 
 
@@ -713,17 +714,19 @@ def _annual_statistic(
 
     yrs = da.resample(time="YS")
 
-    if stat == "absamp":
-        out = yrs.max() - yrs.min()
-        out.attrs.update(pint2cfattrs(units2pint(u), is_difference=True))
-    elif stat == "relamp":
-        out = (yrs.max() - yrs.min()) * 100 / yrs.mean()
-        out.attrs["units"] = "%"
-    elif stat == "phase":
-        out = yrs.map(xr.DataArray.idxmax).dt.dayofyear
-        out.attrs.update(units="", is_dayofyear=np.int32(1))
-    else:
-        raise NotImplementedError(f"{stat} is not a valid annual cycle statistic.")
+    match stat:
+        case "absamp":
+            out = yrs.max() - yrs.min()
+            out.attrs.update(pint2cfattrs(units2pint(u), is_difference=True))
+        case "relamp":
+            out = (yrs.max() - yrs.min()) * 100 / yrs.mean()
+            out.attrs["units"] = "%"
+        case "phase":
+            out = yrs.map(xr.DataArray.idxmax).dt.dayofyear
+            out.attrs.update(units="", is_dayofyear=np.int32(1))
+        case _:
+            raise NotImplementedError(f"{stat} is not a valid annual cycle statistic.")
+
     return out.mean("time", keep_attrs=True)
 
 

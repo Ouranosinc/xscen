@@ -386,7 +386,6 @@ def _add_default_kws(params_dict, params_to_check, func):
     return params_dict
 
 
-# TODO: this changes the type of some variables (e.g. thresh : str -> float). This should probably not be allowed
 def harmonize_units(params_to_check):
     """Compare units and perform a conversion if possible, otherwise raise a `ValidationError`."""
 
