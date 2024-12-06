@@ -1,43 +1,22 @@
-"""Testing utilities for xsdba."""
+"""Helper functions for testing purposes."""
 
 from __future__ import annotations
 
 import collections
-import logging
-import os
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import xarray as xr
-from platformdirs import user_cache_dir
 from scipy.stats import gamma
 
 from xsdba.utils import equally_spaced_nodes
 
-__all__ = ["nancov", "test_timelonlatseries", "test_timeseries"]
-
-# XC
-TESTDATA_BRANCH = os.getenv("XCLIM_TESTDATA_BRANCH", "main")
-"""Sets the branch of Ouranosinc/xclim-testdata to use when fetching testing datasets.
-
-Notes
------
-When running tests locally, this can be set for both `pytest` and `tox` by exporting the variable:
-
-.. code-block:: console
-
-    $ export XCLIM_TESTDATA_BRANCH="my_testing_branch"
-
-or setting the variable at runtime:
-
-.. code-block:: console
-
-    $ env XCLIM_TESTDATA_BRANCH="my_testing_branch" pytest
-
-"""
-
-logger = logging.getLogger("xsdba")
+__all__ = [
+    "test_cannon_2015_dist",
+    "test_cannon_2015_rvs",
+    "test_timelonlatseries",
+    "test_timeseries",
+]
 
 
 def test_cannon_2015_dist():  # noqa: D103
@@ -107,10 +86,3 @@ def test_timeseries(
         return da.to_dataset()
     else:
         return da
-
-
-# XC
-def nancov(X):
-    """Drop observations with NaNs from Numpy's cov."""
-    X_na = np.isnan(X).any(axis=0)
-    return np.cov(X[:, ~X_na])

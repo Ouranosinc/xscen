@@ -279,13 +279,14 @@ def test_normalize(timeseries, random):
     np.testing.assert_allclose(xp, xp2)
 
 
-def test_stack_variables(open_dataset):
-    ds1 = open_dataset("sdba/CanESM2_1950-2100.nc")
-    ds2 = open_dataset("sdba/ahccd_1950-2013.nc")
+def test_stack_variables(gosset):
+    ds1 = xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))
+    ds2 = xr.open_dataset(gosset.fetch("sdba/ahccd_1950-2013.nc"))
 
     da1 = stack_variables(ds1)
     da2 = stack_variables(ds2)
 
+    # FIXME: Thes test for variable order; use a membership test instead
     assert list(da1.multivar.values) == ["pr", "tasmax"]
     assert da1.multivar.attrs["_standard_name"] == [
         "precipitation_flux",

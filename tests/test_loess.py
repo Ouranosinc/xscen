@@ -40,9 +40,9 @@ def test_loess_nb(d, f, w, n, dx, exp):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("use_dask", [True, False])
-def test_loess_smoothing(use_dask, open_dataset):
-    tas = open_dataset(
-        "cmip3/tas.sresb1.giss_model_e_r.run1.atm.da.nc",
+def test_loess_smoothing(use_dask, gosset):
+    tas = xr.open_dataset(
+        gosset.fetch("cmip3/tas.sresb1.giss_model_e_r.run1.atm.da.nc"),
         chunks={"lat": 1} if use_dask else None,
     ).tas.isel(lon=0, time=slice(0, 740))
     tas = tas.where(tas.time.dt.dayofyear != 360)  # Put NaNs

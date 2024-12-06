@@ -26,7 +26,6 @@ from xsdba.processing import (
     uniform_noise_like,
     unstack_variables,
 )
-from xsdba.testing import nancov
 from xsdba.units import convert_units_to, pint_multiply
 from xsdba.utils import (
     ADDITIVE,
@@ -36,6 +35,12 @@ from xsdba.utils import (
     get_correction,
     invert,
 )
+
+
+def nancov(x):
+    """Drop observations with NaNs from Numpy's cov."""
+    x_na = np.isnan(x).any(axis=0)
+    return np.cov(x[:, ~x_na])
 
 
 class TestBaseAdjustment:
@@ -627,15 +632,15 @@ class TestQM:
 
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-    def test_add_dims(self, use_dask, open_dataset):
+    def test_add_dims(self, use_dask, gosset):
         with set_options(sdba_encode_cf=use_dask):
             if use_dask:
                 chunks = {"location": -1}
             else:
                 chunks = None
 
-            dsim = open_dataset(
-                "sdba/CanESM2_1950-2100.nc",
+            dsim = xr.open_dataset(
+                gosset.fetch("sdba/CanESM2_1950-2100.nc"),
                 chunks=chunks,
                 drop_variables=["lat", "lon"],
             ).tasmax
@@ -643,8 +648,8 @@ class TestQM:
             sim = dsim.sel(time=slice("2041", "2070"))
 
             ref = (
-                open_dataset(
-                    "sdba/ahccd_1950-2013.nc",
+                xr.open_dataset(
+                    gosset.fetch("sdba/ahccd_1950-2013.nc"),
                     chunks=chunks,
                     drop_variables=["lat", "lon"],
                 )
@@ -673,7 +678,7 @@ class TestMBCn:
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("group, window", [["time", 1], ["time.dayofyear", 31]])
     @pytest.mark.parametrize("period_dim", [None, "period"])
-    def test_simple(self, open_dataset, use_dask, group, window, period_dim):
+    def test_simple(self, use_dask, group, window, period_dim, gosset):
         group, window, period_dim, use_dask = "time", 1, None, False
         with set_options(sdba_encode_cf=use_dask):
             if use_dask:
@@ -681,8 +686,8 @@ class TestMBCn:
             else:
                 chunks = None
             ref, dsim = (
-                open_dataset(
-                    f"sdba/{file}",
+                xr.open_dataset(
+                    gosset.fetch(f"sdba/{file}"),
                     chunks=chunks,
                     drop_variables=["lat", "lon"],
                 )
@@ -762,8 +767,10 @@ class TestPrincipalComponents:
 
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.parametrize("pcorient", ["full", "simple"])
-    def test_real_data(self, open_dataset, use_dask, pcorient):
-        atmosds = open_dataset("ERA5/daily_surface_cancities_1990-1993.nc")
+    def test_real_data(self, use_dask, pcorient, gosset):
+        atmosds = xr.open_dataset(
+            gosset.fetch("ERA5/daily_surface_cancities_1990-1993.nc")
+        )
 
         ds0 = xr.Dataset(
             {"tasmax": atmosds.tasmax, "tasmin": atmosds.tasmin, "tas": atmosds.tas}
@@ -857,9 +864,9 @@ class TestExtremeValues:
         ).sum()
 
     @pytest.mark.slow
-    def test_real_data(self, open_dataset):
-        dsim = open_dataset("sdba/CanESM2_1950-2100.nc")  # .chunk()
-        dref = open_dataset("sdba/ahccd_1950-2013.nc")  # .chunk()
+    def test_real_data(self, gosset):
+        dsim = xr.open_dataset(gosset.fetch("sdba/CanESM2_1950-2100.nc"))  # .chunk()
+        dref = xr.open_dataset(gosset.fetch("sdba/ahccd_1950-2013.nc"))  # .chunk()
         ref = dref.sel(time=slice("1950", "2009")).pr
         hist = dsim.sel(time=slice("1950", "2009")).pr
         # TODO: Do we want to include standard conversions in xsdba tests?
