@@ -20,7 +20,7 @@ from .base import Grouper, map_blocks, map_groups
 from .detrending import PolyDetrend
 from .options import set_options
 from .processing import escore, jitter_under_thresh, reordering, standardize
-from .units import convert_units_to, units
+from .units import convert_units_to
 from .utils import _fitfunc_1d
 
 
@@ -387,7 +387,7 @@ def mbcn_adjust(
     adj_kws : Dict
         Options for univariate adjust for the scenario that is reordered with the output of npdf transform.
     period_dim : str, optional
-        Name of the period dimension used when stacking time periods of `sim`  using :py:func:`xsdba.base.stack_periods`.
+        Name of the period dimension used when stacking time periods of `sim`  using :py:func:`xsdba.processing.stack_periods`.
         If specified, the interpolation of the npdf transform is performed only once and applied on all periods simultaneously.
         This should be more performant, but also more memory intensive. Defaults to `None`: No optimization will be attempted.
 

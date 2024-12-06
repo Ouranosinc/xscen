@@ -3,28 +3,19 @@
 from __future__ import annotations
 
 import collections
-import hashlib
 import logging
 import os
-import warnings
 from pathlib import Path
-from urllib.error import HTTPError, URLError
-from urllib.parse import urljoin, urlparse
-from urllib.request import urlopen, urlretrieve
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 from platformdirs import user_cache_dir
 from scipy.stats import gamma
-from xarray import open_dataset as _open_dataset
 
 from xsdba.utils import equally_spaced_nodes
 
 __all__ = ["nancov", "test_timelonlatseries", "test_timeseries"]
-
-# keeping xclim-testdata for now, since it's still this on gitHub
-_default_cache_dir = Path(user_cache_dir("xclim-testdata"))
 
 # XC
 TESTDATA_BRANCH = os.getenv("XCLIM_TESTDATA_BRANCH", "main")

@@ -166,8 +166,6 @@ def areacella() -> xr.DataArray:
 
 areacello = areacella
 
-# TODO: Adapt add_imports for new open_dataset for doctests?
-
 
 @pytest.fixture(autouse=True, scope="function")
 def add_example_dataarray(xdoctest_namespace, timeseries) -> None:

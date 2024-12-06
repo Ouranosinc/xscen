@@ -21,7 +21,7 @@ from xclim.core.indicator import Indicator, base_registry
 from xclim.indices.generic import compare, select_resample_op
 from xclim.indices.stats import fit, parametric_quantile
 
-from xsdba.base import Grouper, map_groups, parse_group, parse_offset, uses_dask
+from xsdba.base import Grouper, map_groups, parse_group, uses_dask
 from xsdba.nbutils import _pairwise_haversine_and_bins
 from xsdba.units import (
     convert_units_to,

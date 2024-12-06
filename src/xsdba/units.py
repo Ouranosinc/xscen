@@ -22,15 +22,12 @@ try:
 except ImportError:  # noqa: S110
     # cf-xarray is not installed, this will not be used
     pass
-import warnings
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 
 from xsdba.base import parse_offset
 from xsdba.typing import Quantified
-from xsdba.utils import copy_all_attrs
 
 __all__ = [
     "convert_units_to",

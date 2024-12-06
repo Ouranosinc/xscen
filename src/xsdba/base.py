@@ -5,11 +5,8 @@ Base Classes and Developer Tools
 
 from __future__ import annotations
 
-import datetime as pydt
-import itertools
 from collections.abc import Callable, Sequence
 from inspect import _empty, signature
-from typing import Any, NewType, TypeVar
 
 import cftime
 import dask.array as dsk
@@ -21,7 +18,6 @@ from boltons.funcutils import wraps
 from xarray.core import dtypes
 
 from xsdba.options import OPTIONS, SDBA_ENCODE_CF
-from xsdba.typing import InputKind
 
 # TODO : Redistributes some functions in existing/new scripts
 
@@ -785,68 +781,6 @@ def map_groups(
     return _decorator
 
 
-def infer_kind_from_parameter(param) -> InputKind:
-    """Return the appropriate InputKind constant from an ``inspect.Parameter`` object.
-
-    Parameters
-    ----------
-    param : Parameter
-
-    Notes
-    -----
-    The correspondence between parameters and kinds is documented in :py:class:`xsdba.typing.InputKind`.
-    """
-    if param.annotation is not _empty:
-        annot = set(
-            param.annotation.replace("xarray.", "").replace("xr.", "").split(" | ")
-        )
-    else:
-        annot = {"no_annotation"}
-
-    if "DataArray" in annot and "None" not in annot and param.default is not None:
-        return InputKind.VARIABLE
-
-    annot = annot - {"None"}
-
-    if "DataArray" in annot:
-        return InputKind.OPTIONAL_VARIABLE
-
-    if param.name == "freq":
-        return InputKind.FREQ_STR
-
-    if param.kind == param.VAR_KEYWORD:
-        return InputKind.KWARGS
-
-    if annot == {"Quantified"}:
-        return InputKind.QUANTIFIED
-
-    if "DayOfYearStr" in annot:
-        return InputKind.DAY_OF_YEAR
-
-    if annot.issubset({"int", "float"}):
-        return InputKind.NUMBER
-
-    if annot.issubset({"int", "float", "Sequence[int]", "Sequence[float]"}):
-        return InputKind.NUMBER_SEQUENCE
-
-    if annot.issuperset({"str"}):
-        return InputKind.STRING
-
-    if annot == {"DateStr"}:
-        return InputKind.DATE
-
-    if annot == {"bool"}:
-        return InputKind.BOOL
-
-    if annot == {"dict"}:
-        return InputKind.DICT
-
-    if annot == {"Dataset"}:
-        return InputKind.DATASET
-
-    return InputKind.OTHER_PARAMETER
-
-
 # XC: core.utils
 def ensure_chunk_size(da: xr.DataArray, **minchunks: int) -> xr.DataArray:
     r"""Ensure that the input DataArray has chunks of at least the given size.
@@ -961,6 +895,7 @@ def get_op(op: str, constrain: Sequence[str] | None = None) -> Callable:
 
 
 # XC: calendar
+# TODO: Do not allow this?
 def _interpolate_doy_calendar(
     source: xr.DataArray, doy_max: int, doy_min: int = 1
 ) -> xr.DataArray:
@@ -1138,6 +1073,8 @@ def _month_is_first_period_month(time, freq):
 
 
 # XC: calendar
+# TODO: implement needed functions in stack_periods
+# move to processing
 def stack_periods(
     da: xr.Dataset | xr.DataArray,
     window: int = 30,
@@ -1226,6 +1163,8 @@ def stack_periods(
     use_cftime = da.time.dtype == "O"
 
     if (
+        # if srcfreq in ("D", "h", "min", "s", "ms", "us", "ns")
+        # TODO: Can we remove compare_offsets, only used here
         compare_offsets(srcfreq, "<=", "D")
         and align_days
         and (
@@ -1245,6 +1184,7 @@ def stack_periods(
 
     # Convert integer inputs to freq strings
     mult, *args = parse_offset(freq)
+    # TODO: remove construct?  (hard code  construct-offset)
     win_frq = construct_offset(mult * window, *args)
     strd_frq = construct_offset(mult * stride, *args)
     minl_frq = construct_offset(mult * min_length, *args)

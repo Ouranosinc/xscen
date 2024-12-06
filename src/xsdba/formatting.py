@@ -7,21 +7,18 @@ from __future__ import annotations
 
 import datetime as dt
 import itertools
-import re
 import string
 import warnings
-from ast import literal_eval
 from collections.abc import Callable, Sequence
 from fnmatch import fnmatch
-from inspect import _empty, signature
+from inspect import signature
 from typing import Any
 
 import xarray as xr
 from boltons.funcutils import wraps
 
-from xsdba.typing import KIND_ANNOTATION, InputKind
 
-
+# TODO: remove, keep gen_call_string
 class AttrFormatter(string.Formatter):
     """A formatter for frequently used attribute values.
 
