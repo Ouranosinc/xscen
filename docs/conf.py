@@ -135,7 +135,6 @@ release = xsdba.__version__
 language = "en"
 
 # Sphinx-intl configuration
-locale_dirs = ['locales/']
 gettext_compact = False  # optional
 
 # List of patterns, relative to source directory, that match files and

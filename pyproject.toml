@@ -225,8 +225,7 @@ exclude = [
   ".yamllint.yaml",
   "docs/_*",
   "docs/apidoc/modules.rst",
-  "docs/apidoc/xsdba*.rst",
-  "docs/locales"
+  "docs/apidoc/xsdba*.rst"
 ]
 
 [tool.isort]
