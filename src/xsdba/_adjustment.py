@@ -992,7 +992,7 @@ def _otc_adjust(
 
     References
     ----------
-    :cite:cts:`sdba-robin_2021`
+    :cite:cts:`robin_2021`
     """
     # Initialize parameters
     if bin_width is None:
@@ -1197,7 +1197,7 @@ def _dotc_adjust(
 
     References
     ----------
-    :cite:cts:`sdba-robin_2021`
+    :cite:cts:`robin_2021`
     """
     # Initialize parameters
     if isinstance(bin_width, dict):
