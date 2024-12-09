@@ -1284,7 +1284,7 @@ class NpdfTransform(Adjust):
 class OTC(Adjust):
     r"""Optimal Transport Correction.
 
-    Following :cite:t:`sdba-robin_2019`, this multivariate bias correction method finds the optimal transport
+    Following :cite:t:`robin_2019`, this multivariate bias correction method finds the optimal transport
     mapping between simulated and observed data. The correction of every simulated data point is the observed
     point it is mapped to.
 
@@ -1366,7 +1366,7 @@ class OTC(Adjust):
 
     Note that `POT <https://pythonot.github.io/>`__ must be installed to use this method.
 
-    This implementation is strongly inspired by :cite:t:`sdba-robin_2021`.
+    This implementation is strongly inspired by :cite:t:`robin_2021`.
     The differences from this implementation are :
 
     - `bin_width` and `bin_origin` are dictionaries or float
@@ -1379,7 +1379,7 @@ class OTC(Adjust):
 
     References
     ----------
-    :cite:cts:`sdba-robin_2019,sdba-robin_2021`
+    :cite:cts:`robin_2019,robin_2021`
     """
 
     @classmethod
@@ -1445,14 +1445,14 @@ class OTC(Adjust):
 class dOTC(Adjust):
     r"""Dynamical Optimal Transport Correction.
 
-    This method is the dynamical version of :py:class:`~xclim.sdba.adjustment.OTC`, as presented by :cite:t:`sdba-robin_2019`.
+    This method is the dynamical version of :py:class:`~xclim.sdba.adjustment.OTC`, as presented by :cite:t:`robin_2019`.
     The temporal evolution of the model is found for every point by mapping the historical to the future dataset with
     optimal transport. A mapping between historical and reference data is found in the same way, and the temporal evolution
     of model data is applied to their assigned reference.
 
     See notes for an explanation of the algorithm.
 
-    This implementation is strongly inspired by :cite:t:`sdba-robin_2021`.
+    This implementation is strongly inspired by :cite:t:`robin_2021`.
 
     Parameters
     ----------
@@ -1518,7 +1518,7 @@ class dOTC(Adjust):
 
     Note that `POT <https://pythonot.github.io/>`__ must be installed to use this method.
 
-    This implementation is strongly inspired by :cite:t:`sdba-robin_2021`.
+    This implementation is strongly inspired by :cite:t:`robin_2021`.
     The differences from this reference are :
 
     - `bin_width` and `bin_origin` are dictionaries or float.
@@ -1532,7 +1532,7 @@ class dOTC(Adjust):
 
     References
     ----------
-    :cite:cts:`sdba-robin_2019,sdba-robin_2021`
+    :cite:cts:`robin_2019,robin_2021`
     """
 
     @classmethod
