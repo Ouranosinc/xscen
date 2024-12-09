@@ -26,12 +26,7 @@ import warnings
 from xsdba import adjustment, base, detrending, processing, units, utils
 
 xclim_installed = importlib.util.find_spec("xclim") is not None
-# TODO: remove this, add more documentation
-if not xclim_installed:
-    warnings.warn(
-        "Sub-modules `properties` and `measures` depend on `xclim`. Run `pip install xsdba['extras']` to install it."
-    )
-else:
+if xclim_installed:
     from xsdba import (
         measures,
         properties,

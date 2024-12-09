@@ -7,6 +7,8 @@ and reference datasets. They collapse the time dimension to one value.
 
 This framework for the diagnostic tests was inspired by the `VALUE <http://www.value-cost.eu/>`_ project.
 Statistical Properties is the xclim term for 'indices' in the VALUE project.
+
+This module depends on `xclim`. Run `pip install xsdba['extras']` to install it.
 """
 from __future__ import annotations
 
