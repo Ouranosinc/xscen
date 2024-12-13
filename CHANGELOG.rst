@@ -9,9 +9,10 @@ Contributors: Éric Dupuis (:user:`coxipi`), Trevor James Smith (:user:`Zeitsper
 
 Changes
 ^^^^^^^
-* Split `sdba` from `xclim` and duplicate code where needed. (:pull:`8`)
-* `units` are a copy (or almost) of given modules in `xclim`. A lot of duplicated code from xclim's `calendar` is also in xsdba's `base`. (:pull:`8`)
-
+* Split `sdba` from `xclim` into its own standalone package. Where needed, some common functionalities were duplicated: (:pull:`8`)
+    * ``xsdba.units`` is an adaptation of the ``xclim.core.units` modules.
+    * Many functions and definitions found in ``xclim.core.calendar`` have been adapted to ``xsdba.base``.
+* Dependencies have been updated to reflect the new package structure. (:pull:`45`)
 
 .. _changes_0.1.0:
 
