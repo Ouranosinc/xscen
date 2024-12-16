@@ -86,6 +86,10 @@ class TestScripting:
         elif prefix == "dog:":
             assert out == {"source": "CanESM5"}
 
+    def test_strip_cat_attrs(self):
+        out = xs.utils.strip_cat_attrs(self.ds)
+        assert list(out.attrs.keys()) == ["dog:source"]
+
 
 class TestStackNan:
 

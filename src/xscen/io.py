@@ -24,7 +24,7 @@ from xclim.core.options import OPTIONS as XC_OPTIONS
 
 from .config import parse_config
 from .scripting import TimeoutException
-from .utils import TRANSLATOR, season_sort_key, translate_time_chunk
+from .utils import TRANSLATOR, season_sort_key, strip_cat_attrs, translate_time_chunk
 
 logger = logging.getLogger(__name__)
 KEEPBITS = defaultdict(lambda: 12)
@@ -356,6 +356,7 @@ def save_to_netcdf(
     bitround: Union[bool, int, dict] = False,
     compute: bool = True,
     netcdf_kwargs: Optional[dict] = None,
+    strip_cat_metadata: bool = True,
 ):
     """Save a Dataset to NetCDF, rechunking or compressing if requested.
 
@@ -381,6 +382,8 @@ def save_to_netcdf(
         Whether to start the computation or return a delayed object.
     netcdf_kwargs : dict, optional
         Additional arguments to send to_netcdf()
+    strip_cat_metadata : bool
+        If True (default), strips all catalog-added attributes before saving the dataset.
 
     Returns
     -------
@@ -407,6 +410,9 @@ def save_to_netcdf(
         # Remove original_shape from encoding, since it can cause issues with some engines.
         ds[var].encoding.pop("original_shape", None)
 
+    if strip_cat_metadata:
+        ds = strip_cat_attrs(ds)
+
     _coerce_attrs(ds.attrs)
     for var in ds.variables.values():
         _coerce_attrs(var.attrs)
@@ -427,6 +433,7 @@ def save_to_zarr(  # noqa: C901
     mode: str = "f",
     itervar: bool = False,
     timeout_cleanup: bool = True,
+    strip_cat_metadata: bool = True,
 ):
     """Save a Dataset to Zarr format, rechunking and compressing if requested.
 
@@ -467,6 +474,8 @@ def save_to_zarr(  # noqa: C901
       If True (default) and a :py:class:`xscen.scripting.TimeoutException` is raised during the writing,
       the variable being written is removed from the dataset as it is incomplete.
       This does nothing if `compute` is False.
+    strip_cat_metadata : bool
+      If True (default), strips all catalog-added attributes before saving the dataset.
 
     Returns
     -------
@@ -529,6 +538,9 @@ def save_to_zarr(  # noqa: C901
 
     if len(ds.data_vars) == 0:
         return None
+
+    if strip_cat_metadata:
+        ds = strip_cat_attrs(ds)
 
     _coerce_attrs(ds.attrs)
     for var in ds.variables.values():
