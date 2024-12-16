@@ -1010,7 +1010,8 @@ def _get_needed_fields(schema: dict):
                 needed.add(level)
         elif isinstance(level, list):
             for lvl in level:
-                needed.add(lvl)
+                if not (lvl.startswith("(") and lvl.endswith(")")):
+                    needed.add(lvl)
         elif not (isinstance(level, dict) and list(level.keys()) == ["text"]):
             raise ValueError(
                 f"Invalid schema with unknown {level} of type {type(level)}."

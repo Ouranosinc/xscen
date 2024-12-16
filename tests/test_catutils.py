@@ -228,20 +228,28 @@ def test_build_path(samplecat):
     ) in df.new_path.values
 
 
-def test_build_path_ds():
+@pytest.mark.parametrize("hasver", [True, False])
+def test_build_path_ds(hasver):
     ds = xr.tutorial.open_dataset("air_temperature")
     ds = ds.assign(time=xr.cftime_range("0001-01-01", freq="6h", periods=ds.time.size))
     ds.attrs.update(source="source", institution="institution")
+    if hasver:
+        ds.attrs["version"] = "v1"
     new_path = cu.build_path(
         ds,
         schemas={
-            "folders": ["source", "institution", ["variable", "xrfreq"]],
+            "folders": [["source", "(version)"], "institution", ["variable", "xrfreq"]],
             "filename": ["source", "institution", "variable", "frequency", "DATES"],
         },
     )
-    assert new_path == Path(
-        "source/institution/air_6h/source_institution_air_6hr_0001-0002"
-    )
+    if hasver:
+        assert new_path == Path(
+            "source_v1/institution/air_6h/source_institution_air_6hr_0001-0002"
+        )
+    else:
+        assert new_path == Path(
+            "source/institution/air_6h/source_institution_air_6hr_0001-0002"
+        )
 
 
 def test_build_path_multivar(samplecat):
