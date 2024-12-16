@@ -6,6 +6,11 @@ v0.9.2 (unreleased)
 -------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`).
 
+Breaking changes
+^^^^^^^^^^^^^^^^
+* Version facet is now optional in default filepath schemas for non-simulations a with "source_version" level. (:issue:`500`, :pull:`501`).
+* Catalog attributes are removed by default in ``save_to_zarr`` and ``save_to_netcdf``. Catalog attributes are those added from the catalog columns by ``to_dataset``, ``to_dataset_dict`` and ``extract_dataset``, which have names prefixed with ``cat:``. (:issue:`499`, :pull:`501`).
+
 Bug fixes
 ^^^^^^^^^
 * Fixed bug with reusing weights. (:issue:`411`, :pull:`414`).
