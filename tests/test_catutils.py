@@ -272,7 +272,7 @@ def test_pattern_from_schema(samplecat):
         res = [cu._compile_pattern(patt).parse(p) for patt in patts]
         assert any(res)
 
-        
+
 @pytest.mark.parametrize("hasver", [True, False])
 def test_build_path_ds(hasver):
     ds = xr.tutorial.open_dataset("air_temperature")
