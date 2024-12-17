@@ -13,7 +13,7 @@
 #       # There are four ways to specify a folder name to use:
 #       - < facet >           # The value of the facet.
 #       - (< facet >)         # Same, but if the facet is missing, this level is skipped, resulting in a tree of a different depth.
-#       - [< facet >, < facet >, ...]:  # The folder name consists in more than one facet, concatenated with a "_" by default. They can't be optional.
+#       - [< facet >, < facet >, ...]:  # The folder name consists in more than one facet, concatenated with a "_" by default. They can be optional.
 #       - text: < value >     # A fixed string
 #     filename: # The file name schema, a list of facet names. If a facet is empty, it will be skipped. Elements will be separated by "_".
 #               # The special "DATES" facet will be replaced by the most concise way found to define the temporal range covered by the file.
@@ -33,7 +33,7 @@ original-non-sims:
     - type
     - domain
     - institution
-    - [ source, version ]
+    - [ source, (version) ]
     - (member)
     - frequency
     - variable
@@ -92,7 +92,7 @@ original-hydro-reconstruction:
     - hydrology_source
     - (hydrology_member)
     - institution
-    - [ source, version ]
+    - [ source, (version) ]
     - (member)
     - frequency
     - variable
@@ -199,7 +199,7 @@ derived-reconstruction:
   folders:
     - type
     - institution
-    - [ source, version ]
+    - [ source, (version) ]
     - (member)
     - domain
     - processing_level
@@ -261,7 +261,7 @@ derived-hydro-reconstruction:
     - hydrology_source
     - (hydrology_member)
     - institution
-    - [ source, version ]
+    - [ source, (version) ]
     - (member)
     - domain
     - processing_level
