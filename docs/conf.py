@@ -290,8 +290,12 @@ latex_documents = [
 # -- Options for LaTeX output ------------------------------------------
 
 latex_engine = "pdflatex"
-latex_logo = "logos/xclim-logo-light.png"
-
+latex_logo = "logos/xsdba-logo-light.png"
+html_logo = "xsdba-logo-light.png"
+html_theme_options = {
+    'logo_only': True,
+    'display_version': False,
+}
 
 # -- Options for manual page output ------------------------------------
 
