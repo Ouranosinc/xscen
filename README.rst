@@ -23,8 +23,8 @@ Features
 --------
 
 * The `xsdba` submodule provides a collection of bias-adjustment methods meant to correct for systematic biases found in climate model simulations relative to observations.
-Almost all adjustment algorithms conform to the `train` - `adjust` scheme, meaning that adjustment factors are first estimated on training data sets, then applied in a distinct step to the data to be adjusted.
-Given a reference time series (`ref`), historical simulations (`hist`) and simulations to be adjusted (`sim`), any bias-adjustment method would be applied by first estimating the adjustment factors between the historical simulation and the observation series, and then applying these factors to `sim``, which could be a future simulation:
+  Almost all adjustment algorithms conform to the `train` - `adjust` scheme, meaning that adjustment factors are first estimated on training data sets, then applied in a distinct step to the data to be adjusted.
+  Given a reference time series (`ref`), historical simulations (`hist`) and simulations to be adjusted (`sim`), any bias-adjustment method would be applied by first estimating the adjustment factors between the historical simulation and the observation series, and then applying these factors to `sim``, which could be a future simulation:
 
 * Time grouping (months, day of year, season) can be done within bias adjustment methods.
 
@@ -60,7 +60,6 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
 .. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
         :target: https://github.com/psf/black
         :alt: Python Black
-
 
 .. |build| image:: https://github.com/Ouranosinc/xsdba/actions/workflows/main.yml/badge.svg
         :target: https://github.com/Ouranosinc/xsdba/actions
