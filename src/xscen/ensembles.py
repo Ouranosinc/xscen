@@ -7,7 +7,6 @@ import warnings
 from copy import deepcopy
 from itertools import chain, groupby
 from pathlib import Path
-from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
@@ -31,17 +30,17 @@ __all__ = [
 
 @parse_config
 def ensemble_stats(  # noqa: C901
-    datasets: Union[
-        dict,
-        list[Union[str, os.PathLike]],
-        list[xr.Dataset],
-        list[xr.DataArray],
-        xr.Dataset,
-    ],
+    datasets: (
+        dict
+        | list[str | os.PathLike]
+        | list[xr.Dataset]
+        | list[xr.DataArray]
+        | xr.Dataset
+    ),
     statistics: dict,
     *,
-    create_kwargs: Optional[dict] = None,
-    weights: Optional[xr.DataArray] = None,
+    create_kwargs: dict | None = None,
+    weights: xr.DataArray | None = None,
     common_attrs_only: bool = True,
     to_level: str = "ensemble",
 ) -> xr.Dataset:
@@ -107,9 +106,9 @@ def ensemble_stats(  # noqa: C901
     statistics = deepcopy(statistics)  # to avoid modifying the original dictionary
 
     # if input files are .zarr, change the engine automatically
-    if isinstance(datasets, list) and isinstance(datasets[0], (str, os.PathLike)):
+    if isinstance(datasets, list) and isinstance(datasets[0], str | os.PathLike):
         path = Path(datasets[0])
-        if path.suffix == ".zarr":
+        if path.suffix in [".zarr", ".zip"]:
             create_kwargs.setdefault("engine", "zarr")
 
     if not isinstance(datasets, xr.Dataset):
@@ -133,12 +132,12 @@ def ensemble_stats(  # noqa: C901
 
     for stat in statistics_to_compute:
         stats_kwargs = deepcopy(statistics.get(stat) or {})
-        logger.info(
-            f"Calculating {stat} from an ensemble of {len(ens.realization)} simulations."
-        )
+        msg = f"Calculating {stat} from an ensemble of {len(ens.realization)} simulations."
+        logger.info(msg)
 
         # Workaround for robustness_categories
         real_stat = None
+        categories_kwargs = {}
         if stat == "robustness_categories":
             real_stat = "robustness_categories"
             stat = "robustness_fractions"
@@ -157,20 +156,10 @@ def ensemble_stats(  # noqa: C901
                     f"Weighting is not supported for '{stat}'. The results may be incorrect."
                 )
 
-        # FIXME: change_significance is deprecated and will be removed in xclim 0.49.
         if stat in [
-            "change_significance",
             "robustness_fractions",
             "robustness_categories",
         ]:
-            # FIXME: This can be removed once change_significance is removed.
-            #  It's here because the 'ref' default was removed for change_significance in xclim 0.47.
-            stats_kwargs.setdefault("ref", None)
-            if (stats_kwargs.get("ref") is not None) and len(statistics_to_compute) > 1:
-                raise ValueError(
-                    f"The input requirements for '{stat}' when 'ref' is specified are not compatible with other statistics."
-                )
-
             # These statistics only work on DataArrays
             for v in ens.data_vars:
                 with xr.set_options(keep_attrs=True):
@@ -181,31 +170,14 @@ def ensemble_stats(  # noqa: C901
                             f"{v} is a delta, but 'ref' was still specified."
                         )
                     if delta_kind in ["rel.", "relative", "*", "/"]:
-                        logging.info(
-                            f"Relative delta detected for {v}. Applying 'v - 1' before change_significance."
-                        )
+                        msg = f"Relative delta detected for {v}. Applying 'v - 1' before change_significance."
+                        logging.info(msg)
                         ens_v = ens[v] - 1
                     else:
                         ens_v = ens[v]
 
                     # Call the function
                     tmp = getattr(ensembles, stat)(ens_v, **stats_kwargs)
-
-                    # Manage the multiple outputs of change_significance
-                    # FIXME: change_significance is deprecated and will be removed in xclim 0.49.
-                    if (
-                        stat == "change_significance"
-                        and stats_kwargs.get("p_vals", False) is False
-                    ):
-                        ens_stats[f"{v}_change_frac"], ens_stats[f"{v}_pos_frac"] = tmp
-                    elif stat == "change_significance" and stats_kwargs.get(
-                        "p_vals", False
-                    ):
-                        (
-                            ens_stats[f"{v}_change_frac"],
-                            ens_stats[f"{v}_pos_frac"],
-                            ens_stats[f"{v}_p_vals"],
-                        ) = tmp
 
                     # Robustness categories
                     if real_stat == "robustness_categories":
@@ -247,15 +219,14 @@ def ensemble_stats(  # noqa: C901
 
 
 def generate_weights(  # noqa: C901
-    datasets: Union[dict, list],
+    datasets: dict | list,
     *,
     independence_level: str = "model",
     balance_experiments: bool = False,
-    attribute_weights: Optional[dict] = None,
+    attribute_weights: dict | None = None,
     skipna: bool = True,
-    v_for_skipna: Optional[str] = None,
+    v_for_skipna: str | None = None,
     standardize: bool = False,
-    experiment_weights: bool = False,
 ) -> xr.DataArray:
     """Use realization attributes to automatically generate weights along the 'realization' dimension.
 
@@ -293,8 +264,6 @@ def generate_weights(  # noqa: C901
         Variable to use for skipna=False. If None, the first variable in the first dataset is used.
     standardize : bool
         If True, the weights are standardized to sum to 1 (per timestep/horizon, if skipna=False).
-    experiment_weights : bool
-        Deprecated. Use balance_experiments instead.
 
     Notes
     -----
@@ -311,22 +280,8 @@ def generate_weights(  # noqa: C901
     xr.DataArray
         Weights along the 'realization' dimension, or 2D weights along the 'realization' and 'time/horizon' dimensions if skipna=False.
     """
-    if experiment_weights is True:
-        warnings.warn(
-            "`experiment_weights` has been renamed and will be removed in a future release. Use `balance_experiments` instead.",
-            category=FutureWarning,
-        )
-        balance_experiments = True
-
     if isinstance(datasets, list):
         datasets = {i: datasets[i] for i in range(len(datasets))}
-
-    if independence_level == "all":
-        warnings.warn(
-            "The independence level 'all' is deprecated and will be removed in a future version. Use 'model' instead.",
-            category=FutureWarning,
-        )
-        independence_level = "model"
 
     if independence_level not in ["model", "GCM", "institution"]:
         raise ValueError(
@@ -335,9 +290,8 @@ def generate_weights(  # noqa: C901
     if skipna is False:
         if v_for_skipna is None:
             v_for_skipna = list(datasets[list(datasets.keys())[0]].data_vars)[0]
-            logger.info(
-                f"Using '{v_for_skipna}' as the variable to check for missing values."
-            )
+            msg = f"Using '{v_for_skipna}' as the variable to check for missing values."
+            logger.info(msg)
 
         # Check if any dataset has dimensions that are not 'time' or 'horizon'
         other_dims = {
@@ -676,14 +630,15 @@ def generate_weights(  # noqa: C901
 
 
 def build_partition_data(
-    datasets: Union[dict, list[xr.Dataset]],
+    datasets: dict | list[xr.Dataset],
     partition_dim: list[str] = ["source", "experiment", "bias_adjust_project"],
-    subset_kw: dict = None,
-    regrid_kw: dict = None,
-    indicators_kw: dict = None,
-    rename_dict: dict = None,
+    subset_kw: dict | None = None,
+    regrid_kw: dict | None = None,
+    indicators_kw: dict | None = None,
+    rename_dict: dict | None = None,
 ):
-    """Get the input for the xclim partition functions.
+    """
+    Get the input for the xclim partition functions.
 
     From a list or dictionary of datasets, create a single dataset with
     `partition_dim` dimensions (and time) to pass to one of the xclim partition functions
@@ -692,27 +647,26 @@ def build_partition_data(
     they have to be subsetted and regridded to a common grid/point.
     Indicators can also be computed before combining the datasets.
 
-
     Parameters
     ----------
     datasets : dict
         List or dictionnary of Dataset objects that will be included in the ensemble.
         The datasets should include the necessary ("cat:") attributes to understand their metadata.
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
-    partition_dim: list[str]
+    partition_dim : list[str]
         Components of the partition. They will become the dimension of the output.
         The default is ['source', 'experiment', 'bias_adjust_project'].
         For source, the dimension will actually be institution_source_member.
-    subset_kw: dict
+    subset_kw : dict, optional
         Arguments to pass to `xs.spatial.subset()`.
-    regrid_kw:
+    regrid_kw : dict, optional
         Arguments to pass to `xs.regrid_dataset()`.
-    indicators_kw:
+    indicators_kw : dict, optional
         Arguments to pass to `xs.indicators.compute_indicators()`.
         All indicators have to be for the same frequency, in order to be put on a single time axis.
-    rename_dict:
+    rename_dict : dict, optional
         Dictionary to rename the dimensions from xscen names to xclim names.
-        The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
+        If None, the default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
 
     Returns
     -------
@@ -722,7 +676,6 @@ def build_partition_data(
     See Also
     --------
     xclim.ensembles
-
     """
     if isinstance(datasets, dict):
         datasets = list(datasets.values())
@@ -769,11 +722,11 @@ def build_partition_data(
 
 @parse_config
 def reduce_ensemble(
-    data: Union[xr.DataArray, dict, list, xr.Dataset],
+    data: xr.DataArray | dict | list | xr.Dataset,
     method: str,
     *,
-    horizons: Optional[list[str]] = None,
-    create_kwargs: Optional[dict] = None,
+    horizons: list[str] | None = None,
+    create_kwargs: dict | None = None,
     **kwargs,
 ):
     r"""Reduce an ensemble of simulations using clustering algorithms from xclim.ensembles.
@@ -812,7 +765,7 @@ def reduce_ensemble(
     If the indicators are a mix of yearly, seasonal, and monthly, they should be stacked on the same time/horizon axis and put in the same dataset.
     You can use py:func:`xscen.utils.unstack_dates` on seasonal or monthly indicators to this end.
     """
-    if isinstance(data, (list, dict)):
+    if isinstance(data, list | dict):
         data = ensembles.create_ensemble(datasets=data, **(create_kwargs or {}))
     if horizons:
         if "horizon" not in data.dims:

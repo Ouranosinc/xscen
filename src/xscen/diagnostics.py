@@ -7,13 +7,18 @@ from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
-from typing import Optional, Union
 
 import numpy as np
 import xarray as xr
 import xclim as xc
 import xclim.core.dataflags
 from xclim.core.indicator import Indicator
+
+# FIXME: Remove this when updating minimum xclim version to 0.53
+try:  # Changed in xclim 0.53
+    from xclim.core import ValidationError
+except ImportError:
+    from xclim.core.utils import ValidationError
 
 from .config import parse_config
 from .indicators import load_xclim_module
@@ -44,21 +49,21 @@ def _(s):
 
 @parse_config
 def health_checks(  # noqa: C901
-    ds: Union[xr.Dataset, xr.DataArray],
+    ds: xr.Dataset | xr.DataArray,
     *,
-    structure: Optional[dict] = None,
-    calendar: Optional[str] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    variables_and_units: Optional[dict] = None,
-    cfchecks: Optional[dict] = None,
-    freq: Optional[str] = None,
-    missing: Optional[Union[dict, str, list]] = None,
-    flags: Optional[dict] = None,
-    flags_kwargs: Optional[dict] = None,
+    structure: dict | None = None,
+    calendar: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    variables_and_units: dict | None = None,
+    cfchecks: dict | None = None,
+    freq: str | None = None,
+    missing: dict | str | list | None = None,
+    flags: dict | None = None,
+    flags_kwargs: dict | None = None,
     return_flags: bool = False,
-    raise_on: Optional[list] = None,
-) -> Union[None, xr.Dataset]:
+    raise_on: list | None = None,
+) -> None | xr.Dataset:
     """
     Perform a series of health checks on the dataset. Be aware that missing data checks and flag checks can be slow.
 
@@ -174,7 +179,7 @@ def health_checks(  # noqa: C901
 
     # Check the calendar
     if calendar is not None:
-        cal = xc.core.calendar.get_calendar(ds.time)
+        cal = ds.time.dt.calendar
         if xc.core.calendar.common_calendar([calendar]).replace(
             "default", "standard"
         ) != xc.core.calendar.common_calendar([cal]).replace("default", "standard"):
@@ -210,7 +215,7 @@ def health_checks(  # noqa: C901
                 with xc.set_options(data_validation="raise"):
                     try:
                         xc.core.units.check_units(ds[v], variables_and_units[v])
-                    except xc.core.utils.ValidationError as e:
+                    except ValidationError as e:
                         _error(f"'{v}' ValidationError: {e}", "variables_and_units")
                 _error(
                     f"The variable '{v}' does not have the expected units '{variables_and_units[v]}'. Received '{ds[v].attrs['units']}'.",
@@ -232,7 +237,7 @@ def health_checks(  # noqa: C901
                 with xc.set_options(cf_compliance="raise"):
                     try:
                         getattr(xc.core.cfchecks, check)(**cfchecks[v][check])
-                    except xc.core.utils.ValidationError as e:
+                    except ValidationError as e:
                         _error(f"'{v}' ValidationError: {e}", "cfchecks")
 
     if freq is not None:
@@ -270,9 +275,10 @@ def health_checks(  # noqa: C901
                                 "missing",
                             )
                     else:
-                        logger.info(
+                        msg = (
                             f"Variable '{v}' has no time dimension. The missing data check will be skipped.",
                         )
+                        logger.info(msg)
 
     if flags is not None:
         if return_flags:
@@ -303,18 +309,18 @@ def health_checks(  # noqa: C901
 @parse_config
 def properties_and_measures(  # noqa: C901
     ds: xr.Dataset,
-    properties: Union[
-        str,
-        os.PathLike,
-        Sequence[Indicator],
-        Sequence[tuple[str, Indicator]],
-        ModuleType,
-    ],
-    period: Optional[list[str]] = None,
+    properties: (
+        str
+        | os.PathLike
+        | Sequence[Indicator]
+        | Sequence[tuple[str, Indicator]]
+        | ModuleType
+    ),
+    period: list[str] | None = None,
     unstack: bool = False,
-    rechunk: Optional[dict] = None,
-    dref_for_measure: Optional[xr.Dataset] = None,
-    change_units_arg: Optional[dict] = None,
+    rechunk: dict | None = None,
+    dref_for_measure: xr.Dataset | None = None,
+    change_units_arg: dict | None = None,
     to_level_prop: str = "diag-properties",
     to_level_meas: str = "diag-measures",
 ) -> tuple[xr.Dataset, xr.Dataset]:
@@ -324,7 +330,7 @@ def properties_and_measures(  # noqa: C901
     ----------
     ds : xr.Dataset
         Input dataset.
-    properties : Union[str, os.PathLike, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType]
+    properties : str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType
         Path to a YAML file that instructs on how to calculate properties.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
         tuples (indicator name, indicator) as returned by `iter_indicators()`.
@@ -361,7 +367,7 @@ def properties_and_measures(  # noqa: C901
     --------
     xclim.sdba.properties, xclim.sdba.measures, xclim.core.indicator.build_indicator_module_from_yaml
     """
-    if isinstance(properties, (str, Path)):
+    if isinstance(properties, str | Path):
         logger.debug("Loading properties module.")
         module = load_xclim_module(properties)
         properties = module.iter_indicators()
@@ -373,7 +379,8 @@ def properties_and_measures(  # noqa: C901
     except TypeError:
         N = None
     else:
-        logger.info(f"Computing {N} properties.")
+        msg = f"Computing {N} properties."
+        logger.info(msg)
 
     period = standardize_periods(period, multiple=False)
     # select period for ds
@@ -405,7 +412,8 @@ def properties_and_measures(  # noqa: C901
         else:
             iden = ind.identifier
         # Make the call to xclim
-        logger.info(f"{i} - Computing {iden}.")
+        msg = f"{i} - Computing {iden}."
+        logger.info(msg)
         out = ind(ds=ds)
         vname = out.name
         prop[vname] = out
@@ -443,7 +451,7 @@ def properties_and_measures(  # noqa: C901
 
 
 def measures_heatmap(
-    meas_datasets: Union[list[xr.Dataset], dict], to_level: str = "diag-heatmap"
+    meas_datasets: list[xr.Dataset] | dict, to_level: str = "diag-heatmap"
 ) -> xr.Dataset:
     """Create a heatmap to compare the performance of the different datasets.
 
@@ -525,17 +533,21 @@ def measures_heatmap(
 
 
 def measures_improvement(
-    meas_datasets: Union[list[xr.Dataset], dict], to_level: str = "diag-improved"
+    meas_datasets: list[xr.Dataset] | dict,
+    dim: str | Sequence[str] | None = None,
+    to_level: str = "diag-improved",
 ) -> xr.Dataset:
     """
     Calculate the fraction of improved grid points for each property between two datasets of measures.
 
     Parameters
     ----------
-    meas_datasets: list of xr.Dataset or dict
+    meas_datasets: list[xr.Dataset] | dict
         List of 2 datasets: Initial dataset of measures and final (improved) dataset of measures.
         Both datasets must have the same variables.
         It is also possible to pass a dictionary where the values are the datasets and the key are not used.
+    dim : str or sequence of str, optional
+        Dimension(s) on which to compute the percentage of improved grid points. Default is `None`, which reduces all dimensions.
     to_level: str
         processing_level to assign to the output dataset
 
@@ -543,6 +555,10 @@ def measures_improvement(
     -------
     xr.Dataset
         Dataset containing information on the fraction of improved grid points for each property.
+
+    Notes
+    -----
+    If `dim` is specified, it should be present in every variable of  `meas_datasets`.
     """
     if isinstance(meas_datasets, dict):
         meas_datasets = list(meas_datasets.values())
@@ -554,24 +570,29 @@ def measures_improvement(
         )
     ds1 = meas_datasets[0]
     ds2 = meas_datasets[1]
+    if dim is not None:
+        dims = [dim] if isinstance(dim, str) else dim
+        for v in ds1.data_vars:
+            if set(dims).issubset(set(ds1[v].dims)) is False:
+                raise ValueError(
+                    f"Dimension provided `dim` ({dim}) must be in every variable of `meas_datasets`"
+                )
+
     percent_better = []
     for var in ds2.data_vars:
+        if dim is None:
+            # reduce all dimensions (which may be variable dependent)
+            dims = ds2[var].dims
         if "xclim.sdba.measures.RATIO" in ds1[var].attrs["history"]:
             diff_bias = abs(ds1[var] - 1) - abs(ds2[var] - 1)
         else:
             diff_bias = abs(ds1[var]) - abs(ds2[var])
-        diff_bias = diff_bias.values.ravel()
-        diff_bias = diff_bias[~np.isnan(diff_bias)]
+        total_improved = (diff_bias >= 0).sum(dim=dims)
+        total_notnull = diff_bias.notnull().sum(dim=dims)
+        percent_better_var = total_improved / total_notnull
+        percent_better.append(percent_better_var.expand_dims({"properties": [var]}))
 
-        total = ds2[var].values.ravel()
-        total = total[~np.isnan(total)]
-
-        improved = diff_bias >= 0
-        percent_better.append(np.sum(improved) / len(total))
-
-    ds_better = xr.DataArray(
-        percent_better, coords={"properties": list(ds2.data_vars)}, dims="properties"
-    )
+    ds_better = xr.concat(percent_better, dim="properties")
 
     ds_better = ds_better.to_dataset(name="improved_grid_points")
 

@@ -77,6 +77,10 @@ class TestComputeIndicators:
             xrfreq in ind_dict[xrfreq].attrs["cat:xrfreq"] for xrfreq in ind_dict.keys()
         )
         assert all(v in ind_dict["YS-JAN"] for v in ["tg_min", "growing_degree_days"])
+        assert all(
+            v in ind_dict["YS-JAN"].attrs["cat:variable"]
+            for v in ["tg_min", "growing_degree_days"]
+        )
         if periods is None:
             assert "time" not in ind_dict["fx"].dims
             assert len(ind_dict["YS-JAN"].time) == 2
@@ -208,3 +212,18 @@ class TestComputeIndicators:
         )
         assert len(list(inds_for_avail_vars.iter_indicators())) == 0
         assert [(n, i) for n, i in inds_for_avail_vars.iter_indicators()] == []
+
+
+@pytest.mark.parametrize(
+    "ind,expvars,expfrq",
+    [
+        ("wind_vector_from_speed", ["uas", "vas"], "D"),
+        ("fit", ["params"], "fx"),
+        ("tg_mean", ["tg_mean"], "YS-JAN"),
+    ],
+)
+def test_get_indicator_outputs(ind, expvars, expfrq):
+    ind = xclim.core.indicator.registry[ind.upper()].get_instance()
+    outvars, outfrq = xs.indicators.get_indicator_outputs(ind, "D")
+    assert outvars == expvars
+    assert outfrq == expfrq

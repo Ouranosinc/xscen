@@ -2,42 +2,42 @@ name: xscen
 channels:
   - conda-forge
 dependencies:
-  - python >=3.9,<3.13
-  # Don't forget to sync changes between environment.yml, environment-dev.yml, and setup.py!
+  - python >=3.10,<3.13
+  # Don't forget to sync changes between environment.yml, environment-dev.yml, and pyproject.toml!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
   - cartopy >=0.23.0
   - cftime
   - cf_xarray >=0.7.6
   - clisops >=0.10
-  - dask
-  - flox
+  - dask >=2024.8.1,<2024.11  # FIXME: https://github.com/Ouranosinc/xclim/issues/1992
+  - flox !=0.9.14  # FIXME: 0.9.14 is a broken version. This pin could be removed eventually.
   - fsspec
   - geopandas
   - h5netcdf
-  - h5py <3.11
+  - h5py
   - intake-esm >=2023.07.07
-  - matplotlib
-  - netCDF4 <1.7
+  - matplotlib >=3.6
+  - netCDF4
   - numcodecs
-  - numpy
+  - numpy >=1.24
+  - openpyxl
   - pandas >=2.2
   - parse
   - pyyaml
   - rechunker
-  - scipy
+  - scipy >=1.10
   - shapely >=2.0
   - sparse
   - toolz
-  - xarray >=2023.11.0, <2024.6.0
-  - xclim >=0.50, <0.51
-  - xesmf >=0.7
-  - zarr
-  # To install from source and get translations
-  - babel
+  - xarray >=2023.11.0, !=2024.6.0
+  - xclim >=0.53.2, <0.54
+  - xesmf >=0.7, <0.8.8  # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
+  - zarr >=2.13
+  # To install from source
   - setuptools >=65.0.0
   - setuptools-scm >=8.0.0
   # Opt
   - nc-time-axis >=1.3.1
   - pyarrow >=10.0.1
-  - pip
+  - pip >=24.2.0

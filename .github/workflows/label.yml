@@ -6,7 +6,7 @@
 # https://github.com/actions/labeler/blob/master/README.md
 
 name: Labeler
-on: [pull_request_target]
+on: [ pull_request_target ]
   # Note: potential security risk from this action using pull_request_target.
   # Do not add actions in here which need a checkout of the repo, and do not use any caching in here.
   # See: https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target
@@ -19,12 +19,10 @@ jobs:
     name: Label
     runs-on: ubuntu-latest
     permissions:
-      checks: write
-      contents: read
       pull-requests: write
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@0d381219ddf674d61a7572ddd19d7941e271515c # v2.9.0
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
         with:
           disable-sudo: true
           egress-policy: block

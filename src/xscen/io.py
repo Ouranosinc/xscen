@@ -1,6 +1,7 @@
 """Input/Output functions for xscen."""
 
 import datetime
+import json
 import logging
 import os
 import shutil as sh
@@ -8,7 +9,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from inspect import signature
 from pathlib import Path
-from typing import Optional, Union
+from zipfile import ZipFile
 
 import h5py
 import netCDF4
@@ -18,7 +19,6 @@ import xarray as xr
 import zarr
 from numcodecs.bitround import BitRound
 from rechunker import rechunk as _rechunk
-from xclim.core.calendar import get_calendar
 from xclim.core.options import METADATA_LOCALES
 from xclim.core.options import OPTIONS as XC_OPTIONS
 
@@ -43,10 +43,12 @@ __all__ = [
     "save_to_zarr",
     "subset_maxsize",
     "to_table",
+    "unzip_directory",
+    "zip_directory",
 ]
 
 
-def get_engine(file: Union[str, os.PathLike]) -> str:
+def get_engine(file: str | os.PathLike) -> str:
     """Determine which Xarray engine should be used to open the given file.
 
     The .zarr, .zarr.zip and .zip extensions are recognized as Zarr datasets,
@@ -74,7 +76,7 @@ def get_engine(file: Union[str, os.PathLike]) -> str:
 
 
 def estimate_chunks(  # noqa: C901
-    ds: Union[str, os.PathLike, xr.Dataset],
+    ds: str | os.PathLike | xr.Dataset,
     dims: list,
     target_mb: float = 50,
     chunk_per_variable: bool = False,
@@ -98,71 +100,43 @@ def estimate_chunks(  # noqa: C901
         A dictionary mapping dimensions to chunk sizes.
     """
 
-    def _estimate_chunks(ds, target_mb, size_of_slice, rechunk_dims):
-        # Approximate size of the chunks (equal across dims)
+    def _estimate_chunks(da, target_mb, size_of_slice, rechunk_dims):
+        # Divide the dimensions by the smallest dimension
+        min_dim = np.min([da[d].shape[0] for d in rechunk_dims])
+        ratio = {d: da[d].shape[0] / min_dim for d in rechunk_dims}
+
+        # Get the approximate number of chunks, supposing the chunks are cubes
         approx_chunks = np.power(target_mb / size_of_slice, 1 / len(rechunk_dims))
 
-        chunks_per_dim = dict()
-        if len(rechunk_dims) == 1:
-            rounding = (
-                1
-                if ds[rechunk_dims[0]].shape[0] <= 15
-                else 5 if ds[rechunk_dims[0]].shape[0] <= 250 else 10
-            )
-            chunks_per_dim[rechunk_dims[0]] = np.max(
-                [
-                    np.min(
-                        [
-                            int(rounding * np.round(approx_chunks / rounding)),
-                            ds[rechunk_dims[0]].shape[0],
-                        ]
-                    ),
-                    1,
-                ]
-            )
-        elif len(rechunk_dims) == 2:
-            # Adjust approx_chunks based on the ratio of the rectangle sizes
-            for d in rechunk_dims:
-                rounding = (
-                    1 if ds[d].shape[0] <= 15 else 5 if ds[d].shape[0] <= 250 else 10
-                )
-                adjusted_chunk = int(
-                    rounding
-                    * np.round(
-                        approx_chunks
-                        * (
-                            ds[d].shape[0]
-                            / np.prod(
-                                [
-                                    ds[dd].shape[0]
-                                    for dd in rechunk_dims
-                                    if dd not in [d]
-                                ]
-                            )
-                        )
-                        / rounding
-                    )
-                )
-                chunks_per_dim[d] = np.max(
-                    [np.min([adjusted_chunk, ds[d].shape[0]]), 1]
-                )
-        else:
-            raise NotImplementedError(
-                "estimating chunks on more than 2 dimensions is not implemented yet."
-            )
+        # Redistribute the chunks based on the ratio of the dimensions
+        x = (approx_chunks ** len(rechunk_dims) / np.prod(list(ratio.values()))) ** (
+            1 / len(rechunk_dims)
+        )
+        rounding_per_dim = {
+            d: 1 if da[d].shape[0] <= 15 else 5 if da[d].shape[0] <= 250 else 10
+            for d in rechunk_dims
+        }
+        chunks_per_dim = {
+            d: int(rounding_per_dim[d] * np.round(x * ratio[d] / rounding_per_dim[d]))
+            for d in rechunk_dims
+        }
+        chunks_per_dim = {
+            d: np.max([np.min([chunks_per_dim[d], da[d].shape[0]]), 1])
+            for d in rechunk_dims
+        }
 
         return chunks_per_dim
 
     out = {}
     # If ds is the path to a file, use NetCDF4
-    if isinstance(ds, (str, os.PathLike)):
+    if isinstance(ds, str | os.PathLike):
         ds = netCDF4.Dataset(ds, "r")
 
         # Loop on variables
         for v in ds.variables:
             # Find dimensions to chunk
             rechunk_dims = list(set(dims).intersection(ds.variables[v].dimensions))
-            if not rechunk_dims:
+            if not rechunk_dims or v in ds.dimensions:
                 continue
 
             dtype_size = ds.variables[v].datatype.itemsize
@@ -218,7 +192,7 @@ def estimate_chunks(  # noqa: C901
 def subset_maxsize(
     ds: xr.Dataset,
     maxsize_gb: float,
-) -> list:
+) -> list[xr.Dataset]:
     """Estimate a dataset's size and, if higher than the given limit, subset it alongside the 'time' dimension.
 
     Parameters
@@ -231,7 +205,7 @@ def subset_maxsize(
 
     Returns
     -------
-    list
+    list of xr.Dataset
         List of xr.Dataset subsetted alongside 'time' to limit the filesize to the requested maximum.
     """
     # Estimate the size of the dataset
@@ -242,14 +216,15 @@ def subset_maxsize(
         size_of_file = size_of_file + (varsize * dtype_size) / 1024**3
 
     if size_of_file < maxsize_gb:
-        logger.info(f"Dataset is already smaller than {maxsize_gb} Gb.")
+        msg = f"Dataset is already smaller than {maxsize_gb} Gb."
+        logger.info(msg)
         return [ds]
 
-    elif "time" in ds:
+    elif "time" in ds.dims:
         years = np.unique(ds.time.dt.year)
-        ratio = int(len(years) / (size_of_file / maxsize_gb))
+        ratio = np.max([int(len(years) / (size_of_file / maxsize_gb)), 1])
         ds_sub = []
-        for y in range(years[0], years[-1], ratio):
+        for y in range(years[0], years[-1] + 1, ratio):
             ds_sub.extend([ds.sel({"time": slice(str(y), str(y + ratio - 1))})])
         return ds_sub
 
@@ -259,7 +234,11 @@ def subset_maxsize(
         )
 
 
-def clean_incomplete(path: Union[str, os.PathLike], complete: Sequence[str]) -> None:
+def clean_incomplete(
+    path: str | os.PathLike,
+    complete: Sequence[str] | None = None,
+    incomplete: Sequence[str] | None = None,
+) -> None:
     """Delete un-catalogued variables from a zarr folder.
 
     The goal of this function is to clean up an incomplete calculation.
@@ -270,30 +249,67 @@ def clean_incomplete(path: Union[str, os.PathLike], complete: Sequence[str]) -> 
     ----------
     path : str, Path
         A path to a zarr folder.
-    complete : sequence of strings
-        Name of variables that were completed.
+    complete : sequence of strings, optional
+        Name of variables that were completed. All other variables (except coordinates) will be removed.
+        Use either `complete` or `incomplete`, not both.
+    incomplete : sequence of strings, optional
+        Name of variables that should be removed. Coordinates and dimensions will never be removed through this function.
+        Use either `complete` or `incomplete`, not both.
 
     Returns
     -------
     None
     """
     path = Path(path)
-    with xr.open_zarr(path) as ds:
-        complete = set(complete).union(ds.coords.keys())
 
-    for fold in filter(lambda p: p.is_dir(), path.iterdir()):
-        if fold.name not in complete:
-            logger.warning(f"Removing {fold} from disk")
-            sh.rmtree(fold)
+    if complete is not None and incomplete is not None:
+        raise ValueError("Use either `complete` or `incomplete`, not both.")
+    v_to_rm = []
+
+    if complete is not None:
+        with xr.open_zarr(path) as ds:
+            complete = set(complete).union(ds.coords.keys())
+
+        for fold in filter(lambda p: p.is_dir(), path.iterdir()):
+            if fold.name not in complete:
+                v_to_rm.append(fold.name)
+                msg = f"Removing {fold} from disk"
+                logger.warning(msg)
+                sh.rmtree(fold)
+
+    elif incomplete is not None:
+        with xr.open_zarr(path) as ds:
+            incomplete = [
+                v for v in incomplete if (v not in ds.coords) and (v not in ds.dims)
+            ]
+
+        for fold in filter(lambda p: p.is_dir(), path.iterdir()):
+            if fold.name in incomplete:
+                v_to_rm.append(fold.name)
+                msg = f"Removing {fold} from disk"
+                logger.warning(msg)
+                sh.rmtree(fold)
+
+    # Update the .zmetadata file
+    with (path / ".zmetadata").open("r") as f:
+        metadata = json.load(f)
+    for v in v_to_rm:
+        [
+            metadata["metadata"].pop(k)
+            for k in list(metadata["metadata"].keys())
+            if k.startswith(f"{v}/.")
+        ]
+    with (path / ".zmetadata").open("w") as f:
+        json.dump(metadata, f, indent=2)
 
 
 def _coerce_attrs(attrs):
     """Ensure no funky objects in attrs."""
     for k in list(attrs.keys()):
         if not (
-            isinstance(attrs[k], (str, float, int, np.ndarray))
-            or isinstance(attrs[k], (tuple, list))
-            and isinstance(attrs[k][0], (str, float, int))
+            isinstance(attrs[k], str | float | int | np.ndarray)
+            or isinstance(attrs[k], tuple | list)
+            and isinstance(attrs[k][0], str | float | int)
         ):
             attrs[k] = str(attrs[k])
 
@@ -316,9 +332,11 @@ def round_bits(da: xr.DataArray, keepbits: int):
     keepbits : int
         The number of bits of the mantissa to keep.
     """
+    encoding = da.encoding
     da = xr.apply_ufunc(
         _np_bitround, da, keepbits, dask="parallelized", keep_attrs=True
     )
+    da.encoding = encoding
     da.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] = keepbits
     new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Data compressed with BitRound by keeping {keepbits} bits."
     history = (
@@ -330,7 +348,7 @@ def round_bits(da: xr.DataArray, keepbits: int):
     return da
 
 
-def _get_keepbits(bitround: Union[bool, int, dict], varname: str, vartype):
+def _get_keepbits(bitround: bool | int | dict, varname: str, vartype):
     # Guess the number of bits to keep depending on how bitround was passed, the var dtype and the var name.
     if not np.issubdtype(vartype, np.floating) or bitround is False:
         if isinstance(bitround, dict) and varname in bitround:
@@ -350,12 +368,12 @@ def _get_keepbits(bitround: Union[bool, int, dict], varname: str, vartype):
 @parse_config
 def save_to_netcdf(
     ds: xr.Dataset,
-    filename: Union[str, os.PathLike],
+    filename: str | os.PathLike,
     *,
-    rechunk: Optional[dict] = None,
-    bitround: Union[bool, int, dict] = False,
+    rechunk: dict | None = None,
+    bitround: bool | int | dict = False,
     compute: bool = True,
-    netcdf_kwargs: Optional[dict] = None,
+    netcdf_kwargs: dict | None = None,
     strip_cat_metadata: bool = True,
 ):
     """Save a Dataset to NetCDF, rechunking or compressing if requested.
@@ -423,59 +441,61 @@ def save_to_netcdf(
 @parse_config
 def save_to_zarr(  # noqa: C901
     ds: xr.Dataset,
-    filename: Union[str, os.PathLike],
+    filename: str | os.PathLike,
     *,
-    rechunk: Optional[dict] = None,
-    zarr_kwargs: Optional[dict] = None,
+    rechunk: dict | None = None,
+    zarr_kwargs: dict | None = None,
     compute: bool = True,
-    encoding: Optional[dict] = None,
-    bitround: Union[bool, int, dict] = False,
+    encoding: dict | None = None,
+    bitround: bool | int | dict = False,
     mode: str = "f",
     itervar: bool = False,
     timeout_cleanup: bool = True,
     strip_cat_metadata: bool = True,
 ):
-    """Save a Dataset to Zarr format, rechunking and compressing if requested.
+    """
+    Save a Dataset to Zarr format, rechunking and compressing if requested.
 
     According to mode, removes variables that we don't want to re-compute in ds.
 
     Parameters
     ----------
     ds : xr.Dataset
-      Dataset to be saved.
+        Dataset to be saved.
     filename : str
-      Name of the Zarr file to be saved.
+        Name of the Zarr file to be saved.
     rechunk : dict, optional
-      This is a mapping from dimension name to new chunks (in any format understood by dask).
-      Spatial dimensions can be generalized as 'X' and 'Y' which will be mapped to the actual grid type's
-      dimension names.
-      Rechunking is only done on *data* variables sharing dimensions with this argument.
+        This is a mapping from dimension name to new chunks (in any format understood by dask).
+        Spatial dimensions can be generalized as 'X' and 'Y' which will be mapped to the actual grid type's
+        dimension names.
+        Rechunking is only done on *data* variables sharing dimensions with this argument.
     zarr_kwargs : dict, optional
-      Additional arguments to send to_zarr()
+        Additional arguments to send to_zarr()
     compute : bool
-      Whether to start the computation or return a delayed object.
+        Whether to start the computation or return a delayed object.
     mode : {'f', 'o', 'a'}
-      If 'f', fails if any variable already exists.
-      if 'o', removes the existing variables.
-      if 'a', skip existing variables, writes the others.
+        If 'f', fails if any variable already exists.
+        if 'o', removes the existing variables.
+        if 'a', skip existing variables, writes the others.
     encoding : dict, optional
-      If given, skipped variables are popped in place.
+        If given here instead of 'zarr_kwargs', encoding will only be applied to the variables that are being written,
+        skipping those that are already in the zarr.
     bitround : bool or int or dict
-      If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa,
-      allowing for a much better compression.
-      If an int, this is the number of bits to keep for all float variables.
-      If a dict, a mapping from variable name to the number of bits to keep.
-      If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12,
-      which yields a relative error of 0.012%.
+        If not False, float variables are bit-rounded by dropping a certain number of bits from their mantissa,
+        allowing for a much better compression.
+        If an int, this is the number of bits to keep for all float variables.
+        If a dict, a mapping from variable name to the number of bits to keep.
+        If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12,
+        which yields a relative error of 0.012%.
     itervar : bool
-      If True, (data) variables are written one at a time, appending to the zarr.
-      If False, this function computes, no matter what was passed to kwargs.
+        If True, (data) variables are written one at a time, appending to the zarr.
+        If False, this function computes, no matter what was passed to kwargs.
     timeout_cleanup : bool
-      If True (default) and a :py:class:`xscen.scripting.TimeoutException` is raised during the writing,
-      the variable being written is removed from the dataset as it is incomplete.
-      This does nothing if `compute` is False.
+        If True (default) and a :py:class:`xscen.scripting.TimeoutException` is raised during the writing,
+        the variable being written is removed from the dataset as it is incomplete.
+        This does nothing if `compute` is False.
     strip_cat_metadata : bool
-      If True (default), strips all catalog-added attributes before saving the dataset.
+        If True (default), strips all catalog-added attributes before saving the dataset.
 
     Returns
     -------
@@ -515,22 +535,33 @@ def save_to_zarr(  # noqa: C901
 
         if mode == "o":
             if exists:
-                var_path = path / var
-                logger.warning(f"Removing {var_path} to overwrite.")
-                sh.rmtree(var_path)
+                clean_incomplete(path, incomplete=[var])
             return False
 
         if mode == "a":
+            # In all cases, we need to skip the encoding of existing variables.
+            if exists:
+                if encoding:
+                    encoding.pop(var, None)
+
+            # If we are not appending, we need to skip the writing of existing variables.
             if "append_dim" not in zarr_kwargs:
                 return exists
+
+            # If we are appending, we need to raise an error if there are new variables.
+            elif exists is False:
+                raise ValueError(
+                    f"When 'append_dim' is set in zarr_kwargs, all variables must already exist in the dataset."
+                )
+
             return False
 
     for var in list(ds.data_vars.keys()):
         if _skip(var):
-            logger.info(f"Skipping {var} in {path}.")
+            msg = f"Skipping {var} in {path}."
+            logger.info(msg)
             ds = ds.drop_vars(var)
-            if encoding:
-                encoding.pop(var)
+            continue
         if keepbits := _get_keepbits(bitround, var, ds[var].dtype):
             ds = ds.assign({var: round_bits(ds[var], keepbits)})
         # Remove original_shape from encoding, since it can cause issues with some engines.
@@ -556,7 +587,8 @@ def save_to_zarr(  # noqa: C901
             dsbase = ds.drop_vars(allvars)
             dsbase.to_zarr(path, **zarr_kwargs, mode="w")
         for i, (name, var) in enumerate(ds.data_vars.items()):
-            logger.debug(f"Writing {name} ({i + 1} of {len(ds.data_vars)}) to {path}")
+            msg = f"Writing {name} ({i + 1} of {len(ds.data_vars)}) to {path}"
+            logger.debug(msg)
             dsvar = ds.drop_vars(allvars - {name})
             try:
                 dsvar.to_zarr(
@@ -567,23 +599,19 @@ def save_to_zarr(  # noqa: C901
                 )
             except TimeoutException:
                 if timeout_cleanup:
-                    logger.info(f"Removing incomplete {name}.")
-                    sh.rmtree(path / name)
+                    clean_incomplete(path, incomplete=[name])
                 raise
 
     else:
-        logger.debug(f"Writing {list(ds.data_vars.keys())} for {filename}.")
+        msg = f"Writing {list(ds.data_vars.keys())} for {filename}."
+        logger.debug(msg)
         try:
             return ds.to_zarr(
                 filename, compute=compute, mode="a", encoding=encoding, **zarr_kwargs
             )
         except TimeoutException:
             if timeout_cleanup:
-                logger.info(
-                    f"Removing incomplete {list(ds.data_vars.keys())} for {filename}."
-                )
-                for name in ds.data_vars:
-                    sh.rmtree(path / name)
+                clean_incomplete(path, incomplete=list(ds.data_vars.keys()))
             raise
 
 
@@ -640,13 +668,13 @@ def _to_dataframe(
 
 
 def to_table(
-    ds: Union[xr.Dataset, xr.DataArray],
+    ds: xr.Dataset | xr.DataArray,
     *,
-    row: Optional[Union[str, Sequence[str]]] = None,
-    column: Optional[Union[str, Sequence[str]]] = None,
-    sheet: Optional[Union[str, Sequence[str]]] = None,
-    coords: Union[bool, str, Sequence[str]] = True,
-) -> Union[pd.DataFrame, dict]:
+    row: str | Sequence[str] | None = None,
+    column: str | Sequence[str] | None = None,
+    sheet: str | Sequence[str] | None = None,
+    coords: bool | str | Sequence[str] = True,
+) -> pd.DataFrame | dict:
     """Convert a dataset to a pandas DataFrame with support for multicolumns and multisheet.
 
     This function will trigger a computation of the dataset.
@@ -679,7 +707,11 @@ def to_table(
     if isinstance(ds, xr.Dataset):
         da = ds.to_array(name="data")
         if len(ds) == 1:
-            da = da.isel(variable=0).rename(data=da.variable.values[0])
+            da = da.isel(variable=0)
+            da.name = str(da["variable"].values)
+            da = da.drop_vars("variable")
+    else:
+        da = ds
 
     def _ensure_list(seq):
         if isinstance(seq, str):
@@ -693,7 +725,13 @@ def to_table(
         row = [d for d in da.dims if d != "variable" and d not in passed_dims]
     row = _ensure_list(row)
     if column is None:
-        column = ["variable"] if len(ds) > 1 and "variable" not in passed_dims else []
+        column = (
+            ["variable"]
+            if isinstance(ds, xr.Dataset)
+            and len(ds) > 1
+            and "variable" not in passed_dims
+            else []
+        )
     column = _ensure_list(column)
     if sheet is None:
         sheet = []
@@ -712,10 +750,10 @@ def to_table(
 
     if coords is not True:
         coords = _ensure_list(coords or [])
-        drop = set(ds.coords.keys()) - set(da.dims) - set(coords)
+        drop = set(da.coords.keys()) - set(da.dims) - set(coords)
         da = da.drop_vars(drop)
     else:
-        coords = list(set(ds.coords.keys()) - set(da.dims))
+        coords = list(set(da.coords.keys()) - set(da.dims))
     if len(coords) > 1 and ("variable" in row or "variable" in sheet):
         raise NotImplementedError(
             "Keeping auxiliary coords is not implemented when 'variable' is in the row or in the sheets."
@@ -739,9 +777,7 @@ def to_table(
     return _to_dataframe(da, **table_kwargs)
 
 
-def make_toc(
-    ds: Union[xr.Dataset, xr.DataArray], loc: Optional[str] = None
-) -> pd.DataFrame:
+def make_toc(ds: xr.Dataset | xr.DataArray, loc: str | None = None) -> pd.DataFrame:
     """Make a table of content describing a dataset's variables.
 
     This return a simple DataFrame with variable names as index, the long_name as "description" and units.
@@ -779,28 +815,48 @@ def make_toc(
             for vv, da in ds.data_vars.items()
         ],
     ).set_index(_("Variable"))
+
+    # Add global attributes by using a fake variable and description
+    if len(ds.attrs) > 0:
+        globattr = pd.DataFrame.from_records(
+            [
+                {
+                    _("Variable"): vv,
+                    _("Description"): da,
+                    _("Units"): "",
+                }
+                for vv, da in ds.attrs.items()
+            ],
+        ).set_index(_("Variable"))
+        globattr.attrs["name"] = _("Global attributes")
+
+        # Empty row to separate global attributes from variables
+        toc = pd.concat([toc, pd.DataFrame(index=[""])])
+        toc = pd.concat([toc, pd.DataFrame(index=[_("Global attributes")])])
+        toc = pd.concat([toc, globattr])
     toc.attrs["name"] = _("Content")
+
     return toc
 
 
 TABLE_FORMATS = {".csv": "csv", ".xls": "excel", ".xlsx": "excel"}
 
 
-def save_to_table(
-    ds: Union[xr.Dataset, xr.DataArray],
-    filename: Union[str, os.PathLike],
-    output_format: Optional[str] = None,
+def save_to_table(  # noqa: C901
+    ds: xr.Dataset | xr.DataArray,
+    filename: str | os.PathLike,
+    output_format: str | None = None,
     *,
-    row: Optional[Union[str, Sequence[str]]] = None,
-    column: Union[None, str, Sequence[str]] = "variable",
-    sheet: Optional[Union[str, Sequence[str]]] = None,
-    coords: Union[bool, Sequence[str]] = True,
+    row: str | Sequence[str] | None = None,
+    column: None | str | Sequence[str] = None,
+    sheet: str | Sequence[str] | None = None,
+    coords: bool | Sequence[str] = True,
     col_sep: str = "_",
-    row_sep: Optional[str] = None,
-    add_toc: Union[bool, pd.DataFrame] = False,
+    row_sep: str | None = None,
+    add_toc: bool | pd.DataFrame = False,
     **kwargs,
 ):
-    """Save the dataset to a tabular file (csv, excel, ...).
+    r"""Save the dataset to a tabular file (csv, excel, ...).
 
     This function will trigger a computation of the dataset.
 
@@ -821,7 +877,8 @@ def save_to_table(
       Default is all data dimensions.
     column : str or sequence of str, optional
       Name of the dimension(s) to use as columns.
-      Default is "variable", i.e. the name of the variable(s).
+      When using a Dataset with more than 1 variable, default is "variable", i.e. the name of the variable(s).
+      When using a DataArray, default is None.
     sheet : str or sequence of str, optional
       Name of the dimension(s) to use as sheet names.
       Only valid if the output format is excel.
@@ -837,7 +894,7 @@ def save_to_table(
       A table of content to add as the first sheet. Only valid if the output format is excel.
       If True, :py:func:`make_toc` is used to generate the toc.
       The sheet name of the toc can be given through the "name" attribute of the DataFrame, otherwise "Content" is used.
-    kwargs:
+    \*\*kwargs:
       Other arguments passed to the pandas function.
       If the output format is excel, kwargs to :py:class:`pandas.ExcelWriter` can be given here as well.
     """
@@ -849,6 +906,9 @@ def save_to_table(
         raise ValueError(
             f"Output format could not be inferred from filename {filename.name}. Please pass `output_format`."
         )
+
+    if column is None and isinstance(ds, xr.Dataset) and len(ds.data_vars) > 1:
+        column = "variable"
 
     if sheet is not None and output_format != "excel":
         raise ValueError(
@@ -868,15 +928,22 @@ def save_to_table(
             add_toc = make_toc(ds)
         out = {(add_toc.attrs.get("name", "Content"),): add_toc, **out}
 
-    if sheet or (add_toc is not False):
+    # Get engine_kwargs
+    if output_format == "excel":
         engine_kwargs = {}  # Extract engine kwargs
         for arg in signature(pd.ExcelWriter).parameters:
             if arg in kwargs:
                 engine_kwargs[arg] = kwargs.pop(arg)
+    else:
+        engine_kwargs = {}
 
+    if sheet or (add_toc is not False):
         with pd.ExcelWriter(filename, **engine_kwargs) as writer:
             for sheet_name, df in out.items():
                 df.to_excel(writer, sheet_name=col_sep.join(sheet_name), **kwargs)
+    elif len(engine_kwargs) > 0:
+        with pd.ExcelWriter(filename, **engine_kwargs) as writer:
+            out.to_excel(writer, **kwargs)
     else:
         if output_format != "excel" and isinstance(out.columns, pd.MultiIndex):
             out.columns = out.columns.map(lambda lvls: col_sep.join(map(str, lvls)))
@@ -928,20 +995,20 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
             for d in ds[rechunk_var].dims
         )
         ds[rechunk_var].encoding.pop("chunks", None)
-        ds[rechunk_var].encoding.pop("preferred_chunks", None)
+        ds[rechunk_var].encoding["preferred_chunks"] = rechunk_dims
 
     return ds
 
 
 @parse_config
 def rechunk(
-    path_in: Union[os.PathLike, str, xr.Dataset],
-    path_out: Union[os.PathLike, str],
+    path_in: os.PathLike | str | xr.Dataset,
+    path_out: os.PathLike | str,
     *,
-    chunks_over_var: Optional[dict] = None,
-    chunks_over_dim: Optional[dict] = None,
+    chunks_over_var: dict | None = None,
+    chunks_over_dim: dict | None = None,
     worker_mem: str,
-    temp_store: Optional[Union[os.PathLike, str]] = None,
+    temp_store: os.PathLike | str | None = None,
     overwrite: bool = False,
 ) -> None:
     """Rechunk a dataset into a new zarr.
@@ -991,7 +1058,7 @@ def rechunk(
     elif chunks_over_dim:
         chunks = {v: {d: chunks_over_dim[d] for d in ds[v].dims} for v in variables}
         chunks.update(time=None, lat=None, lon=None)
-        cal = get_calendar(ds)
+        cal = ds.time.dt.calendar
         Nt = ds.time.size
         chunks = translate_time_chunk(chunks, cal, Nt)
     else:
@@ -1006,3 +1073,60 @@ def rechunk(
 
     if temp_store is not None:
         sh.rmtree(temp_store)
+
+
+def zip_directory(
+    root: str | os.PathLike,
+    zipfile: str | os.PathLike,
+    delete: bool = False,
+    **zip_args,
+):
+    r"""Make a zip archive of the content of a directory.
+
+    Parameters
+    ----------
+    root : path
+        The directory with the content to archive.
+    zipfile : path
+        The zip file to create.
+    delete : bool
+        If True, the original directory is deleted after zipping.
+    \*\*zip_args
+        Any other arguments to pass to :py:mod:`zipfile.ZipFile`, such as "compression".
+        The default is to make no compression (``compression=ZIP_STORED``).
+    """
+    root = Path(root)
+
+    def _add_to_zip(zf, path, root):
+        zf.write(path, path.relative_to(root))
+        if path.is_dir():
+            for subpath in path.iterdir():
+                _add_to_zip(zf, subpath, root)
+
+    with ZipFile(zipfile, "w", **zip_args) as zf:
+        for file in root.iterdir():
+            _add_to_zip(zf, file, root)
+
+    if delete:
+        sh.rmtree(root)
+
+
+def unzip_directory(zipfile: str | os.PathLike, root: str | os.PathLike):
+    r"""Unzip an archive to a directory.
+
+    This function is the exact opposite of :py:func:`xscen.io.zip_directory`.
+
+    Parameters
+    ----------
+    zipfile : path
+        The zip file to read.
+    root : path
+        The directory where to put the content to archive.
+        If doesn't exist, it will be created (and all its parents).
+        If it exists, should be empty.
+    """
+    root = Path(root)
+    root.mkdir(parents=True, exist_ok=True)
+
+    with ZipFile(zipfile, "r") as zf:
+        zf.extractall(root)

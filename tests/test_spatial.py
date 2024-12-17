@@ -144,6 +144,65 @@ class TestCreepFill:
         np.testing.assert_equal(out.isel(lat=3, lon=3), np.tile(np.nan, 3))
 
 
+class TestGetGrid:
+    def test_none(self):
+        ds = datablock_3d(
+            np.zeros((20, 10, 10)),
+            "tas",
+            "lon",
+            -142,
+            "lat",
+            0,
+            2,
+            2,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        assert xs.spatial.get_grid_mapping(ds) == ""
+
+    def test_rotated_pole(self):
+        ds = datablock_3d(
+            np.zeros((20, 10, 10)),
+            "tas",
+            "rlon",
+            -142,
+            "rlat",
+            0,
+            2,
+            2,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        assert xs.spatial.get_grid_mapping(ds) == "rotated_pole"
+
+        ds_no_coord = ds.copy()
+        ds_no_coord = ds_no_coord.drop_vars("rotated_pole")
+        assert xs.spatial.get_grid_mapping(ds_no_coord) == "rotated_pole"
+
+        ds_no_var = ds.copy()
+        ds_no_var = ds_no_var.drop_vars("tas")
+        assert xs.spatial.get_grid_mapping(ds_no_var) == "rotated_pole"
+
+    def test_error(self):
+        ds = datablock_3d(
+            np.zeros((20, 10, 10)),
+            "tas",
+            "x",
+            -5000,
+            "y",
+            5000,
+            100000,
+            100000,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        ds["tas"].attrs["grid_mapping"] = "lambert_conformal_conic"
+        with pytest.warns(
+            UserWarning, match="There are conflicting grid_mapping attributes"
+        ):
+            assert xs.spatial.get_grid_mapping(ds) == "lambert_conformal_conic"
+
+
 class TestSubset:
     ds = datablock_3d(
         np.ones((3, 50, 50)),
@@ -240,6 +299,29 @@ class TestSubset:
                 assert "with no buffer" in out.attrs["history"]
                 np.testing.assert_array_equal(out["lon"], np.arange(-63, -59))
                 np.testing.assert_array_equal(out["lat"], np.arange(47, 51))
+
+    @pytest.mark.parametrize("crs", ["bad", "EPSG:3857", "EPSG:4326"])
+    def test_shape_crs(self, crs):
+        gdf = gpd.GeoDataFrame(
+            {"geometry": [Polygon([(-63, 47), (-63, 50), (-60, 50), (-60, 47)])]}
+        )
+        if crs != "bad":
+            gdf.crs = crs
+            if crs != "EPSG:4326":
+                with pytest.warns(UserWarning, match="Reprojecting to this CRS"):
+                    with pytest.raises(
+                        ValueError, match="No grid cell centroids"
+                    ):  # This is from clisops, this is not our warning
+                        xs.spatial.subset(self.ds, "shape", shape=gdf, tile_buffer=5)
+            else:
+                # Make sure there is no warning about reprojection
+                with pytest.warns() as record:
+                    xs.spatial.subset(self.ds, "shape", shape=gdf, tile_buffer=5)
+                assert not any("Reprojecting to this CRS" in str(w) for w in record)
+
+        else:
+            with pytest.warns(UserWarning, match="does not have a CRS"):
+                xs.spatial.subset(self.ds, "shape", shape=gdf, tile_buffer=5)
 
     def test_subset_sel(self):
         ds = datablock_3d(
