@@ -7,7 +7,7 @@ Welcome to xsdba's documentation!
    self
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 0
    :caption: Table of Contents:
 
    readme
