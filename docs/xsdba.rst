@@ -58,9 +58,9 @@ In a conventional empirical quantile mapping (EQM), this will compute the quanti
 
 .. warning::
 
-    If grouping according to the day of the year is needed, the :py:mod:`xsdba.calendar` submodule contains useful
-    tools to manage the different calendars that the input data can have. By default, if 2 different calendars are
-    passed, the adjustment factors will always be interpolated to the largest range of day of the years but this can
+    If grouping according to the day of the year is needed, the :py:mod:`xarray.DataArray.convert_calendar` is useful
+    tools to manage the different calendars that the input data can have. By default, if two different calendars are
+    passed in `xsdba`, the adjustment factors will always be interpolated to the largest range of day of the years but this can
     lead to strange values, so we recommend converting the data beforehand to a common calendar.
 
 Application in multivariate settings (climate science examples)

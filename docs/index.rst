@@ -17,8 +17,6 @@ Welcome to xsdba's documentation!
    contributing
    releasing
    notebooks/index
-   notebooks/example
-   notebooks/advanced_example
 
 
 .. toctree::
