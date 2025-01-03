@@ -4,16 +4,20 @@ channels:
   - defaults
 dependencies:
   - python >=3.12,<3.13
-  - sphinx >=7.0.0
+  # Docs
   - furo >=2023.9.10
+  - ipykernel
+  - ipython >=8.5.0
+  - jupyter_client
+  - nbsphinx >=0.9.5
+  - nc-time-axis >=1.4.1
   - pandoc
-  - sphinx-autoapi
+  - pooch >=1.8.0
+  - sphinx >=7.0.0
+  - aphinz-autoapi
+  - sphinx-autobuild >=2024.4.16
   - sphinx-codeautolink
   - sphinx-copybutton
   - sphinx-intl
   - sphinxcontrib-bibtex
   - sphinxcontrib-napoleon
-  - typer >=0.12.3
-  - nbsphinx
-  - ipython
-  - ipykernel
