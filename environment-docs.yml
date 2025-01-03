@@ -14,10 +14,10 @@ dependencies:
   - pandoc
   - pooch >=1.8.0
   - sphinx >=7.0.0
-  - sphinx-autoapi
   - sphinx-autobuild >=2024.4.16
+  - sphinx-autodoc-typehints
   - sphinx-codeautolink
   - sphinx-copybutton
   - sphinx-intl
+  - sphinx-mdinclude
   - sphinxcontrib-bibtex
-  - sphinxcontrib-napoleon
