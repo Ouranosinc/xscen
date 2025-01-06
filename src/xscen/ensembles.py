@@ -671,22 +671,6 @@ def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
         if regrid_kw:
             ds = regrid_dataset(ds, **regrid_kw)
 
-        # if indicators_kw:
-        #     dict_ind = compute_indicators(ds, **indicators_kw)
-        #     if len(dict_ind) > 1:
-        #         raise ValueError(
-        #             f"The indicators computation should return only indicators of the same frequency.Returned frequencies: {dict_ind.keys()}"
-        #         )
-        #     else:
-        #         ds = list(dict_ind.values())[0]
-
-        # # get calendar of each dataset
-        # if calendar_kw is None:
-        #     if "time" in ds.coords:
-        #         time = xr.decode_cf(ds).time
-        #         ds["time"] = time
-        #         calendars.append(xc.core.calendar.get_calendar(time))
-
         for dim in partition_dim:
             if f"cat:{dim}" in ds.attrs:
                 ds = ds.expand_dims(**{dim: [ds.attrs[f"cat:{dim}"]]})
@@ -811,8 +795,6 @@ def build_partition_data(
     partition_dim: list[str] = ["realization", "experiment", "bias_adjust_project"],
     subset_kw: dict | None = None,
     regrid_kw: dict | None = None,
-    indicators_kw: dict | None = None,
-    calendar_kw: dict | None = None,
     rename_dict: dict | None = None,
     to_dataset_kw: dict | None = None,
     to_level: str = "partition-ensemble",
@@ -847,17 +829,6 @@ def build_partition_data(
         Arguments to pass to `xs.spatial.subset()`.
     regrid_kw : dict, optional
         Arguments to pass to `xs.regrid_dataset()`.
-    indicators_kw : dict, optional
-        Arguments to pass to `xs.indicators.compute_indicators()`.
-        All indicators have to be for the same frequency, in order to be put on a single time axis.
-    calendar_kw : dict, optional
-        Arguments to pass to `xclim.core.calendar.convert_calendar`.
-        If None, the smallest common calendar is chosen.
-        For example, a mixed input of “noleap” and “360_day” will default to “noleap”.
-        ‘default’ is the standard calendar using np.datetime64 objects (xarray’s “standard” with use_cftime=False).
-        This is the same behavior as `calendar` in xclim.create_ensemble.
-        For conversions involving '360_day', the align_on='date' option is used by default.
-        If False, no conversion is done.
     rename_dict : dict, optional
         Dictionary to rename the dimensions from xscen names to xclim names.
         The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
@@ -880,7 +851,6 @@ def build_partition_data(
     subset_kw = subset_kw or {}
     regrid_kw = regrid_kw or {}
     to_dataset_kw = to_dataset_kw or {}
-    calendar_kw = calendar_kw or {}
 
     if isinstance(datasets, list):
         ens = _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw)
