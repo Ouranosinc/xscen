@@ -2,6 +2,7 @@
 
 import atexit
 import logging
+from pathlib import Path
 
 import xarray as xr
 from dask import config as dskconf
@@ -37,8 +38,10 @@ if __name__ == "__main__":
 
     # Copy config to the top of the log file
     if "logging" in CONFIG and "file" in CONFIG["logging"]["handlers"]:
-        f1 = open(CONFIG["logging"]["handlers"]["file"]["filename"], "a+")
-        f2 = open("config1.yml")
+        f1 = Path(CONFIG["logging"]["handlers"]["file"]["filename"], "a+").open(
+            encoding="utf-8"
+        )
+        f2 = Path("config1.yml").open(encoding="utf-8")
         f1.write(f2.read())
         f1.close()
         f2.close()
@@ -64,7 +67,7 @@ if __name__ == "__main__":
     if "extract" in CONFIG["tasks"]:
         # Iterate on types of data to extract (reconstruction, simulation)
         # and get the respective dictionary from the config
-        for source_type, type_dict in CONFIG["extract"].items():
+        for type_dict in CONFIG["extract"].values():
             # Filter the catalog to get only the datasets that match the arguments in the config.
             # Arguments are not passed automatically, because the config is different for each type of data.
             # Therefore, we must manually send the 'type_dict' entry to the search_data_catalogs function.
@@ -105,7 +108,8 @@ if __name__ == "__main__":
                                     ds,
                                     ds[list(ds.data_vars)[0]]
                                     .isel(time=0, drop=True)
-                                    .notnull(),
+                                    .notnull()
+                                    .compute(),
                                 )
                             # Prepare the filename for the zarr file, using the format specified in paths1.yml
                             path = CONFIG["paths"]["task"].format(**cur)
@@ -169,7 +173,7 @@ if __name__ == "__main__":
         for var, ba_dict in CONFIG["biasadjust"].items():
             # Search the ProjectCatalog for the results of the previous step, then iterate over each dataset.
             dict_sim = pcat.search(**ba_dict["sim_inputs"]).to_dataset_dict(**tdd)
-            for id_sim, ds_sim in dict_sim.items():
+            for ds_sim in dict_sim.values():
                 cur = {
                     "id": ds_sim.attrs["cat:id"],
                     "xrfreq": ds_sim.attrs["cat:xrfreq"],
@@ -285,7 +289,7 @@ if __name__ == "__main__":
     if "diagnostics" in CONFIG["tasks"]:
         # The properties and measures that we want to compute are different for each type of data (ref, sim, scen),
         # so we need to iterate over them.
-        for kind, kind_dict in CONFIG["diagnostics"]["kind"].items():
+        for kind_dict in CONFIG["diagnostics"]["kind"].values():
             # Search for the right datasets and iterate over them
             dict_input = pcat.search(**kind_dict["inputs"]).to_dataset_dict(**tdd)
             for key_input, ds_input in dict_input.items():
@@ -335,7 +339,7 @@ if __name__ == "__main__":
         meas_dict = pcat.search(processing_level="diag-measures-sim").to_dataset_dict(
             **tdd
         )
-        for id_meas, ds_meas_sim in meas_dict.items():
+        for ds_meas_sim in meas_dict.values():
             cur = {
                 "id": ds_meas_sim.attrs["cat:id"],
                 "processing_level": "diag-improved",

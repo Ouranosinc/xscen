@@ -32,8 +32,9 @@ Features
     templates
     api
     contributing
+    releasing
     authors
-    changes
+    changelog
     security
 
 .. toctree::

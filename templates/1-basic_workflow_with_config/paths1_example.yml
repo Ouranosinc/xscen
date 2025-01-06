@@ -13,11 +13,11 @@ extract:
   reconstruction:
     search_data_catalogs:
       data_catalogs:
-         -  PATH_TO_OFFICIAL_CATALOGUES/reconstruction.json
+        - PATH_TO_OFFICIAL_CATALOGUES/reconstruction.json
   simulation:
     search_data_catalogs:
       data_catalogs:
-        -  PATH_TO_OFFICIAL_CATALOGUES/simulation.json
+        - PATH_TO_OFFICIAL_CATALOGUES/simulation.json
 
 regrid:
   regrid_dataset:
@@ -54,19 +54,19 @@ dask:
     local_directory: DASK_PATH
     dashboard_address: YOUR_RANDOM_NUMBER
 
-logging:
-    handlers:
-        file:
-            filename: PATH/logger.log
+#logging: #Uncomment if you want a log file
+#    handlers:
+#        file:
+#            filename: PATH/logger.log
 
 utils:
-    stack_drop_nans:
-        to_file: &coords
-          PATH/stack_coords/coords_{domain}_{shape}.nc
-    unstack_fill_nan:
-      coords: *coords
-    maybe_unstack:
-      coords: *coords
+  stack_drop_nans:
+    to_file: &coords
+      PATH/stack_coords/coords_{domain}_{shape}.nc
+  unstack_fill_nan:
+    coords: *coords
+  maybe_unstack:
+    coords: *coords
 
 scripting:
   send_mail:

@@ -56,13 +56,14 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 lint/flake8: ## check style with flake8
-	ruff xscen tests
-	flake8 --config=.flake8 xscen tests
+	python -m ruff check src/xscen tests
+	python -m flake8 --config=.flake8 src/xscen tests
+	# python -m numpydoc lint src/xscen/**.py  # FIXME: disabled until the codebase is fully numpydoc compliant
 
 lint/black: ## check style with black
-	black --check xscen tests
-	blackdoc --check xscen docs
-	isort --check xscen tests
+	python -m black --check src/xscen tests
+	python -m blackdoc --check src/xscen docs
+	python -m isort --check src/xscen tests
 
 lint: lint/black lint/flake8 ## check style
 
@@ -70,14 +71,14 @@ test: ## run tests quickly with the default Python
 	python -m pytest
 
 test-all: ## run tests on every Python version with tox
-	tox
+	python -m tox
 
 initialize-translations: clean-docs ## initialize translations, ignoring autodoc-generated files
 	${MAKE} -C docs gettext
 	sphinx-intl update -p docs/_build/gettext -d docs/locales -l fr
 
 autodoc: clean-docs ## create sphinx-apidoc files
-	sphinx-apidoc -o docs/apidoc --module-first xscen
+	sphinx-apidoc -o docs/apidoc --module-first src/xscen
 
 linkcheck: autodoc ## run checks over all external links found throughout the documentation
 	env SKIP_NOTEBOOKS=1 $(MAKE) -C docs linkcheck
@@ -106,11 +107,22 @@ install: clean ## install the package to the active Python's site-packages
 	python -m pip install .
 
 dev: clean ## install the package in editable mode with all development dependencies
-	python -m pip install --editable ".[dev]"
+	python -m pip install --editable ".[all]"
+	pre-commit install
 
 findfrench:  ## Extract phrases and update the French translation catalog (this doesn't translate)
-	python setup.py extract_messages
-	python setup.py update_catalog -l fr
+	pybabel extract -o src/xscen/data/messages.pot --omit-header --input-dirs=src/xscen/
+	pybabel update -l fr -D xscen -i src/xscen/data/messages.pot -d src/xscen/data/ --omit-header --no-location
 
 translate:   ## Compile the translation catalogs.
-	python setup.py compile_catalog
+	pybabel compile -f -D xscen -d src/xscen/data/
+
+MO_LAST_COMMIT = $(shell git log -n 1 --pretty=format:%H -- src/xscen/data/fr/LC_MESSAGES/xscen.mo)
+PO_LAST_COMMIT = $(shell git log -n 1 --pretty=format:%H -- src/xscen/data/fr/LC_MESSAGES/xscen.po)
+checkfrench:  ## Error if the catalog could be update or if the compilation is older than the catalog.
+	rm -f .check_messages.pot
+	pybabel extract -o .check_messages.pot --omit-header --input-dirs=src/xscen/ --no-location
+	pybabel update -l fr -D xscen -i .check_messages.pot -d src/xscen/data/ --omit-header --check
+	rm -f .check_messages.pot
+	# Last commit that touched the PO file must be an ancestor of the last that touched the MO
+	if git merge-base --is-ancestor $(PO_LAST_COMMIT) $(MO_LAST_COMMIT); then echo "ok"; else echo "Compilation is older than translations. Please compile with 'make translate'."; exit 1; fi

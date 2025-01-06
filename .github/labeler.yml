@@ -18,17 +18,22 @@
       - '.readthedocs.yml'
       - '.secrets.baseline'
       - '.yamllint.yaml'
+      - 'CI/**/*'
       - 'Makefile'
       - 'docs/Makefile'
       - 'tox.ini'
 
+# label 'docs' all documentation-related steps and files
 'docs':
   - changed_files:
     - any-glob-to-any-file:
+      - '.github/DISCUSSION_TEMPLATE/**/*'
       - '.github/ISSUE_TEMPLATE.md'
       - '.github/ISSUE_TEMPLATE/**/*'
       - '.github/PULL_REQUEST_TEMPLATE.md'
       - '.readthedocs.yml'
+      - 'AUTHORS.rst'
+      - 'CODE_OF_CONDUCT.md'
       - 'CONTRIBUTING.rst'
       - 'README.rst'
       - 'docs/**/*'

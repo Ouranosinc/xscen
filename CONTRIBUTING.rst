@@ -1,5 +1,3 @@
-.. highlight:: shell
-
 ============
 Contributing
 ============
@@ -46,22 +44,23 @@ If you are proposing a feature:
 
 * Explain in detail how it would work.
 * Keep the scope as narrow as possible, to make it easier to implement.
-* Remember that this is a volunteer-driven project, and that contributions
-  are welcome. :)
+* Remember that this is a volunteer-driven project, and that contributions are welcome. :)
 
 Get Started!
 ------------
 
 .. note::
 
-    If you are new to using GitHub and `git`, please read `this guide <https://guides.github.com/activities/hello-world/>`_ first.
+    If you are new to using `GitHub <https://github.com/>`_ and ``git``, please read `this guide <https://guides.github.com/activities/hello-world/>`_ first.
 
 .. warning::
 
-    Anaconda Python users: Due to the complexity of some packages, the default dependency solver can take a long time to resolve the environment. Consider running the following commands in order to speed up the process::
+    Anaconda Python users: Due to the complexity of some packages, the default dependency solver can take a long time to resolve the environment. Consider running the following commands in order to speed up the process:
 
-        $ conda install -n base conda-libmamba-solver
-        $ conda config --set solver libmamba
+    .. code-block:: console
+
+        conda install -n base conda-libmamba-solver
+        conda config --set solver libmamba
 
     For more information, please see the following link: https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community
 
@@ -69,76 +68,128 @@ Get Started!
 
 Ready to contribute? Here's how to set up ``xscen`` for local development.
 
-#. Clone the repo locally::
+#. First, clone the ``xscen`` repo locally.
 
-    $ git clone git@github.com:Ouranosinc/xscen.git
+    * If you are not a ``xscen`` collaborator, first fork the ``xscen`` repo on GitHub, then clone your fork locally.
 
-#. Install your local copy into a development environment. You can create a new Anaconda development environment with::
+        .. code-block:: console
 
-    $ conda env create -f environment-dev.yml
-    $ conda activate xscen-dev
-    $ python -m pip install --editable ".[dev]"
+            git clone git@github.com:your_name_here/xscen.git
 
-   This installs ``xscen`` in an "editable" state, meaning that changes to the code are immediately seen by the environment.
+    * If you are a ``xscen`` collaborator, clone the ``xscen`` repo directly.
 
-#. As xscen was installed in editable mode, we also need to compile the translation catalogs manually::
+        .. code-block:: console
 
-    $ make translate
+            git clone git@github.com:Ouranosinc/xscen.git
 
-#. To ensure a consistent coding style, install the ``pre-commit`` hooks to your local clone::
+#. Install your local copy into a development environment. You can create a new Anaconda development environment with:
 
-    $ pre-commit install
+    .. code-block:: console
 
-   On commit, ``pre-commit`` will check that ``black``, ``blackdoc``, ``isort``, ``flake8``, and ``ruff`` checks are passing, perform automatic fixes if possible, and warn of violations that require intervention. If your commit fails the checks initially, simply fix the errors, re-add the files, and re-commit.
+        conda env create -f environment-dev.yml
+        conda activate xscen-dev
+        make dev
 
-   You can also run the hooks manually with::
+    If you are on Windows, replace the ``make dev`` command with the following:
 
-    $ pre-commit run -a
+    .. code-block:: console
 
-   If you want to skip the ``pre-commit`` hooks temporarily, you can pass the ``--no-verify`` flag to `$ git commit`.
+        python -m pip install -e .[dev]
+        pre-commit install
 
-#. Create a branch for local development::
+    This installs ``xscen`` in an "editable" state, meaning that changes to the code are immediately seen by the environment. To ensure a consistent coding style, `make dev` also installs the ``pre-commit`` hooks to your local clone.
 
-    $ git checkout -b name-of-your-bugfix-or-feature
+    On commit, ``pre-commit`` will check that ``black``, ``blackdoc``, ``isort``, ``flake8``, and ``ruff`` checks are passing, perform automatic fixes if possible, and warn of violations that require intervention. If your commit fails the checks initially, simply fix the errors, re-add the files, and re-commit.
 
-   Now you can make your changes locally.
+    You can also run the hooks manually with:
 
-#. When you're done making changes, we **strongly** suggest running the tests in your environment or with the help of ``tox``::
+    .. code-block:: console
 
-     $ python -m pytest
-     # Or, to run multiple build tests
-     $ tox
+        pre-commit run -a
 
-   Alternatively, you can run the tests using `make`::
+    If you want to skip the ``pre-commit`` hooks temporarily, you can pass the `--no-verify` flag to `$ git commit`.
 
-    $ make lint
-    $ make test
+#. As xscen was installed in editable mode, we also need to compile the translation catalogs manually:
 
-   Running `make lint` and `make test` demands that your runtime/dev environment have all necessary development dependencies installed.
+    .. code-block:: console
+
+        make translate
+
+#. Create a branch for local development:
+
+    .. code-block:: console
+
+        git checkout -b name-of-your-bugfix-or-feature
+
+    Now you can make your changes locally.
+
+#. When you're done making changes, we **strongly** suggest running the tests in your environment or with the help of ``tox``:
+
+    .. code-block:: console
+
+        make lint
+        python -m pytest
+        # Or, to run multiple build tests
+        python -m tox
+
+    Alternatively, you can run the tests using `make`:
+
+    .. code-block:: console
+
+        make lint
+        make test
+
+    Running `make lint` and `make test` demands that your runtime/dev environment have all necessary development dependencies installed.
 
    .. warning::
 
-        Due to some dependencies only being available via Anaconda/conda-forge or built from source, `tox`-based testing will only work if `ESMF`_ is available in your system path. This also requires that the `ESMF_VERSION` environment variable (matching the version of ESMF installed) be accessible within your shell as well (e.g.: `$ export ESMF_VERSION=8.5.0`).
+        Due to some dependencies only being available via Anaconda/conda-forge or built from source, `tox`-based testing will only work if `ESMF <http://earthsystemmodeling.org/download/>`_ is available in your system path. This also requires that the `ESMF_VERSION` environment variable (matching the version of ESMF installed) be accessible within your shell as well (e.g.: `$ export ESMF_VERSION=8.5.0`).
 
-#. Commit your changes and push your branch to GitHub::
+#. Commit your changes and push your branch to GitHub:
 
-    $ git add .
-    $ git commit -m "Your detailed description of your changes."
-    $ git push origin name-of-your-bugfix-or-feature
+    .. code-block:: console
 
-   If ``pre-commit`` hooks fail, try re-committing your changes (or, if need be, you can skip them with `$ git commit --no-verify`).
+        git add .
+        git commit -m "Your detailed description of your changes."
+        git push origin name-of-your-bugfix-or-feature
+
+    If ``pre-commit`` hooks fail, try fixing the issues, re-staging the files to be committed, and re-committing your changes (or, if need be, you can skip them with `git commit --no-verify`).
+
 
 #. Submit a `Pull Request <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request>`_ through the GitHub website.
 
-#. When pushing your changes to your branch on GitHub, the documentation will automatically be tested to reflect the changes in your Pull Request. This build process can take several minutes at times. If you are actively making changes that affect the documentation and wish to save time, you can compile and test your changes beforehand locally with::
+#. If changes to your branch are made on GitHub, you can update your local branch with:
 
-    # To generate the html and open it in your browser
-    $ make docs
-    # To only generate the html
-    $ make autodoc
-    $ make -C docs html
-    # To simply test that the docs pass build checks
-    $ tox -e docs
+    .. code-block:: console
+
+        git checkout name-of-your-bugfix-or-feature
+        git fetch
+        git pull origin name-of-your-bugfix-or-feature
+
+    If you have merge conflicts, you might need to replace `git pull` with `git merge` and resolve the conflicts manually.
+    Resolving conflicts from the command line can be tricky. If you are not comfortable with this, you can ignore the last command and instead use a GUI like PyCharm or Visual Studio Code to merge the remote changes and resolve the conflicts.
+
+#. Before merging, your Pull Request will need to be based on the `main` branch of the  `xscen`` repository. If your branch is not up-to-date with the `main` branch, you can perform similar steps as above to update your branch:
+
+    .. code-block:: console
+
+        git checkout name-of-your-bugfix-or-feature
+        git fetch
+        git pull origin main
+
+    See the previous step for more information on resolving conflicts.
+
+#. When pushing your changes to your branch on GitHub, the documentation will automatically be tested to reflect the changes in your Pull Request. This build process can take several minutes at times. If you are actively making changes that affect the documentation and wish to save time, you can compile and test your changes beforehand locally with:
+
+    .. code-block:: console
+
+        # To generate the html and open it in your browser
+        make docs
+        # To only generate the html
+        make autodoc
+        make -C docs html
+        # To simply test that the docs pass build checks
+        python -m tox -e docs
 
    .. note::
 
@@ -146,13 +197,13 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
 
        In order to speed up documentation builds, setting a value for the environment variable "SKIP_NOTEBOOKS" (e.g. "$ export SKIP_NOTEBOOKS=1") will prevent the notebooks from being evaluated on all subsequent "$ tox -e docs" or "$ make docs" invocations.
 
-#. Once your Pull Request has been accepted and merged to the ``main`` branch, several automated workflows will be triggered:
+#. Once your Pull Request has been accepted and merged to the `main` branch, several automated workflows will be triggered:
 
-   - The ``bump-version.yml`` workflow will automatically bump the patch version when pull requests are pushed to the ``main`` branch on GitHub. **It is not recommended to manually bump the version in your branch when merging (non-release) pull requests (this will cause the version to be bumped twice).**
+   - The ``bump-version.yml`` workflow will automatically bump the patch version when pull requests are pushed to the `main` branch on GitHub. **It is not recommended to manually bump the version in your branch when merging (non-release) pull requests (this will cause the version to be bumped twice).**
    - `ReadTheDocs` will automatically build the documentation and publish it to the `latest` branch of `xscen` documentation website.
    - If your branch is not a fork (ie: you are a maintainer), your branch will be automatically deleted.
 
-You will have contributed your first changes to ``xscen``!
+You will have contributed to ``xscen``!
 
 .. _translating-xscen:
 
@@ -187,7 +238,7 @@ Once the code is implemented and translatable strings are marked as such, we nee
 
     $ make findfrench
 
-Then go edit ``xscen/xscen/data/fr/LC_MESSAGES/xscen.po`` with the correct French translations. Finally, running::
+Then go edit ``xscen/xscen/data/fr/LC_MESSAGES/xscen.po`` with the correct French translations. Finally, run::
 
     $ make translate
 
@@ -200,28 +251,43 @@ Before you submit a pull request, check that it meets these guidelines:
 
 #. The pull request should include tests and should aim to provide `code coverage <https://en.wikipedia.org/wiki/Code_coverage>`_ for all new lines of code. You can use the ``--cov-report html --cov xscen`` flags during the call to ``pytest`` to generate an HTML report and analyse the current test coverage.
 
-#. If the pull request adds functionality, the docs should also be updated. Put your new functionality into a function with a docstring, and add the feature to the list in ``README.rst``.
+#. All functions should be documented with `docstrings` following the `numpydoc <https://numpydoc.readthedocs.io/en/latest/format.html>`_ format.
+
+#. If the pull request adds functionality, either update the documentation or create a new notebook that demonstrates the feature. Library-defining features should also be listed in ``README.rst``.
 
 #. The pull request should not break the templates.
 
-#. The pull request should work for Python 3.9, 3.10, 3.11, and 3.12. Check that the tests pass for all supported Python versions.
+#. The pull request should work for all currently supported Python versions. Check the `pyproject.toml` or `tox.ini` files for the list of supported versions. We aim to follow the support and drop schedule of Python versions as recommended by the NumPy NEP calendar: https://numpy.org/neps/nep-0029-deprecation_policy.html
 
 Tips
 ----
 
-To run a subset of tests::
+To run a subset of tests:
 
-$ pytest tests.test_xscen
+.. code-block:: console
 
-To run specific code style checks::
+    python -m pytest tests/test_xscen.py
 
-    $ black --check xscen tests
-    $ isort --check xscen tests
-    $ blackdoc --check xscen docs
-    $ ruff xscen tests
-    $ flake8 xscen tests
+You can also directly call a specific test class or test function using:
 
-To get ``black``, ``isort``, ``blackdoc``, ``ruff``, and ``flake8`` (with plugins ``flake8-alphabetize`` and ``flake8-rst-docstrings``) simply install them with `pip` (or `conda`) into your environment.
+.. code-block:: console
+
+    python -m pytest tests/test_xscen.py::TestClassName::test_function_name
+
+For more information on running tests, see the `pytest documentation <https://docs.pytest.org/en/latest/usage.html>`_.
+
+To run specific code style checks:
+
+.. code-block:: console
+
+    python -m black --check src/xscen tests
+    python -m isort --check src/xscen tests
+    python -m blackdoc --check src/xscen docs
+    python -m ruff check src/xscen tests
+    python -m flake8 src/xscen tests
+    validate-docstrings src/xscen/**.py
+
+To get ``black``, ``isort``, ``blackdoc``, ``ruff``, ``flake8`` (with the ``flake8-rst-docstrings`` plugin), and ``numpydoc`` (for ``validate-docstrings``), simply install them with ``pip`` (or ``conda``) into your environment.
 
 Versioning/Tagging
 ------------------
@@ -275,5 +341,8 @@ From the command line on your Linux distribution, simply run the following from 
     # To upload to PyPI
     $ twine upload dist/*
 
+Code of Conduct
+---------------
 
-.. _`ESMF`: http://earthsystemmodeling.org/download/
+Please note that this project is released with a `Contributor Code of Conduct <https://github.com/Ouranosinc/xscen/blob/main/CODE_OF_CONDUCT.md>`_.
+By participating in this project you agree to abide by its terms.

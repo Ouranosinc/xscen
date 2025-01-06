@@ -1,0 +1,270 @@
+# This file defines the structure of the data on Ouranos' servers
+#
+# The path-builder function parses this tree from top to bottom, always using the first match.
+# Names of the top elements are only there for reference purposes. They make cleaner error message, but are not significant otherwise.
+# Each top element may define the following fields:
+#
+#     with: # Section that decides if we use this element for the given file.
+#       - facet: < facet >         # A facet and its values to match
+#         value: <value or values>  # this can be repeated
+#         # This schema will then be used if the facet <facet> is one of the values listed in <values>.
+#         # The absence of "value" means it is used if the facet <facet> is not empty.
+#     folders: # The path structure, each element is mapped to a folder level
+#       # There are four ways to specify a folder name to use:
+#       - < facet >           # The value of the facet.
+#       - (< facet >)         # Same, but if the facet is missing, this level is skipped, resulting in a tree of a different depth.
+#       - [< facet >, < facet >, ...]:  # The folder name consists in more than one facet, concatenated with a "_" by default. They can't be optional.
+#       - text: < value >     # A fixed string
+#     filename: # The file name schema, a list of facet names. If a facet is empty, it will be skipped. Elements will be separated by "_".
+#               # The special "DATES" facet will be replaced by the most concise way found to define the temporal range covered by the file.
+#               # DATES should only appear at the end.
+---
+### Original / raw data
+#
+# These schemas are meant for primary data, usually hourly or daily, used as input for scenario projects.
+# It usually includes datasets with processing_level "raw" or "biasadjusted
+original-non-sims:
+  with:
+    - facet: type
+      value: [ station-obs, reconstruction, forecast ]
+    - facet: processing_level
+      value: raw
+  folders:
+    - type
+    - domain
+    - institution
+    - [ source, version ]
+    - (member)
+    - frequency
+    - variable
+  filename: [ variable, frequency, domain, institution, source, version, member, DATES ]
+original-sims-raw:
+  with:
+    - facet: type
+      value: simulation
+    - facet: processing_level
+      value: [ raw ]
+  folders:
+    - type
+    - processing_level
+    - mip_era
+    - activity
+    - domain
+    - institution
+    - source
+    - (driving_model)
+    - experiment
+    - member
+    - frequency
+    - variable
+  filename: [ variable, frequency, bias_adjust_project, version, mip_era, activity, domain, institution, source, driving_model, experiment, member, DATES ]
+original-sims-ba:
+  with:
+    - facet: type
+      value: simulation
+    - facet: processing_level
+      value: [ biasadjusted ]
+  folders:
+    - type
+    - processing_level
+    - [ bias_adjust_project, version ]
+    - mip_era
+    - activity
+    - domain
+    - institution
+    - source
+    - (driving_model)
+    - experiment
+    - member
+    - frequency
+    - variable
+  filename: [ variable, frequency, bias_adjust_project, version, mip_era, activity, domain, institution, source, driving_model, experiment, member, DATES ]
+original-hydro-reconstruction:
+  with:
+    - facet: type
+      value: reconstruction-hydro
+    - facet: processing_level
+      value: raw
+  folders:
+    - type
+    - domain
+    - hydrology_project
+    - hydrology_source
+    - (hydrology_member)
+    - institution
+    - [ source, version ]
+    - (member)
+    - frequency
+    - variable
+  filename: [ variable, frequency, domain, hydrology_project, hydrology_source, hydrology_member, institution, source, version, member, DATES ]
+original-hydro-sims-raw:
+  with:
+    - facet: type
+      value: simulation-hydro
+    - facet: processing_level
+      value: [ raw ]
+  folders:
+    - type
+    - hydrology_project
+    - hydrology_source
+    - (hydrology_member)
+    - processing_level
+    - mip_era
+    - activity
+    - domain
+    - institution
+    - source
+    - (driving_model)
+    - experiment
+    - member
+    - frequency
+    - variable
+  filename: [ variable, frequency, hydrology_project, hydrology_source, hydrology_member, bias_adjust_project, version, mip_era, activity, domain, institution, source, driving_model, experiment, member, DATES ]
+original-hydro-sims-ba:
+  with:
+    - facet: type
+      value: simulation-hydro
+    - facet: processing_level
+      value: [ biasadjusted ]
+  folders:
+    - type
+    - hydrology_project
+    - hydrology_source
+    - (hydrology_member)
+    - processing_level
+    - [ bias_adjust_project, version ]
+    - mip_era
+    - activity
+    - domain
+    - institution
+    - source
+    - (driving_model)
+    - experiment
+    - member
+    - frequency
+    - variable
+  filename: [ variable, frequency, hydrology_project, hydrology_source, hydrology_member, bias_adjust_project, version, mip_era, activity, domain, institution, source, driving_model, experiment, member, DATES ]
+
+### Derived data
+#
+# These schemas are meant for the output of scenario projects.
+# The main differences here are that:
+#
+#     - domain denotes the zone over which the scenario was computed, not the original source's coverage
+#     - processing_level has more possible values, denoting slight variant of the data instead of broad categories.
+#     As such, both fields are here much lower in the hierarchy.
+derived-sims-ba:
+  with:
+  - facet: type
+    value: simulation
+  - facet: bias_adjust_project
+  folders:
+    - type
+    - [ bias_adjust_project, version ]
+    - mip_era
+    - activity
+    - institution
+    - source
+    - (driving_model)
+    - experiment
+    - member
+    - domain
+    - processing_level
+    - xrfreq
+    - variable
+  filename: [ variable, xrfreq, bias_adjust_project, version, mip_era, activity, institution, source, driving_model, experiment, member, domain, processing_level, DATES ]
+derived-sims-raw:
+  with:
+  - facet: type
+    value: simulation
+  folders:
+    - type
+    - text: raw
+    - mip_era
+    - activity
+    - institution
+    - source
+    - (driving_model)
+    - experiment
+    - member
+    - domain
+    - processing_level
+    - xrfreq
+    - variable
+  filename: [ variable, xrfreq, bias_adjust_project, version, mip_era, activity, institution, source, driving_model, experiment, member, domain, processing_level, DATES ]
+derived-reconstruction:
+  with:
+    - facet: type
+      value: reconstruction
+  folders:
+    - type
+    - institution
+    - [ source, version ]
+    - (member)
+    - domain
+    - processing_level
+    - xrfreq
+    - variable
+  filename: [ variable, xrfreq, institution, source, version, member, domain, processing_level, DATES ]
+derived-hydro-sims-ba:
+  with:
+  - facet: type
+    value: simulation-hydro
+  - facet: bias_adjust_project
+  folders:
+    - type
+    - hydrology_project
+    - hydrology_source
+    - (hydrology_member)
+    - [ bias_adjust_project, version ]
+    - mip_era
+    - activity
+    - institution
+    - source
+    - (driving_model)
+    - experiment
+    - member
+    - domain
+    - processing_level
+    - xrfreq
+    - variable
+  filename: [ variable, xrfreq, hydrology_project, hydrology_source, hydrology_member, bias_adjust_project, version, mip_era, activity, institution, source, driving_model, experiment, member, domain, processing_level, DATES ]
+derived-hydro-sims-raw:
+  with:
+  - facet: type
+    value: simulation-hydro
+  folders:
+    - type
+    - hydrology_project
+    - hydrology_source
+    - (hydrology_member)
+    - text: raw
+    - mip_era
+    - activity
+    - institution
+    - source
+    - (driving_model)
+    - experiment
+    - member
+    - domain
+    - processing_level
+    - xrfreq
+    - variable
+  filename: [ variable, xrfreq, hydrology_project, hydrology_source, hydrology_member, bias_adjust_project, version, mip_era, activity, institution, source, driving_model, experiment, member, domain, processing_level, DATES ]
+derived-hydro-reconstruction:
+  with:
+    - facet: type
+      value: reconstruction-hydro
+  folders:
+    - type
+    - hydrology_project
+    - hydrology_source
+    - (hydrology_member)
+    - institution
+    - [ source, version ]
+    - (member)
+    - domain
+    - processing_level
+    - xrfreq
+    - variable
+  filename: [ variable, xrfreq, hydrology_project, hydrology_source, hydrology_member, institution, source, version, member, domain, processing_level, DATES ]
