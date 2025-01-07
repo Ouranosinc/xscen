@@ -1071,21 +1071,18 @@ class TestEnsemblePartition:
     @pytest.mark.skipif(xe is None, reason="xesmf needed for testing regrdding")
     def test_build_partition_data(self, samplecat, tmp_path):
         # test subset
-        datasets = samplecat.search(variable="tas").to_dataset_dict(
+        datasets = samplecat.search(variable="tas", member="r1i1p1f1").to_dataset_dict(
             xarray_open_kwargs={"engine": "h5netcdf"}
         )
         ds = xs.ensembles.build_partition_data(
             datasets=datasets,
             partition_dim=["source", "experiment"],
             subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
-            indicators_kw=dict(indicators=[xc.atmos.tg_mean]),
             rename_dict={"source": "new-name"},
         )
 
-        assert ds.dims == {"time": 2, "scenario": 4, "new-name": 2}
-        assert ds.lat.values == 45.0
-        assert ds.lon.values == -74
-        assert [i for i in ds.data_vars] == ["tg_mean"]
+        assert ds.dims == {"time": 730, "scenario": 4, "new-name": 1}
+        assert ds.attrs["cat:processing_level"] == "partition-ensemble"
 
         # test regrid
         ds_grid = xe.util.cf_grid_2d(-75, -74, 0.25, 45, 48, 0.55)
@@ -1095,6 +1092,7 @@ class TestEnsemblePartition:
         ds = xs.ensembles.build_partition_data(
             datasets=datasets,
             regrid_kw=dict(ds_grid=ds_grid, weights_location=tmp_path),
+            to_level="test",
         )
 
         assert ds.dims == {
@@ -1105,16 +1103,43 @@ class TestEnsemblePartition:
             "lon": 4,
         }
         assert [i for i in ds.data_vars] == ["tas"]
+        assert ds.attrs["cat:processing_level"] == "test"
 
-        # test error
-        with pytest.raises(
-            ValueError,
-        ):
-            ds = xs.ensembles.build_partition_data(
-                datasets=datasets,
-                subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
-                indicators_kw=dict(indicators=[xc.atmos.tg_mean, xc.indicators.cf.tg]),
-            )
+    def test_partition_from_catalog(self, samplecat):
+        datasets = samplecat.search(variable="tas", member="r1i1p1f1")
+        ds_from_dict = xs.ensembles.build_partition_data(
+            datasets=datasets.to_dataset_dict(
+                xarray_open_kwargs={"engine": "h5netcdf"}
+            ),
+            partition_dim=["source", "experiment"],
+            subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
+        )
+
+        ds_from_cat = xs.ensembles.build_partition_data(
+            datasets=datasets,
+            partition_dim=["source", "experiment"],
+            subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
+            to_dataset_kw=dict(xarray_open_kwargs={"engine": "h5netcdf"}),
+        )
+        # fix order
+        ds_from_cat = ds_from_cat[["time", "model", "scenario", "tas"]]
+        ds_from_cat["tas"] = ds_from_cat["tas"].transpose("scenario", "model", "time")
+
+        assert ds_from_dict.equals(ds_from_cat)
+
+    def test_realization_partition(self, samplecat):
+
+        datasets = samplecat.search(variable="tas").to_dataset_dict(
+            xarray_open_kwargs={"engine": "h5netcdf"}
+        )
+        ds = xs.ensembles.build_partition_data(
+            datasets=datasets,
+            partition_dim=["realization", "experiment"],
+            subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
+        )
+
+        assert "NCC_NorESM2-MM_r1i1p1f1" in ds.model.values
+        assert ds.dims == {"time": 730, "scenario": 4, "model": 2}
 
 
 class TestReduceEnsemble:

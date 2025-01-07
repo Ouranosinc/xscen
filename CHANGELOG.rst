@@ -4,11 +4,12 @@ Changelog
 
 v0.11.0 (unreleased)
 --------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * ``xs.io.make_toc`` now includes the global attributes of the dataset after the information about the variables. (:pull:`473`).
+* Improve ``xs.ensemles.build_partition_data``. (:pull:``).
 
 Bug fixes
 ^^^^^^^^^

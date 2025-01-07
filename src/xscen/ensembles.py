@@ -767,6 +767,9 @@ def _partition_from_catalog(
 
         if subset_kw:
             ds = subset(ds, **subset_kw)
+            ds = ds.drop_vars(
+                ["lat", "lon", "rlat", "rlon", "rotated_pole"], errors="ignore"
+            )
         if regrid_kw:
             ds = regrid_dataset(ds, **regrid_kw)
 
@@ -806,14 +809,12 @@ def build_partition_data(
     `partition_dim` dimensions (and time) to pass to one of the xclim partition functions
     (https://xclim.readthedocs.io/en/stable/api.html#uncertainty-partitioning).
     If the inputs have different grids,
-    they have to be subsetted and regridded to a common grid/point.
-    Indicators can also be computed and calendar converted before combining the datasets.
-
+    they have to be subsetted and/or regridded to a common grid/point.
 
     Parameters
     ----------
-    datasets : dict
-        List, dictionnary or DataCatalog of Datasets that will be included in the ensemble.
+    datasets : list, dict, DataCatalog
+        List or dictionnary of Datasets or DataCatalog that will be included in the ensemble.
         The datasets should include the necessary ("cat:") attributes to understand their metadata.
         Tip: A dictionnary can be created with `datasets = pcat.search(**search_dict).to_dataset_dict()`.
 
@@ -829,9 +830,13 @@ def build_partition_data(
         Arguments to pass to `xs.spatial.subset()`.
     regrid_kw : dict, optional
         Arguments to pass to `xs.regrid_dataset()`.
+        Note thet regriding is computationnaly expensive. For large datasets,
+        it might be worth it to do do regridding first, outside of this function.
     rename_dict : dict, optional
         Dictionary to rename the dimensions from xscen names to xclim names.
         The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
+    to_dataset_kw : dict, optional
+        Arguments to pass to `xscen.DataCatalog.to_dataset()` if datasets is a DataCatalog.
     to_level: str
         The processing level of the output dataset. Default is 'partition-ensemble'.
 
@@ -844,7 +849,6 @@ def build_partition_data(
     --------
     xclim.ensembles
     """
-    # TODO: add warning if both realization and source in partition_dim
     if isinstance(datasets, dict):
         datasets = list(datasets.values())
     # initialize dict
