@@ -9,7 +9,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliet
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * ``xs.io.make_toc`` now includes the global attributes of the dataset after the information about the variables. (:pull:`473`).
-* Improve ``xs.ensemles.build_partition_data``. (:pull:``).
+* Improve ``xs.ensemles.build_partition_data``. (:pull:`504`).
 
 Bug fixes
 ^^^^^^^^^

@@ -658,7 +658,6 @@ def generate_weights(  # noqa: C901
 
 def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
     list_ds = []
-    # calendars = []
     # only keep attrs common to all datasets
     common_attrs = False
     for ds in datasets:
