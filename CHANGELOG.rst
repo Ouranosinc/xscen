@@ -8,7 +8,7 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliet
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* Improve ``xs.ensemles.build_partition_data``. (:pull:``).
+* Improve ``xs.ensemles.build_partition_data``. (:pull:`504`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
