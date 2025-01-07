@@ -330,7 +330,7 @@ def properties_and_measures(  # noqa: C901
     ----------
     ds : xr.Dataset
         Input dataset.
-    properties : Union[str, os.PathLike, Sequence[Indicator], Sequence[tuple[str, Indicator]], ModuleType]
+    properties : str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType
         Path to a YAML file that instructs on how to calculate properties.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
         tuples (indicator name, indicator) as returned by `iter_indicators()`.
@@ -533,17 +533,21 @@ def measures_heatmap(
 
 
 def measures_improvement(
-    meas_datasets: list[xr.Dataset] | dict, to_level: str = "diag-improved"
+    meas_datasets: list[xr.Dataset] | dict,
+    dim: str | Sequence[str] | None = None,
+    to_level: str = "diag-improved",
 ) -> xr.Dataset:
     """
     Calculate the fraction of improved grid points for each property between two datasets of measures.
 
     Parameters
     ----------
-    meas_datasets: list of xr.Dataset or dict
+    meas_datasets: list[xr.Dataset] | dict
         List of 2 datasets: Initial dataset of measures and final (improved) dataset of measures.
         Both datasets must have the same variables.
         It is also possible to pass a dictionary where the values are the datasets and the key are not used.
+    dim : str or sequence of str, optional
+        Dimension(s) on which to compute the percentage of improved grid points. Default is `None`, which reduces all dimensions.
     to_level: str
         processing_level to assign to the output dataset
 
@@ -551,6 +555,10 @@ def measures_improvement(
     -------
     xr.Dataset
         Dataset containing information on the fraction of improved grid points for each property.
+
+    Notes
+    -----
+    If `dim` is specified, it should be present in every variable of  `meas_datasets`.
     """
     if isinstance(meas_datasets, dict):
         meas_datasets = list(meas_datasets.values())
@@ -562,24 +570,29 @@ def measures_improvement(
         )
     ds1 = meas_datasets[0]
     ds2 = meas_datasets[1]
+    if dim is not None:
+        dims = [dim] if isinstance(dim, str) else dim
+        for v in ds1.data_vars:
+            if set(dims).issubset(set(ds1[v].dims)) is False:
+                raise ValueError(
+                    f"Dimension provided `dim` ({dim}) must be in every variable of `meas_datasets`"
+                )
+
     percent_better = []
     for var in ds2.data_vars:
+        if dim is None:
+            # reduce all dimensions (which may be variable dependent)
+            dims = ds2[var].dims
         if "xclim.sdba.measures.RATIO" in ds1[var].attrs["history"]:
             diff_bias = abs(ds1[var] - 1) - abs(ds2[var] - 1)
         else:
             diff_bias = abs(ds1[var]) - abs(ds2[var])
-        diff_bias = diff_bias.values.ravel()
-        diff_bias = diff_bias[~np.isnan(diff_bias)]
+        total_improved = (diff_bias >= 0).sum(dim=dims)
+        total_notnull = diff_bias.notnull().sum(dim=dims)
+        percent_better_var = total_improved / total_notnull
+        percent_better.append(percent_better_var.expand_dims({"properties": [var]}))
 
-        total = ds2[var].values.ravel()
-        total = total[~np.isnan(total)]
-
-        improved = diff_bias >= 0
-        percent_better.append(np.sum(improved) / len(total))
-
-    ds_better = xr.DataArray(
-        percent_better, coords={"properties": list(ds2.data_vars)}, dims="properties"
-    )
+    ds_better = xr.concat(percent_better, dim="properties")
 
     ds_better = ds_better.to_dataset(name="improved_grid_points")
 

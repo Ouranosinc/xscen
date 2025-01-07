@@ -49,7 +49,9 @@ from .diagnostics import properties_and_measures
 from .ensembles import *
 from .extract import (
     extract_dataset,
+    get_period_from_warming_level,
     get_warming_level,
+    get_warming_level_from_period,
     search_data_catalogs,
     subset_warming_level,
 )
@@ -69,7 +71,7 @@ from .utils import clean_up
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.10.1-dev.1"
+__version__ = "0.10.2-dev.0"
 
 
 def warning_on_one_line(

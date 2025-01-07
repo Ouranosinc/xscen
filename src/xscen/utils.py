@@ -11,11 +11,9 @@ from collections import defaultdict
 from collections.abc import Sequence
 from copy import deepcopy
 from datetime import datetime
-from io import StringIO
 from itertools import chain
 from pathlib import Path
 from types import ModuleType
-from typing import TextIO
 
 import cftime
 import flox.xarray
@@ -28,7 +26,6 @@ from xclim.core.calendar import parse_offset
 from xclim.core.options import METADATA_LOCALES
 from xclim.core.options import OPTIONS as XC_OPTIONS
 from xclim.core.utils import uses_dask
-from xclim.testing.utils import show_versions as _show_versions
 
 from .config import parse_config
 
@@ -46,7 +43,6 @@ __all__ = [
     "maybe_unstack",
     "minimum_calendar",
     "natural_sort",
-    "publish_release_notes",
     "stack_drop_nans",
     "standardize_periods",
     "translate_time_chunk",
@@ -812,20 +808,26 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
                 ).dimensionality.get("[time]")
 
                 if time_in_ds == time_in_out:
-                    ds[v] = units.convert_units_to(ds[v], variables_and_units[v])
+                    ds = ds.assign(
+                        {v: units.convert_units_to(ds[v], variables_and_units[v])}
+                    )
                 elif time_in_ds - time_in_out == 1:
                     # ds is an amount
-                    ds[v] = units.amount2rate(ds[v], out_units=variables_and_units[v])
+                    ds = ds.assign(
+                        {v: units.amount2rate(ds[v], out_units=variables_and_units[v])}
+                    )
                 elif time_in_ds - time_in_out == -1:
                     # ds is a rate
-                    ds[v] = units.rate2amount(ds[v], out_units=variables_and_units[v])
+                    ds = ds.assign(
+                        {v: units.rate2amount(ds[v], out_units=variables_and_units[v])}
+                    )
                 else:
                     raise ValueError(
                         f"No known transformation between {ds[v].units} and {variables_and_units[v]} (temporal dimensionality mismatch)."
                     )
             elif (v in ds) and (ds[v].units != variables_and_units[v]):
                 # update unit name if physical units are equal but not their name (ex. degC vs °C)
-                ds[v] = ds[v].assign_attrs(units=variables_and_units[v])
+                ds = ds.assign({v: ds[v].assign_attrs(units=variables_and_units[v])})
 
     return ds
 
@@ -1083,88 +1085,6 @@ def clean_up(  # noqa: C901
     return ds
 
 
-def publish_release_notes(
-    style: str = "md",
-    file: os.PathLike | StringIO | TextIO | None = None,
-    changes: str | os.PathLike | None = None,
-) -> str | None:
-    """Format release history in Markdown or ReStructuredText.
-
-    Parameters
-    ----------
-    style : {"rst", "md"}
-        Use ReStructuredText (`rst`) or Markdown (`md`) formatting. Default: Markdown.
-    file : {os.PathLike, StringIO, TextIO, None}
-        If provided, prints to the given file-like object. Otherwise, returns a string.
-    changes : {str, os.PathLike}, optional
-        If provided, manually points to the file where the changelog can be found.
-        Assumes a relative path otherwise.
-
-    Returns
-    -------
-    str, optional
-
-    Notes
-    -----
-    This function exists solely for development purposes. Adapted from xclim.testing.utils.publish_release_notes.
-    """
-    if isinstance(changes, str | Path):
-        changes_file = Path(changes).absolute()
-    else:
-        changes_file = Path(__file__).absolute().parents[2].joinpath("CHANGELOG.rst")
-
-    if not changes_file.exists():
-        raise FileNotFoundError("Changes file not found in xscen file tree.")
-
-    with Path(changes_file).open(encoding="utf-8") as f:
-        changes = f.read()
-
-    if style == "rst":
-        hyperlink_replacements = {
-            r":issue:`([0-9]+)`": r"`GH/\1 <https://github.com/Ouranosinc/xscen/issues/\1>`_",
-            r":pull:`([0-9]+)`": r"`PR/\1 <https://github.com/Ouranosinc/xscen/pull/\>`_",
-            r":user:`([a-zA-Z0-9_.-]+)`": r"`@\1 <https://github.com/\1>`_",
-        }
-    elif style == "md":
-        hyperlink_replacements = {
-            r":issue:`([0-9]+)`": r"[GH/\1](https://github.com/Ouranosinc/xscen/issues/\1)",
-            r":pull:`([0-9]+)`": r"[PR/\1](https://github.com/Ouranosinc/xscen/pull/\1)",
-            r":user:`([a-zA-Z0-9_.-]+)`": r"[@\1](https://github.com/\1)",
-        }
-    else:
-        raise NotImplementedError()
-
-    for search, replacement in hyperlink_replacements.items():
-        changes = re.sub(search, replacement, changes)
-
-    if style == "md":
-        changes = changes.replace("=========\nChangelog\n=========", "# Changelog")
-
-        titles = {r"\n(.*?)\n([\-]{1,})": "-", r"\n(.*?)\n([\^]{1,})": "^"}
-        for title_expression, level in titles.items():
-            found = re.findall(title_expression, changes)
-            for grouping in found:
-                fixed_grouping = (
-                    str(grouping[0]).replace("(", r"\(").replace(")", r"\)")
-                )
-                search = rf"({fixed_grouping})\n([\{level}]{'{' + str(len(grouping[1])) + '}'})"
-                replacement = f"{'##' if level == '-' else '###'} {grouping[0]}"
-                changes = re.sub(search, replacement, changes)
-
-        link_expressions = r"[\`]{1}([\w\s]+)\s<(.+)>`\_"
-        found = re.findall(link_expressions, changes)
-        for grouping in found:
-            search = rf"`{grouping[0]} <.+>`\_"
-            replacement = f"[{str(grouping[0]).strip()}]({grouping[1]})"
-            changes = re.sub(search, replacement, changes)
-
-    if not file:
-        return changes
-    if isinstance(file, Path | os.PathLike):
-        file = Path(file).open("w")
-    print(changes, file=file)
-
-
 def unstack_dates(  # noqa: C901
     ds: xr.Dataset,
     seasons: dict[int, str] | None = None,
@@ -1338,99 +1258,6 @@ def unstack_dates(  # noqa: C901
     else:
         dso = reshape_da(dsp)
     return dso.assign_coords(**new_coords)
-
-
-def show_versions(
-    file: os.PathLike | StringIO | TextIO | None = None,
-    deps: list | None = None,
-) -> str | None:
-    """Print the versions of xscen and its dependencies.
-
-    Parameters
-    ----------
-    file : {os.PathLike, StringIO, TextIO}, optional
-        If provided, prints to the given file-like object. Otherwise, returns a string.
-    deps : list, optional
-        A list of dependencies to gather and print version information from. Otherwise, prints `xscen` dependencies.
-
-    Returns
-    -------
-    str or None
-    """
-    if deps is None:
-        deps = [
-            "xscen",
-            # Main packages
-            "cartopy",
-            "cftime",
-            "cf_xarray",
-            "clisops",
-            "dask",
-            "flox",
-            "fsspec",
-            "geopandas",
-            "h5netcdf",
-            "h5py",
-            "intake_esm",
-            "matplotlib",
-            "netCDF4",
-            "numcodecs",
-            "numpy",
-            "pandas",
-            "parse",
-            "pyyaml",
-            "rechunker",
-            "scipy",
-            "shapely",
-            "sparse",
-            "toolz",
-            "xarray",
-            "xclim",
-            "xesmf",
-            "zarr",
-            # Opt
-            "nc-time-axis",
-            "pyarrow",
-            # Dev
-            "babel",
-            "black",
-            "blackdoc",
-            "bump-my-version",
-            "coverage",
-            "coveralls",
-            "flake8",
-            "flake8-rst-docstrings",
-            "ipykernel",
-            "ipython",
-            "isort",
-            "jupyter_client",
-            "nbsphinx",
-            "nbval",
-            "pandoc",
-            "pooch",
-            "pre-commit",
-            "pytest",
-            "pytest-cov",
-            "ruff",
-            "setuptools",
-            "setuptools-scm",
-            "sphinx",
-            "sphinx-autoapi",
-            "sphinx-rtd-theme",
-            "sphinxcontrib-napoleon",
-            "sphinx-codeautolink",
-            "sphinx-copybutton",
-            "sphinx-mdinclude",
-            "watchdog",
-            "xdoctest",
-            "tox",
-            "build",
-            "wheel",
-            "pip",
-            "flake8-alphabetize",
-        ]
-
-    return _show_versions(file=file, deps=deps)
 
 
 def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
@@ -1610,3 +1437,29 @@ def rechunk_for_resample(obj: xr.DataArray | xr.Dataset, **resample_kwargs):
 
     res = obj.resample(**resample_kwargs)
     return flox.xarray.rechunk_for_blockwise(obj, res._dim, res._codes)
+
+
+def publish_release_notes(*args, **kwargs):
+    """Backward compatibility for the old function."""
+    warnings.warn(
+        "'xscen.utils.publish_release_notes' has been moved to 'xscen.testing.publish_release_notes'."
+        "Support for this function will be removed in xscen v0.12.0.",
+        FutureWarning,
+    )
+
+    from .testing import publish_release_notes as prn
+
+    return prn(*args, **kwargs)
+
+
+def show_versions(*args, **kwargs):
+    """Backward compatibility for the old function."""
+    warnings.warn(
+        "'xscen.utils.show_versions' has been moved to 'xscen.testing.show_versions'."
+        "Support for this function will be removed in xscen v0.12.0.",
+        FutureWarning,
+    )
+
+    from .testing import show_versions as sv
+
+    return sv(*args, **kwargs)

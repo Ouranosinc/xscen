@@ -8,12 +8,62 @@ Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliet
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Improve ``xs.ensemles.build_partition_data``. (:pull:``).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* ``xs.utils.publish_release_notes`` and ``xs.utils.show_versions`` have been moved to ``xs.testing``. (:pull:`492`).
+
+Bug fixes
+^^^^^^^^^
+* Added a missing library (``openpyxl``) to the requirements. (:pull:`492`).
+* Fixed a bug in ``xs.io.subset_maxsize`` where the function would drop the last year. (:pull:`492`).
+* Fixed a bug in ``xs.io.clean_incomplete`` where the `.zmetadata` file was not removed. (:pull:`492`).
+* Fixed a bug in the saving of datasets where encoding was sometimes not applied, resulting for example in rechunking not being respected. (:pull:`492`).
+* Fixed multiple bugs in ``xs.io.save_to_zarr`` with `mode='a'`. (:pull:`492`).
+* Fixed a few minor bugs in ``xs.io.save_to_table``. (:pull:`492`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Added a new parameter `latest` to ``xs.testing.publish_release_notes`` to only print the latest release notes. (:pull:`492`).
+* The estimation method in ``xs.io.estimate_chunks`` has been improved. (:pull:`492`).
+* A new parameter `incomplete` has been added to ``xs.io.clean_incomplete`` to remove incomplete variables. (:pull:`492`).
+* Continued work on adding tests. (:pull:`492`).
+
+
+v0.10.1 (2024-11-04)
+--------------------
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Éric Dupuis (:user:`coxipi`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * ``xs.io.make_toc`` now includes the global attributes of the dataset after the information about the variables. (:pull:`473`).
-* Improve ``xs.ensemles.build_partition_data``. (:pull:`504`).
+* New function ``xs.get_warming_level_from_period`` to get the warming level associated with a given time horizon. (:pull:`474`).
+* Added ability to skip whole folders to ``xs.parse_directory`` with argument ``skip_dirs``. (:pull:`478`, :pull:`479`).
+* `diagnostics.measures_improvement` now accepts `dim`, which specifies `dimension(s)` on which the proportion of improved pixels are computed. (:pull:`416`)
+* The argument `indicators` in ``xs.produce_horizon`` is now optional. Added an argument `op` to control the climatological operation. (:pull:`483`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* ``xs.get_warming_level`` has been renamed to ``xs.get_period_from_warming_level``. Its argument `return_horizon` was reversed and renamed `return_central_year` (:pull:`474`).
+* Removed support for the deprecated `xclim` function `change_significance` in `ensemble_stats`. (:pull:`482`).
+* The argument `indicators` in ``xs.produce_horizon`` is no longer positional. (:pull:`483`).
 
 Bug fixes
 ^^^^^^^^^
 * ``xs.io.save_to_table`` now correctly handles the case where the input is a `DataArray` or a `Dataset` with a single variable. (:pull:`473`).
+* Fixed a bug in ``xs.utils.change_units`` where the original dataset was also getting modified. (:pull:`482`).
+* Fixed a bug in ``xs.compute_indicators`` where the `cat:variable` attribute was not correctly set. (:pull:`483`).
+* Fixed a bug in ``xs.climatological_op`` where kwargs were not passed to the operation function. (:pull:`486`).
+* Fixed a bug in ``xs.climatological_op`` where `min_periods` was not passed when the operation was `linregress`. (:pull:`486`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Include CF convention for temperature differences and on scale (:pull:`428`, :issue:`428`).
+* Bumped the version of `xclim` to 0.53.2. (:pull:`482`).
+* More tests added. (:pull:`486`).
+* Fixed a bug in ``xs.testing.datablock_3d`` where some attributes of the rotated pole got reversed half-way through the creation of the dataset. (:pull:`486`).
+* The function ``xs.regrid._get_grid_mapping`` was moved to ``xs.spatial.get_grid_mapping`` and is now a public function. (:pull:`486`).
 
 v0.10.0 (2024-09-30)
 --------------------

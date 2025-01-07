@@ -124,6 +124,7 @@ def _find_assets(
     exts: set[str],
     lengths: set[int],
     dirglob: str | None = None,
+    skip_dirs: list[os.PathLike] | None = None,
 ):
     """Walk recursively over files in a directory, filtering according to a glob pattern, path depth and extensions.
 
@@ -138,14 +139,21 @@ def _find_assets(
     dirglob : str, optional
         A glob pattern. If given, only parent folders matching this pattern are walked through.
         This pattern can not include the asset's basename.
+    skip_dirs : list of Paths, optional
+        A list of directories to skip on the walk.
     """
+    skip_dirs = skip_dirs or []
     root = str(Path(root))  # to be sure
     for top, alldirs, files in os.walk(root):
         # Split zarr subdirectories from next iteration
         zarrs = []
         for dr in deepcopy(alldirs):
+            fdr = Path(top).joinpath(dr)
             if dr.endswith(".zarr"):
                 zarrs.append(dr)
+                alldirs.remove(dr)
+            if fdr in skip_dirs:
+                logger.debug("Skipping %s", fdr)
                 alldirs.remove(dr)
 
         if (
@@ -270,6 +278,7 @@ def _parse_dir(  # noqa: C901
     root: os.PathLike | str,
     patterns: list[str],
     dirglob: str | None = None,
+    skip_dirs: list[os.PathLike] | None = None,
     checks: list[str] | None = None,
     read_from_file: list[str] | dict | None = None,
     attrs_map: dict | None = None,
@@ -289,6 +298,8 @@ def _parse_dir(  # noqa: C901
     dirglob : str
         A glob pattern. If given, only parent folders matching this pattern are walked through.
         This pattern can not include the asset's basename.
+    skip_dirs : list of strings or Paths, optional
+        A list of directories to skip in the walk.
     checks: list of strings, optional
         A list of checks to perform, available values are:
         - "readable" : Check that the file is readable by the current user.
@@ -314,6 +325,12 @@ def _parse_dir(  # noqa: C901
     exts = {Path(patt).suffix for patt in patterns}
     comp_patterns = list(map(_compile_pattern, patterns))
     checks = checks or []
+    parsed = []
+
+    root = Path(root)
+    if any([(skd in root.parents) or (skd == root) for skd in (skip_dirs or [])]):
+        logger.debug("Skipping %s", root)
+        return parsed
 
     # Multithread, communicating via FIFO queues.
     # This thread walks the directory
@@ -325,7 +342,6 @@ def _parse_dir(  # noqa: C901
     # Usually, the walking is the bottleneck.
     q_found = queue.Queue()
     q_checked = queue.Queue()
-    parsed = []
 
     def check_worker():
         # Worker that processes the checks.
@@ -389,7 +405,7 @@ def _parse_dir(  # noqa: C901
 
     # Skip the checks if none are requested (save some overhead)
     q = q_found if checks else q_checked
-    for path in _find_assets(Path(root), exts, lengths, dirglob):
+    for path in _find_assets(Path(root), exts, lengths, dirglob, skip_dirs):
         q.put(path)
 
     q_found.join()
@@ -465,6 +481,7 @@ def parse_directory(  # noqa: C901
     homogenous_info: dict | None = None,
     cvs: str | os.PathLike | dict | None = None,
     dirglob: str | None = None,
+    skip_dirs: list[str | os.PathLike] | None = None,
     xr_open_kwargs: Mapping[str, Any] | None = None,
     only_official_columns: bool = True,
     progress: bool = False,
@@ -506,6 +523,8 @@ def parse_directory(  # noqa: C901
     dirglob : str, optional
         A glob pattern for path matching to accelerate the parsing of a directory tree if only a subtree is needed.
         Only folders matching the pattern are parsed to find datasets.
+    skip_dirs : list of str or Paths, optional
+        A list of folders that will be removed from the search, should be absolute.
     xr_open_kwargs: dict
         If needed, arguments to send xr.open_dataset() when opening the file to read the attributes.
     only_official_columns: bool
@@ -597,6 +616,7 @@ def parse_directory(  # noqa: C901
     parse_kwargs = dict(
         patterns=patterns,
         dirglob=dirglob,
+        skip_dirs=[Path(d) for d in (skip_dirs or [])],
         read_from_file=read_from_file if not read_file_groups else None,
         attrs_map=attrs_map,
         xr_open_kwargs=xr_open_kwargs,
