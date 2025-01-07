@@ -66,7 +66,7 @@ dependencies = [
   "sparse",
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0, <2024.10.0", # FIXME: 2024.10.0 breaks rechunker with zarr
-  "xclim >=0.53.2, <0.54",
+  "xclim >=0.54, <0.55",
   "zarr >=2.13"
 ]
 
