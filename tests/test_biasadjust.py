@@ -53,14 +53,14 @@ class TestTrain:
             dhist360,
             var="tas",
             period=["2001", "2002"],
-            adapt_freq={"thresh": "2 K"},
+            # adapt_freq={"thresh": "2 K"}, #FIXME: put back the test when xclim 0.55 is released, https://github.com/Ouranosinc/xclim/pull/2038/files
             jitter_over={"upper_bnd": "3 K", "thresh": "2 K"},
             jitter_under={"thresh": "2 K"},
         )
 
         assert out.attrs["train_params"] == {
             "maximal_calendar": "noleap",
-            "adapt_freq": {"thresh": "2 K"},
+            # "adapt_freq": {"thresh": "2 K"},  #FIXME: put back the test when xclim 0.55 is released, https://github.com/Ouranosinc/xclim/pull/2038/files
             "jitter_over": {"upper_bnd": "3 K", "thresh": "2 K"},
             "jitter_under": {"thresh": "2 K"},
             "var": ["tas"],
