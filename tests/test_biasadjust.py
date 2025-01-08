@@ -47,11 +47,10 @@ class TestTrain:
 
     def test_preprocess(self):
 
-        dref360 = self.dref.convert_calendar("360_day", align_on="year")
-
+        dhist360 = self.dhist.convert_calendar("360_day", align_on="year")
         out = xs.train(
-            dref360,
-            self.dhist,
+            self.dref,
+            dhist360,
             var="tas",
             period=["2001", "2002"],
             adapt_freq={"thresh": "2 K"},
