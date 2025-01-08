@@ -46,21 +46,23 @@ class TestTrain:
         np.testing.assert_array_equal(out["scaling"], result)
 
     def test_preprocess(self):
+        # FIXME: put back the test when xclim 0.55 is released, https://github.com/Ouranosinc/xclim/pull/2038/files
+        # dhist360 = self.dhist.convert_calendar("360_day", align_on="year")
+        dhist360 = self.dhist.convert_calendar("noleap", align_on="year")
 
-        dhist360 = self.dhist.convert_calendar("360_day", align_on="year")
         out = xs.train(
             self.dref,
             dhist360,
             var="tas",
             period=["2001", "2002"],
-            # adapt_freq={"thresh": "2 K"}, #FIXME: put back the test when xclim 0.55 is released, https://github.com/Ouranosinc/xclim/pull/2038/files
+            adapt_freq={"thresh": "2 K"},
             jitter_over={"upper_bnd": "3 K", "thresh": "2 K"},
             jitter_under={"thresh": "2 K"},
         )
 
         assert out.attrs["train_params"] == {
             "maximal_calendar": "noleap",
-            # "adapt_freq": {"thresh": "2 K"},  #FIXME: put back the test when xclim 0.55 is released, https://github.com/Ouranosinc/xclim/pull/2038/files
+            "adapt_freq": {"thresh": "2 K"},
             "jitter_over": {"upper_bnd": "3 K", "thresh": "2 K"},
             "jitter_under": {"thresh": "2 K"},
             "var": ["tas"],
