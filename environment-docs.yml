@@ -1,23 +1,24 @@
 name: xsdba
 channels:
-  - conda-forge
-  - defaults
+- conda-forge
+- defaults
 dependencies:
-  - python >=3.12,<3.13
-  # Docs
-  - furo >=2023.9.10
-  - ipykernel
-  - ipython >=8.5.0
-  - jupyter_client
-  - nbsphinx >=0.9.5
-  - nc-time-axis >=1.4.1
-  - pandoc
-  - pooch >=1.8.0
-  - sphinx >=7.0.0
-  - sphinx-autobuild >=2024.4.16
-  - sphinx-autodoc-typehints
-  - sphinx-codeautolink
-  - sphinx-copybutton
-  - sphinx-intl
-  - sphinx-mdinclude
-  - sphinxcontrib-bibtex
+- python >=3.12,<3.13
+# Docs
+- furo >=2023.9.10
+- ipykernel
+- ipython >=8.5.0
+- jupyter_client
+- nbsphinx >=0.9.5
+- nc-time-axis >=1.4.1
+- pandoc
+- pooch >=1.8.0
+- pygments<2.19
+- sphinx >=7.0.0
+- sphinx-autobuild >=2024.4.16
+- sphinx-autodoc-typehints
+- sphinx-codeautolink
+- sphinx-copybutton
+- sphinx-intl
+- sphinx-mdinclude
+- sphinxcontrib-bibtex

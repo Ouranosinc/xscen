@@ -87,6 +87,7 @@ docs = [
   "nbsphinx >=0.9.5",
   "nc-time-axis >=1.4.1",
   "pooch >=1.8.0",
+  "pygments<2.19",
   "sphinx >=7.0.0",
   "sphinx-autobuild >=2024.4.16",
   "sphinx-autodoc-typehints",
