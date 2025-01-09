@@ -44,8 +44,8 @@ The official documentation is at https://xsdba.readthedocs.io/
 
 How to make the most of `xsdba`: `Basic Usage Examples`_ and `In-Depth Examples`_.
 
-.. _Basic Usage Examples: https://xsdba.readthedocs.io/en/stable/notebooks/.html
-.. _In-Depth Examples: https://xsdba.readthedocs.io/en/stable/notebooks/index.html
+.. _Basic Usage Examples: https://xsdba.readthedocs.io/en/latest/notebooks/example.html
+.. _In-Depth Examples: https://xsdba.readthedocs.io/en/latest/notebooks/advanced_example.html
 
 
 Credits
