@@ -5,6 +5,21 @@ Changelog
 `Unreleased <https://github.com/Ouranosinc/xsdba>`_ (latest)
 ------------------------------------------------------------
 
+Contributors:
+
+Changes
+^^^^^^^
+* No change.
+
+Fixes
+^^^^^
+* No change.
+
+.. _changes_0.2.0:
+
+`v0.2.0 <https://github.com/Ouranosinc/xsdba/tree/0.2.0>`_
+----------------------------------------------------------
+
 Contributors: Éric Dupuis (:user:`coxipi`), Trevor James Smith (:user:`Zeitsperre`).
 
 Changes
