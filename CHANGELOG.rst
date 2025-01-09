@@ -18,7 +18,7 @@ Fixes
 .. _changes_0.2.0:
 
 `v0.2.0 <https://github.com/Ouranosinc/xsdba/tree/0.2.0>`_ (2025-01-09)
-----------------------------------------------------------
+-----------------------------------------------------------------------
 
 Contributors: Éric Dupuis (:user:`coxipi`), Trevor James Smith (:user:`Zeitsperre`).
 
