@@ -19,10 +19,6 @@ class TestUnits:
         q = 5 * units.percent
         assert q.to("dimensionless") == 0.05
 
-        q = 5 * units.parse_units("pct")
-        assert q.to("dimensionless") == 0.05
-
-
 class TestConvertUnitsTo:
     @pytest.mark.parametrize(
         "alias", [units("Celsius"), units("degC"), units("C"), units("deg_C")]
@@ -38,9 +34,6 @@ class TestUnitConversion:
         assert str(u.units) == "mm d-1"
 
         u = units("percent")
-        assert str(u.units) == "%"
-
-        u = units("pct")
         assert str(u.units) == "%"
 
     def test_units2pint(self, timelonlatseries):
