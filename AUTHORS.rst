@@ -14,7 +14,7 @@ Co-Developers
 * Trevor James Smith <smith.trevorj@ouranos.ca> `@Zeitsperre <https://github.com/Zeitsperre>`_
 
 Contributors [*]_
-------------
+-----------------
 
 * Juliette Lavoie <lavoie.juliette@ouranos.ca> `@juliettelavoie <https://github.com/juliettelavoie>`_
 * Adrien Lamarche `@LamAdr <https://github.com/LamAdr>`_
