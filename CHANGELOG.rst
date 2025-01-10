@@ -10,7 +10,7 @@ Contributors: Pascal Bourgault (:user:`aulemahal`).
 Changes
 ^^^^^^^
 * Remove the units registry declaration and instead use whatever is set as pint's application registry.
-  Code still assumes it is a registry based upon the one in cf-xarray (which exports the `cf` formatter). (:pull:`57`).
+  Code still assumes it is a registry based upon the one in cf-xarray (which exports the `cf` formatter). (:issue:`44`, :pull:`57`).
 
 Fixes
 ^^^^^
