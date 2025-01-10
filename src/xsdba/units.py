@@ -9,19 +9,11 @@ import inspect
 from functools import wraps
 from typing import Any, cast
 
-import pint
-
-# this dependency is "necessary" for convert_units_to
+# this dependency is "necessary" for convert_units_to and all unit printing (which use the CF formatter)
 # if we only do checks, we could get rid of it
-
-try:
-    # allows to use cf units
-    import cf_xarray.units  # noqa: F401
-except ImportError:  # noqa: S110
-    # cf-xarray is not installed, this will not be used
-    pass
-
+import cf_xarray.units  # noqa: F401
 import numpy as np
+import pint
 import xarray as xr
 
 from xsdba.base import parse_offset
