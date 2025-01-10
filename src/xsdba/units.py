@@ -6,19 +6,17 @@ Units Handling Submodule
 from __future__ import annotations
 
 import inspect
-from copy import deepcopy
 from functools import wraps
 from typing import Any, cast
 
 import pint
-from pint import UndefinedUnitError
 
 # this dependency is "necessary" for convert_units_to
 # if we only do checks, we could get rid of it
 
 try:
     # allows to use cf units
-    import cf_xarray.units
+    import cf_xarray.units  # noqa: F401
 except ImportError:  # noqa: S110
     # cf-xarray is not installed, this will not be used
     pass

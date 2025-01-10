@@ -19,6 +19,7 @@ class TestUnits:
         q = 5 * units.percent
         assert q.to("dimensionless") == 0.05
 
+
 class TestConvertUnitsTo:
     @pytest.mark.parametrize(
         "alias", [units("Celsius"), units("degC"), units("C"), units("deg_C")]
