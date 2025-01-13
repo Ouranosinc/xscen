@@ -2,14 +2,14 @@
   "title": "xsdba",
   "creators": [
     {
-      "name": "Dupuis, Éric",
-      "affiliation": "Ouranos, Montréal, Québec, Canada",
-      "orcid": "0000-0001-7976-4596"
-    },
-    {
       "name": "Bourgault, Pascal",
       "affiliation": "Ouranos, Montréal, Québec, Canada",
       "orcid": "0000-0003-1192-0403"
+    },
+    {
+      "name": "Dupuis, Éric",
+      "affiliation": "Ouranos, Montréal, Québec, Canada",
+      "orcid": "0000-0001-7976-4596"
     },
     {
       "name": "Smith, Trevor James",
