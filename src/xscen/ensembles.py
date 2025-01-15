@@ -787,10 +787,10 @@ def build_partition_data(
 
     Parameters
     ----------
-    datasets : list, dict, DataCatalog
-        List or dictionnary of Datasets or DataCatalog that will be included in the ensemble.
+    datasets : list[xr.Dataset], dict[str, xr.Dataset], DataCatalog
+        Either a list/dictionary of Datasets or a DataCatalog that will be included in the ensemble.
         The datasets should include the necessary ("cat:") attributes to understand their metadata.
-        Tip: A dictionnary can be created with `datasets = pcat.search(**search_dict).to_dataset_dict()`.
+        Tip: A dictionary can be created with `datasets = pcat.search(**search_dict).to_dataset_dict()`.
 
         The use of a DataCatalog is recommended for large ensembles.
         In that case, the ensembles will be loaded separately for each `bias_adjust_project`,
@@ -804,8 +804,8 @@ def build_partition_data(
         Arguments to pass to `xs.spatial.subset()`.
     regrid_kw : dict, optional
         Arguments to pass to `xs.regrid_dataset()`.
-        Note thet regriding is computationnaly expensive. For large datasets,
-        it might be worth it to do do regridding first, outside of this function.
+        Note that regriding is computationally expensive. For large datasets,
+        it might be worth it to do the regridding first, outside of this function.
     rename_dict : dict, optional
         Dictionary to rename the dimensions from xscen names to xclim names.
         The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
@@ -840,7 +840,7 @@ def build_partition_data(
 
     else:
         raise ValueError(
-            "datasets should be a list or a dictionary of xarray datasets or a xscen.DataCatalog"
+            "'datasets' should be a list/dictionary of xarray datasets or a xscen.DataCatalog"
         )
 
     rename_dict = rename_dict or {}
