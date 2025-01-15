@@ -4,11 +4,11 @@ Changelog
 
 v0.11.0 (unreleased)
 --------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* N/A
+* Improve ``xs.ensembles.build_partition_data``. (:pull:`504`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
