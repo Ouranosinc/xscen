@@ -4,7 +4,7 @@ Changelog
 
 v0.11.0 (unreleased)
 --------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -29,7 +29,7 @@ Internal changes
 * The estimation method in ``xs.io.estimate_chunks`` has been improved. (:pull:`492`).
 * A new parameter `incomplete` has been added to ``xs.io.clean_incomplete`` to remove incomplete variables. (:pull:`492`).
 * Continued work on adding tests. (:pull:`492`).
-
+* Modified a CI build to test against the oldest supported version of `xclim`.
 
 v0.10.1 (2024-11-04)
 --------------------
