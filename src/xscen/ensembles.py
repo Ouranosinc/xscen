@@ -17,7 +17,7 @@ from .catutils import generate_id
 from .config import parse_config
 from .indicators import compute_indicators
 from .regrid import regrid_dataset
-from .spatial import subset
+from .spatial import get_grid_mapping, subset
 from .utils import clean_up, get_cat_attrs
 
 logger = logging.getLogger(__name__)
@@ -638,8 +638,16 @@ def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
     for ds in datasets:
         if subset_kw:
             ds = subset(ds, **subset_kw)
+            gridmap = get_grid_mapping(ds)
             ds = ds.drop_vars(
-                ["lat", "lon", "rlat", "rlon", "rotated_pole"], errors="ignore"
+                [
+                    ds.cf["longitude"],
+                    ds.cf["latitude"],
+                    ds.cf.axes["X"][0],
+                    ds.cf.axes["Y"][0],
+                    gridmap,
+                ],
+                errors="ignore",
             )
 
         if regrid_kw:
@@ -741,9 +749,18 @@ def _partition_from_catalog(
 
         if subset_kw:
             ds = subset(ds, **subset_kw)
+            gridmap = get_grid_mapping(ds)
             ds = ds.drop_vars(
-                ["lat", "lon", "rlat", "rlon", "rotated_pole"], errors="ignore"
+                [
+                    ds.cf["longitude"],
+                    ds.cf["latitude"],
+                    ds.cf.axes["X"][0],
+                    ds.cf.axes["Y"][0],
+                    gridmap,
+                ],
+                errors="ignore",
             )
+
         if regrid_kw:
             ds = regrid_dataset(ds, **regrid_kw)
 
