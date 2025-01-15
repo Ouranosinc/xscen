@@ -43,7 +43,7 @@ dependencies = [
   "cftime",
   "cf_xarray >=0.7.6",
   "clisops >=0.10",
-  "dask >=2024.8.1,<2024.11", # FIXME: https://github.com/Ouranosinc/xclim/issues/1992
+  "dask >=2024.8.1,<2024.13", # FIXME: https://github.com/Ouranosinc/xclim/issues/1992
   "flox !=0.9.14", # FIXME: 0.9.14 is a broken version. This pin could be removed eventually.
   "fsspec",
   "geopandas",
@@ -65,7 +65,7 @@ dependencies = [
   "shapely >=2.0",
   "sparse",
   "toolz",
-  "xarray >=2023.11.0, !=2024.6.0, <2024.10.0", # FIXME: 2024.10.0 breaks rechunker with zarr
+  "xarray >=2023.11.0, !=2024.6.0, <2025.2.0", # FIXME: 2024.10.0 breaks rechunker with zarr
   "xclim >=0.54, <0.55",
   "zarr >=2.13, <3.0" # FIXME: xarray is compatible with zarr 3.0 from 2025.01.1, but we pin xarray below that version"
 ]
@@ -110,10 +110,10 @@ docs = [
   "sphinx-mdinclude",
   "sphinx-rtd-theme >=1.0",
   "sphinxcontrib-napoleon",
-  "pygments <2.19" # FIXME: temporary fix, https://github.com/felix-hilden/sphinx-codeautolink/issues/153
+  "pygments <2.20" # FIXME: temporary fix, https://github.com/felix-hilden/sphinx-codeautolink/issues/153
 ]
 extra = [
-  "xesmf>=0.7, <0.8.8" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
+  "xesmf>=0.7, <0.8.9" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
 ]
 all = ["xscen[dev]", "xscen[docs]", "xscen[extra]"]
 
