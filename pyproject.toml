@@ -328,7 +328,6 @@ min_confidence = 90
 paths = ["src/xscen", "tests"]
 sort_by_size = true
 
-
 # [tool.setuptools.packages.find]
 # include = [
 # ".zenodo.json",

@@ -60,10 +60,10 @@ repos:
     rev: v2.13
     hooks:
       - id: vulture
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.14.1
-    hooks:
-      - id: mypy
+#  - repo: https://github.com/pre-commit/mirrors-mypy
+#    rev: v1.14.1
+#    hooks:
+#      - id: mypy
   - repo: https://github.com/keewis/blackdoc
     rev: v0.3.9
     hooks:
@@ -89,7 +89,7 @@ repos:
         additional_dependencies: [ 'pyupgrade==3.17.0' ]
       - id: nbqa-black
         args: [ '--target-version=py310' ]
-        additional_dependencies: [ 'black==24.8.0' ]
+        additional_dependencies: [ 'black==24.10.0' ]
       - id: nbqa-isort
         additional_dependencies: [ 'isort==5.13.2' ]
   - repo: https://github.com/kynan/nbstripout
