@@ -641,8 +641,8 @@ def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
             gridmap = get_grid_mapping(ds)
             ds = ds.drop_vars(
                 [
-                    ds.cf["longitude"],
-                    ds.cf["latitude"],
+                    ds.cf["longitude"].name,
+                    ds.cf["latitude"].name,
                     ds.cf.axes["X"][0],
                     ds.cf.axes["Y"][0],
                     gridmap,
@@ -752,8 +752,8 @@ def _partition_from_catalog(
             gridmap = get_grid_mapping(ds)
             ds = ds.drop_vars(
                 [
-                    ds.cf["longitude"],
-                    ds.cf["latitude"],
+                    ds.cf["longitude"].name,
+                    ds.cf["latitude"].name,
                     ds.cf.axes["X"][0],
                     ds.cf.axes["Y"][0],
                     gridmap,
