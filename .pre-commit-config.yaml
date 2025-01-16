@@ -45,7 +45,7 @@ repos:
       - id: isort
         exclude: ^docs/
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.2
+    rev: v0.8.6
     hooks:
       - id: ruff
         args: [ '--fix', '--show-fixes' ]
@@ -82,7 +82,7 @@ repos:
 #      - id: numpydoc-validation
 #        exclude: ^docs/|^tests/
   - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.8.7
+    rev: 1.9.1
     hooks:
       - id: nbqa-pyupgrade
         args: [ '--py310-plus' ]
@@ -93,7 +93,7 @@ repos:
       - id: nbqa-isort
         additional_dependencies: [ 'isort==5.13.2' ]
   - repo: https://github.com/kynan/nbstripout
-    rev: 0.8.0
+    rev: 0.8.1
     hooks:
       - id: nbstripout
         files: ".ipynb"
