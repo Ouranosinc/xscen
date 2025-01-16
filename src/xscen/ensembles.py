@@ -12,10 +12,12 @@ import numpy as np
 import xarray as xr
 from xclim import ensembles
 
+from .catalog import DataCatalog
+from .catutils import generate_id
 from .config import parse_config
 from .indicators import compute_indicators
 from .regrid import regrid_dataset
-from .spatial import subset
+from .spatial import get_grid_mapping, subset
 from .utils import clean_up, get_cat_attrs
 
 logger = logging.getLogger(__name__)
@@ -629,13 +631,167 @@ def generate_weights(  # noqa: C901
     return weights
 
 
+def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
+    list_ds = []
+    # only keep attrs common to all datasets
+    common_attrs = False
+    for ds in datasets:
+        if subset_kw:
+            ds = subset(ds, **subset_kw)
+            gridmap = get_grid_mapping(ds)
+            ds = ds.drop_vars(
+                [
+                    ds.cf["longitude"].name,
+                    ds.cf["latitude"].name,
+                    ds.cf.axes["X"][0],
+                    ds.cf.axes["Y"][0],
+                    gridmap,
+                ],
+                errors="ignore",
+            )
+
+        if regrid_kw:
+            ds = regrid_dataset(ds, **regrid_kw)
+
+        for dim in partition_dim:
+            if f"cat:{dim}" in ds.attrs:
+                ds = ds.expand_dims(**{dim: [ds.attrs[f"cat:{dim}"]]})
+
+        if "bias_adjust_project" in ds.dims:
+            ds = ds.assign_coords(
+                adjustment=(
+                    "bias_adjust_project",
+                    [ds.attrs.get("cat:adjustment", np.nan)],
+                )
+            )
+            ds = ds.assign_coords(
+                reference=(
+                    "bias_adjust_project",
+                    [ds.attrs.get("cat:reference", np.nan)],
+                )
+            )
+
+        if "realization" in partition_dim:
+            new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
+            ds = ds.expand_dims(realization=[new_source])
+
+        a = ds.attrs
+        a.pop("intake_esm_vars", None)  # remove list for intersection to work
+        common_attrs = dict(common_attrs.items() & a.items()) if common_attrs else a
+        list_ds.append(ds)
+    ens = xr.merge(list_ds)
+    ens.attrs = common_attrs
+    return ens
+
+
+def _partition_from_catalog(
+    datasets, partition_dim, subset_kw, regrid_kw, to_dataset_kw
+):
+
+    if ("adjustment" in partition_dim or "reference" in partition_dim) and (
+        "bias_adjust_project" in partition_dim
+    ):
+        raise ValueError(
+            "The partition_dim can have either adjustment and reference or bias_adjust_project, not both."
+        )
+
+    if ("realization" in partition_dim) and ("source" in partition_dim):
+        raise ValueError(
+            "The partition_dim can have either realization or source, not both."
+        )
+
+    # special case to handle source (create one dimension with institution_source_member)
+    ensemble_on_list = None
+    if "realization" in partition_dim:
+        partition_dim.remove("realization")
+        ensemble_on_list = ["institution", "source", "member"]
+
+    subcat = datasets
+
+    # get attrs that are common to all datasets
+    common_attrs = {}
+    for col, series in subcat.df.items():
+        if (series[0] == series).all():
+            common_attrs[f"cat:{col}"] = series[0]
+
+    col_id = [
+        (
+            "adjustment" if "adjustment" in partition_dim else None
+        ),  # instead of bias_adjust_project, need to use adjustment, not method bc .sel
+        (
+            "reference" if "reference" in partition_dim else None
+        ),  # instead of bias_adjust_project
+        "bias_adjust_project" if "bias_adjust_project" in partition_dim else None,
+        "mip_era",
+        "activity",
+        "driving_model",
+        "institution" if "realization" in partition_dim else None,
+        "source",
+        "experiment",
+        "member" if "realization" in partition_dim else None,
+        "domain",
+    ]
+
+    subcat.df["id"] = generate_id(subcat.df, col_id)
+
+    # create a dataset for each bias_adjust_project, modify grid and concat them
+    # choose dim that exists in partition_dim and first in the order of preference
+    order_of_preference = ["reference", "bias_adjust_project", "source"]
+    dim_with_different_grid = list(set(partition_dim) & set(order_of_preference))[0]
+
+    list_ds = []
+    for d in subcat.df[dim_with_different_grid].unique():
+        ds = subcat.search(**{dim_with_different_grid: d}).to_dataset(
+            concat_on=partition_dim,
+            create_ensemble_on=ensemble_on_list,
+            **to_dataset_kw,
+        )
+
+        if subset_kw:
+            ds = subset(ds, **subset_kw)
+            gridmap = get_grid_mapping(ds)
+            ds = ds.drop_vars(
+                [
+                    ds.cf["longitude"].name,
+                    ds.cf["latitude"].name,
+                    ds.cf.axes["X"][0],
+                    ds.cf.axes["Y"][0],
+                    gridmap,
+                ],
+                errors="ignore",
+            )
+
+        if regrid_kw:
+            ds = regrid_dataset(ds, **regrid_kw)
+
+        # add coords adjustment and reference
+        if "bias_adjust_project" in ds.dims:
+            ds = ds.assign_coords(
+                adjustment=(
+                    "bias_adjust_project",
+                    [ds.attrs.get("cat:adjustment", np.nan)],
+                )
+            )  # need to use adjustment, not method bc .sel
+            ds = ds.assign_coords(
+                reference=(
+                    "bias_adjust_project",
+                    [ds.attrs.get("cat:reference", np.nan)],
+                )
+            )
+        list_ds.append(ds)
+    ens = xr.concat(list_ds, dim=dim_with_different_grid)
+    ens.attrs = common_attrs
+    return ens
+
+
 def build_partition_data(
     datasets: dict | list[xr.Dataset],
-    partition_dim: list[str] = ["source", "experiment", "bias_adjust_project"],
+    partition_dim: list[str] = ["realization", "experiment", "bias_adjust_project"],
     subset_kw: dict | None = None,
     regrid_kw: dict | None = None,
-    indicators_kw: dict | None = None,
     rename_dict: dict | None = None,
+    to_dataset_kw: dict | None = None,
+    to_level: str = "partition-ensemble",
 ):
     """
     Get the input for the xclim partition functions.
@@ -644,16 +800,20 @@ def build_partition_data(
     `partition_dim` dimensions (and time) to pass to one of the xclim partition functions
     (https://xclim.readthedocs.io/en/stable/api.html#uncertainty-partitioning).
     If the inputs have different grids,
-    they have to be subsetted and regridded to a common grid/point.
-    Indicators can also be computed before combining the datasets.
+    they have to be subsetted and/or regridded to a common grid/point.
 
     Parameters
     ----------
-    datasets : dict
-        List or dictionnary of Dataset objects that will be included in the ensemble.
+    datasets : list[xr.Dataset], dict[str, xr.Dataset], DataCatalog
+        Either a list/dictionary of Datasets or a DataCatalog that will be included in the ensemble.
         The datasets should include the necessary ("cat:") attributes to understand their metadata.
-        Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
-    partition_dim : list[str]
+        Tip: A dictionary can be created with `datasets = pcat.search(**search_dict).to_dataset_dict()`.
+
+        The use of a DataCatalog is recommended for large ensembles.
+        In that case, the ensembles will be loaded separately for each `bias_adjust_project`,
+        the subsetting or regridding can be applied before combining the datasets through concatenation.
+        If `bias_adjust_project` is not in `partition_dim`, `source` will be used instead.
+    partition_dim: list[str]
         Components of the partition. They will become the dimension of the output.
         The default is ['source', 'experiment', 'bias_adjust_project'].
         For source, the dimension will actually be institution_source_member.
@@ -661,12 +821,15 @@ def build_partition_data(
         Arguments to pass to `xs.spatial.subset()`.
     regrid_kw : dict, optional
         Arguments to pass to `xs.regrid_dataset()`.
-    indicators_kw : dict, optional
-        Arguments to pass to `xs.indicators.compute_indicators()`.
-        All indicators have to be for the same frequency, in order to be put on a single time axis.
+        Note that regriding is computationally expensive. For large datasets,
+        it might be worth it to do the regridding first, outside of this function.
     rename_dict : dict, optional
         Dictionary to rename the dimensions from xscen names to xclim names.
-        If None, the default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
+        The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
+    to_dataset_kw : dict, optional
+        Arguments to pass to `xscen.DataCatalog.to_dataset()` if datasets is a DataCatalog.
+    to_level: str
+        The processing level of the output dataset. Default is 'partition-ensemble'.
 
     Returns
     -------
@@ -682,40 +845,31 @@ def build_partition_data(
     # initialize dict
     subset_kw = subset_kw or {}
     regrid_kw = regrid_kw or {}
+    to_dataset_kw = to_dataset_kw or {}
 
-    list_ds = []
-    for ds in datasets:
-        if subset_kw:
-            ds = subset(ds, **subset_kw)
+    if isinstance(datasets, list):
+        ens = _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw)
 
-        if regrid_kw:
-            ds = regrid_dataset(ds, **regrid_kw)
+    elif isinstance(datasets, DataCatalog):
+        ens = _partition_from_catalog(
+            datasets, partition_dim, subset_kw, regrid_kw, to_dataset_kw
+        )
 
-        if indicators_kw:
-            dict_ind = compute_indicators(ds, **indicators_kw)
-            if len(dict_ind) > 1:
-                raise ValueError(
-                    f"The indicators computation should return only indicators of the same frequency.Returned frequencies: {dict_ind.keys()}"
-                )
-            else:
-                ds = list(dict_ind.values())[0]
-
-        for dim in partition_dim:
-            if f"cat:{dim}" in ds.attrs:
-                ds = ds.expand_dims(**{dim: [ds.attrs[f"cat:{dim}"]]})
-
-        if "source" in partition_dim:
-            new_source = f"{ds.attrs['cat:institution']}_{ds.attrs['cat:source']}_{ds.attrs['cat:member']}"
-            ds = ds.assign_coords(source=[new_source])
-        list_ds.append(ds)
-    ens = xr.merge(list_ds)
+    else:
+        raise ValueError(
+            "'datasets' should be a list/dictionary of xarray datasets or a xscen.DataCatalog"
+        )
 
     rename_dict = rename_dict or {}
+    rename_dict.setdefault("realization", "model")
     rename_dict.setdefault("source", "model")
     rename_dict.setdefault("experiment", "scenario")
     rename_dict.setdefault("bias_adjust_project", "downscaling")
     rename_dict = {k: v for k, v in rename_dict.items() if k in ens.dims}
     ens = ens.rename(rename_dict)
+
+    ens.attrs["cat:processing_level"] = to_level
+    ens.attrs["cat:id"] = generate_id(ens)[0]
 
     return ens
 

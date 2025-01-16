@@ -1053,7 +1053,6 @@ def rechunk(
         raise ValueError(
             "No chunks given. Need to give at `chunks_over_var` or `chunks_over_dim`."
         )
-
     plan = _rechunk(ds, chunks, worker_mem, str(path_out), temp_store=str(temp_store))
 
     plan.execute()

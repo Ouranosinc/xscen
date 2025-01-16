@@ -4,11 +4,11 @@ Changelog
 
 v0.11.0 (unreleased)
 --------------------
-Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* N/A
+* Improve ``xs.ensembles.build_partition_data``. (:pull:`504`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -29,7 +29,13 @@ Internal changes
 * The estimation method in ``xs.io.estimate_chunks`` has been improved. (:pull:`492`).
 * A new parameter `incomplete` has been added to ``xs.io.clean_incomplete`` to remove incomplete variables. (:pull:`492`).
 * Continued work on adding tests. (:pull:`492`).
-
+* Modified a CI build to test against the oldest supported version of `xclim`. (:pull:`505`).
+* Updated the cookiecutter template version: (:pull:`507`)
+    * Added `vulture` to pre-commit hooks (finding dead code blocks).
+    * Added `zizmor` to the pre-commit hooks (security analysis for CI workflows).
+    * Secured token usages on all workflows (using `zizmor`).
+    * Simplified logic in ``bump-version.yml``.
+    * Synchronized a few dependencies.
 
 v0.10.1 (2024-11-04)
 --------------------
