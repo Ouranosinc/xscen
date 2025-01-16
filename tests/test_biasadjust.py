@@ -47,12 +47,13 @@ class TestTrain:
         np.testing.assert_array_equal(out["scaling"], result)
 
     def test_preprocess(self):
-
-        dref360 = self.dref.convert_calendar("360_day", align_on="year")
+        # FIXME: put back the test when xclim 0.55 is released, https://github.com/Ouranosinc/xclim/pull/2038/files
+        # dhist360 = self.dhist.convert_calendar("360_day", align_on="year")
+        dhist360 = self.dhist.convert_calendar("noleap", align_on="year")
 
         out = xs.train(
-            dref360,
-            self.dhist,
+            self.dref,
+            dhist360,
             var="tas",
             period=["2001", "2002"],
             adapt_freq={"thresh": "2 K"},

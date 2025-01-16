@@ -297,7 +297,8 @@ def timeout(seconds: int, task: str = ""):
         yield
     else:
 
-        def _timeout_handler(signum, frame):
+        # FIXME: These variables are not used
+        def _timeout_handler(signum, frame):  # noqa: F841
             raise TimeoutException(seconds, task)
 
         old_handler = signal.signal(signal.SIGALRM, _timeout_handler)

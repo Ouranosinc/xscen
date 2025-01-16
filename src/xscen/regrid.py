@@ -11,7 +11,6 @@ from pathlib import Path
 
 import cartopy.crs as ccrs
 import cf_xarray as cfxr
-import numpy as np
 import xarray as xr
 from xclim.core.units import convert_units_to
 
@@ -23,6 +22,7 @@ except ImportError:
     Regridder = "xesmf.Regridder"
 
 from .config import parse_config
+from .spatial import get_grid_mapping
 
 __all__ = ["create_bounds_gridmapping", "create_mask", "regrid_dataset"]
 
@@ -164,7 +164,7 @@ def regrid_dataset(  # noqa: C901
             out = regridder(ds, keep_attrs=True, **call_kwargs)
 
             # Double-check that grid_mapping information is transferred
-            gridmap_out = _get_grid_mapping(ds_grid)
+            gridmap_out = get_grid_mapping(ds_grid)
             if gridmap_out:
                 # Regridder seems to seriously mess up the rotated dimensions
                 for d in out.lon.dims:
@@ -182,7 +182,7 @@ def regrid_dataset(  # noqa: C901
                 if gridmap_out not in out:
                     out = out.assign_coords({gridmap_out: ds_grid[gridmap_out]})
             else:
-                gridmap_in = _get_grid_mapping(ds)
+                gridmap_in = get_grid_mapping(ds)
                 # Remove the original grid_mapping attribute
                 for v in out.data_vars:
                     if "grid_mapping" in out[v].attrs:
@@ -349,8 +349,8 @@ def _regridder(
         Regridder object
     """
     if method.startswith("conservative"):
-        gridmap_in = _get_grid_mapping(ds_in)
-        gridmap_grid = _get_grid_mapping(ds_grid)
+        gridmap_in = get_grid_mapping(ds_in)
+        gridmap_grid = get_grid_mapping(ds_grid)
 
         if (
             ds_in.cf["longitude"].ndim == 2
@@ -386,8 +386,13 @@ def create_bounds_rotated_pole(ds: xr.Dataset) -> xr.Dataset:
     return create_bounds_gridmapping(ds, "rotated_pole")
 
 
-def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str) -> xr.Dataset:
+def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str | None = None) -> xr.Dataset:
     """Create bounds for rotated pole datasets."""
+    if gridmap is None:
+        gridmap = get_grid_mapping(ds)
+        if gridmap == "":
+            raise ValueError("Grid mapping could not be inferred from the dataset.")
+
     xname = ds.cf.axes["X"][0]
     yname = ds.cf.axes["Y"][0]
 
@@ -450,24 +455,6 @@ def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str) -> xr.Dataset:
     ds_bnds.lat.attrs["bounds"] = "lat_bounds"
     ds_bnds.lon.attrs["bounds"] = "lon_bounds"
     return ds_bnds.transpose(*ds.lon.dims, "bounds")
-
-
-def _get_grid_mapping(ds: xr.Dataset) -> str:
-    """Get the grid_mapping attribute from the dataset."""
-    gridmap = [
-        ds[v].attrs["grid_mapping"]
-        for v in ds.data_vars
-        if "grid_mapping" in ds[v].attrs
-    ]
-    gridmap += [c for c in ds.coords if ds[c].attrs.get("grid_mapping_name", None)]
-    gridmap = list(np.unique(gridmap))
-
-    if len(gridmap) > 1:
-        warnings.warn(
-            f"There are conflicting grid_mapping attributes in the dataset. Assuming {gridmap[0]}."
-        )
-
-    return gridmap[0] if gridmap else ""
 
 
 def _generate_random_string(length: int):

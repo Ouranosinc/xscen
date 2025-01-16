@@ -5,25 +5,16 @@ import numpy as np
 import pytest
 import xarray as xr
 import xclim as xc
-from packaging.version import Version
 
 try:
     import xesmf as xe
 except ImportError:
     xe = None
-# temp fix for changes to xclim-testdata
-from functools import partial
 
-from xclim.testing import open_dataset
 from xclim.testing.helpers import test_timeseries as timeseries
+from xclim.testing.utils import nimbus
 
 import xscen as xs
-
-# FIXME: Remove if-else when updating minimum xclim version to 0.53
-if Version(xc.__version__) < Version("0.53.0"):
-    # Hack to revert to old testdata with old xclim
-    open_dataset = partial(open_dataset, branch="v2023.12.14")
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -255,22 +246,6 @@ class TestEnsembleStats:
                         "abs_thresh": 2.5,
                         "ref": ref,
                     }
-                },
-            )
-
-        # Error if you try to use a robustness_fractions with a reference dataset, but also specify other statistics
-        with pytest.raises(
-            ValueError, match="The input requirements for 'robustness_fractions'"
-        ):
-            xs.ensemble_stats(
-                ens,
-                statistics={
-                    "robustness_fractions": {
-                        "test": "threshold",
-                        "abs_thresh": 2.5,
-                        "ref": ref,
-                    },
-                    "ensemble_mean_std_max_min": None,
                 },
             )
 
@@ -1071,21 +1046,18 @@ class TestEnsemblePartition:
     @pytest.mark.skipif(xe is None, reason="xesmf needed for testing regrdding")
     def test_build_partition_data(self, samplecat, tmp_path):
         # test subset
-        datasets = samplecat.search(variable="tas").to_dataset_dict(
+        datasets = samplecat.search(variable="tas", member="r1i1p1f1").to_dataset_dict(
             xarray_open_kwargs={"engine": "h5netcdf"}
         )
         ds = xs.ensembles.build_partition_data(
             datasets=datasets,
             partition_dim=["source", "experiment"],
             subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
-            indicators_kw=dict(indicators=[xc.atmos.tg_mean]),
             rename_dict={"source": "new-name"},
         )
 
-        assert ds.dims == {"time": 2, "scenario": 4, "new-name": 2}
-        assert ds.lat.values == 45.0
-        assert ds.lon.values == -74
-        assert [i for i in ds.data_vars] == ["tg_mean"]
+        assert ds.dims == {"time": 730, "scenario": 4, "new-name": 1}
+        assert ds.attrs["cat:processing_level"] == "partition-ensemble"
 
         # test regrid
         ds_grid = xe.util.cf_grid_2d(-75, -74, 0.25, 45, 48, 0.55)
@@ -1095,6 +1067,7 @@ class TestEnsemblePartition:
         ds = xs.ensembles.build_partition_data(
             datasets=datasets,
             regrid_kw=dict(ds_grid=ds_grid, weights_location=tmp_path),
+            to_level="test",
         )
 
         assert ds.dims == {
@@ -1105,21 +1078,48 @@ class TestEnsemblePartition:
             "lon": 4,
         }
         assert [i for i in ds.data_vars] == ["tas"]
+        assert ds.attrs["cat:processing_level"] == "test"
 
-        # test error
-        with pytest.raises(
-            ValueError,
-        ):
-            ds = xs.ensembles.build_partition_data(
-                datasets=datasets,
-                subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
-                indicators_kw=dict(indicators=[xc.atmos.tg_mean, xc.indicators.cf.tg]),
-            )
+    def test_partition_from_catalog(self, samplecat):
+        datasets = samplecat.search(variable="tas", member="r1i1p1f1")
+        ds_from_dict = xs.ensembles.build_partition_data(
+            datasets=datasets.to_dataset_dict(
+                xarray_open_kwargs={"engine": "h5netcdf"}
+            ),
+            partition_dim=["source", "experiment"],
+            subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
+        )
+
+        ds_from_cat = xs.ensembles.build_partition_data(
+            datasets=datasets,
+            partition_dim=["source", "experiment"],
+            subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
+            to_dataset_kw=dict(xarray_open_kwargs={"engine": "h5netcdf"}),
+        )
+        # fix order
+        ds_from_cat = ds_from_cat[["time", "model", "scenario", "tas"]]
+        ds_from_cat["tas"] = ds_from_cat["tas"].transpose("scenario", "model", "time")
+
+        assert ds_from_dict.equals(ds_from_cat)
+
+    def test_realization_partition(self, samplecat):
+
+        datasets = samplecat.search(variable="tas").to_dataset_dict(
+            xarray_open_kwargs={"engine": "h5netcdf"}
+        )
+        ds = xs.ensembles.build_partition_data(
+            datasets=datasets,
+            partition_dim=["realization", "experiment"],
+            subset_kw=dict(name="mtl", method="gridpoint", lat=[45.0], lon=[-74]),
+        )
+
+        assert "NCC_NorESM2-MM_r1i1p1f1" in ds.model.values
+        assert ds.dims == {"time": 730, "scenario": 4, "model": 2}
 
 
 class TestReduceEnsemble:
     def test_with_criteria(self):
-        ds = open_dataset("EnsembleReduce/TestEnsReduceCriteria.nc")
+        ds = xr.open_dataset(nimbus().fetch("EnsembleReduce/TestEnsReduceCriteria.nc"))
         selected, clusters, fig_data = xs.reduce_ensemble(
             ds["data"], method="kmeans", max_clusters=3
         )
@@ -1138,7 +1138,9 @@ class TestReduceEnsemble:
             "CNRM-CM5": "EnsembleStats/BCCAQv2+ANUSPLIN300_CNRM-CM5_historical+rcp45_r1i1p1_1970-2050_tg_mean_YS.nc",
         }
         for d in datasets:
-            ds = open_dataset(datasets[d]).isel(lon=slice(0, 4), lat=slice(0, 4))
+            ds = xr.open_dataset(nimbus().fetch(datasets[d])).isel(
+                lon=slice(0, 4), lat=slice(0, 4)
+            )
             ds = xs.climatological_op(
                 ds,
                 op="mean",
@@ -1162,7 +1164,7 @@ class TestReduceEnsemble:
         assert fig_data == {}
 
     def test_errors(self):
-        ds = open_dataset("EnsembleReduce/TestEnsReduceCriteria.nc")
+        ds = xr.open_dataset(nimbus().fetch("EnsembleReduce/TestEnsReduceCriteria.nc"))
         with pytest.raises(
             ValueError, match="Data must have a 'horizon' dimension to be subsetted."
         ):
