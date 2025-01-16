@@ -65,19 +65,18 @@ dependencies = [
   "shapely >=2.0",
   "sparse",
   "toolz",
-  "xarray >=2023.11.0, !=2024.6.0",
-  "xclim >=0.53.2, <0.54",
-  "zarr >=2.13"
+  "xarray >=2023.11.0, !=2024.6.0, <2024.10.0", # FIXME: 2024.10.0 breaks rechunker with zarr
+  "xclim >=0.53.2, <0.55",
+  "zarr >=2.13, <3.0" # FIXME: xarray is compatible with zarr 3.0 from 2025.01.1, but we pin xarray below that version"
 ]
 
 [project.optional-dependencies]
 dev = [
   # Dev tools and testing
-  "pip >=24.2.0",
   "babel",
-  "black[jupyter] ==24.10.0",
+  "black ==24.10.0",
   "blackdoc ==0.3.9",
-  "bump-my-version >=0.26.0",
+  "bump-my-version >=0.28.0",
   "coverage >=7.5.0",
   "coveralls >=4.0.1",
   "flake8 >=7.1.1",
@@ -86,12 +85,12 @@ dev = [
   "mypy",
   "numpydoc >=1.8.0",
   "pooch >=1.8.0",
-  "pre-commit >=3.3.2",
+  "pre-commit >=3.5.0",
   "pytest-cov >=5.0.0",
   "pytest >=8.3.2",
   "pytest-xdist[psutil] >=3.2.0",
-  "ruff >=0.5.7",
-  "tox >=4.18.0",
+  "ruff >=0.8.2",
+  "tox >=4.23.2",
   "watchdog >=4.0.0",
   "xdoctest"
 ]
@@ -109,7 +108,8 @@ docs = [
   "sphinx-intl",
   "sphinx-mdinclude",
   "sphinx-rtd-theme >=1.0",
-  "sphinxcontrib-napoleon"
+  "sphinxcontrib-napoleon",
+  "pygments <2.19" # FIXME: temporary fix, https://github.com/felix-hilden/sphinx-codeautolink/issues/153
 ]
 extra = [
   "xesmf>=0.7, <0.8.8" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
@@ -134,7 +134,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.10.2-dev.0"
+current_version = "0.10.2-dev.1"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -319,6 +319,14 @@ version = {attr = "xscen.__version__"}
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["xscen"]
+
+[tool.vulture]
+exclude = []
+ignore_decorators = ["@pytest.fixture"]
+ignore_names = []
+min_confidence = 90
+paths = ["src/xscen", "tests"]
+sort_by_size = true
 
 # [tool.setuptools.packages.find]
 # include = [

@@ -71,11 +71,17 @@ from .utils import clean_up
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.10.2-dev.0"
+__version__ = "0.10.2-dev.1"
 
 
+# FIXME: file and line are unused
 def warning_on_one_line(
-    message: str, category: Warning, filename: str, lineno: int, file=None, line=None
+    message: str,
+    category: Warning,
+    filename: str,
+    lineno: int,
+    file=None,  # noqa: F841
+    line=None,  # noqa: F841
 ):
     """
     Monkeypatch Reformat warning so that `warnings.warn` doesn't mention itself.
