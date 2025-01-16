@@ -23,6 +23,7 @@ import sys
 import warnings
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, os.path.abspath(".."))
 if os.environ.get("READTHEDOCS") and "ESMFMKFILE" not in os.environ:
@@ -222,7 +223,7 @@ htmlhelp_basename = "xscendoc"
 
 # -- Options for LaTeX output ------------------------------------------
 
-latex_elements = {
+latex_elements: dict[str, Any] = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',

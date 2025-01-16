@@ -17,6 +17,9 @@ updates:
     schedule:
       interval: monthly
     groups:
+      ci:
+        patterns:
+          - "CI/*"
       python:
         patterns:
-          - "*"
+          - "pyproject.toml"
