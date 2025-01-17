@@ -633,6 +633,15 @@ def get_cat_attrs(
     return facets
 
 
+def strip_cat_attrs(ds: xr.Dataset, prefix: str = "cat:"):
+    """Remove attributes added from the catalog by `to_dataset` or `extract_dataset`."""
+    dsc = ds.copy()
+    for k in list(dsc.attrs):
+        if k.startswith(prefix):
+            del dsc.attrs[k]
+    return dsc
+
+
 @parse_config
 def maybe_unstack(
     ds: xr.Dataset,
@@ -923,12 +932,10 @@ def clean_up(  # noqa: C901
         msg = f"Converting units: {variables_and_units}"
         logger.info(msg)
         ds = change_units(ds=ds, variables_and_units=variables_and_units)
-
     # convert calendar
     if convert_calendar_kwargs:
         # create mask of grid point that should always be nan
         ocean = ds.isnull().all("time")
-
         # if missing_by_var exist make sure missing data are added to time axis
         if missing_by_var:
             if not all(k in missing_by_var.keys() for k in ds.data_vars):
