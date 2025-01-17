@@ -34,10 +34,6 @@ A generic bias adjustment process is laid out as follows:
 - adjustment ``scen = Adj.adjust(sim, **kwargs)``
 - post-processing on `scen` (for example: re-trending)
 
-..
-
-    TODO : Find a way to link API below, and those later in the file.
-
 The train-adjust approach allows to inspect the trained adjustment object.
 The training information is stored in the underlying `Adj.ds` dataset and usually has a `af` variable with the adjustment factors.
 Its layout and the other available variables vary between the different algorithm, refer to :ref:`Adjustment methods <xsdba-user-api>`.

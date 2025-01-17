@@ -5,7 +5,7 @@ Changelog
 `Unreleased <https://github.com/Ouranosinc/xsdba>`_ (latest)
 ------------------------------------------------------------
 
-Contributors: Pascal Bourgault (:user:`aulemahal`).
+Contributors: Pascal Bourgault (:user:`aulemahal`), Éric Dupuis (:user:`coxipi`).
 
 Changes
 ^^^^^^^
@@ -14,7 +14,7 @@ Changes
 
 Fixes
 ^^^^^
-* No change.
+* Pin `sphinx-codeautolink` to fix ReadTheDocs and correct some docs errors (:pull:`40`).
 
 .. _changes_0.2.0:
 
