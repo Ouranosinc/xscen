@@ -1,5 +1,6 @@
 """Functions to train and adjust a dataset using a bias-adjustment algorithm."""
 
+import ast
 import logging
 from copy import deepcopy
 
@@ -50,6 +51,48 @@ def _add_preprocessing_attr(scen, train_kwargs):
             "bias_adjustment"
         ] += ", ref and hist were prepared with " + " and ".join(preproc)
     return scen
+
+
+# TODO: Place this somewhere else?
+def _parse_group(group):
+    # need to check type, isinstance would give that Grouper is a dict
+    if type(group) is dict:
+        # So we can specifiy window and add_dims in yaml.
+        group = sdba.Grouper.from_kwargs(**group)["group"]
+    elif isinstance(group, str):
+        group = sdba.Grouper(group)
+    return group
+
+
+# TODO: Place this somewhere else?
+def _harmonize_calendars(
+    *inputs: list[xr.Dataset], maximal_calendar: str, align_on: str
+):
+    r"""Harmonize input calendars.
+
+    Parameters
+    ----------
+    \*inputs : list[xr.Dataset]
+      Input dataset that need calendar harmonization
+    maximal_calendar :
+      Maximal calendar `inputs[0]` can be. The hierarchy: 360_day < noleap < standard < all_leap.
+      If `inputs[0]`'s calendar is higher than maximal calendar, it will be converted to the maximal calendar.
+    align_on: str, optional
+      `align_on` argument for the function `xr.DataArray.convert_calendar`.
+
+    Returns
+    -------
+    list[xr.Dataset]
+      Datasets with harmonized calendars
+    """
+    # convert to a list so that in-place changes are possible
+    inputs = list(inputs)
+    cals = [inp.time.dt.calendar for inp in inputs]
+    mincal = minimum_calendar(cals[0], maximal_calendar)
+    for i, cal in enumerate(cals):
+        if cal != mincal:
+            inputs[i] = inputs[i].convert_calendar(mincal, align_on=align_on)
+    return inputs
 
 
 @parse_config
@@ -134,23 +177,11 @@ def train(
     hist = hist.sel(time=slice(period[0], period[1]))
     ref = ref.sel(time=slice(period[0], period[1]))
 
-    # convert calendar if necessary
-    simcal = hist.time.dt.calendar
-    refcal = ref.time.dt.calendar
-    mincal = minimum_calendar(simcal, maximal_calendar)
-    if simcal != mincal:
-        hist = hist.convert_calendar(mincal, align_on=align_on)
-    if refcal != mincal:
-        ref = ref.convert_calendar(mincal, align_on=align_on)
+    hist, ref = _harmonize_calendars(
+        hist, ref, maximal_calendar=maximal_calendar, align_on=align_on
+    )
 
-    if group:
-        if isinstance(group, dict):
-            # So we can specifiy window and add_dims in yaml.
-            group = sdba.Grouper.from_kwargs(**group)["group"]
-        elif isinstance(group, str):
-            group = sdba.Grouper(group)
-        xclim_train_args["group"] = group
-
+    xclim_train_args["group"] = _parse_group(group)
     if jitter_over is not None:
         ref = sdba.processing.jitter_over_thresh(ref, **jitter_over)
         hist = sdba.processing.jitter_over_thresh(hist, **jitter_over)
@@ -160,7 +191,7 @@ def train(
         hist = sdba.processing.jitter_under_thresh(hist, **jitter_under)
 
     if adapt_freq is not None:
-        adapt_freq.setdefault("group", group)
+        adapt_freq.setdefault("group", xclim_train_args["group"])
         hist, pth, dP0 = sdba.processing.adapt_freq(ref, hist, **adapt_freq)
         adapt_freq.pop("group")
 
@@ -190,7 +221,7 @@ def train(
 
 @parse_config
 def adjust(
-    dtrain: xr.Dataset,
+    dtrain: xr.Dataset | None,
     dsim: xr.Dataset,
     periods: list[str] | list[list[str]],
     *,
@@ -199,14 +230,16 @@ def adjust(
     bias_adjust_institution: str | None = None,
     bias_adjust_project: str | None = None,
     align_on: str | None = "year",
+    method: str | None = None,
+    maximal_calendar: str = "noleap",
 ) -> xr.Dataset:
     """
     Adjust a simulation.
 
     Parameters
     ----------
-    dtrain : xr.Dataset
-      A trained algorithm's dataset, as returned by `train`.
+    dtrain : xr.Dataset , optional
+      A trained algorithm's dataset, as returned by `train`. If `None`, then `method` should be provided.
     dsim : xr.Dataset
       Simulated timeseries, projected period.
     periods : list of str or list of lists of str
@@ -222,6 +255,13 @@ def adjust(
       The project to assign to the output.
     align_on: str, optional
       `align_on` argument for the function `xr.DataArray.convert_calendar`.
+    method : str, optional
+      Adjustment class. Pass this argument for a method that has no training, and thus no `dtrain` (which should be set to `None`).
+      If this is set to `None`, then a non-null `dtrain` is expected.
+    maximal_calendar: str, optional
+      Maximal calendar dsim can be. The hierarchy: 360_day < noleap < standard < all_leap.
+      If dsim's calendar is higher than maximal calendar, it will be converted to the maximal calendar.
+      This is only used if `dtrain` is `None`, otherwise the `maximal_calendar` from `dtrain` will be used.
 
     Returns
     -------
@@ -233,31 +273,65 @@ def adjust(
     xclim.sdba.adjustment.DetrendedQuantileMapping, xclim.sdba.adjustment.ExtremeValues
 
     """
+    if both_null := (dtrain is None and method is None) or (
+        dtrain is not None and method is not None
+    ):
+        msg = "Both" if both_null else "Neither"
+        raise ValueError(
+            f"{msg} `dtrain` or `method` are `None`. One and only one of these arguments must be `None`."
+        )
+
     xclim_adjust_args = deepcopy(xclim_adjust_args)
     xclim_adjust_args = xclim_adjust_args or {}
+    if dtrain is not None:
+        # evaluate the dict that was stored as a string
+        if not isinstance(dtrain.attrs["train_params"], dict):
+            # FIXME: eval is bad. There has to be a better way!™
+            dtrain.attrs["train_params"] = ast.literal_eval(
+                dtrain.attrs["train_params"]
+            )
 
-    # evaluate the dict that was stored as a string
-    if not isinstance(dtrain.attrs["train_params"], dict):
-        # FIXME: eval is bad. There has to be a better way!™
-        dtrain.attrs["train_params"] = eval(dtrain.attrs["train_params"])  # noqa: S307
+        var = dtrain.attrs["train_params"]["var"]
+        if len(var) != 1:
+            raise ValueError(
+                "biasadjust currently does not support entries with multiple variables."
+            )
+        else:
+            var = var[0]
+            sim = dsim[var]
 
-    var = dtrain.attrs["train_params"]["var"]
-    if len(var) != 1:
-        raise ValueError(
-            "biasadjust currently does not support entries with multiple variables."
+        (sim,) = _harmonize_calendars(
+            sim,
+            maximal_calendar=dtrain.attrs["train_params"]["maximal_calendar"],
+            align_on=align_on,
         )
-    else:
+        ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)
+    elif method is not None:
+        # Adjust class assumed
+        # I think in this case it would make more sense to simply have a DataArray
+        # But to make it more like the rest of the method, I think it makes sense to have Dataset eith a single variable
+        if len(var := list(dsim.data_vars)) > 1:
+            raise ValueError(
+                "When using `base`, `dsim` must contain a single variable."
+            )
         var = var[0]
-        sim = dsim[var]
+        # Group should be included in adjust args for Adjust-only biasadjustment
+        # I think it's better to accept `xclim_adjust_args` might not be parsed appropriately,
+        # anticipating the use of a YAML config file. It's OK for `sdba` not to accept a dict, and
+        # it's OK for `xscen` to be aware of dict group coming from YAML files, IMO.
+        # I would say that a similar (breaking) change could be made in train: Drop the explicit
+        # `group` argument, just assume it will be in `xclim_train_args`.
+        xclim_adjust_args.setdefault("group", {"group": "time.dayofyear", "window": 31})
+        xclim_adjust_args["group"] = _parse_group(xclim_adjust_args["group"])
 
-    # get right calendar
-    simcal = sim.time.dt.calendar
-    mincal = minimum_calendar(simcal, dtrain.attrs["train_params"]["maximal_calendar"])
-    if simcal != mincal:
-        sim = sim.convert_calendar(mincal, align_on=align_on)
-
-    # adjust
-    ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)
+        sim, xclim_adjust_args["hist"], xclim_adjust_args["ref"] = _harmonize_calendars(
+            dsim[var],
+            xclim_adjust_args["hist"][var],
+            xclim_adjust_args["ref"][var],
+            maximal_calendar=maximal_calendar,
+            align_on=align_on,
+        )
+        ADJ = getattr(sdba.adjustment, method)
 
     if ("detrend" in xclim_adjust_args) and (
         isinstance(xclim_adjust_args["detrend"], dict)
@@ -273,13 +347,13 @@ def adjust(
     slices = []
     for period in periods:
         sim_sel = sim.sel(time=slice(period[0], period[1]))
-
-        out = ADJ.adjust(sim_sel, **xclim_adjust_args)
+        out = ADJ.adjust(sim=sim_sel, **xclim_adjust_args)
         slices.extend([out])
     # put all the adjusted period back together
     dscen = xr.concat(slices, dim="time")
 
-    dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
+    if dtrain is not None:
+        dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
     dscen = xr.Dataset(data_vars={var: dscen}, attrs=dsim.attrs)
     dscen.attrs["cat:processing_level"] = to_level
     dscen.attrs["cat:variable"] = parse_from_ds(dscen, ["variable"])["variable"]
