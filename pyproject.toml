@@ -91,7 +91,7 @@ docs = [
   "sphinx >=7.0.0",
   "sphinx-autobuild >=2024.4.16",
   "sphinx-autodoc-typehints",
-  "sphinx-codeautolink>=0.16.1",
+  "sphinx-codeautolink >=0.16.1",
   "sphinx-copybutton",
   "sphinx-intl",
   "sphinx-mdinclude",
