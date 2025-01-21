@@ -7,9 +7,9 @@ xscen |logo|
 +----------------------------+-----------------------------------------------------+
 | Documentation and Support  | |docs|                                              |
 +----------------------------+-----------------------------------------------------+
-| Open Source                | |license| |ossf|                                    |
+| Open Source                | |license| |ossf-score| |zenodo|                     |
 +----------------------------+-----------------------------------------------------+
-| Coding Standards           | |black| |ruff| |pre-commit|                         |
+| Coding Standards           | |black| |ruff| |pre-commit| |ossf-bp| |fossa|       |
 +----------------------------+-----------------------------------------------------+
 | Development Status         | |status| |build| |coveralls|                        |
 +----------------------------+-----------------------------------------------------+
@@ -64,6 +64,10 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
         :target: https://xscen.readthedocs.io/en/latest
         :alt: Documentation Status
 
+.. |fossa| image:: https://app.fossa.com/api/projects/git%2Bgithub.com%2FOuranosinc%2Fxscen.svg?type=shield
+        :target: https://app.fossa.com/projects/git%2Bgithub.com%2FOuranosinc%2Fxscen?ref=badge_shield
+        :alt: FOSSA
+
 .. |license| image:: https://img.shields.io/pypi/l/figanos
         :target: https://github.com/Ouranosinc/figanos/blob/main/LICENSE
         :alt: License
@@ -72,9 +76,13 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
         :target: https://github.com/Ouranosinc/xscen
         :alt: xscen Logo
 
-.. |ossf| image:: https://api.securityscorecards.dev/projects/github.com/Ouranosinc/xscen/badge
+.. |ossf-bp| image:: https://bestpractices.coreinfrastructure.org/projects/9945/badge
+        :target: https://bestpractices.coreinfrastructure.org/projects/9945
+        :alt: Open Source Security Foundation Best Practices
+
+.. |ossf-score| image:: https://api.securityscorecards.dev/projects/github.com/Ouranosinc/xscen/badge
         :target: https://securityscorecards.dev/viewer/?uri=github.com/Ouranosinc/xscen
-        :alt: OpenSSF Scorecard
+        :alt: Open Source Security Foundation Scorecard
 
 .. |pre-commit| image:: https://results.pre-commit.ci/badge/github/Ouranosinc/xscen/main.svg
         :target: https://results.pre-commit.ci/latest/github/Ouranosinc/xscen/main
@@ -95,3 +103,7 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
 .. |versions| image:: https://img.shields.io/pypi/pyversions/xscen.svg
         :target: https://pypi.python.org/pypi/xscen
         :alt: Supported Python Versions
+
+.. |zenodo| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.7897542.svg
+        :target: https://doi.org/10.5281/zenodo.7897542
+        :alt: Zenodo DOI
