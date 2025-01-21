@@ -6,7 +6,7 @@
 #   not configurations related to the deployment process itself.
 
 'CI':
-  - changed_files:
+  - changed-files:
     - any-glob-to-any-file:
       - '.cruft.json'
       - '.editorconfig'
@@ -25,7 +25,7 @@
 
 # label 'docs' all documentation-related steps and files
 'docs':
-  - changed_files:
+  - changed-files:
     - any-glob-to-any-file:
       - '.github/DISCUSSION_TEMPLATE/**/*'
       - '.github/ISSUE_TEMPLATE.md'
@@ -39,6 +39,6 @@
       - 'docs/**/*'
 
 'xclim':
-  - changed_files:
+  - changed-files:
     - any-glob-to-any-file:
       - 'xscen/xclim_modules/**/*'
