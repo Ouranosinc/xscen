@@ -36,6 +36,7 @@ Internal changes
     * Secured token usages on all workflows (using `zizmor`).
     * Simplified logic in ``bump-version.yml``.
     * Synchronized a few dependencies.
+* Fixed a few socket blocks and configuration issues in the CI workflows. (:pull:`512`).
 
 v0.10.1 (2024-11-04)
 --------------------
