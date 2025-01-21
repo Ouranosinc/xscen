@@ -14,6 +14,7 @@ Changes
 
 Fixes
 ^^^^^
+* Gave credits to the package to all previous contributors of ``xclim.sdba`` (:issue:`58`, :pull:`59`).
 * Pin `sphinx-codeautolink` to fix ReadTheDocs and correct some docs errors (:pull:`40`).
 
 .. _changes_0.2.0:
