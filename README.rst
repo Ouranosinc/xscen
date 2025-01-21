@@ -14,14 +14,14 @@ xscen |logo|
 | Development Status         | |status| |build| |coveralls|                        |
 +----------------------------+-----------------------------------------------------+
 
-A climate change scenario-building analysis framework, built with Intake-esm catalogs and xarray-based packages such as xclim and xESMF.
+A climate change scenario-building analysis framework, built with `intake-esm` catalogs and `xarray`-based packages such as `xclim` and `xESMF`.
 
 For documentation concerning `xscen`, see: https://xscen.readthedocs.io/en/latest/
 
 Features
 --------
 * Supports workflows with YAML configuration files for better transparency, reproducibility, and long-term backups.
-* `Intake-esm`_-based catalog to find and manage climate data.
+* `intake-esm`_-based catalog to find and manage climate data.
 * Climate dataset extraction, subsetting, and temporal aggregation.
 * Calculate missing variables through `intake-esm`'s `DerivedVariableRegistry`_.
 * Regridding powered by `xESMF`_.
@@ -37,12 +37,12 @@ Acknowledgments
 This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pypackage`_ project template.
 
 .. _Cookiecutter: https://github.com/cookiecutter/cookiecutter
+.. _DerivedVariableRegistry: https://intake-esm.readthedocs.io/en/latest/how-to/define-and-use-derived-variable-registry.html
 .. _Ouranosinc/cookiecutter-pypackage: https://github.com/Ouranosinc/cookiecutter-pypackage
 .. _installation docs: https://xscen.readthedocs.io/en/latest/installation.html
-.. _Intake-esm: https://intake-esm.readthedocs.io/
-.. _DerivedVariableRegistry: https://intake-esm.readthedocs.io/en/latest/how-to/define-and-use-derived-variable-registry.html
-.. _xclim: https://xclim.readthedocs.io/
+.. _intake-esm: https://intake-esm.readthedocs.io/
 .. _xESMF: https://xesmf.readthedocs.io/
+.. _xclim: https://xclim.readthedocs.io/
 
 .. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
         :target: https://github.com/psf/black

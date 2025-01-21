@@ -37,6 +37,7 @@ Internal changes
     * Simplified logic in ``bump-version.yml``.
     * Synchronized a few dependencies.
 * Fixed a few socket blocks and configuration issues in the CI workflows. (:pull:`512`).
+* Added Open Source Security Foundation Best Practices badge, Zenodo DOI badge, FOSSA license compliance badge to the README. (:pull:`514`).
 
 v0.10.1 (2024-11-04)
 --------------------
