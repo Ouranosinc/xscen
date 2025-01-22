@@ -72,23 +72,21 @@ def extract_dataset(  # noqa: C901
     catalog : DataCatalog
         Sub-catalog for a single dataset, one value of the output of `search_data_catalogs`.
     variables_and_freqs : dict, optional
-        Variables and freqs, following a 'variable: xrfreq-compatible str' format. A list of strings can also be provided.
-        If None, it will be read from catalog._requested_variables and catalog._requested_variable_freqs
-        (set by `variables_and_freqs` in `search_data_catalogs`)
-    periods : list of str or list of lists of str, optional
+        Variables and frequencies, following a 'variable: xrfreq-compatible str' format. A list of strings can also be provided.
+        If None, it will be read from `catalog._requested_variables` and `catalog._requested_variable_freqs`
+        (set by `variables_and_freqs` in `search_data_catalogs`).
+    periods : list of str or list of int or list of lists of str or list of lists of int, optional
         Either [start, end] or list of [start, end] for the periods to be evaluated.
-        Will be read from catalog._requested_periods if None.
-        Leave both None to extract everything.
+        Will be read from catalog._requested_periods if None. Leave both None to extract everything.
     region : dict, optional
         Description of the region and the subsetting method (required fields listed in the Notes) used in `xscen.spatial.subset`.
     to_level : str
-        The processing level to assign to the output.
-        Defaults to 'extracted'
+        The processing level to assign to the output. Defaults to 'extracted'.
     ensure_correct_time : bool
         When True (default), even if the data has the correct frequency, its time coordinate is
-        checked so that it exactly matches the frequency code (xrfreq). For example, daily data given at
-        noon would be transformed to be given at midnight. If the time coordinate is invalid,
-        it raises an error.
+        checked so that it exactly matches the frequency code (xrfreq).
+        For example, daily data given at noon would be transformed to be given at midnight.
+        If the time coordinate is invalid, it raises an error.
     xr_open_kwargs : dict, optional
         A dictionary of keyword arguments to pass to `DataCatalogs.to_dataset_dict`, which
         will be passed to `xr.open_dataset`.
@@ -101,9 +99,9 @@ def extract_dataset(  # noqa: C901
         Dictionary where the keys are the variables and the values are the resampling method.
         Options for the resampling method are {'mean', 'min', 'max', 'sum', 'wind_direction'}.
         If the method is not given for a variable, it is guessed from the variable name and frequency,
-        using the mapping in CVs/resampling_methods.json. If the variable is not found there,
-        "mean" is used by default.
-    mask: xr.Dataset or xr.DataArray or bool
+        using the mapping in CVs/resampling_methods.json.
+        If the variable is not found there, "mean" is used by default.
+    mask : xr.Dataset or xr.DataArray or bool
         A mask that is applied to all variables and only keeps data where it is True.
         Where the mask is False, variable values are replaced by NaNs.
         The mask should have the same dimensions as the variables extracted.
