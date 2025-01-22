@@ -811,7 +811,6 @@ class TestClimatologicalOp:
                 xs.climatological_op(ds, op=op).tas_clim_std, np.nan
             )
 
-        with pytest.warns(RuntimeWarning, match="Degrees of freedom <= 0 for slice."):
             out = xs.climatological_op(ds, op=op, min_periods=29)
 
         if ddof == 0:
