@@ -54,13 +54,6 @@ Aggregation
    :members:
    :noindex:
 
-Reduction
-----------
-
-.. automodule:: xscen.reduce
-   :members:
-   :noindex:
-
 Diagnostics and Quality Checks
 ------------------------------
 
