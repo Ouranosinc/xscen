@@ -38,6 +38,7 @@ Internal changes
     * Synchronized a few dependencies.
 * Fixed a few socket blocks and configuration issues in the CI workflows. (:pull:`512`).
 * Added Open Source Security Foundation Best Practices badge, Zenodo DOI badge, FOSSA license compliance badge to the README. (:pull:`514`).
+* Several deprecated usages within the code base have been addressed. The number of warnings emitted from the test suite have been significantly reduced. (:issue:`515`, :pull:`516`).
 
 v0.10.1 (2024-11-04)
 --------------------
