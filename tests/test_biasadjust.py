@@ -1,3 +1,4 @@
+import contextlib
 import warnings
 
 import numpy as np
@@ -145,8 +146,16 @@ class TestAdjust:
         )
 
         # For justification of warning filter, see: https://docs.xarray.dev/en/stable/generated/xarray.Dataset.polyfit.html
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RankWarning)
+        if (
+            to_level is None
+            and bias_adjust_institution is None
+            and bias_adjust_project is None
+        ):
+            # No warning is expected
+            context = contextlib.nullcontext()
+        else:
+            context = pytest.warns(RankWarning)
+        with context:
             out = xs.adjust(
                 dtrain,
                 self.dsim.copy(),
