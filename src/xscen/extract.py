@@ -51,7 +51,7 @@ def extract_dataset(  # noqa: C901
     catalog: DataCatalog,
     *,
     variables_and_freqs: dict | None = None,
-    periods: list[str] | list[list[str]] | None = None,
+    periods: list[str | int] | list[list[str | int]] | None = None,
     region: dict | None = None,
     to_level: str = "extracted",
     ensure_correct_time: bool = True,
@@ -77,7 +77,8 @@ def extract_dataset(  # noqa: C901
         (set by `variables_and_freqs` in `search_data_catalogs`)
     periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start, end] for the periods to be evaluated.
-        Will be read from catalog._requested_periods if None. Leave both None to extract everything.
+        Will be read from catalog._requested_periods if None.
+        Leave both None to extract everything.
     region : dict, optional
         Description of the region and the subsetting method (required fields listed in the Notes) used in `xscen.spatial.subset`.
     to_level : str

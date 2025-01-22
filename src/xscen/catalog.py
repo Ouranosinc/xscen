@@ -186,7 +186,6 @@ class DataCatalog(intake_esm.esm_datastore):
         for datecol in ["date_start", "date_end"]:
             if datecol in self.df.columns and self.df[datecol].dtype == "O":
                 # Missing values in object columns are np.nan, which numpy can't convert to datetime64 (what's up with that numpy???)
-                # FIXME: Notebooks failing due to NaN handling of infer_objects() in pandas. dropna() is might not be the right approach.
                 self.df[datecol] = (
                     self.df[datecol]
                     .infer_objects(copy=False)
