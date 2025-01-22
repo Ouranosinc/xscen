@@ -1522,7 +1522,7 @@ def _dispatch_historical_to_future(
     )
     df = df[df.experiment != "historical"].reset_index(drop=True)
     return DataCatalog(
-        {"esmcat": catalog.esmcat.dict(), "df": df},
+        {"esmcat": catalog.esmcat.model_dump(), "df": df},
         registry=catalog.derivedcat,
         drop_duplicates=False,
     )

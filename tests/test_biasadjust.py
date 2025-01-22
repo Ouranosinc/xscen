@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pytest
 import xarray as xr
@@ -189,9 +191,11 @@ class TestAdjust:
 
         root = str(tmpdir / "_data")
         xs.save_to_zarr(dtrain, f"{root}/test.zarr", mode="o")
-        dtrain2 = xr.open_dataset(
-            f"{root}/test.zarr", chunks={"dayofyear": 365, "quantiles": 15}
-        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            dtrain2 = xr.open_dataset(
+                f"{root}/test.zarr", chunks={"dayofyear": 365, "quantiles": 15}
+            )
 
         out = xs.adjust(
             dtrain,
