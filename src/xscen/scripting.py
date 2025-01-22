@@ -463,7 +463,10 @@ def move_and_delete(
                     for f in copied_files:
                         # copied files don't include zarr files
                         if f[-16:] == ".zarr/.zmetadata":
-                            ds = xr.open_dataset(f[:-11])
+                            with warnings.catch_warnings():
+                                # Silence RuntimeWarning about failed guess of backend engines
+                                warnings.simplefilter("ignore", category=RuntimeWarning)
+                                ds = xr.open_dataset(f[:-11])
                             pcat.update_from_ds(ds=ds, path=f[:-11])
                         if f[-3:] == ".nc":
                             ds = xr.open_dataset(f)
@@ -473,7 +476,10 @@ def move_and_delete(
                     logger.info(msg)
                     sh.move(source, dest)
                 if Path(dest).suffix in [".zarr", ".nc"]:
-                    ds = xr.open_dataset(dest)
+                    with warnings.catch_warnings():
+                        # Silence RuntimeWarning about failed guess of backend engines
+                        warnings.simplefilter("ignore", category=RuntimeWarning)
+                        ds = xr.open_dataset(dest)
                     pcat.update_from_ds(ds=ds, path=dest)
             else:
                 msg = f"You are trying to move {source}, but it does not exist."
