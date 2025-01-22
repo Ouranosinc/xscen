@@ -668,7 +668,7 @@ class TestClimatologicalOp:
         with pytest.raises(NotImplementedError):
             xs.climatological_op(ds, op="mean")
 
-    @pytest.mark.parametrize("xrfreq", ["MS", "AS-JAN"])
+    @pytest.mark.parametrize("xrfreq", ["MS", "YS-JAN"])
     @pytest.mark.parametrize(
         "op", ["max", "mean", "median", "min", "std", "sum", "var", "linregress"]
     )
@@ -720,7 +720,7 @@ class TestClimatologicalOp:
         )
         assert out.attrs["cat:processing_level"] == "climatology"
 
-    @pytest.mark.parametrize("xrfreq", ["MS", "AS-JAN"])
+    @pytest.mark.parametrize("xrfreq", ["MS", "YS-JAN"])
     @pytest.mark.parametrize(
         "op", ["max", "mean", "median", "min", "std", "sum", "var", "linregress"]
     )
@@ -806,11 +806,14 @@ class TestClimatologicalOp:
         op = {"std": {"ddof": ddof}}
 
         # Test with NaNs
-        np.testing.assert_array_almost_equal(
-            xs.climatological_op(ds, op=op).tas_clim_std, np.nan
-        )
+        with pytest.warns(RuntimeWarning, match="Degrees of freedom <= 0 for slice."):
+            np.testing.assert_array_almost_equal(
+                xs.climatological_op(ds, op=op).tas_clim_std, np.nan
+            )
 
-        out = xs.climatological_op(ds, op=op, min_periods=29)
+        with pytest.warns(RuntimeWarning, match="Degrees of freedom <= 0 for slice."):
+            out = xs.climatological_op(ds, op=op, min_periods=29)
+
         if ddof == 0:
             np.testing.assert_array_almost_equal(
                 out["tas_clim_std"], 8.366600, decimal=6
@@ -900,14 +903,14 @@ class TestClimatologicalOp:
             np.tile(np.arange(1, 2), 10),
             variable="tas",
             start="2001-01-01",
-            freq="AS-JAN",
+            freq="YS-JAN",
             as_dataset=True,
         )
         ds2 = timeseries(
             np.tile(np.arange(1, 2), 10),
             variable="tas",
             start="2021-01-01",
-            freq="AS-JAN",
+            freq="YS-JAN",
             as_dataset=True,
         )
 
@@ -927,20 +930,20 @@ class TestClimatologicalOp:
             np.tile(np.arange(1, 2), 30),
             variable="tas",
             start="2001-01-01",
-            freq="AS-JAN",
+            freq="YS-JAN",
             as_dataset=True,
         )
 
         out = xs.climatological_op(ds.convert_calendar(cal, align_on="date"), op="mean")
         assert out.time.dt.calendar == cal
 
-    @pytest.mark.parametrize("xrfreq", ["MS", "QS-DEC", "AS-JAN"])
+    @pytest.mark.parametrize("xrfreq", ["MS", "QS-DEC", "YS-JAN"])
     def test_horizons_as_dim(self, xrfreq):
         o = 12 if xrfreq == "MS" else 4 if xrfreq == "QS-DEC" else 1
         freq = {
             "MS": {"month": o},
             "QS-DEC": {"season": o},
-            "AS-JAN": {},
+            "YS-JAN": {},
         }
         ds = timeseries(
             np.tile(np.arange(1, o + 1), 30),

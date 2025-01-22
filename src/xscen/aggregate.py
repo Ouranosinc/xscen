@@ -59,7 +59,8 @@ def climatological_op(  # noqa: C901
     to_level: str = "climatology",
     horizons_as_dim: bool = False,
 ) -> xr.Dataset:
-    """Perform an operation 'op' over time, for given time periods, respecting the temporal resolution of ds.
+    """
+    Perform an operation 'op' over time, for given time periods, respecting the temporal resolution of ds.
 
     Parameters
     ----------
@@ -116,9 +117,8 @@ def climatological_op(  # noqa: C901
     -----
     xarray.core.rolling.DatasetRolling functions do not support kwargs other than 'keep_attrs'. In order to pass
     additional arguments to the operation, we instead use the 'reduce' method and pass the operation as a numpy function.
-    If possible, a function that handles NaN values will be used (e.g. op='mean' will use np.nanmean), as the 'min_periods'
-    argument already decides how many NaN values are acceptable.
-
+    If possible, a function that handles NaN values will be used (e.g. op='mean' will use `np.nanmean`), as the
+    'min_periods' argument already decides how many NaN values are acceptable.
     """
     # Daily data is not supported
     if len(ds.time) > 3 and xr.infer_freq(ds.time) == "D":
