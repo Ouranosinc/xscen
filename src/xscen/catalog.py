@@ -186,11 +186,7 @@ class DataCatalog(intake_esm.esm_datastore):
         for datecol in ["date_start", "date_end"]:
             if datecol in self.df.columns and self.df[datecol].dtype == "O":
                 # Missing values in object columns are np.nan, which numpy can't convert to datetime64 (what's up with that numpy???)
-                self.df[datecol] = (
-                    self.df[datecol]
-                    .dropna()
-                    .astype("datetime64[ms]")
-                )
+                self.df[datecol] = self.df[datecol].dropna().astype("datetime64[ms]")
 
         if check_valid:
             self.check_valid()
