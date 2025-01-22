@@ -299,7 +299,7 @@ class TestGenerateWeights:
                         ds["horizon"] = xr.DataArray(
                             ["1981-2010", "2041-2070", "+2C", "+4C"], dims="time"
                         )
-                        ds = ds.swap_dims({"time": "horizon"}).drop("time")
+                        ds = ds.swap_dims({"time": "horizon"}).drop_vars("time")
                         if f"{gcm}-{member}" == "CanESM2-r3i1p1":
                             ds = ds.where(ds.horizon == "1981-2010")
                         elif gcm == "GFDL-ESM2G":

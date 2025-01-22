@@ -667,7 +667,7 @@ def search_data_catalogs(  # noqa: C901
     # Prepare a unique catalog to search from, with the DerivedCat added if required
     catalog = DataCatalog(
         {
-            "esmcat": data_catalogs[0].esmcat.dict(),
+            "esmcat": data_catalogs[0].esmcat.model_dump(),
             "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
         },
         **cat_kwargs,

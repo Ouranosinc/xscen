@@ -106,7 +106,7 @@ class TestComputeDeltas:
         out2 = xs.compute_deltas(self.ds, reference_horizon="1981-2010")
         assert out1.equals(out2)
 
-    @pytest.mark.parametrize("xrfreq", ["MS", "QS", "AS-JAN"])
+    @pytest.mark.parametrize("xrfreq", ["MS", "QS", "YS-JAN"])
     def test_freqs(self, xrfreq):
         o = 12 if xrfreq == "MS" else 4 if xrfreq == "QS" else 1
 
