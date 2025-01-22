@@ -4,8 +4,14 @@ import numpy as np
 import pytest
 import xarray as xr
 import xclim as xc
-from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
+
+# Copied from xarray/core/nputils.py
+# Can be removed once numpy 2.0+ is the oldest supported version
+try:
+    from numpy.exceptions import RankWarning
+except ImportError:
+    from numpy import RankWarning
 
 import xscen as xs
 
@@ -138,14 +144,18 @@ class TestAdjust:
             period=["2001", "2003"],
         )
 
-        out = xs.adjust(
-            dtrain,
-            self.dsim.copy(),
-            periods=periods,
-            to_level=to_level,
-            bias_adjust_institution=bias_adjust_institution,
-            bias_adjust_project=bias_adjust_project,
-        )
+        # For justification of warning filter, see: https://docs.xarray.dev/en/stable/generated/xarray.Dataset.polyfit.html
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RankWarning)
+            out = xs.adjust(
+                dtrain,
+                self.dsim.copy(),
+                periods=periods,
+                to_level=to_level,
+                bias_adjust_institution=bias_adjust_institution,
+                bias_adjust_project=bias_adjust_project,
+            )
+
         assert out.attrs["cat:processing_level"] == to_level or "biasadjusted"
         assert out.attrs["cat:variable"] == ("tas",)
         assert out.attrs["cat:id"] == "fake_id"
