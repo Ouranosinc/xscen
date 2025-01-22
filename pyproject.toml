@@ -108,7 +108,7 @@ docs = [
   "sphinx-intl",
   "sphinx-mdinclude",
   "sphinx-rtd-theme >=1.0",
-  "sphinxcontrib-napoleon",
+  "sphinxcontrib-napoleon"
 ]
 extra = [
   "xesmf>=0.7, <0.8.8" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
