@@ -188,7 +188,6 @@ class DataCatalog(intake_esm.esm_datastore):
                 # Missing values in object columns are np.nan, which numpy can't convert to datetime64 (what's up with that numpy???)
                 self.df[datecol] = (
                     self.df[datecol]
-                    .infer_objects(copy=False)
                     .dropna()
                     .astype("datetime64[ms]")
                 )
