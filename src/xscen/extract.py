@@ -1610,7 +1610,7 @@ def _restrict_by_resolution(
             # and the resolution itself as well as the domain name
             elif pd.unique(df_sim["activity"])[0] == "CORDEX":
                 # Unique CORDEX domains
-                cordex_doms = pd.unique([d.split("-")[0] for d in domains])
+                cordex_doms = list(pd.unique(pd.Series([d.split("-")[0] for d in domains])))
                 chosen = []
 
                 for d in cordex_doms:
