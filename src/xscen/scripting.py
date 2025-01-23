@@ -10,7 +10,6 @@ import sys
 import time
 import warnings
 from contextlib import contextmanager
-from distutils.dir_util import copy_tree
 from email.message import EmailMessage
 from io import BytesIO
 from pathlib import Path
@@ -441,16 +440,14 @@ def move_and_delete(
 
     Parameters
     ----------
-    moving: list of lists of str or os.PathLike
+    moving : list of lists of str or os.PathLike
         list of lists of path of files to move, following the format: [[source 1, destination1], [source 2, destination2],...]
-    pcat: ProjectCatalog
+    pcat : ProjectCatalog
         Catalog to update with new destinations
-    deleting: list of str or os.PathLike, optional
-        list of directories to be deleted including all contents and recreated empty.
-        E.g. the working directory of a workflow.
-    copy: bool, optional
+    deleting : list of str or os.PathLike, optional
+        List of directories to be deleted, including all contents, and recreated empty. e.g. The working directory of a workflow.
+    copy : bool, optional
         If True, copy directories instead of moving them.
-
     """
     if isinstance(moving, list) and isinstance(moving[0], list):
         for files in moving:
@@ -459,11 +456,14 @@ def move_and_delete(
                 if copy:
                     msg = f"Copying {source} to {dest}."
                     logger.info(msg)
-                    copied_files = copy_tree(source, dest)
+                    copied_files = sh.copytree(source, dest, dirs_exist_ok=True)
                     for f in copied_files:
                         # copied files don't include zarr files
                         if f[-16:] == ".zarr/.zmetadata":
-                            ds = xr.open_dataset(f[:-11])
+                            with warnings.catch_warnings():
+                                # Silence RuntimeWarning about failed guess of backend engines
+                                warnings.simplefilter("ignore", category=RuntimeWarning)
+                                ds = xr.open_dataset(f[:-11])
                             pcat.update_from_ds(ds=ds, path=f[:-11])
                         if f[-3:] == ".nc":
                             ds = xr.open_dataset(f)
@@ -473,7 +473,10 @@ def move_and_delete(
                     logger.info(msg)
                     sh.move(source, dest)
                 if Path(dest).suffix in [".zarr", ".nc"]:
-                    ds = xr.open_dataset(dest)
+                    with warnings.catch_warnings():
+                        # Silence RuntimeWarning about failed guess of backend engines
+                        warnings.simplefilter("ignore", category=RuntimeWarning)
+                        ds = xr.open_dataset(dest)
                     pcat.update_from_ds(ds=ds, path=dest)
             else:
                 msg = f"You are trying to move {source}, but it does not exist."

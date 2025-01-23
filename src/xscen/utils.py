@@ -166,7 +166,7 @@ def date_parser(  # noqa: C901
     end_of_period: bool | str = False,
     out_dtype: str = "datetime",
     strtime_format: str = "%Y-%m-%d",
-    freq: str = "H",
+    freq: str = "h",
 ) -> str | pd.Period | pd.Timestamp:
     """Return a datetime from a string.
 

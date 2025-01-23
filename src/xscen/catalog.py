@@ -186,9 +186,7 @@ class DataCatalog(intake_esm.esm_datastore):
         for datecol in ["date_start", "date_end"]:
             if datecol in self.df.columns and self.df[datecol].dtype == "O":
                 # Missing values in object columns are np.nan, which numpy can't convert to datetime64 (what's up with that numpy???)
-                self.df[datecol] = (
-                    self.df[datecol].fillna("").to_numpy().astype("datetime64[ms]")
-                )
+                self.df[datecol] = self.df[datecol].dropna().astype("datetime64[ms]")
 
         if check_valid:
             self.check_valid()
@@ -622,7 +620,7 @@ class DataCatalog(intake_esm.esm_datastore):
             return
         data["path"] = data["new_path"]
         data = data.drop(columns=["new_path"])
-        return self.__class__({"esmcat": self.esmcat.dict(), "df": data})
+        return self.__class__({"esmcat": self.esmcat.model_dump(), "df": data})
 
 
 class ProjectCatalog(DataCatalog):
@@ -946,7 +944,7 @@ def concat_data_catalogs(*dcs):
     df = pd.concat(catalogs, axis=0).drop_duplicates(ignore_index=True)
     dvr = intake_esm.DerivedVariableRegistry()
     dvr._registry.update(registry)
-    newcat = DataCatalog({"esmcat": dcs[0].esmcat.dict(), "df": df}, registry=dvr)
+    newcat = DataCatalog({"esmcat": dcs[0].esmcat.model_dump(), "df": df}, registry=dvr)
     newcat._requested_variables = requested_variables
     if requested_variables_true:
         newcat._requested_variables_true = requested_variables_true
