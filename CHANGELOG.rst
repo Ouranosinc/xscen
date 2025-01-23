@@ -13,6 +13,7 @@ New features and enhancements
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * ``xs.utils.publish_release_notes`` and ``xs.utils.show_versions`` have been moved to ``xs.testing``. (:pull:`492`).
+* The previously-deprecated ``xs.reduce`` module has been removed. Refer to ``xs.ensembles.make_criteria`` and ``xs.ensembles.reduce_ensemble`` for replacement functionality. (:pull:`517`).
 
 Bug fixes
 ^^^^^^^^^
