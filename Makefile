@@ -99,9 +99,11 @@ servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
 dist: clean ## builds source and wheel package
-	python -m build --sdist
-	python -m build --wheel
+	python -m flit build
 	ls -l dist
+
+release: dist ## package and upload a release
+	python -m flit publish dist/*
 
 install: clean ## install the package to the active Python's site-packages
 	python -m pip install .
