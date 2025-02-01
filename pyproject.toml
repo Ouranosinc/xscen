@@ -111,7 +111,7 @@ docs = [
   "sphinxcontrib-napoleon"
 ]
 extra = [
-  "xesmf>=0.7, <0.8.8" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
+  "xesmf>=0.7, <0.8.9" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
 ]
 all = ["xscen[dev]", "xscen[docs]", "xscen[extra]"]
 
