@@ -2,17 +2,17 @@
 xscen |logo|
 ============
 
-+----------------------------+-----------------------------------------------------+
-| Versions                   | |pypi| |conda| |versions|                           |
-+----------------------------+-----------------------------------------------------+
-| Documentation and Support  | |docs|                                              |
-+----------------------------+-----------------------------------------------------+
-| Open Source                | |license| |ossf-score| |zenodo|                     |
-+----------------------------+-----------------------------------------------------+
-| Coding Standards           | |black| |ruff| |pre-commit| |ossf-bp| |fossa|       |
-+----------------------------+-----------------------------------------------------+
-| Development Status         | |status| |build| |coveralls|                        |
-+----------------------------+-----------------------------------------------------+
++----------------------------+-------------------------------------------------------+
+| Versions                   | |pypi| |conda| |versions|                             |
++----------------------------+-------------------------------------------------------+
+| Documentation and Support  | |docs|                                                |
++----------------------------+-------------------------------------------------------+
+| Open Source                | |license| |ossf-score| |zenodo|                       |
++----------------------------+-------------------------------------------------------+
+| Coding Standards           | |black| |isort| |ruff| |pre-commit| |ossf-bp| |fossa| |
++----------------------------+-------------------------------------------------------+
+| Development Status         | |status| |build| |coveralls|                          |
++----------------------------+-------------------------------------------------------+
 
 A climate change scenario-building analysis framework, built with `intake-esm` catalogs and `xarray`-based packages such as `xclim` and `xESMF`.
 
@@ -67,6 +67,10 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
 .. |fossa| image:: https://app.fossa.com/api/projects/git%2Bgithub.com%2FOuranosinc%2Fxscen.svg?type=shield
         :target: https://app.fossa.com/projects/git%2Bgithub.com%2FOuranosinc%2Fxscen?ref=badge_shield
         :alt: FOSSA
+
+.. |isort| image:: https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336
+        :target: https://pycqa.github.io/isort/
+        :alt: Isort
 
 .. |license| image:: https://img.shields.io/pypi/l/figanos
         :target: https://github.com/Ouranosinc/figanos/blob/main/LICENSE

@@ -21,31 +21,39 @@ repos:
       - id: check-toml
       - id: check-yaml
         args: [ '--allow-multiple-documents' ]
-  - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.10.0
-    hooks:
-      - id: python-check-blanket-noqa
-      - id: python-no-eval
-        exclude: biasadjust.py
-      - id: python-no-log-warn
-      - id: python-use-type-annotations
-      - id: rst-inline-touching-normal
   - repo: https://github.com/pappasam/toml-sort
     rev: v0.24.2
     hooks:
       - id: toml-sort-fix
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: [ '--config-file=.yamllint.yaml' ]
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      - id: python-check-blanket-noqa
+      - id: python-check-blanket-type-ignore
+      - id: python-no-eval
+        exclude: biasadjust.py
+      - id: python-no-log-warn
+      - id: python-use-type-annotations
+      - id: rst-directive-colons
+      - id: rst-inline-touching-normal
+      - id: text-unicode-replacement-char
   - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.10.0
+    rev: 25.1.0
     hooks:
       - id: black
         exclude: ^docs/
   - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
+    rev: 6.0.0
     hooks:
       - id: isort
         exclude: ^docs/
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.6
+    rev: v0.9.0
     hooks:
       - id: ruff
         args: [ '--fix', '--show-fixes' ]
@@ -71,11 +79,11 @@ repos:
         additional_dependencies: [ 'black==24.10.0' ]
         exclude: config.py
       - id: blackdoc-autoupdate-black
-  - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.35.1
-    hooks:
-      - id: yamllint
-        args: [ '--config-file=.yamllint.yaml' ]
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.3.0
+      - id: codespell
+        additional_dependencies: [ 'tomli' ]
+        args: [ '--toml=pyproject.toml' ]
 #  - repo: https://github.com/numpy/numpydoc
 #    rev: v1.8.0
 #    hooks:
@@ -86,12 +94,12 @@ repos:
     hooks:
       - id: nbqa-pyupgrade
         args: [ '--py310-plus' ]
-        additional_dependencies: [ 'pyupgrade==3.17.0' ]
+        additional_dependencies: [ 'pyupgrade==3.19.1' ]
       - id: nbqa-black
         args: [ '--target-version=py310' ]
-        additional_dependencies: [ 'black==24.10.0' ]
+        additional_dependencies: [ 'black==25.1.0' ]
       - id: nbqa-isort
-        additional_dependencies: [ 'isort==5.13.2' ]
+        additional_dependencies: [ 'isort==6.0.0' ]
   - repo: https://github.com/kynan/nbstripout
     rev: 0.8.1
     hooks:
