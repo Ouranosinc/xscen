@@ -2,6 +2,14 @@
 Changelog
 =========
 
+v0.12.0 (unreleased)
+--------------------
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* `xscen` now uses `flit` as its build-engine and no longer uses `setuptools`, `setuptools-scm`, or `wheel`. (:pull:`519`).
+
 v0.11.0 (2025-01-23)
 --------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`).
