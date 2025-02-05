@@ -10,6 +10,17 @@ Breaking changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now uses `flit` as its build-engine and no longer uses `setuptools`, `setuptools-scm`, or `wheel`. (:pull:`519`).
 
+Bug fixes
+^^^^^^^^^
+* Docstrings and documentation have been updated to remove several small grammatical errors. (:pull:`527`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Updated the cookiecutter template to the latest commit. (:pull:`527`):
+    * Updated versions of many GitHub Actions and Python dependencies.
+    * Removed `coveralls` from the CI dependencies.
+    * Added `pre-commit` hooks for `vulture` (dead code) and `codespell` (typos).
+
 v0.11.0 (2025-01-23)
 --------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`).
