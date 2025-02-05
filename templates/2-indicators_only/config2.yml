@@ -7,7 +7,7 @@ dask:
     threads_per_worker: 4
     memory_limit: 10GB
     # dashboard_address: 11111
-    # silence_logs: 50  # To supress warnings about garbage collection and other inevitable stuff
+    # silence_logs: 50  # To suppress warnings about garbage collection and other inevitable stuff
     array.slicing.split_large_chunks: False
 
 logging:

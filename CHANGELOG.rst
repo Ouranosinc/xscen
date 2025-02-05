@@ -441,7 +441,7 @@ New features and enhancements
 * New 'cos-lat' averaging in `spatial_mean`. (:issue:`94`, :pull:`125`).
 * Support for computing anomalies in `compute_deltas`.  (:pull:`165`).
 * Add function `diagnostics.measures_improvement_2d`. (:pull:`167`).
-* Add function ``regrid.create_bounds_rotated_pole`` and automatic use in ``regrid_dataset`` and ``spatial_mean``. This is temporary, while we wait for a functionning method in ``cf_xarray``. (:pull:`174`, :issue:`96`).
+* Add function ``regrid.create_bounds_rotated_pole`` and automatic use in ``regrid_dataset`` and ``spatial_mean``. This is temporary, while we wait for a functioning method in ``cf_xarray``. (:pull:`174`, :issue:`96`).
 * Add ``spatial`` submodule with functions ``creep_weights`` and ``creep_fill`` for filling NaNs using neighbours. (:pull:`174`).
 * Allow passing ``GeoDataFrame`` instances in ``spatial_mean``'s ``region`` argument, not only geospatial file paths. (:pull:`174`).
 * Allow searching for periods in `catalog.search`. (:issue:`123`, :pull:`170`).
@@ -557,7 +557,7 @@ New features and enhancements
 * In extract_dataset, add option ``ensure_correct_time`` to ensure the time coordinate matches the expected freq. Ex: monthly values given on the 15th day are moved to the 1st, as expected when asking for "MS". (:issue: `53`).
 * In regrid_dataset: (:pull:`68`).
     * Allow passing skipna to the regridder kwargs.
-    * Do not fail for any grid mapping problem, includin if a grid_mapping attribute mentions a variable that doesn't exist.
+    * Do not fail for any grid mapping problem, including if a grid_mapping attribute mentions a variable that doesn't exist.
 * Default email sent to the local user. (:pull:`68`).
 * Special accelerated pathway for parsing catalogs with all dates within the datetime64[ns] range. (:pull:`75`).
 * New functions ``reduce_ensemble`` and ``build_reduction_data`` to support kkz and kmeans clustering. (:issue:`4`, :pull:`63`).

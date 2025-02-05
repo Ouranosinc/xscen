@@ -997,7 +997,7 @@ def unstack_id(df: pd.DataFrame | ProjectCatalog | DataCatalog) -> dict:
 
     Parameters
     ----------
-    df : pd.DataFrame | ProjectCatalog | DataCatalog
+    df : pd.DataFrame or ProjectCatalog or DataCatalog
         Either a Project/DataCatalog or a pandas DataFrame.
 
     Returns
@@ -1044,21 +1044,21 @@ def subset_file_coverage(
     Parameters
     ----------
     df : pd.DataFrame
-      List of files to be evaluated, with at least a date_start and date_end column,
-      which are expected to be `datetime64` objecs.
+        List of files to be evaluated, with at least a date_start and date_end column,
+        which are expected to be `datetime64` objects.
     periods : list of str or list of lists of str
-      Either [start, end] or list of [start, end] for the periods to be evaluated.
-      All periods must be covered, otherwise an empty subset is returned.
+        Either [start, end] or list of [start, end] for the periods to be evaluated.
+        All periods must be covered, otherwise an empty subset is returned.
     coverage : float
-      Percentage of hours that need to be covered in a given period for the dataset to be valid. Use 0 to ignore this checkup.
-      The coverage calculation is only valid if there are no overlapping periods in `df` (ensure with `duplicates_ok=False`).
-    duplicates_ok: bool
-      If True, no checkup is done on possible duplicates.
+        Percentage of hours that need to be covered in a given period for the dataset to be valid. Use 0 to ignore this checkup.
+        The coverage calculation is only valid if there are no overlapping periods in `df` (ensure with `duplicates_ok=False`).
+    duplicates_ok : bool
+        If True, no checkup is done on possible duplicates.
 
     Returns
     -------
     pd.DataFrame
-      Subset of files that overlap the targetted periods
+        Subset of files that overlap the targeted periods.
     """
     periods = standardize_periods(periods)
 

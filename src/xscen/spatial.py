@@ -154,10 +154,9 @@ def subset(
     ----------
     ds : xr.Dataset
         Dataset to be subsetted.
-    method : str
-        ['gridpoint', 'bbox', shape', 'sel']
-        If the method is `sel`, this is not a call to clisops but only a subsetting with the xarray .sel() fonction.
-    name: str, optional
+    method : {'gridpoint', 'bbox', shape', 'sel'}
+        If the method is 'sel', this is not a call to clisops but only a subsetting with the xarray `.sel()` function.
+    name : str, optional
         Used to rename the 'cat:domain' attribute.
     tile_buffer : float
         For ['bbox', shape'], uses an approximation of the grid cell size to add a buffer around the requested region.

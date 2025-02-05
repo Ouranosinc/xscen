@@ -138,7 +138,7 @@ def regrid_dataset(  # noqa: C901
                     f"{'_'.join(kwargs[k] for k in kwargs if isinstance(kwargs[k], str))}.nc",
                 )
 
-                # Re-use existing weight file if possible
+                # Reuse existing weight file if possible
                 if Path(weights_filename).is_file() and not (
                     ("reuse_weights" in kwargs) and (kwargs["reuse_weights"] is False)
                 ):
