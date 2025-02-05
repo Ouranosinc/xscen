@@ -76,11 +76,12 @@ repos:
     rev: v0.3.9
     hooks:
       - id: blackdoc
-        additional_dependencies: [ 'black==24.10.0' ]
+        additional_dependencies: [ 'black==25.1.0' ]
         exclude: config.py
       - id: blackdoc-autoupdate-black
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
+    hooks:
       - id: codespell
         additional_dependencies: [ 'tomli' ]
         args: [ '--toml=pyproject.toml' ]
