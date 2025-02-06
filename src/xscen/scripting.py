@@ -133,14 +133,14 @@ class ExitWatcher:
             sys.excepthook = self.err_handler
             self.hooked = True
         else:
-            warnings.warn("Exit hooks have already been overrided.")
+            warnings.warn("Exit hooks have already been overridden.")
 
     def unhook(self):
         if self.hooked:
             sys.exit = self.orig_exit
             sys.excepthook = self.orig_excepthook
         else:
-            raise ValueError("Exit hooks were not overriden, can't unhook.")
+            raise ValueError("Exit hooks were not overridden. Cannot unhook.")
 
     def exit(self, code=0):
         self.code = code
@@ -172,24 +172,20 @@ def send_mail_on_exit(
     Parameters
     ----------
     subject : str, optional
-      Email subject. Will be appended by "Success", "No errors" or "Failure" depending
-      on how the system exits.
+        Email subject. Will be appended by "Success", "No errors" or "Failure" depending
+        on how the system exits.
     msg_ok : str, optional
-      Content of the email if the system exists successfully.
+        Content of the email if the system exists successfully.
     msg_err : str, optional
-      Content of the email id the system exists with a non-zero code or with an error.
-      The message will be appended by the exit code or with the error traceback.
+        Content of the email id the system exists with a non-zero code or with an error.
+        The message will be appended by the exit code or with the error traceback.
     on_error_only : boolean
-      Whether to only send an email on a non-zero/error exit.
+        Whether to only send an email on a non-zero/error exit.
     skip_ctrlc : boolean
-      If True (default), exiting with a KeyboardInterrupt will not send an email.
+        If True (default), exiting with a KeyboardInterrupt will not send an email.
     mail_kwargs
-      Other arguments passed to :py:func:`send_mail`.
-      The `to` argument is necessary for this function to work.
-
-    Returns
-    -------
-    None
+        Other arguments passed to :py:func:`send_mail`.
+        The `to` argument is necessary for this function to work.
 
     Example
     -------
@@ -372,7 +368,7 @@ def save_and_update(
     path: str or os.pathlike, optional
         Path where to save the dataset.
         If the string contains variables in curly bracket. They will be filled by catalog attributes.
-        If None, the `catutils.build_path` fonction will be used to create a path.
+        If None, the `catutils.build_path` function will be used to create a path.
     file_format: {'nc', 'zarr'}
         Format of the file.
         If None, look for the following in order: build_path_kwargs['format'], a suffix in path, ds.attrs['cat:format'].

@@ -504,11 +504,11 @@ def parse_directory(  # noqa: C901
         missing fields are parsed from their metadata, if found.
         If a sequence of column names, only those fields are parsed from the file, if missing.
         If False (default), files are never opened.
-        If a tuple of 2 lists of strings, only the first file of groups defined by the
-        first list of columns is read and the second list of columns is parsed from the
-        file and applied to the whole group. For example, `(["source"],["institution", "activity"])` will find a
-        group with all the files that have the same source, open only one of the files to read the institution
-        and activity, and write this information in the catalog for all filles of the group.
+        If a tuple of 2 lists of strings, only the first file of groups defined by the first list of
+        columns is read and the second list of columns is parsed from the file and applied to the whole group.
+        For example, `(["source"],["institution", "activity"])` will find a group with all the files
+        that have the same source, open only one of the files to read the institution
+        and activity, and write this information in the catalog for all files of the group.
         It can also be a list of those tuples.
     homogenous_info : dict, optional
         Using the {column_name: description} format, information to apply to all files.
@@ -530,8 +530,9 @@ def parse_directory(  # noqa: C901
     only_official_columns: bool
         If True (default), this ensures the final catalog only has the columns defined in :py:data:`xscen.catalog.COLUMNS`.
         Other fields in the patterns will raise an error.
-        If False, the columns are those used in the patterns and the homogenous info. In that case, the column order is not determined.
-        Path, format and id are always present in the output.
+        If False, the columns are those used in the patterns and the homogeneous info.
+        In that case, the column order is not determined.
+        Path, format, and id are always present in the output.
     progress : bool
         If True, a counter is shown in stdout when finding files on disk. Does nothing if `parallel_dirs` is not False.
     parallel_dirs: bool or int
@@ -546,7 +547,7 @@ def parse_directory(  # noqa: C901
 
     Notes
     -----
-    - Offical columns names are controlled and ordered by :py:data:`COLUMNS`:
+    - Official columns names are controlled and ordered by :py:data:`COLUMNS`:
         ["id", "type", "processing_level", "mip_era", "activity", "driving_institution", "driving_model", "institution",
          "source", "bias_adjust_institution", "bias_adjust_project","experiment", "member",
          "xrfreq", "frequency", "variable", "domain", "date_start", "date_end", "version"]
@@ -1100,7 +1101,7 @@ def _build_path(
     elif isinstance(data, pd.Series):
         facets = dict(data)
     else:
-        raise NotImplementedError(f"Can't buld path with object of type {type(data)}")
+        raise NotImplementedError(f"Cannot build path with object of type {type(data)}")
 
     facets = facets | extra_facets
 
