@@ -1182,7 +1182,7 @@ def _wl_prep_infomodels(realization, ignore_member, fields):
 
 
 def _wl_find_column(tas, model):
-    # choose colum based in ds cat attrs, +'$' to ensure a full match (matches end-of-string)
+    # Choose column based on ds cat attrs, +'$' to ensure a full match (matches end-of-string)
     mip = tas.mip_era.str.match(model["mip_era"] + "$")
     src = tas.source.str.match(model["source"] + "$")
     if not src.any():
@@ -1232,7 +1232,7 @@ def subset_warming_level(
        Warming level.
        e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
        Multiple levels can be passed, in which case using "{wl}" in  `to_level` and `wl_dim` is not recommended.
-       Mutliple levels are currently only implemented for annual data.
+       Multiple levels are currently only implemented for annual data.
     to_level :
        The processing level to assign to the output.
        Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
