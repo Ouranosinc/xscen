@@ -397,10 +397,11 @@ def _wrap_month(m):
 
 
 def fix_semiannual(ds, freq):
-    """Avoid wrong start dates for semiannual frequency.
+    """
+    Avoid wrong start dates for semiannual frequency.
 
     Resampling with offsets that are multiples of a base frequency (ex: 2QS-OCT) is broken in pandas (https://github.com/pandas-dev/pandas/issues/51563).
-    This will cut the beggining of the dataset so it starts exactly at the beginning of the resampling period.
+    This will cut the beginning of the dataset so it starts exactly at the beginning of the resampling period.
     """
     # I hate that we have to do that
     mul, b, s, anc = parse_offset(freq)

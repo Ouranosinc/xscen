@@ -145,7 +145,7 @@ def train(
 
     if group:
         if isinstance(group, dict):
-            # So we can specifiy window and add_dims in yaml.
+            # So we can specify window and add_dims in yaml.
             group = sdba.Grouper.from_kwargs(**group)["group"]
         elif isinstance(group, str):
             group = sdba.Grouper(group)
