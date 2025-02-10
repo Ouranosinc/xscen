@@ -4,9 +4,10 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import xarray as xr
-from conftest import SAMPLES_DIR
 
 from xscen import catutils as cu
+
+from .conftest import SAMPLES_DIR
 
 
 # Sample files are in the doc folder

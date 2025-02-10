@@ -4,10 +4,11 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
-from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
+
+from .conftest import notebooks
 
 
 class TestSearchDataCatalogs:
