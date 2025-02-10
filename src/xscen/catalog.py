@@ -186,9 +186,7 @@ class DataCatalog(intake_esm.esm_datastore):
         for datecol in ["date_start", "date_end"]:
             if datecol in self.df.columns and self.df[datecol].dtype == "O":
                 # Missing values in object columns are np.nan, which numpy can't convert to datetime64 (what's up with that numpy???)
-                self.df[datecol] = (
-                    self.df[datecol].fillna("").to_numpy().astype("datetime64[ms]")
-                )
+                self.df[datecol] = self.df[datecol].dropna().astype("datetime64[ms]")
 
         if check_valid:
             self.check_valid()
@@ -622,7 +620,7 @@ class DataCatalog(intake_esm.esm_datastore):
             return
         data["path"] = data["new_path"]
         data = data.drop(columns=["new_path"])
-        return self.__class__({"esmcat": self.esmcat.dict(), "df": data})
+        return self.__class__({"esmcat": self.esmcat.model_dump(), "df": data})
 
 
 class ProjectCatalog(DataCatalog):
@@ -946,7 +944,7 @@ def concat_data_catalogs(*dcs):
     df = pd.concat(catalogs, axis=0).drop_duplicates(ignore_index=True)
     dvr = intake_esm.DerivedVariableRegistry()
     dvr._registry.update(registry)
-    newcat = DataCatalog({"esmcat": dcs[0].esmcat.dict(), "df": df}, registry=dvr)
+    newcat = DataCatalog({"esmcat": dcs[0].esmcat.model_dump(), "df": df}, registry=dvr)
     newcat._requested_variables = requested_variables
     if requested_variables_true:
         newcat._requested_variables_true = requested_variables_true
@@ -999,7 +997,7 @@ def unstack_id(df: pd.DataFrame | ProjectCatalog | DataCatalog) -> dict:
 
     Parameters
     ----------
-    df : pd.DataFrame | ProjectCatalog | DataCatalog
+    df : pd.DataFrame or ProjectCatalog or DataCatalog
         Either a Project/DataCatalog or a pandas DataFrame.
 
     Returns
@@ -1046,21 +1044,21 @@ def subset_file_coverage(
     Parameters
     ----------
     df : pd.DataFrame
-      List of files to be evaluated, with at least a date_start and date_end column,
-      which are expected to be `datetime64` objecs.
+        List of files to be evaluated, with at least a date_start and date_end column,
+        which are expected to be `datetime64` objects.
     periods : list of str or list of lists of str
-      Either [start, end] or list of [start, end] for the periods to be evaluated.
-      All periods must be covered, otherwise an empty subset is returned.
+        Either [start, end] or list of [start, end] for the periods to be evaluated.
+        All periods must be covered, otherwise an empty subset is returned.
     coverage : float
-      Percentage of hours that need to be covered in a given period for the dataset to be valid. Use 0 to ignore this checkup.
-      The coverage calculation is only valid if there are no overlapping periods in `df` (ensure with `duplicates_ok=False`).
-    duplicates_ok: bool
-      If True, no checkup is done on possible duplicates.
+        Percentage of hours that need to be covered in a given period for the dataset to be valid. Use 0 to ignore this checkup.
+        The coverage calculation is only valid if there are no overlapping periods in `df` (ensure with `duplicates_ok=False`).
+    duplicates_ok : bool
+        If True, no checkup is done on possible duplicates.
 
     Returns
     -------
     pd.DataFrame
-      Subset of files that overlap the targetted periods
+        Subset of files that overlap the targeted periods.
     """
     periods = standardize_periods(periods)
 

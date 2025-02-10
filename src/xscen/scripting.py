@@ -10,7 +10,6 @@ import sys
 import time
 import warnings
 from contextlib import contextmanager
-from distutils.dir_util import copy_tree
 from email.message import EmailMessage
 from io import BytesIO
 from pathlib import Path
@@ -134,14 +133,14 @@ class ExitWatcher:
             sys.excepthook = self.err_handler
             self.hooked = True
         else:
-            warnings.warn("Exit hooks have already been overrided.")
+            warnings.warn("Exit hooks have already been overridden.")
 
     def unhook(self):
         if self.hooked:
             sys.exit = self.orig_exit
             sys.excepthook = self.orig_excepthook
         else:
-            raise ValueError("Exit hooks were not overriden, can't unhook.")
+            raise ValueError("Exit hooks were not overridden. Cannot unhook.")
 
     def exit(self, code=0):
         self.code = code
@@ -173,24 +172,20 @@ def send_mail_on_exit(
     Parameters
     ----------
     subject : str, optional
-      Email subject. Will be appended by "Success", "No errors" or "Failure" depending
-      on how the system exits.
+        Email subject. Will be appended by "Success", "No errors" or "Failure" depending
+        on how the system exits.
     msg_ok : str, optional
-      Content of the email if the system exists successfully.
+        Content of the email if the system exists successfully.
     msg_err : str, optional
-      Content of the email id the system exists with a non-zero code or with an error.
-      The message will be appended by the exit code or with the error traceback.
+        Content of the email id the system exists with a non-zero code or with an error.
+        The message will be appended by the exit code or with the error traceback.
     on_error_only : boolean
-      Whether to only send an email on a non-zero/error exit.
+        Whether to only send an email on a non-zero/error exit.
     skip_ctrlc : boolean
-      If True (default), exiting with a KeyboardInterrupt will not send an email.
+        If True (default), exiting with a KeyboardInterrupt will not send an email.
     mail_kwargs
-      Other arguments passed to :py:func:`send_mail`.
-      The `to` argument is necessary for this function to work.
-
-    Returns
-    -------
-    None
+        Other arguments passed to :py:func:`send_mail`.
+        The `to` argument is necessary for this function to work.
 
     Example
     -------
@@ -373,7 +368,7 @@ def save_and_update(
     path: str or os.pathlike, optional
         Path where to save the dataset.
         If the string contains variables in curly bracket. They will be filled by catalog attributes.
-        If None, the `catutils.build_path` fonction will be used to create a path.
+        If None, the `catutils.build_path` function will be used to create a path.
     file_format: {'nc', 'zarr'}
         Format of the file.
         If None, look for the following in order: build_path_kwargs['format'], a suffix in path, ds.attrs['cat:format'].
@@ -441,16 +436,14 @@ def move_and_delete(
 
     Parameters
     ----------
-    moving: list of lists of str or os.PathLike
+    moving : list of lists of str or os.PathLike
         list of lists of path of files to move, following the format: [[source 1, destination1], [source 2, destination2],...]
-    pcat: ProjectCatalog
+    pcat : ProjectCatalog
         Catalog to update with new destinations
-    deleting: list of str or os.PathLike, optional
-        list of directories to be deleted including all contents and recreated empty.
-        E.g. the working directory of a workflow.
-    copy: bool, optional
+    deleting : list of str or os.PathLike, optional
+        List of directories to be deleted, including all contents, and recreated empty. e.g. The working directory of a workflow.
+    copy : bool, optional
         If True, copy directories instead of moving them.
-
     """
     if isinstance(moving, list) and isinstance(moving[0], list):
         for files in moving:
@@ -459,11 +452,14 @@ def move_and_delete(
                 if copy:
                     msg = f"Copying {source} to {dest}."
                     logger.info(msg)
-                    copied_files = copy_tree(source, dest)
+                    copied_files = sh.copytree(source, dest, dirs_exist_ok=True)
                     for f in copied_files:
                         # copied files don't include zarr files
                         if f[-16:] == ".zarr/.zmetadata":
-                            ds = xr.open_dataset(f[:-11])
+                            with warnings.catch_warnings():
+                                # Silence RuntimeWarning about failed guess of backend engines
+                                warnings.simplefilter("ignore", category=RuntimeWarning)
+                                ds = xr.open_dataset(f[:-11])
                             pcat.update_from_ds(ds=ds, path=f[:-11])
                         if f[-3:] == ".nc":
                             ds = xr.open_dataset(f)
@@ -473,7 +469,10 @@ def move_and_delete(
                     logger.info(msg)
                     sh.move(source, dest)
                 if Path(dest).suffix in [".zarr", ".nc"]:
-                    ds = xr.open_dataset(dest)
+                    with warnings.catch_warnings():
+                        # Silence RuntimeWarning about failed guess of backend engines
+                        warnings.simplefilter("ignore", category=RuntimeWarning)
+                        ds = xr.open_dataset(dest)
                     pcat.update_from_ds(ds=ds, path=dest)
             else:
                 msg = f"You are trying to move {source}, but it does not exist."

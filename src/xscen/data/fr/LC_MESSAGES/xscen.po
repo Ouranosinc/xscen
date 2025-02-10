@@ -1,6 +1,8 @@
+#, python-brace-format
 msgid "{window}-year climatological {operation} of {attr}."
 msgstr "Moyenne {window} ans de {attr}."
 
+#, python-brace-format
 msgid "{attr1}: {kind} delta compared to {refhoriz}."
 msgstr "{attr1}: Delta {kind} comparé à {refhoriz}."
 

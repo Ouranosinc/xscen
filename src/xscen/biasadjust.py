@@ -177,9 +177,22 @@ def train(
     hist = hist.sel(time=slice(period[0], period[1]))
     ref = ref.sel(time=slice(period[0], period[1]))
 
-    hist, ref = _harmonize_calendars(
-        hist, ref, maximal_calendar=maximal_calendar, align_on=align_on
-    )
+    # convert calendar if necessary
+    simcal = hist.time.dt.calendar
+    refcal = ref.time.dt.calendar
+    mincal = minimum_calendar(simcal, maximal_calendar)
+    if simcal != mincal:
+        hist = hist.convert_calendar(mincal, align_on=align_on)
+    if refcal != mincal:
+        ref = ref.convert_calendar(mincal, align_on=align_on)
+
+    if group:
+        if isinstance(group, dict):
+            # So we can specify window and add_dims in yaml.
+            group = sdba.Grouper.from_kwargs(**group)["group"]
+        elif isinstance(group, str):
+            group = sdba.Grouper(group)
+        xclim_train_args["group"] = group
 
     xclim_train_args["group"] = _parse_group(group)
     if jitter_over is not None:

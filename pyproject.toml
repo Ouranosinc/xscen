@@ -1,10 +1,6 @@
 [build-system]
-requires = [
-  "setuptools >=65.0.0",
-  "setuptools-scm >=8.0",
-  "wheel"
-]
-build-backend = "setuptools.build_meta"
+requires = ["flit_core >=3.10.1,<4"]
+build-backend = "flit_core.buildapi"
 
 [project]
 name = "xscen"
@@ -17,10 +13,10 @@ maintainers = [
   {name = "Gabriel Rondeau-Genesse", email = "rondeau-genesse.gabriel@ouranos.ca"},
   {name = "Trevor James Smith", email = "smith.trevorj@ouranos.ca"}
 ]
-description = "A climate change scenario-building analysis framework, built with xclim/xarray."
 readme = "README.rst"
 requires-python = ">=3.10.0"
 keywords = ["xscen"]
+license = {file = "LICENSE"}
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
@@ -37,7 +33,7 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Topic :: Scientific/Engineering :: Atmospheric Science"
 ]
-dynamic = ["version"]
+dynamic = ["description", "version"]
 dependencies = [
   "cartopy >=0.23.0",
   "cftime",
@@ -58,7 +54,7 @@ dependencies = [
   "pandas >=2.2",
   "parse",
   # Used when opening catalogs.
-  "pyarrow>=10.0.1",
+  "pyarrow >=10.0.1",
   "pyyaml",
   "rechunker",
   "scipy >=1.10",
@@ -73,24 +69,25 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   # Dev tools and testing
-  "babel",
-  "black ==24.10.0",
+  "babel >=2.17",
+  "black ==25.1.0",
   "blackdoc ==0.3.9",
-  "bump-my-version >=0.28.0",
+  "bump-my-version >=0.30.1",
   "coverage >=7.5.0",
-  "coveralls >=4.0.1",
   "flake8 >=7.1.1",
   "flake8-rst-docstrings >=0.3.0",
-  "isort ==5.13.2",
-  "mypy",
+  "flit >=3.10.1,<4.0",
+  "isort ==6.0.0",
+  "mypy >=1.14.1",
   "numpydoc >=1.8.0",
+  "pip >=25.0",
   "pooch >=1.8.0",
   "pre-commit >=3.5.0",
   "pytest-cov >=5.0.0",
   "pytest >=8.3.2",
   "pytest-xdist[psutil] >=3.2.0",
-  "ruff >=0.8.2",
-  "tox >=4.23.2",
+  "ruff >=0.9.0",
+  "tox >=4.24.1",
   "watchdog >=4.0.0",
   "xdoctest"
 ]
@@ -99,20 +96,19 @@ docs = [
   "ipykernel",
   "ipython >=8.5.0",
   "jupyter_client",
-  "nbsphinx",
+  "nbsphinx >=0.9.5",
   "nbval",
-  "sphinx >=7.0.0",
+  "sphinx >=7.1.0",
   "sphinx-autoapi",
-  "sphinx-codeautolink",
+  "sphinx-codeautolink >=0.16.2",
   "sphinx-copybutton",
   "sphinx-intl",
   "sphinx-mdinclude",
   "sphinx-rtd-theme >=1.0",
-  "sphinxcontrib-napoleon",
-  "pygments <2.19" # FIXME: temporary fix, https://github.com/felix-hilden/sphinx-codeautolink/issues/153
+  "sphinxcontrib-napoleon"
 ]
 extra = [
-  "xesmf>=0.7, <0.8.8" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
+  "xesmf >=0.7,<0.8.8" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
 ]
 all = ["xscen[dev]", "xscen[docs]", "xscen[extra]"]
 
@@ -134,7 +130,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.10.2-dev.1"
+current_version = "0.11.1-dev.0"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -166,6 +162,9 @@ values = [
   "release"
 ]
 
+[tool.codespell]
+ignore-words-list = "ans,astroid,attributs,coo,mesure,nam,ond,socio-economic,vas,winn"
+
 [tool.coverage.paths]
 source = ["src/xscen/", "*/site-packages/xscen/"]
 
@@ -173,6 +172,59 @@ source = ["src/xscen/", "*/site-packages/xscen/"]
 omit = ["docs/notebooks/*.ipynb", "tests/*.py", "src/xscen/reduce.py"] # FIXME: Remove xscen/reduce.py when it's fully deleted.
 relative_files = true
 source = ["xscen"]
+
+[tool.flit.sdist]
+include = [
+  ".zenodo.json",
+  "AUTHORS.rst",
+  "CHANGELOG.rst",
+  "CODE_OF_CONDUCT.md",
+  "CONTRIBUTING.rst",
+  "LICENSE",
+  "Makefile",
+  "README.rst",
+  "SECURITY.md",
+  "docs/*.rst",
+  "docs/Makefile",
+  "docs/_static/_images/*.png",
+  "docs/conf.py",
+  "docs/make.bat",
+  "docs/notebooks/*.ipynb",
+  "docs/notebooks/*.rst",
+  "docs/notebooks/samples/*.csv",
+  "docs/notebooks/samples/*.json",
+  "docs/notebooks/samples/*.yml",
+  "docs/notebooks/samples/tutorial/**/*.nc",
+  "requirements_upstream.txt",
+  "src/xscen/**/*.py",
+  "src/xscen/**/*.yml",
+  "src/xscen/CVs/*.json",
+  "src/xscen/data/*.nc",
+  "src/xscen/data/fr/LC_MESSAGES/*.mo",
+  "src/xscen/data/fr/LC_MESSAGES/*.po",
+  "tests/*.py"
+]
+exclude = [
+  "*.py[co]",
+  "__pycache__",
+  ".cruft.json",
+  ".editorconfig",
+  ".flake8",
+  ".gitignore",
+  ".pre-commit-config.yaml",
+  ".readthedocs.yml",
+  ".secrets.baseline",
+  ".yamllint.yaml",
+  ".zizmor.yml",
+  "docs/_build",
+  "docs/apidoc/modules.rst",
+  "docs/apidoc/xscen*.rst",
+  "environment.yml",
+  "environment-dev.yml",
+  "scripts/*.ipynb",
+  "templates",
+  "tox.ini"
+]
 
 [tool.isort]
 append_only = true
@@ -309,17 +361,6 @@ max-doc-length = 180
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
 
-[tool.setuptools]
-license-files = ["LICENSE"]
-include-package-data = true
-
-[tool.setuptools.dynamic]
-version = {attr = "xscen.__version__"}
-
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["xscen"]
-
 [tool.vulture]
 exclude = []
 ignore_decorators = ["@pytest.fixture"]
@@ -327,51 +368,3 @@ ignore_names = []
 min_confidence = 90
 paths = ["src/xscen", "tests"]
 sort_by_size = true
-
-# [tool.setuptools.packages.find]
-# include = [
-# ".zenodo.json",
-# "AUTHORS.rst",
-# "CHANGELOG.rst",
-# "CONTRIBUTING.rst",
-# "LICENSE",
-# "Makefile",
-# "README.rst",
-# "docs/*.rst",
-# "docs/Makefile",
-# "docs/_static/_images/*.png",
-# "docs/conf.py",
-# "docs/make.bat",
-# "docs/notebooks/.ipynb",
-# "docs/notebooks/samples/*.csv",
-# "docs/notebooks/samples/*.json",
-# "docs/notebooks/samples/*.yml",
-# "environment.yml",
-# "environment-dev.yml",
-# "src/xscen/**/*.py",
-# "src/xscen/**/*.yml",
-# "src/xscen/CVs/*.json",
-# "src/xscen/data/*.csv",
-# "src/xscen/data/**/*.mo",
-# "src/xscen/data/**/*.po",
-# "tests/*.py",
-# "tox.ini"
-# ]
-# exclude = [
-# "*.py[co]",
-# "__pycache__",
-# ".coveralls.yml",
-# ".editorconfig",
-# ".flake8",
-# ".gitignore",
-# ".pre-commit-config.yaml",
-# ".readthedocs.yml",
-# ".yamllint.yaml",
-# "conda/xscen/*.yml",
-# "docs/_*",
-# "docs/apidoc/modules.rst",
-# "docs/apidoc/xscen*.rst",
-# "docs/locales",
-# "docs/notesbnooks/samples/tutorial/**/*.nc",
-# "templates"
-# ]

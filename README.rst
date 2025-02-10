@@ -2,26 +2,26 @@
 xscen |logo|
 ============
 
-+----------------------------+-----------------------------------------------------+
-| Versions                   | |pypi| |conda| |versions|                           |
-+----------------------------+-----------------------------------------------------+
-| Documentation and Support  | |docs|                                              |
-+----------------------------+-----------------------------------------------------+
-| Open Source                | |license| |ossf|                                    |
-+----------------------------+-----------------------------------------------------+
-| Coding Standards           | |black| |ruff| |pre-commit|                         |
-+----------------------------+-----------------------------------------------------+
-| Development Status         | |status| |build| |coveralls|                        |
-+----------------------------+-----------------------------------------------------+
++----------------------------+-------------------------------------------------------+
+| Versions                   | |pypi| |conda| |versions|                             |
++----------------------------+-------------------------------------------------------+
+| Documentation and Support  | |docs|                                                |
++----------------------------+-------------------------------------------------------+
+| Open Source                | |license| |ossf-score| |zenodo|                       |
++----------------------------+-------------------------------------------------------+
+| Coding Standards           | |black| |isort| |ruff| |pre-commit| |ossf-bp| |fossa| |
++----------------------------+-------------------------------------------------------+
+| Development Status         | |status| |build| |coveralls|                          |
++----------------------------+-------------------------------------------------------+
 
-A climate change scenario-building analysis framework, built with Intake-esm catalogs and xarray-based packages such as xclim and xESMF.
+A climate change scenario-building analysis framework, built with `intake-esm` catalogs and `xarray`-based packages such as `xclim` and `xESMF`.
 
 For documentation concerning `xscen`, see: https://xscen.readthedocs.io/en/latest/
 
 Features
 --------
 * Supports workflows with YAML configuration files for better transparency, reproducibility, and long-term backups.
-* `Intake-esm`_-based catalog to find and manage climate data.
+* `intake-esm`_-based catalog to find and manage climate data.
 * Climate dataset extraction, subsetting, and temporal aggregation.
 * Calculate missing variables through `intake-esm`'s `DerivedVariableRegistry`_.
 * Regridding powered by `xESMF`_.
@@ -37,12 +37,12 @@ Acknowledgments
 This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pypackage`_ project template.
 
 .. _Cookiecutter: https://github.com/cookiecutter/cookiecutter
+.. _DerivedVariableRegistry: https://intake-esm.readthedocs.io/en/latest/how-to/define-and-use-derived-variable-registry.html
 .. _Ouranosinc/cookiecutter-pypackage: https://github.com/Ouranosinc/cookiecutter-pypackage
 .. _installation docs: https://xscen.readthedocs.io/en/latest/installation.html
-.. _Intake-esm: https://intake-esm.readthedocs.io/
-.. _DerivedVariableRegistry: https://intake-esm.readthedocs.io/en/latest/how-to/define-and-use-derived-variable-registry.html
-.. _xclim: https://xclim.readthedocs.io/
+.. _intake-esm: https://intake-esm.readthedocs.io/
 .. _xESMF: https://xesmf.readthedocs.io/
+.. _xclim: https://xclim.readthedocs.io/
 
 .. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
         :target: https://github.com/psf/black
@@ -64,6 +64,14 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
         :target: https://xscen.readthedocs.io/en/latest
         :alt: Documentation Status
 
+.. |fossa| image:: https://app.fossa.com/api/projects/git%2Bgithub.com%2FOuranosinc%2Fxscen.svg?type=shield
+        :target: https://app.fossa.com/projects/git%2Bgithub.com%2FOuranosinc%2Fxscen?ref=badge_shield
+        :alt: FOSSA
+
+.. |isort| image:: https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336
+        :target: https://pycqa.github.io/isort/
+        :alt: Isort
+
 .. |license| image:: https://img.shields.io/pypi/l/figanos
         :target: https://github.com/Ouranosinc/figanos/blob/main/LICENSE
         :alt: License
@@ -72,9 +80,13 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
         :target: https://github.com/Ouranosinc/xscen
         :alt: xscen Logo
 
-.. |ossf| image:: https://api.securityscorecards.dev/projects/github.com/Ouranosinc/xscen/badge
+.. |ossf-bp| image:: https://bestpractices.coreinfrastructure.org/projects/9945/badge
+        :target: https://bestpractices.coreinfrastructure.org/projects/9945
+        :alt: Open Source Security Foundation Best Practices
+
+.. |ossf-score| image:: https://api.securityscorecards.dev/projects/github.com/Ouranosinc/xscen/badge
         :target: https://securityscorecards.dev/viewer/?uri=github.com/Ouranosinc/xscen
-        :alt: OpenSSF Scorecard
+        :alt: Open Source Security Foundation Scorecard
 
 .. |pre-commit| image:: https://results.pre-commit.ci/badge/github/Ouranosinc/xscen/main.svg
         :target: https://results.pre-commit.ci/latest/github/Ouranosinc/xscen/main
@@ -95,3 +107,7 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
 .. |versions| image:: https://img.shields.io/pypi/pyversions/xscen.svg
         :target: https://pypi.python.org/pypi/xscen
         :alt: Supported Python Versions
+
+.. |zenodo| image:: https://zenodo.org/badge/DOI/10.5281/zenodo.7897542.svg
+        :target: https://doi.org/10.5281/zenodo.7897542
+        :alt: Zenodo DOI

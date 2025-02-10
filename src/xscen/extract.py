@@ -51,7 +51,7 @@ def extract_dataset(  # noqa: C901
     catalog: DataCatalog,
     *,
     variables_and_freqs: dict | None = None,
-    periods: list[str] | list[list[str]] | None = None,
+    periods: list[str | int] | list[list[str | int]] | None = None,
     region: dict | None = None,
     to_level: str = "extracted",
     ensure_correct_time: bool = True,
@@ -72,22 +72,21 @@ def extract_dataset(  # noqa: C901
     catalog : DataCatalog
         Sub-catalog for a single dataset, one value of the output of `search_data_catalogs`.
     variables_and_freqs : dict, optional
-        Variables and freqs, following a 'variable: xrfreq-compatible str' format. A list of strings can also be provided.
-        If None, it will be read from catalog._requested_variables and catalog._requested_variable_freqs
-        (set by `variables_and_freqs` in `search_data_catalogs`)
-    periods : list of str or list of lists of str, optional
+        Variables and frequencies, following a 'variable: xrfreq-compatible str' format. A list of strings can also be provided.
+        If None, it will be read from `catalog._requested_variables` and `catalog._requested_variable_freqs`
+        (set by `variables_and_freqs` in `search_data_catalogs`).
+    periods : list of str or list of int or list of lists of str or list of lists of int, optional
         Either [start, end] or list of [start, end] for the periods to be evaluated.
         Will be read from catalog._requested_periods if None. Leave both None to extract everything.
     region : dict, optional
         Description of the region and the subsetting method (required fields listed in the Notes) used in `xscen.spatial.subset`.
     to_level : str
-        The processing level to assign to the output.
-        Defaults to 'extracted'
+        The processing level to assign to the output. Defaults to 'extracted'.
     ensure_correct_time : bool
         When True (default), even if the data has the correct frequency, its time coordinate is
-        checked so that it exactly matches the frequency code (xrfreq). For example, daily data given at
-        noon would be transformed to be given at midnight. If the time coordinate is invalid,
-        it raises an error.
+        checked so that it exactly matches the frequency code (xrfreq).
+        For example, daily data given at noon would be transformed to be given at midnight.
+        If the time coordinate is invalid, it raises an error.
     xr_open_kwargs : dict, optional
         A dictionary of keyword arguments to pass to `DataCatalogs.to_dataset_dict`, which
         will be passed to `xr.open_dataset`.
@@ -100,9 +99,9 @@ def extract_dataset(  # noqa: C901
         Dictionary where the keys are the variables and the values are the resampling method.
         Options for the resampling method are {'mean', 'min', 'max', 'sum', 'wind_direction'}.
         If the method is not given for a variable, it is guessed from the variable name and frequency,
-        using the mapping in CVs/resampling_methods.json. If the variable is not found there,
-        "mean" is used by default.
-    mask: xr.Dataset or xr.DataArray or bool
+        using the mapping in CVs/resampling_methods.json.
+        If the variable is not found there, "mean" is used by default.
+    mask : xr.Dataset or xr.DataArray or bool
         A mask that is applied to all variables and only keeps data where it is True.
         Where the mask is False, variable values are replaced by NaNs.
         The mask should have the same dimensions as the variables extracted.
@@ -667,7 +666,7 @@ def search_data_catalogs(  # noqa: C901
     # Prepare a unique catalog to search from, with the DerivedCat added if required
     catalog = DataCatalog(
         {
-            "esmcat": data_catalogs[0].esmcat.dict(),
+            "esmcat": data_catalogs[0].esmcat.model_dump(),
             "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
         },
         **cat_kwargs,
@@ -1183,7 +1182,7 @@ def _wl_prep_infomodels(realization, ignore_member, fields):
 
 
 def _wl_find_column(tas, model):
-    # choose colum based in ds cat attrs, +'$' to ensure a full match (matches end-of-string)
+    # Choose column based on ds cat attrs, +'$' to ensure a full match (matches end-of-string)
     mip = tas.mip_era.str.match(model["mip_era"] + "$")
     src = tas.source.str.match(model["source"] + "$")
     if not src.any():
@@ -1233,7 +1232,7 @@ def subset_warming_level(
        Warming level.
        e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
        Multiple levels can be passed, in which case using "{wl}" in  `to_level` and `wl_dim` is not recommended.
-       Mutliple levels are currently only implemented for annual data.
+       Multiple levels are currently only implemented for annual data.
     to_level :
        The processing level to assign to the output.
        Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
@@ -1522,7 +1521,7 @@ def _dispatch_historical_to_future(
     )
     df = df[df.experiment != "historical"].reset_index(drop=True)
     return DataCatalog(
-        {"esmcat": catalog.esmcat.dict(), "df": df},
+        {"esmcat": catalog.esmcat.model_dump(), "df": df},
         registry=catalog.derivedcat,
         drop_duplicates=False,
     )
@@ -1611,7 +1610,9 @@ def _restrict_by_resolution(
             # and the resolution itself as well as the domain name
             elif pd.unique(df_sim["activity"])[0] == "CORDEX":
                 # Unique CORDEX domains
-                cordex_doms = pd.unique([d.split("-")[0] for d in domains])
+                cordex_doms = list(
+                    pd.unique(pd.Series([d.split("-")[0] for d in domains]))
+                )
                 chosen = []
 
                 for d in cordex_doms:
