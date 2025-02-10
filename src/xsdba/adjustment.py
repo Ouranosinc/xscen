@@ -1308,7 +1308,7 @@ class OTC(Adjust):
         If `True`, a random location is picked uniformly inside their bin. Default is `True`.
     adapt_freq_thresh : dict or str, optional
         Threshold for frequency adaptation per variable.
-        See :py:class:`xclim.sdba.processing.adapt_freq` for details.
+        See :py:class:`xsdba.processing.adapt_freq` for details.
         Frequency adaptation is not applied to missing variables if is dict.
         Applied to all variables if is string.
     normalization : {None, 'standardize', 'max_distance', 'max_value'}
@@ -1316,11 +1316,11 @@ class OTC(Adjust):
         Default is "max_distance".
         See notes for details.
     group : Union[str, Grouper]
-        The grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+        The grouping information. See :py:class:`xsdba.base.Grouper` for details.
         Default is "time", meaning a single adjustment group along dimension "time".
     pts_dim : str
         The name of the "multivariate" dimension. Defaults to "multivar", which is the
-        normal case when using :py:func:`xclim.sdba.base.stack_variables`.
+        normal case when using :py:func:`xsdba.base.stack_variables`.
 
     Notes
     -----
@@ -1445,7 +1445,7 @@ class OTC(Adjust):
 class dOTC(Adjust):
     r"""Dynamical Optimal Transport Correction.
 
-    This method is the dynamical version of :py:class:`~xclim.sdba.adjustment.OTC`, as presented by :cite:t:`robin_2019`.
+    This method is the dynamical version of :py:class:`~xsdba.adjustment.OTC`, as presented by :cite:t:`robin_2019`.
     The temporal evolution of the model is found for every point by mapping the historical to the future dataset with
     optimal transport. A mapping between historical and reference data is found in the same way, and the temporal evolution
     of model data is applied to their assigned reference.
@@ -1479,26 +1479,26 @@ class dOTC(Adjust):
         Applied to all variables if is string.
     adapt_freq_thresh : dict or str, optional
         Threshold for frequency adaptation per variable.
-        See :py:class:`xclim.sdba.processing.adapt_freq` for details.
+        See :py:class:`xsdba.processing.adapt_freq` for details.
         Frequency adaptation is not applied to missing variables if is dict.
         Applied to all variables if is string.
     normalization : {None, 'standardize', 'max_distance', 'max_value'}
         Per-variable transformation applied before the distances are calculated
         in the optimal transport. Default is "max_distance".
-        See :py:class:`~xclim.sdba.adjustment.OTC` for details.
+        See :py:class:`~xsdba.adjustment.OTC` for details.
     group : Union[str, Grouper]
-        The grouping information. See :py:class:`xclim.sdba.base.Grouper` for details.
+        The grouping information. See :py:class:`xsdba.base.Grouper` for details.
         Default is "time", meaning a single adjustment group along dimension "time".
     pts_dim : str
         The name of the "multivariate" dimension. Defaults to "multivar", which is the
-        normal case when using :py:func:`xclim.sdba.base.stack_variables`.
+        normal case when using :py:func:`xsdba.base.stack_variables`.
 
     Notes
     -----
     The simulated historical, simulated future and observed data sets :math:`X0`, :math:`X1` and :math:`Y0` are
     discretized and standardized using histograms whose bin length along dimension `k` is given by `bin_width[k]`.
     Mappings between :math:`Y0` and :math:`X0` on the one hand and between :math:`X0` and :math:`X1` on the other
-    are found by optimal transport (see :py:class:`~xclim.sdba.adjustment.OTC`). The latter mapping is used to
+    are found by optimal transport (see :py:class:`~xsdba.adjustment.OTC`). The latter mapping is used to
     compute the temporal evolution of model data. This evolution is computed additively or multiplicatively for
     each variable depending on its `kind`, and is applied to observed data with
 

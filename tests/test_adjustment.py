@@ -633,7 +633,7 @@ class TestQM:
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.filterwarnings("ignore::RuntimeWarning")
     def test_add_dims(self, use_dask, gosset):
-        with set_options(sdba_encode_cf=use_dask):
+        with set_options(xsdba_encode_cf=use_dask):
             if use_dask:
                 chunks = {"location": -1}
             else:
@@ -680,7 +680,7 @@ class TestMBCn:
     @pytest.mark.parametrize("period_dim", [None, "period"])
     def test_simple(self, use_dask, group, window, period_dim, gosset):
         group, window, period_dim, use_dask = "time", 1, None, False
-        with set_options(sdba_encode_cf=use_dask):
+        with set_options(xsdba_encode_cf=use_dask):
             if use_dask:
                 chunks = {"location": -1}
             else:

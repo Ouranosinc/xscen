@@ -18,7 +18,7 @@ import xarray as xr
 from boltons.funcutils import wraps
 from xarray.core import dtypes
 
-from xsdba.options import OPTIONS, SDBA_ENCODE_CF
+from xsdba.options import OPTIONS, XSDBA_ENCODE_CF
 
 # TODO : Redistributes some functions in existing/new scripts
 
@@ -675,7 +675,7 @@ def map_blocks(  # noqa: C901
                 # duck empty calls dask if chunks is not None
                 tmpl[var] = duck_empty(dims, sizes, dtype=dtype, chunks=chunks)
 
-            if OPTIONS[SDBA_ENCODE_CF]:
+            if OPTIONS[XSDBA_ENCODE_CF]:
                 ds = ds.copy()
                 # Optimization to circumvent the slow pickle.dumps(cftime_array)
                 # List of the keys to avoid changing the coords dict while iterating over it.
