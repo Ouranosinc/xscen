@@ -294,7 +294,7 @@ class TestAdjust:
             var="pr",
             period=["2001", "2003"],
             adapt_freq={"thresh": "1 kg m-2 d-1"},
-            xclim_train_args={"kind": "*", "nquantiles": 50},
+            xsdba_train_args={"kind": "*", "nquantiles": 50},
         )
 
         out_xscen = xs.adjust(

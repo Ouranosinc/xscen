@@ -61,7 +61,7 @@ def train(
     *,
     method: str = "DetrendedQuantileMapping",
     group: xsdba.Grouper | str | dict | None = None,
-    xclim_train_args: dict | None = None,
+    xsdba_train_args: dict | None = None,
     maximal_calendar: str = "noleap",
     adapt_freq: dict | None = None,
     jitter_under: dict | None = None,
@@ -86,7 +86,7 @@ def train(
     group : str or xsdba.Grouper or dict, optional
       Grouping information. If a string, it is interpreted as a grouper on the time dimension. If a dict, it is passed to `xsdba.Grouper.from_kwargs`.
       Defaults to {"group": "time.dayofyear", "window": 31}.
-    xclim_train_args : dict
+    xsdba_train_args : dict
       Dict of arguments to pass to the `.train` of the adjustment object.
     maximal_calendar: str
       Maximal calendar dhist can be. The hierarchy: 360_day < noleap < standard < all_leap.
@@ -125,9 +125,9 @@ def train(
     if group is None:
         group = {"group": "time.dayofyear", "window": 31}
 
-    xclim_train_args = xclim_train_args or {}
+    xsdba_train_args = xsdba_train_args or {}
     if method == "DetrendedQuantileMapping":
-        xclim_train_args.setdefault("nquantiles", 15)
+        xsdba_train_args.setdefault("nquantiles", 15)
 
     # cut out the right period
     period = standardize_periods(period, multiple=False)
@@ -149,7 +149,7 @@ def train(
             group = xsdba.Grouper.from_kwargs(**group)["group"]
         elif isinstance(group, str):
             group = xsdba.Grouper(group)
-        xclim_train_args["group"] = group
+        xsdba_train_args["group"] = group
 
     if jitter_over is not None:
         ref = xsdba.processing.jitter_over_thresh(ref, **jitter_over)
@@ -164,7 +164,7 @@ def train(
         hist, pth, dP0 = xsdba.processing.adapt_freq(ref, hist, **adapt_freq)
         adapt_freq.pop("group")
 
-    ADJ = getattr(xsdba.adjustment, method).train(ref, hist, **xclim_train_args)
+    ADJ = getattr(xsdba.adjustment, method).train(ref, hist, **xsdba_train_args)
 
     if adapt_freq is not None:
         ds = ADJ.ds.assign(pth=pth, dP0=dP0)
