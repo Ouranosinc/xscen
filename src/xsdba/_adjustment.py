@@ -425,7 +425,7 @@ def mbcn_adjust(
         scen_block = xr.zeros_like(sim[{"time": ind_gw}])
         for iv, v in enumerate(sim[pts_dims[0]].values):
             sl = {"time": ind_gw, pts_dims[0]: iv}
-            with set_options(xsdba_extra_output=False):
+            with set_options(extra_output=False):
                 ADJ = base.train(
                     ref[sl], hist[sl], **base_kws_vars[v], skip_input_checks=True
                 )

@@ -247,5 +247,4 @@ class TestMapBlocks:
             d = ds.mean("location")
             return d.rename("data").to_dataset()
 
-        with set_options(xsdba_encode_cf=True):
-            func(ds.convert_calendar("noleap").tasmax, group=Grouper("time"))
+        func(ds.convert_calendar("noleap").tasmax, group=Grouper("time"))

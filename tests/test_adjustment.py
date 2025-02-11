@@ -512,7 +512,7 @@ class TestQDM:
         ref, hist, sim = cannon_2015_rvs(15000, random=False)
 
         # Quantile mapping
-        with set_options(xsdba_extra_output=True):
+        with set_options(extra_output=True):
             QDM = QuantileDeltaMapping.train(
                 ref, hist, kind="*", group="time", nquantiles=50
             )
@@ -633,44 +633,43 @@ class TestQM:
     @pytest.mark.parametrize("use_dask", [True, False])
     @pytest.mark.filterwarnings("ignore::RuntimeWarning")
     def test_add_dims(self, use_dask, gosset):
-        with set_options(xsdba_encode_cf=use_dask):
-            if use_dask:
-                chunks = {"location": -1}
-            else:
-                chunks = None
+        if use_dask:
+            chunks = {"location": -1}
+        else:
+            chunks = None
 
-            dsim = xr.open_dataset(
-                gosset.fetch("sdba/CanESM2_1950-2100.nc"),
+        dsim = xr.open_dataset(
+            gosset.fetch("sdba/CanESM2_1950-2100.nc"),
+            chunks=chunks,
+            drop_variables=["lat", "lon"],
+        ).tasmax
+        hist = dsim.sel(time=slice("1981", "2010"))
+        sim = dsim.sel(time=slice("2041", "2070"))
+
+        ref = (
+            xr.open_dataset(
+                gosset.fetch("sdba/ahccd_1950-2013.nc"),
                 chunks=chunks,
                 drop_variables=["lat", "lon"],
-            ).tasmax
-            hist = dsim.sel(time=slice("1981", "2010"))
-            sim = dsim.sel(time=slice("2041", "2070"))
-
-            ref = (
-                xr.open_dataset(
-                    gosset.fetch("sdba/ahccd_1950-2013.nc"),
-                    chunks=chunks,
-                    drop_variables=["lat", "lon"],
-                )
-                .sel(time=slice("1981", "2010"))
-                .tasmax
             )
-            ref = convert_units_to(ref, "K")
-            # The idea is to have ref defined only over 1 location
-            # But sdba needs the same dimensions on ref and hist for Grouping with add_dims
-            ref = ref.where(ref.location == "Amos")
+            .sel(time=slice("1981", "2010"))
+            .tasmax
+        )
+        ref = convert_units_to(ref, "K")
+        # The idea is to have ref defined only over 1 location
+        # But sdba needs the same dimensions on ref and hist for Grouping with add_dims
+        ref = ref.where(ref.location == "Amos")
 
-            # With add_dims, "does it run" test
-            group = Grouper("time.dayofyear", window=5, add_dims=["location"])
-            EQM = EmpiricalQuantileMapping.train(ref, hist, group=group)
-            EQM.adjust(sim).load()
+        # With add_dims, "does it run" test
+        group = Grouper("time.dayofyear", window=5, add_dims=["location"])
+        EQM = EmpiricalQuantileMapping.train(ref, hist, group=group)
+        EQM.adjust(sim).load()
 
-            # Without, sanity test.
-            group = Grouper("time.dayofyear", window=5)
-            EQM2 = EmpiricalQuantileMapping.train(ref, hist, group=group)
-            scen2 = EQM2.adjust(sim).load()
-            assert scen2.sel(location=["Kugluktuk", "Vancouver"]).isnull().all()
+        # Without, sanity test.
+        group = Grouper("time.dayofyear", window=5)
+        EQM2 = EmpiricalQuantileMapping.train(ref, hist, group=group)
+        scen2 = EQM2.adjust(sim).load()
+        assert scen2.sel(location=["Kugluktuk", "Vancouver"]).isnull().all()
 
 
 @pytest.mark.slow
@@ -680,35 +679,32 @@ class TestMBCn:
     @pytest.mark.parametrize("period_dim", [None, "period"])
     def test_simple(self, use_dask, group, window, period_dim, gosset):
         group, window, period_dim, use_dask = "time", 1, None, False
-        with set_options(xsdba_encode_cf=use_dask):
-            if use_dask:
-                chunks = {"location": -1}
-            else:
-                chunks = None
-            ref, dsim = (
-                xr.open_dataset(
-                    gosset.fetch(f"sdba/{file}"),
-                    chunks=chunks,
-                    drop_variables=["lat", "lon"],
-                )
-                .isel(location=1, drop=True)
-                .expand_dims(location=["Amos"])
-                for file in ["ahccd_1950-2013.nc", "CanESM2_1950-2100.nc"]
+        if use_dask:
+            chunks = {"location": -1}
+        else:
+            chunks = None
+        ref, dsim = (
+            xr.open_dataset(
+                gosset.fetch(f"sdba/{file}"),
+                chunks=chunks,
+                drop_variables=["lat", "lon"],
             )
-            water_density_inverse = "1e-03 m^3/kg"
-            dsim["pr"] = convert_units_to(
-                pint_multiply(dsim.pr, water_density_inverse), ref.pr
-            )
-            ref, hist = (
-                ds.sel(time=slice("1981", "2010")).isel(time=slice(365 * 4))
-                for ds in [ref, dsim]
-            )
-            dsim = dsim.sel(time=slice("1981", None))
-            sim = (stack_periods(dsim).isel(period=slice(1, 2))).isel(
-                time=slice(365 * 4)
-            )
+            .isel(location=1, drop=True)
+            .expand_dims(location=["Amos"])
+            for file in ["ahccd_1950-2013.nc", "CanESM2_1950-2100.nc"]
+        )
+        water_density_inverse = "1e-03 m^3/kg"
+        dsim["pr"] = convert_units_to(
+            pint_multiply(dsim.pr, water_density_inverse), ref.pr
+        )
+        ref, hist = (
+            ds.sel(time=slice("1981", "2010")).isel(time=slice(365 * 4))
+            for ds in [ref, dsim]
+        )
+        dsim = dsim.sel(time=slice("1981", None))
+        sim = (stack_periods(dsim).isel(period=slice(1, 2))).isel(time=slice(365 * 4))
 
-            ref, hist, sim = (stack_variables(ds) for ds in [ref, hist, sim])
+        ref, hist, sim = (stack_variables(ds) for ds in [ref, hist, sim])
 
         MBCN = MBCn.train(
             ref,

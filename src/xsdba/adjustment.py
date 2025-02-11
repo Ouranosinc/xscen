@@ -34,7 +34,7 @@ from xsdba._adjustment import (
 )
 from xsdba.base import Grouper, ParametrizableWithDataset, parse_group, uses_dask
 from xsdba.formatting import gen_call_string, update_history
-from xsdba.options import OPTIONS, XSDBA_EXTRA_OUTPUT, set_options
+from xsdba.options import EXTRA_OUTPUT, OPTIONS, set_options
 from xsdba.processing import grouped_time_indexes
 from xsdba.units import convert_units_to
 from xsdba.utils import (
@@ -298,7 +298,7 @@ class TrainAdjust(BaseAdjustment):
         if _is_multivariate is False:
             scen.attrs["units"] = self.train_units
 
-        if OPTIONS[XSDBA_EXTRA_OUTPUT]:
+        if OPTIONS[EXTRA_OUTPUT]:
             return out
         return scen
 
@@ -382,7 +382,7 @@ class Adjust(BaseAdjustment):
         if _is_multivariate is False:
             scen.attrs["units"] = ref.units
 
-        if OPTIONS[XSDBA_EXTRA_OUTPUT]:
+        if OPTIONS[EXTRA_OUTPUT]:
             return out
         return scen
 
@@ -651,7 +651,7 @@ class QuantileDeltaMapping(EmpiricalQuantileMapping):
             extrapolation=extrapolation,
             kind=self.kind,
         )
-        if OPTIONS[XSDBA_EXTRA_OUTPUT]:
+        if OPTIONS[EXTRA_OUTPUT]:
             out.sim_q.attrs.update(long_name="Group-wise quantiles of `sim`.")
             return out
         return out.scen
@@ -1273,7 +1273,7 @@ class NpdfTransform(Adjust):
             "adj_kws": adj_kws or {},
         }
 
-        with set_options(xsdba_extra_output=False):
+        with set_options(extra_output=False):
             out = ds.map_blocks(npdf_transform, template=template, kwargs=kwargs)
 
         out = out.assign(rotation_matrices=rot_matrices)

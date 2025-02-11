@@ -18,7 +18,7 @@ import xarray as xr
 from boltons.funcutils import wraps
 from xarray.core import dtypes
 
-from xsdba.options import OPTIONS, XSDBA_ENCODE_CF
+from xsdba.options import OPTIONS
 
 # TODO : Redistributes some functions in existing/new scripts
 
@@ -674,14 +674,6 @@ def map_blocks(  # noqa: C901
                 dims = base_dims + var_new_dims
                 # duck empty calls dask if chunks is not None
                 tmpl[var] = duck_empty(dims, sizes, dtype=dtype, chunks=chunks)
-
-            if OPTIONS[XSDBA_ENCODE_CF]:
-                ds = ds.copy()
-                # Optimization to circumvent the slow pickle.dumps(cftime_array)
-                # List of the keys to avoid changing the coords dict while iterating over it.
-                for crd in list(ds.coords.keys()):
-                    if xr.core.common._contains_cftime_datetimes(ds[crd].variable):
-                        ds[crd] = xr.conventions.encode_cf_variable(ds[crd].variable)
 
             def _call_and_transpose_on_exit(dsblock, **f_kwargs):
                 """Call the decorated func and transpose to ensure the same dim order as on the template."""
