@@ -120,6 +120,12 @@ def train(
     else:
         ref = dref[var[0]]
         hist = dhist[var[0]]
+    # xsdba is climate agnostic, so units conversion won't use water density
+    # to convert rate <-> amount. We can keep using xclim utilities in for this
+    # purpose
+    # TODO: change this to be compatible with multivar too.
+    # This could fail if sim/hist don't have the same units.
+    ref = xc.core.units.convert_units_to(ref, hist, context="infer")
 
     # we want to put default if group is None, but not if group is False
     if group is None:
