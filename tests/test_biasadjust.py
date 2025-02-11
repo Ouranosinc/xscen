@@ -17,10 +17,6 @@ except ImportError:
 
 import xscen as xs
 
-xsdba.set_options(
-    xsdba_encode_cf=False
-)  # FIXME: A temporary bug fix waiting for xclim 0.49
-
 
 class TestTrain:
     dref = timeseries(
@@ -311,7 +307,7 @@ class TestAdjust:
         )
 
         # xclim version
-        with xsdba.set_options(xsdba_extra_output=True):
+        with xsdba.set_options(extra_output=True):
             group = xsdba.Grouper(group="time.dayofyear", window=31)
 
             drefx = dref.sel(time=slice("2001", "2003")).convert_calendar("noleap")

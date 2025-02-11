@@ -12,7 +12,7 @@ from .config import parse_config
 from .utils import minimum_calendar, standardize_periods
 
 logger = logging.getLogger(__name__)
-xsdba.set_options(xsdba_encode_cf=True, xsdba_extra_output=False)
+xsdba.set_options(extra_output=False)
 
 
 __all__ = [
