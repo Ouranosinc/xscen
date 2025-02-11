@@ -293,7 +293,7 @@ class TestAdjust:
             dhist,
             var="pr",
             period=["2001", "2003"],
-            adapt_freq={"thresh": "1 mm d-1"},
+            adapt_freq={"thresh": "1 kg m-2 d-1"},
             xclim_train_args={"kind": "*", "nquantiles": 50},
         )
 
@@ -319,7 +319,7 @@ class TestAdjust:
             dsimx = dsim.sel(time=slice("2001", "2006")).convert_calendar("noleap")
 
             dhist_ad, pth, dP0 = xsdba.processing.adapt_freq(
-                drefx["pr"], dhistx["pr"], group=group, thresh="1 mm d-1"
+                drefx["pr"], dhistx["pr"], group=group, thresh="1 kg m-2 d-1"
             )
 
             QM = xsdba.DetrendedQuantileMapping.train(
