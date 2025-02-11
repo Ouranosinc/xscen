@@ -41,16 +41,17 @@
 # (by modifying extract:simulation:search_data_catalogs:other_search_criteria:)
 # to make sure all tasks work properly before launching it for all simulations.
 tasks:
-- extract # Extract the simulation and reference dataset with the right domain and period.
-- regrid # Regrid the simulation onto the reference grid.
-- biasadjust # Train and adjust the simulation dataset one variable at the time.
-- cleanup # Join each individually adjusted variable back in one scenario dataset and clean up other details.
-- rechunk # Rechunk the scenario dataset and save it.
-- diagnostics # Compute diagnostics (properties, measures and summaries)
-- indicators # Compute xclim indicators on the scenario.
-- climatology # Compute the climatological mean of the indicators
-- delta # Compute the deltas of the climatological means.
-- ensembles # Compute the ensemble statistics on indicators, climatology and deltas.
+  - extract # Extract the simulation and reference dataset with the right domain and period.
+  - regrid # Regrid the simulation onto the reference grid.
+  - biasadjust # Train and adjust the simulation dataset one variable at the time.
+  - cleanup # Join each individually adjusted variable back in one scenario dataset and clean up other details.
+  - rechunk # Rechunk the scenario dataset and save it.
+  - diagnostics # Compute diagnostics (properties, measures and summaries)
+  - indicators # Compute xclim indicators on the scenario.
+  - climatology # Compute the climatological mean of the indicators
+  - delta # Compute the deltas of the climatological means.
+  - ensembles # Compute the ensemble statistics on indicators, climatology and deltas.
+
 
 # Task Arguments
 extract:
@@ -59,16 +60,12 @@ extract:
   # It is dealt with manually in workflow1.py, building a loop over all entries below 'extract:'.
   # We do this here because we need a different set of arguments for the reconstruction and simulations.
   reconstruction:
-    dask:
-      # these arguments will need to be passed manually to the dask client
+    dask: # these arguments will need to be passed manually to the dask client
       n_workers: 2
       threads_per_worker: 3
       memory_limit: 15GB
-    search_data_catalogs:
-      # these arguments will be passed manually to xs.search_data_catalogs
-      variables_and_freqs:
-        # this is an anchor. more on anchors:  https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/
-        &var_and_freq
+    search_data_catalogs: # these arguments will be passed manually to xs.search_data_catalogs
+      variables_and_freqs: &var_and_freq # this is an anchor. more on anchors:  https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/
         tasmax: D
         tasmin: D
         pr: D
@@ -79,8 +76,7 @@ extract:
         - '1991'
         - '2020'
       other_search_criteria:
-        source:
-          # put the reference you want here
+        source: # put the reference you want here
           "ERA5-Land"
       # below are more possible arguments for the function xs.search_data_catalogs,
       # In this example, they are not needed in the config. Only entries that differ from the function defaults need to be specified.
@@ -92,8 +88,7 @@ extract:
       #restrict_resolution:
       #restrict_members:
       #restrict_warming_level:
-    extract_dataset:
-      # these arguments will be passed manually to xs.extract_dataset
+    extract_dataset: # these arguments will be passed manually to xs.extract_dataset
       region: &region
         name: test1
         method: bbox
@@ -109,7 +104,8 @@ extract:
       #preprocess:
       #resample_methods:
       #mask:
-    stack_drop_nans: &stack True
+    stack_drop_nans: &stack
+      True
     save:
       mode: o
       encoding:
@@ -141,24 +137,23 @@ extract:
       periods: &sim_period
         - '1950'
         - '2100'
-      other_search_criteria:
-        # put the simulations you want here
+      other_search_criteria: # put the simulations you want here
         processing_level: raw
         mip_era: CMIP6
         experiment:
-        - ssp245
-        - ssp370
+          - ssp245
+          - ssp370
         source:
-        - CMCC-ESM2
-        - KACE-1-0-G
+          - CMCC-ESM2
+          - KACE-1-0-G
         member:
-        - r1i1p1f1
+          - r1i1p1f1
     extract_dataset:
       xr_combine_kwargs:
         combine_attrs: override
       xr_open_kwargs:
         drop_variables:
-        - height
+          - height
         chunks:
           lat: 10
           lon: 10
@@ -177,6 +172,7 @@ extract:
         lon: -1
         time: 365
 
+
 regrid:
   dask:
     n_workers: 2
@@ -188,8 +184,7 @@ regrid:
   output:
     type: reconstruction
     processing_level: extracted
-  regrid_dataset:
-    # automatically passed to the function (module name is regrid)
+  regrid_dataset: # automatically passed to the function (module name is regrid)
     regridder_kwargs:
       method: bilinear
       extrap_method: inverse_dist
@@ -201,6 +196,7 @@ regrid:
     mode: o
     rechunk:
       time: -1
+
 
 biasadjust:
   dtr:
@@ -239,8 +235,10 @@ biasadjust:
             weights: tricube
         interp: nearest
         extrapolation: constant
-      bias_adjust_institution: &b_a_inst Ouranos
-      bias_adjust_project: &b_a_pro template1
+      bias_adjust_institution: &b_a_inst
+        Ouranos
+      bias_adjust_project: &b_a_pro
+        template1
       #moving_yearly_window:
       #align_on:
     save: *save_time_-1
@@ -301,6 +299,7 @@ biasadjust:
       bias_adjust_project: *b_a_pro
     save: *save_time_-1
 
+
 cleanup:
   dask:
     n_workers: 4
@@ -352,6 +351,7 @@ cleanup:
       pr:
         dtype: float32
 
+
 rechunk:
   dask:
     n_workers: 3
@@ -382,20 +382,20 @@ diagnostics:
       tasmin: degC
       pr: mm d-1
     cfchecks:
-      tasmax: { 'cfcheck_from_name': {} }
-      tasmin: { 'cfcheck_from_name': {} }
-      pr: { 'cfcheck_from_name': {} }
+      tasmax: {'cfcheck_from_name': {}}
+      tasmin: {'cfcheck_from_name': {}}
+      pr: {'cfcheck_from_name': {}}
     flags:
-      tasmax: # `None` flags means that it will use xclim's default flags for the given variable
+      tasmax:  # `None` flags means that it will use xclim's default flags for the given variable
       tasmin:
       pr:
-        # structure
-        # start_date
-        # end_date
-        # missing
-        # flag_kwargs
-        # return_flags
-        # raise_on  # Since we don't raise on anything, the function will print warnings instead
+    # structure
+    # start_date
+    # end_date
+    # missing
+    # flag_kwargs
+    # return_flags
+    # raise_on  # Since we don't raise on anything, the function will print warnings instead
   kind:
     reference:
       inputs:
@@ -446,11 +446,9 @@ diagnostics:
         rechunk:
           lat: -1
           lon: -1
-  measures_heatmap: {}
-    # automatically passed to the function
+  measures_heatmap: {} # automatically passed to the function
     #to_level:
-  measures_improvement: {}
-    # automatically passed to the function
+  measures_improvement: {}   # automatically passed to the function
     #to_level:
 
 indicators:
@@ -460,11 +458,11 @@ indicators:
     memory_limit: "2GB"
   inputs:
     processing_level: final
-  compute_indicators: {}
-    # automatically passed to the function
+  compute_indicators: {} # automatically passed to the function
     #periods:
     #to_level:
   save: *save_time_-1
+
 
 aggregate:
   dask:
@@ -476,8 +474,7 @@ aggregate:
       processing_level: indicators
     delta:
       processing_level: climatology
-  climatological_op:
-    # automatically passed to the function
+  climatological_op: # automatically passed to the function
     op: mean
     window: 30
     stride: 10
@@ -485,8 +482,7 @@ aggregate:
     to_level: climatology
     #periods_as_dim: True
     #min_periods:
-  compute_deltas:
-    # automatically passed to the function
+  compute_deltas: # automatically passed to the function
     kind: "+"
     reference_horizon: "1991-2020"
     to_level: 'delta'
@@ -494,17 +490,17 @@ aggregate:
   save:
     mode: 'o'
 
+
 ensembles:
   dask:
     n_workers: 3
     threads_per_worker: 5
     memory_limit: "5GB"
   processing_levels:
-  - indicators
-  - climatology
-  - delta
-  ensemble_stats:
-    # automatically passed to the function
+    - indicators
+    - climatology
+    - delta
+  ensemble_stats: # automatically passed to the function
     statistics:
       ensemble_percentiles:
         split: False
@@ -515,54 +511,52 @@ ensembles:
   save:
     mode: o
 
+
 # General Arguments
 
-project:
-  # argument to create the project
+project: # argument to create the project
   name: Template 1 - basic_workflow_with_config
   version: 1.0.0
   description: Template for xscen workflow
   id: t1
 
-scripting:
-  # send an email when code fails or succeed
+scripting: # send an email when code fails or succeed
   subject: Template 1 - basic_workflow_with_config
   send_mail_on_exit:
     msg_err: Something went wrong!
     on_error_only: True
 
-dask:
-  # general dask arguments
+
+dask: # general dask arguments
   array.slicing.split_large_chunks: False
 
-logging:
-  # general logging args
+
+logging: # general logging args
   formatters:
     default:
       format: '%(asctime)s %(levelname)-8s %(name)-15s %(message)s'
       datefmt: '%Y-%m-%d %H:%M:%S'
   handlers:
     console:
-      class: logging.StreamHandler
+      class : logging.StreamHandler
       formatter: default
-      level: INFO
-  #    file: #Uncomment if you want a log file, don't forget to also uncomment the filename in paths1.yml.
-  #      class: logging.FileHandler
-  #      formatter: default
-  #      level : DEBUG
+      level : INFO
+#    file: #Uncomment if you want a log file, don't forget to also uncomment the filename in paths1.yml.
+#      class: logging.FileHandler
+#      formatter: default
+#      level : DEBUG
   loggers:
     xscen:
       propagate: False
       level: INFO
       handlers: [ console ] # [file, console] could also be used to write the log to a file
 
-xclim:
-  # Options for xclim
-  metadata_locales:
-  # Enable French translation for xclim indicators, but also some xscen methods.
-  - fr
 
-to_dataset_dict:
-  # parameters to open datasets
+xclim:  # Options for xclim
+  metadata_locales:  # Enable French translation for xclim indicators, but also some xscen methods.
+    - fr
+
+
+to_dataset_dict: # parameters to open datasets
   xarray_open_kwargs:
     decode_timedelta: False
