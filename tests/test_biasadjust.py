@@ -18,7 +18,7 @@ except ImportError:
 import xscen as xs
 
 xsdba.set_options(
-    sdba_encode_cf=False
+    xsdba_encode_cf=False
 )  # FIXME: A temporary bug fix waiting for xclim 0.49
 
 
