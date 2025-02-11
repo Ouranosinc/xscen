@@ -2,10 +2,9 @@ from pathlib import Path
 
 import pandas as pd
 import xarray as xr
+from conftest import SAMPLES_DIR
 
 from xscen import catalog, extract
-
-from .conftest import SAMPLES_DIR
 
 
 def test_subset_file_coverage():

@@ -1,10 +1,9 @@
 import numpy as np
+from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
 from xscen import scripting as sc
-
-from .conftest import notebooks
 
 
 class TestScripting:

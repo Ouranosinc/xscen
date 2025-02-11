@@ -3,13 +3,12 @@ import numpy as np
 import pytest
 import xarray as xr
 import xclim
+from conftest import notebooks
 from shapely.geometry import Polygon
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
 from xscen.testing import datablock_3d
-
-from .conftest import notebooks
 
 try:
     import xesmf as xe
