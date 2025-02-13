@@ -126,9 +126,11 @@ def train(
     # purpose.  This fails if sim/hist would need this conversion too.
     ref = xc.core.units.convert_units_to(ref, hist, context="infer")
     for d in [adapt_freq, jitter_over, jitter_under]:
-        if d is not None and "thresh" in d:
-            thr = xc.core.units.convert_units_to(d["thresh"], hist, context="infer")
-            d["thresh"] = f"{thr} {hist.units}"
+        if d is not None:
+            for s in ["thresh", "upper_bnd", "lower_bnd"]:
+                if s in d:
+                    thr = xc.core.units.convert_units_to(d[s], hist, context="infer")
+                    d[s] = f"{thr} {hist.units}"
 
     group = group if group is not None else {"group": "time.dayofyear", "window": 31}
 

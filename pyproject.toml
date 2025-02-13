@@ -349,7 +349,7 @@ lines-after-imports = 2
 no-lines-before = ["future", "standard-library"]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 15
+max-complexity = 20
 
 [tool.ruff.lint.per-file-ignores]
 "docs/**/*.py" = ["E402"]

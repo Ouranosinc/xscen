@@ -240,8 +240,8 @@ class TestAdjust:
             == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
             " window=31), kind='+').adjust(sim, detrend=<LoessDetrend>),"
             " ref and hist were prepared with jitter_under_thresh(ref, hist,"
-            " {'thresh': '2 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd':"
-            " '3 K', 'thresh': '2 K'}) and adapt_freq(ref, hist, {'thresh': '2 K'})"
+            " {'thresh': '2.0 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd':"
+            " '3.0 K', 'thresh': '2.0 K'}) and adapt_freq(ref, hist, {'thresh': '2.0 K'})"
         )
 
         assert (
@@ -249,13 +249,13 @@ class TestAdjust:
             == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
             " window=31), kind='+').adjust(sim, detrend=<LoessDetrend>), ref and"
             " hist were prepared with jitter_under_thresh(ref, hist, {'thresh':"
-            " '2 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd': '3 K',"
-            " 'thresh': '2 K'}) and adapt_freq(ref, hist, {'thresh': '2 K'})"
+            " '2.0 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd': '3.0 K',"
+            " 'thresh': '2.0 K'}) and adapt_freq(ref, hist, {'thresh': '2.0 K'})"
         )
 
         assert out.equals(out2)
 
-    def test_xclim_vs_xscen(
+    def test_xsdba_vs_xscen(
         self,
     ):  # should give the same results  using xscen and xclim
         dref = (
@@ -289,7 +289,7 @@ class TestAdjust:
             dhist,
             var="pr",
             period=["2001", "2003"],
-            adapt_freq={"thresh": "1 kg m-2 d-1"},
+            adapt_freq={"thresh": "1 mm d-1"},
             xsdba_train_args={"kind": "*", "nquantiles": 50},
         )
 
@@ -306,7 +306,7 @@ class TestAdjust:
             },
         )
 
-        # xclim version
+        # xsdba version
         with xsdba.set_options(extra_output=True):
             group = xsdba.Grouper(group="time.dayofyear", window=31)
 
@@ -314,8 +314,13 @@ class TestAdjust:
             dhistx = dhist.sel(time=slice("2001", "2003")).convert_calendar("noleap")
             dsimx = dsim.sel(time=slice("2001", "2006")).convert_calendar("noleap")
 
+            # xsdba is now climate agnostics,
+            thr = xc.core.units.convert_units_to(
+                "1 mm d-1", dhistx["pr"], context="infer"
+            )
+            thresh = f"{thr} {dhistx['pr'].units}"
             dhist_ad, pth, dP0 = xsdba.processing.adapt_freq(
-                drefx["pr"], dhistx["pr"], group=group, thresh="1 kg m-2 d-1"
+                drefx["pr"], dhistx["pr"], group=group, thresh=thresh
             )
 
             QM = xsdba.DetrendedQuantileMapping.train(
