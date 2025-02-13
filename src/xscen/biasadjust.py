@@ -1,6 +1,7 @@
 """Functions to train and adjust a dataset using a bias-adjustment algorithm."""
 
 import logging
+import warnings
 from copy import deepcopy
 
 import xarray as xr
@@ -62,6 +63,7 @@ def train(
     method: str = "DetrendedQuantileMapping",
     group: xsdba.Grouper | str | dict | None = None,
     xsdba_train_args: dict | None = None,
+    xclim_train_args: dict | None = None,
     maximal_calendar: str = "noleap",
     adapt_freq: dict | None = None,
     jitter_under: dict | None = None,
@@ -88,6 +90,9 @@ def train(
       Defaults to {"group": "time.dayofyear", "window": 31}.
     xsdba_train_args : dict
       Dict of arguments to pass to the `.train` of the adjustment object.
+    xclim_train_args : dict
+      Dict of arguments to pass to the `.train` of the adjustment object.
+      A warning will be emitted stating that this a legacy argument replaced with `xsdba_train_args`.
     maximal_calendar: str
       Maximal calendar dhist can be. The hierarchy: 360_day < noleap < standard < all_leap.
       If dhist's calendar is higher than maximal calendar, it will be converted to the maximal calendar.
@@ -110,6 +115,17 @@ def train(
     xsdba.adjustment.DetrendedQuantileMapping, xsdba.adjustment.ExtremeValues
 
     """
+    if xclim_train_args is not None:
+        warnings.warn(
+            "`xclim_train_args` will be deprecated and replaced by `xsdba_train_args`.",
+            FutureWarning,
+        )
+        if xsdba_train_args is not None:
+            warnings.warn(
+                "`xclim_train_args` and `xsdba_train_args` were both given, but correspond to the same option. `xsdba_train_args` will be kept"
+            )
+        else:
+            xsdba_train_args = deepcopy(xclim_train_args)
     # TODO: To be adequately fixed later when we add multivariate
     if isinstance(var, str):
         var = [var]
@@ -203,6 +219,7 @@ def adjust(
     periods: list[str] | list[list[str]],
     *,
     xsdba_adjust_args: dict | None = None,
+    xclim_adjust_args: dict | None = None,
     to_level: str = "biasadjusted",
     bias_adjust_institution: str | None = None,
     bias_adjust_project: str | None = None,
@@ -221,6 +238,9 @@ def adjust(
       Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
     xsdba_adjust_args : dict, optional
       Dict of arguments to pass to the `.adjust` of the adjustment object.
+    xclim_adjust_args : dict, optional
+      Dict of arguments to pass to the `.adjust` of the adjustment object
+      A warning will be emitted stating that this a legacy argument replaced with `xclim_train_args`.
     to_level : str
       The processing level to assign to the output.
       Defaults to 'biasadjusted'
@@ -241,6 +261,17 @@ def adjust(
     xsdba.adjustment.DetrendedQuantileMapping, xsdba.adjustment.ExtremeValues
 
     """
+    if xclim_adjust_args is not None:
+        warnings.warn(
+            "`xclim_adjust_args` will be deprecated and replaced by `xsdba_adjust_args`.",
+            FutureWarning,
+        )
+        if xsdba_adjust_args is not None:
+            warnings.warn(
+                "`xclim_adjust_args` and `xsdba_adjust_args` were both given, but correspond to the same option. `xsdba_adjust_args` will be kept"
+            )
+        else:
+            xsdba_adjust_args = deepcopy(xclim_adjust_args)
     xsdba_adjust_args = deepcopy(xsdba_adjust_args)
     xsdba_adjust_args = xsdba_adjust_args or {}
 
