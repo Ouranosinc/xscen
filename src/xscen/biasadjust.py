@@ -120,16 +120,17 @@ def train(
     else:
         ref = dref[var[0]]
         hist = dhist[var[0]]
-    # xsdba is climate agnostic, so units conversion won't use water density
-    # to convert rate <-> amount. We can keep using xclim utilities in for this
-    # purpose
     # TODO: change this to be compatible with multivar too.
-    # This could fail if sim/hist don't have the same units.
+    # xsdba is climate agnostic, so units conversion won't use water density
+    # to convert rate <-> amount. We can keep using xclim utilities for this
+    # purpose.  This fails if sim/hist would need this conversion too.
     ref = xc.core.units.convert_units_to(ref, hist, context="infer")
+    for d in [adapt_freq, jitter_over, jitter_under]:
+        if d is not None and "thresh" in d:
+            thr = xc.core.units.convert_units_to(d["thresh"], hist, context="infer")
+            d["thresh"] = f"{thr} {hist.units}"
 
-    # we want to put default if group is None, but not if group is False
-    if group is None:
-        group = {"group": "time.dayofyear", "window": 31}
+    group = group if group is not None else {"group": "time.dayofyear", "window": 31}
 
     xsdba_train_args = xsdba_train_args or {}
     if method == "DetrendedQuantileMapping":
@@ -149,13 +150,12 @@ def train(
     if refcal != mincal:
         ref = ref.convert_calendar(mincal, align_on=align_on)
 
-    if group:
-        if isinstance(group, dict):
-            # So we can specify window and add_dims in yaml.
-            group = xsdba.Grouper.from_kwargs(**group)["group"]
-        elif isinstance(group, str):
-            group = xsdba.Grouper(group)
-        xsdba_train_args["group"] = group
+    if isinstance(group, dict):
+        # So we can specify window and add_dims in yaml.
+        group = xsdba.Grouper.from_kwargs(**group)["group"]
+    elif isinstance(group, str):
+        group = xsdba.Grouper(group)
+    xsdba_train_args["group"] = group
 
     if jitter_over is not None:
         ref = xsdba.processing.jitter_over_thresh(ref, **jitter_over)
