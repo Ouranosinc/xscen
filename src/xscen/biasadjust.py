@@ -166,9 +166,11 @@ def train(
     xsdba_train_args["group"] = group
 
     # TODO: change this to be compatible with multivar too?
-    contexts = [infer_context(da.standard_name) for da in [ref, hist]]
-    context = "hydro" if "hydro" in contexts else "none"
-    with xc.core.units.units.context(context):
+    contexts = [
+        infer_context(da.attrs.get("standard_name", None)) for da in [ref, hist]
+    ]
+    cntx = "hydro" if "hydro" in contexts else "none"
+    with xc.core.units.units.context(cntx):
         if jitter_over is not None:
             ref = xsdba.processing.jitter_over_thresh(ref, **jitter_over)
             hist = xsdba.processing.jitter_over_thresh(hist, **jitter_over)
@@ -301,7 +303,8 @@ def adjust(
         kwargs.setdefault("kind", ADJ.kind)
         xsdba_adjust_args["detrend"] = getattr(xsdba.detrending, name)(**kwargs)
 
-    with xc.core.units.units.context(infer_context(sim.standard_name)):
+    cntx = infer_context(sim.attrs.get("standard_name", None))
+    with xc.core.units.units.context(cntx):
         # do the adjustment for all the simulation_period lists
         periods = standardize_periods(periods)
         slices = []
