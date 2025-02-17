@@ -7,6 +7,7 @@ from copy import deepcopy
 import xarray as xr
 import xclim as xc
 import xsdba
+from xclim.core.units import infer_context
 
 from .catutils import parse_from_ds
 from .config import parse_config
@@ -140,14 +141,6 @@ def train(
     # xsdba is climate agnostic, so units conversion won't use water density
     # to convert rate <-> amount. We can keep using xclim utilities for this
     # purpose.  This fails if sim/hist would need this conversion too.
-    ref = xc.core.units.convert_units_to(ref, hist, context="infer")
-    for d in [adapt_freq, jitter_over, jitter_under]:
-        if d is not None:
-            for s in ["thresh", "upper_bnd", "lower_bnd"]:
-                if s in d:
-                    thr = xc.core.units.convert_units_to(d[s], hist, context="infer")
-                    d[s] = f"{thr} {hist.units}"
-
     group = group if group is not None else {"group": "time.dayofyear", "window": 31}
 
     xsdba_train_args = xsdba_train_args or {}
@@ -175,20 +168,24 @@ def train(
         group = xsdba.Grouper(group)
     xsdba_train_args["group"] = group
 
-    if jitter_over is not None:
-        ref = xsdba.processing.jitter_over_thresh(ref, **jitter_over)
-        hist = xsdba.processing.jitter_over_thresh(hist, **jitter_over)
+    # this will not work with multivariate DataArrays
+    contexts = [infer_context(da.standard_name) for da in [ref, hist]]
+    context = "hydro" if "hydro" in contexts else "none"
+    with xc.core.units.units.context(context):
+        if jitter_over is not None:
+            ref = xsdba.processing.jitter_over_thresh(ref, **jitter_over)
+            hist = xsdba.processing.jitter_over_thresh(hist, **jitter_over)
 
-    if jitter_under is not None:
-        ref = xsdba.processing.jitter_under_thresh(ref, **jitter_under)
-        hist = xsdba.processing.jitter_under_thresh(hist, **jitter_under)
+        if jitter_under is not None:
+            ref = xsdba.processing.jitter_under_thresh(ref, **jitter_under)
+            hist = xsdba.processing.jitter_under_thresh(hist, **jitter_under)
 
-    if adapt_freq is not None:
-        adapt_freq.setdefault("group", group)
-        hist, pth, dP0 = xsdba.processing.adapt_freq(ref, hist, **adapt_freq)
-        adapt_freq.pop("group")
+        if adapt_freq is not None:
+            adapt_freq.setdefault("group", group)
+            hist, pth, dP0 = xsdba.processing.adapt_freq(ref, hist, **adapt_freq)
+            adapt_freq.pop("group")
 
-    ADJ = getattr(xsdba.adjustment, method).train(ref, hist, **xsdba_train_args)
+        ADJ = getattr(xsdba.adjustment, method).train(ref, hist, **xsdba_train_args)
 
     if adapt_freq is not None:
         ds = ADJ.ds.assign(pth=pth, dP0=dP0)
@@ -307,15 +304,16 @@ def adjust(
         kwargs.setdefault("kind", ADJ.kind)
         xsdba_adjust_args["detrend"] = getattr(xsdba.detrending, name)(**kwargs)
 
-    # do the adjustment for all the simulation_period lists
-    periods = standardize_periods(periods)
-    slices = []
-    for period in periods:
-        sim_sel = sim.sel(time=slice(period[0], period[1]))
+    with xc.core.units.units.context(infer_context(sim.standard_name)):
+        # do the adjustment for all the simulation_period lists
+        periods = standardize_periods(periods)
+        slices = []
+        for period in periods:
+            sim_sel = sim.sel(time=slice(period[0], period[1]))
 
-        out = ADJ.adjust(sim_sel, **xsdba_adjust_args)
-        slices.extend([out])
-    # put all the adjusted period back together
+            out = ADJ.adjust(sim_sel, **xsdba_adjust_args)
+            slices.extend([out])
+        # put all the adjusted period back together
     dscen = xr.concat(slices, dim="time")
 
     dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])

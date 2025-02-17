@@ -62,8 +62,8 @@ dependencies = [
   "sparse",
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0, <2024.10.0", # FIXME: 2024.10.0 breaks rechunker with zarr
-  "xclim >=0.53.2, <0.55",
   "xsdba@git+https://git@github.com/Ouranosinc/xsdba.git@naming_conventions",
+  "xclim@git+https://git@github.com/Ouranosinc/xclim.git@main",
   "zarr >=2.13, <3.0" # FIXME: xarray is compatible with zarr 3.0 from 2025.01.1, but we pin xarray below that version"
 ]
 
