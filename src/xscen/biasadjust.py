@@ -137,10 +137,7 @@ def train(
     else:
         ref = dref[var[0]]
         hist = dhist[var[0]]
-    # TODO: change this to be compatible with multivar too.
-    # xsdba is climate agnostic, so units conversion won't use water density
-    # to convert rate <-> amount. We can keep using xclim utilities for this
-    # purpose.  This fails if sim/hist would need this conversion too.
+
     group = group if group is not None else {"group": "time.dayofyear", "window": 31}
 
     xsdba_train_args = xsdba_train_args or {}
@@ -168,7 +165,7 @@ def train(
         group = xsdba.Grouper(group)
     xsdba_train_args["group"] = group
 
-    # this will not work with multivariate DataArrays
+    # TODO: change this to be compatible with multivar too?
     contexts = [infer_context(da.standard_name) for da in [ref, hist]]
     context = "hydro" if "hydro" in contexts else "none"
     with xc.core.units.units.context(context):
