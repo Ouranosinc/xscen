@@ -314,24 +314,24 @@ class TestAdjust:
             dhistx = dhist.sel(time=slice("2001", "2003")).convert_calendar("noleap")
             dsimx = dsim.sel(time=slice("2001", "2006")).convert_calendar("noleap")
 
-            # xsdba is now climate agnostics,
-            thr = xc.core.units.convert_units_to(
-                "1 mm d-1", dhistx["pr"], context="infer"
-            )
-            thresh = f"{thr} {dhistx['pr'].units}"
-            dhist_ad, pth, dP0 = xsdba.processing.adapt_freq(
-                drefx["pr"], dhistx["pr"], group=group, thresh=thresh
-            )
+            # xsdba is now climate agnostics, hydro context must be specified
+            with xc.core.units.units.context("hydro"):
+                dhist_ad, pth, dP0 = xsdba.processing.adapt_freq(
+                    drefx["pr"], dhistx["pr"], group=group, thresh="1 mm d-1"
+                )
 
-            QM = xsdba.DetrendedQuantileMapping.train(
-                drefx["pr"], dhist_ad, group=group, kind="*", nquantiles=50
-            )
+                QM = xsdba.DetrendedQuantileMapping.train(
+                    drefx["pr"], dhist_ad, group=group, kind="*", nquantiles=50
+                )
 
-            detrend = xsdba.detrending.LoessDetrend(
-                f=0.2, niter=1, d=0, weights="tricube", group=group, kind="*"
-            )
-            out_xclim = QM.adjust(
-                dsimx["pr"], detrend=detrend, interp="nearest", extrapolation="constant"
-            ).rename({"scen": "pr"})
+                detrend = xsdba.detrending.LoessDetrend(
+                    f=0.2, niter=1, d=0, weights="tricube", group=group, kind="*"
+                )
+                out_xclim = QM.adjust(
+                    dsimx["pr"],
+                    detrend=detrend,
+                    interp="nearest",
+                    extrapolation="constant",
+                ).rename({"scen": "pr"})
 
         assert out_xscen.equals(out_xclim)
