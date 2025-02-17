@@ -240,8 +240,8 @@ class TestAdjust:
             == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
             " window=31), kind='+').adjust(sim, detrend=<LoessDetrend>),"
             " ref and hist were prepared with jitter_under_thresh(ref, hist,"
-            " {'thresh': '2.0 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd':"
-            " '3.0 K', 'thresh': '2.0 K'}) and adapt_freq(ref, hist, {'thresh': '2.0 K'})"
+            " {'thresh': '2 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd':"
+            " '3 K', 'thresh': '2 K'}) and adapt_freq(ref, hist, {'thresh': '2 K'})"
         )
 
         assert (
@@ -249,8 +249,8 @@ class TestAdjust:
             == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
             " window=31), kind='+').adjust(sim, detrend=<LoessDetrend>), ref and"
             " hist were prepared with jitter_under_thresh(ref, hist, {'thresh':"
-            " '2.0 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd': '3.0 K',"
-            " 'thresh': '2.0 K'}) and adapt_freq(ref, hist, {'thresh': '2.0 K'})"
+            " '2 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd': '3 K',"
+            " 'thresh': '2 K'}) and adapt_freq(ref, hist, {'thresh': '2 K'})"
         )
 
         assert out.equals(out2)
