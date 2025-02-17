@@ -57,7 +57,7 @@ def _add_preprocessing_attr(scen, train_kwargs):
 def _parse_group(group):
     # need to check type, isinstance would give that Grouper is a dict
     if type(group) is dict:
-        # So we can specifiy window and add_dims in yaml.
+        # So we can specify window and add_dims in YAML.
         group = sdba.Grouper.from_kwargs(**group)["group"]
     elif isinstance(group, str):
         group = sdba.Grouper(group)
@@ -322,7 +322,7 @@ def adjust(
     elif method is not None:
         # Adjust class assumed
         # I think in this case it would make more sense to simply have a DataArray
-        # But to make it more like the rest of the method, I think it makes sense to have Dataset eith a single variable
+        # But to make it more like the rest of the method, I think it makes sense to have Dataset with a single variable
         if len(var := list(dsim.data_vars)) > 1:
             raise ValueError(
                 "When using `base`, `dsim` must contain a single variable."
