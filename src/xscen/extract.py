@@ -513,14 +513,10 @@ def resample(  # noqa: C901
         missing_note = f", {action} incomplete periods "
     elif isinstance(missing, dict):
         missmeth = missing.pop("method")
-        complete = ~xc.core.missing.MISSING_METHODS[missmeth](
-            da, target_frequency, initial_frequency
-        )(**missing)
-        funcstr = xc.core.formatting.gen_call_string(
-            f"xclim.core.missing_{missmeth}", **missing
-        )
+        miss = xc.core.missing.MISSING_METHODS[missmeth](**missing)
+        complete = ~miss(da, target_frequency, initial_frequency)
         missing = "mask"
-        missing_note = f", masking incomplete periods according to {funcstr} "
+        missing_note = f", masking incomplete periods according to {miss} "
     if missing in {"mask", "drop"}:
         out = out.where(complete, drop=(missing == "drop"))
 
