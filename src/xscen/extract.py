@@ -359,7 +359,7 @@ def resample(  # noqa: C901
     """
     var_name = da.name
 
-    initial_frequency = xr.infer_freq(da.time.dt.round("T")) or "undetected"
+    initial_frequency = xr.infer_freq(da.time.dt.round("min")) or "undetected"
     if initial_frequency == "undetected":
         warnings.warn(
             "Could not infer the frequency of the dataset. Be aware that this might result in erroneous manipulations."
@@ -1198,7 +1198,7 @@ def _wl_find_column(tas, model):
         logger.info(
             "More than one simulation of the database fits the dataset metadata. Choosing the first one."
         )
-    tas_sel = tas.isel(simulation=candidates.argmax())
+    tas_sel = tas.isel(simulation=candidates.argmax("simulation"))
     return tas_sel
 
 

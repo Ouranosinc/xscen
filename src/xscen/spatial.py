@@ -50,6 +50,8 @@ def creep_weights(mask: xr.DataArray, n: int = 1, mode: str = "clip") -> xr.Data
     DataArray
        Weights. The dot product must be taken over the last N dimensions.
     """
+    if mode not in ["clip", "wrap"]:
+        raise ValueError("mode must be either 'clip' or 'wrap'")
     da = mask
     mask = da.values
     neighbors = np.array(
@@ -71,8 +73,6 @@ def creep_weights(mask: xr.DataArray, n: int = 1, mode: str = "clip") -> xr.Data
                 )
             elif mode == "wrap":
                 neigh_idx = np.unravel_index(neigh_idx_1d, mask.shape, order="C")
-            else:
-                raise ValueError("mode must be either 'clip' or 'wrap'")
             neigh = mask[neigh_idx]
             N = (neigh).sum()
             if N > 0:

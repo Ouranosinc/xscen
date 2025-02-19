@@ -656,8 +656,8 @@ def parse_directory(  # noqa: C901
 
     if read_file_groups:  # Read fields from file, but only one per group.
         for group_cols, parse_cols in read_from_file:
-            df = (
-                df.groupby(group_cols)
+            df = (  # column indexing avoids a deprecation where cols in group_cols are not sent to apply
+                df.groupby(group_cols)[df.columns]
                 .apply(
                     _parse_first_ds,
                     cols=parse_cols,
