@@ -4,11 +4,12 @@ Changelog
 
 v0.12.0 (unreleased)
 --------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now uses `flit` as its build-engine and no longer uses `setuptools`, `setuptools-scm`, or `wheel`. (:pull:`519`).
+* Update to support Python3.13 and `xclim` v0.55.0 (:pull:`532`).
 
 Bug fixes
 ^^^^^^^^^

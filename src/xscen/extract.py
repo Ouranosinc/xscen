@@ -359,7 +359,7 @@ def resample(  # noqa: C901
     """
     var_name = da.name
 
-    initial_frequency = xr.infer_freq(da.time.dt.round("T")) or "undetected"
+    initial_frequency = xr.infer_freq(da.time.dt.round("min")) or "undetected"
     if initial_frequency == "undetected":
         warnings.warn(
             "Could not infer the frequency of the dataset. Be aware that this might result in erroneous manipulations."
@@ -513,14 +513,10 @@ def resample(  # noqa: C901
         missing_note = f", {action} incomplete periods "
     elif isinstance(missing, dict):
         missmeth = missing.pop("method")
-        complete = ~xc.core.missing.MISSING_METHODS[missmeth](
-            da, target_frequency, initial_frequency
-        )(**missing)
-        funcstr = xc.core.formatting.gen_call_string(
-            f"xclim.core.missing_{missmeth}", **missing
-        )
+        miss = xc.core.missing.MISSING_METHODS[missmeth](**missing)
+        complete = ~miss(da, target_frequency, initial_frequency)
         missing = "mask"
-        missing_note = f", masking incomplete periods according to {funcstr} "
+        missing_note = f", masking incomplete periods according to {miss} "
     if missing in {"mask", "drop"}:
         out = out.where(complete, drop=(missing == "drop"))
 
@@ -1202,7 +1198,7 @@ def _wl_find_column(tas, model):
         logger.info(
             "More than one simulation of the database fits the dataset metadata. Choosing the first one."
         )
-    tas_sel = tas.isel(simulation=candidates.argmax())
+    tas_sel = tas.isel(simulation=candidates.argmax("simulation"))
     return tas_sel
 
 

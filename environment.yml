@@ -32,8 +32,8 @@ dependencies:
   - sparse
   - toolz
   - xarray >=2023.11.0, !=2024.6.0, <2024.10.0 # FIXME: 2024.10.0 breaks rechunker with zarr
-  - xclim >=0.53.2, <0.55
-  - xesmf >=0.7, <0.8.8  # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
+  - xclim >=0.55, <0.56
+  - xesmf >=0.7, !=0.8.8
   - zarr >=2.13, <3.0 # FIXME: xarray is compatible with zarr 3.0 from 2025.01.1, but we pin xarray below that version
   # To install from source
   - flit >=3.10.1,<4.0

@@ -11,7 +11,7 @@ class TestScripting:
         np.tile(np.arange(1, 2), 50),
         variable="tas",
         start="2000-01-01",
-        freq="AS-JAN",
+        freq="YS-JAN",
         as_dataset=True,
     )
     ds.attrs = {
