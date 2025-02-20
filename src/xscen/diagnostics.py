@@ -365,7 +365,7 @@ def properties_and_measures(  # noqa: C901
 
     See Also
     --------
-    xclim.sdba.properties, xclim.sdba.measures, xclim.core.indicator.build_indicator_module_from_yaml
+    xsdba.properties, xsdba.measures, xclim.core.indicator.build_indicator_module_from_yaml
     """
     if isinstance(properties, str | Path):
         logger.debug("Loading properties module.")
@@ -485,7 +485,8 @@ def measures_heatmap(
         for var_name in meas:
             da = meas[var_name]
             # mean the absolute value of the bias over all positions and add to heat map
-            if "xclim.sdba.measures.RATIO" in da.attrs["history"]:
+            # TODO: check this indeed works with xsdba
+            if "xsdba.measures.RATIO" in da.attrs["history"]:
                 # if ratio, best is 1, this moves "best to 0 to compare with bias
                 row.append(abs(da - 1).mean().values)
             else:
@@ -583,7 +584,7 @@ def measures_improvement(
         if dim is None:
             # reduce all dimensions (which may be variable dependent)
             dims = ds2[var].dims
-        if "xclim.sdba.measures.RATIO" in ds1[var].attrs["history"]:
+        if "xsdba.measures.RATIO" in ds1[var].attrs["history"]:
             diff_bias = abs(ds1[var] - 1) - abs(ds2[var] - 1)
         else:
             diff_bias = abs(ds1[var]) - abs(ds2[var])

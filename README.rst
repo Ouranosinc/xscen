@@ -25,7 +25,7 @@ Features
 * Climate dataset extraction, subsetting, and temporal aggregation.
 * Calculate missing variables through `intake-esm`'s `DerivedVariableRegistry`_.
 * Regridding powered by `xESMF`_.
-* Bias adjustment tools provided by `xclim`_.
+* Bias adjustment tools provided by `xsdba`_.
 
 Installation
 ------------
@@ -43,6 +43,7 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
 .. _intake-esm: https://intake-esm.readthedocs.io/
 .. _xESMF: https://xesmf.readthedocs.io/
 .. _xclim: https://xclim.readthedocs.io/
+.. _xsdba: https://xsdba.readthedocs.io/
 
 .. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
         :target: https://github.com/psf/black
