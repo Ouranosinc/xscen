@@ -4,11 +4,15 @@ Changelog
 
 v0.12.0 (unreleased)
 --------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now uses `flit` as its build-engine and no longer uses `setuptools`, `setuptools-scm`, or `wheel`. (:pull:`519`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Include station-obs and forecasts in the derived schema for `build_path`. (:pull:`534`).
 
 Bug fixes
 ^^^^^^^^^
