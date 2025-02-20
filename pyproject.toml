@@ -274,7 +274,7 @@ override_SS05 = [
 ]
 
 [tool.pytest.ini_options]
-min_version = "7.0"
+minversion = "7.0"
 addopts = [
   "--color=yes",
   "--ignore-glob='*.ipynb_checkpoints'",
