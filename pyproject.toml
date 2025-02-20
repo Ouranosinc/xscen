@@ -171,7 +171,7 @@ ignore-words-list = "ans,astroid,attributs,coo,mesure,nam,ond,socio-economic,vas
 source = ["src/xscen/", "*/site-packages/xscen/"]
 
 [tool.coverage.run]
-omit = ["docs/notebooks/*.ipynb", "tests/*.py", "src/xscen/reduce.py"] # FIXME: Remove xscen/reduce.py when it's fully deleted.
+omit = ["docs/notebooks/*.ipynb", "tests/*.py"]
 relative_files = true
 source = ["xscen"]
 
@@ -274,9 +274,9 @@ override_SS05 = [
 ]
 
 [tool.pytest.ini_options]
+min_version = "7.0"
 addopts = [
   "--color=yes",
-  "--cov=xscen",
   "--ignore-glob='*.ipynb_checkpoints'",
   "--strict-config",
   "--strict-markers",
@@ -286,8 +286,10 @@ addopts = [
   "--dist=worksteal"
 ]
 filterwarnings = ["ignore::UserWarning"]
-testpaths = "tests"
 markers = ["requires_netcdf: marks tests that require netcdf files to run"]
+pythonpath = ["src/xscen"]
+testpaths = ["tests"]
+xfail_strict = true
 
 [tool.ruff]
 src = ["src/xscen"]
