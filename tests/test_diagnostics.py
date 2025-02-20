@@ -400,7 +400,7 @@ class TestPropertiesMeasures:
         )
         print(m2)
         print(m2["maximum_length_of_warm_spell"].values)
-        assert m1.dims == {}
+        assert m1.sizes == {}
         np.testing.assert_allclose(m2["maximum_length_of_warm_spell"].values, 0)
 
     def test_measures_heatmap(self):

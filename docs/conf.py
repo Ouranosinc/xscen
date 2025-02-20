@@ -54,6 +54,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "nbsphinx",
+    "sphinx_autodoc_typehints",
     "sphinx_codeautolink",
     "sphinx_copybutton",
     "sphinx_mdinclude",
