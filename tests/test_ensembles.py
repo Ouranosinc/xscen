@@ -1056,7 +1056,7 @@ class TestEnsemblePartition:
             rename_dict={"source": "new-name"},
         )
 
-        assert ds.dims == {"time": 730, "scenario": 4, "new-name": 1}
+        assert ds.sizes == {"time": 730, "scenario": 4, "new-name": 1}
         assert ds.attrs["cat:processing_level"] == "partition-ensemble"
 
         # test regrid
@@ -1070,7 +1070,7 @@ class TestEnsemblePartition:
             to_level="test",
         )
 
-        assert ds.dims == {
+        assert ds.sizes == {
             "scenario": 4,
             "model": 1,
             "time": 730,
@@ -1114,7 +1114,7 @@ class TestEnsemblePartition:
         )
 
         assert "NCC_NorESM2-MM_r1i1p1f1" in ds.model.values
-        assert ds.dims == {"time": 730, "scenario": 4, "model": 2}
+        assert ds.sizes == {"time": 730, "scenario": 4, "model": 2}
 
 
 class TestReduceEnsemble:

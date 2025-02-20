@@ -248,7 +248,7 @@ def test_parse_from_zarr(tmp_path):
 def test_parse_from_nc(tmp_path):
     # Real ds
     ds = xr.tutorial.open_dataset("air_temperature")
-    ds.to_netcdf(tmp_path / "air.nc")
+    ds.to_netcdf(tmp_path / "air.nc", encoding={"air": {"dtype": "float32"}})
     info = cu.parse_from_ds(
         tmp_path / "air.nc",
         names=["frequency", "source", "variable"],
