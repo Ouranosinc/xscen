@@ -9,7 +9,7 @@ Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bo
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now uses `flit` as its build-engine and no longer uses `setuptools`, `setuptools-scm`, or `wheel`. (:pull:`519`).
-* Update to xclim 0.55 (:pull:`532`).
+* Update to support Python3.13 and `xclim` v0.55.0 (:pull:`532`).
 
 Bug fixes
 ^^^^^^^^^
