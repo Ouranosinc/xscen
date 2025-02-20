@@ -21,6 +21,9 @@ Internal changes
     * Updated versions of many GitHub Actions and Python dependencies.
     * Removed `coveralls` from the CI dependencies.
     * Added `pre-commit` hooks for `vulture` (dead code) and `codespell` (typos).
+* The minimum supported `clisops` version has been raised to v0.15.0. (:pull:`533`).
+* Dependency pins have been synchronized across the repository. (:pull:`533`).
+* GitHub Workflows for conda builds now use the `coverallsapp/github-action` action for coverage reporting. (:pull:`533`).
 
 v0.11.0 (2025-01-23)
 --------------------
