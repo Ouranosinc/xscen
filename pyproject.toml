@@ -63,7 +63,7 @@ dependencies = [
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0",
   "xclim >=0.55, <0.56",
-  "zarr >=2.13"
+  "zarr >=2.13,<3"
 ]
 
 [project.optional-dependencies]
