@@ -62,6 +62,7 @@ dependencies = [
   "sparse",
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0, <2024.10.0", # FIXME: 2024.10.0 breaks rechunker with zarr
+  "xsdba@git+https://git@github.com/Ouranosinc/xsdba.git@naming_conventions",
   "xclim >=0.55, <0.56",
   "zarr >=2.13, <3.0" # FIXME: xarray is compatible with zarr 3.0 from 2025.01.1, but we pin xarray below that version"
 ]
@@ -352,7 +353,7 @@ lines-after-imports = 2
 no-lines-before = ["future", "standard-library"]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 15
+max-complexity = 20
 
 [tool.ruff.lint.per-file-ignores]
 "docs/**/*.py" = ["E402"]

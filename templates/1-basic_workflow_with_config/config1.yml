@@ -216,7 +216,7 @@ biasadjust:
       group:
         group: time.dayofyear
         window: 31
-      xclim_train_args:
+      xsdba_train_args:
         kind: "*"
         nquantiles: 50
       #maximal_calendar:
@@ -226,7 +226,7 @@ biasadjust:
       #align_on:
     xscen_adjust:
       periods: *sim_period
-      xclim_adjust_args:
+      xsdba_adjust_args:
         detrend:
           LoessDetrend:
             f: 0.2
@@ -252,12 +252,12 @@ biasadjust:
       group:
         group: time.dayofyear
         window: 31
-      xclim_train_args:
+      xsdba_train_args:
         kind: "+"
         nquantiles: 50
     xscen_adjust:
       periods: *sim_period
-      xclim_adjust_args:
+      xsdba_adjust_args:
         detrend:
           LoessDetrend:
             f: 0.2
@@ -281,12 +281,12 @@ biasadjust:
         window: 31
       jitter_under:
         thresh: 0.05 mm d-1
-      xclim_train_args:
+      xsdba_train_args:
         kind: "*"
         nquantiles: 50
     xscen_adjust:
       periods: *sim_period
-      xclim_adjust_args:
+      xsdba_adjust_args:
         detrend:
           LoessDetrend:
             f: 0.2
