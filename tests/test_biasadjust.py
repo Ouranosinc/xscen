@@ -5,6 +5,8 @@ import numpy as np
 import pytest
 import xarray as xr
 import xclim as xc
+from conftest import notebooks
+from xclim.sdba import stack_variables
 from xclim.testing.helpers import test_timeseries as timeseries
 
 # Copied from xarray/core/nputils.py
@@ -333,3 +335,33 @@ class TestAdjust:
             ).rename({"scen": "pr"})
 
         assert out_xscen.equals(out_xclim)
+
+    def test_only_adjust(self):
+        # that's an optional dependency in xclim, not ideal
+        # but it's the only example of purely Adjust
+        pytest.importorskip("ot")
+
+        # dOTC fails with a uniform array like above, so this is needed
+        dsim = timeseries(
+            np.arange(365 * 3 + 1),
+            variable="tas",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+        )
+
+        dsim.attrs["cat:xrfreq"] = "D"
+        dsim.attrs["cat:domain"] = "one_point"
+        dsim.attrs["cat:id"] = "fake_id"
+
+        dsim = stack_variables(dsim).to_dataset()
+        xs.adjust(
+            dtrain=None,
+            dsim=dsim,
+            periods=["2003", "2005"],
+            method="dOTC",
+            xclim_adjust_args=dict(
+                ref=dsim.sel(time=slice("2001", "2003")),
+                hist=dsim.sel(time=slice("2001", "2003")),
+            ),
+        )
