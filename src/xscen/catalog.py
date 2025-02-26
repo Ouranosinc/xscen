@@ -723,7 +723,7 @@ class ProjectCatalog(DataCatalog):
         drop_duplicates: bool = True,
         **kwargs,
     ):
-        """
+        r"""
         Open or create a project catalog.
 
         Parameters
@@ -755,7 +755,13 @@ class ProjectCatalog(DataCatalog):
         if create:
             if isinstance(df, str | Path) and (not Path(df).is_file() or overwrite):
                 self.create(df, project=project, overwrite=overwrite)
-        super().__init__(df, *args, check_valid=check_valid, drop_duplicates=drop_duplicates, **kwargs)
+        super().__init__(
+            df,
+            *args,
+            check_valid=check_valid,
+            drop_duplicates=drop_duplicates,
+            **kwargs,
+        )
         self.check_valid_flag = check_valid
         self.drop_duplicates_flag = drop_duplicates
         self.meta_file = df if not isinstance(df, dict) else None
