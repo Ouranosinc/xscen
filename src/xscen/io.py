@@ -1052,6 +1052,11 @@ def rechunk(
             ds = xr.open_dataset(path_in)
     else:
         ds = path_in
+    # Remove all input chunks information, avoids an error with rechunker and xarray >= 2024.10
+    # TODO: Remove this and pin rechunker when https://github.com/pangeo-data/rechunker/pull/156 is merged and released
+    for var in ds.variables.values():
+        var.encoding.pop("chunks", None)
+
     variables = list(ds.data_vars)
     if chunks_over_var:
         chunks = chunks_over_var
