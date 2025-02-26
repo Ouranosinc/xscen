@@ -4,7 +4,7 @@ Changelog
 
 v0.12.0 (unreleased)
 --------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -14,6 +14,7 @@ Breaking changes
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Include station-obs and forecasts in the derived schema for `build_path`. (:pull:`534`).
+* Project catalog now allows `check_valid` and `drop_duplicates` keyword arguments. (:pull:`536`, :issue:`535`).
 
 Bug fixes
 ^^^^^^^^^
