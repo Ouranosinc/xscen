@@ -719,9 +719,11 @@ class ProjectCatalog(DataCatalog):
         create: bool = False,
         overwrite: bool = False,
         project: dict | None = None,
+        check_valid: bool = True,
+        drop_duplicates: bool = True,
         **kwargs,
     ):
-        """
+        r"""
         Open or create a project catalog.
 
         Parameters
@@ -735,6 +737,13 @@ class ProjectCatalog(DataCatalog):
             If this and 'create' are True, this will overwrite any existing JSON and CSV file with an empty catalog.
         project : dict, optional
             Metadata to create the catalog, if required.
+        check_valid : bool
+            If True (default), will check that all files in the catalog exist on disk and remove those that don't.
+        drop_duplicates : bool
+            If True (default), will drop duplicates in the catalog based on the 'id' and 'path' columns.
+        \**kwargs : dict
+            Any other arguments are passed to xscen.catalog.DataCatalog.
+
 
         Notes
         -----
@@ -746,9 +755,15 @@ class ProjectCatalog(DataCatalog):
         if create:
             if isinstance(df, str | Path) and (not Path(df).is_file() or overwrite):
                 self.create(df, project=project, overwrite=overwrite)
-        super().__init__(df, *args, **kwargs)
-        self.check_valid()
-        self.drop_duplicates()
+        super().__init__(
+            df,
+            *args,
+            check_valid=check_valid,
+            drop_duplicates=drop_duplicates,
+            **kwargs,
+        )
+        self.check_valid_flag = check_valid
+        self.drop_duplicates_flag = drop_duplicates
         self.meta_file = df if not isinstance(df, dict) else None
 
     # TODO: Implement a way to easily destroy part of the catalog to "reset" some steps
@@ -772,7 +787,7 @@ class ProjectCatalog(DataCatalog):
         Warnings
         --------
         If a file was deleted between the parsing of the catalog and this call,
-        it will be removed from the csv when `check_valid` is called.
+        it will be removed from the csv if `check_valid` is called.
 
         Parameters
         ----------
@@ -786,9 +801,10 @@ class ProjectCatalog(DataCatalog):
             if isinstance(df, pd.Series):
                 df = pd.DataFrame(df).transpose()
             self.esmcat._df = pd.concat([self.df, df])
-
-        self.check_valid()
-        self.drop_duplicates()
+        if self.check_valid_flag:
+            self.check_valid()
+        if self.drop_duplicates_flag:
+            self.drop_duplicates()
 
         # make sure year really has 4 digits
         if "date_start" in self.df:
@@ -834,8 +850,10 @@ class ProjectCatalog(DataCatalog):
                 }
             )
             disk_cat.esmcat._df = pd.concat([disk_cat.df, df_str])
-            disk_cat.check_valid()
-            disk_cat.drop_duplicates()
+            if self.check_valid_flag:
+                disk_cat.check_valid()
+            if self.drop_duplicates_flag:
+                disk_cat.drop_duplicates()
             with fs.open(disk_cat.esmcat.catalog_file, "wb") as csv_outfile:
                 disk_cat.df.to_csv(csv_outfile, index=False, compression=None)
 
@@ -858,7 +876,7 @@ class ProjectCatalog(DataCatalog):
         Warnings
         --------
         If a file was deleted between the parsing of the catalog and this call,
-        it will be removed from the csv when `check_valid` is called.
+        it will be removed from the csv if `check_valid` is called.
 
         Parameters
         ----------
@@ -910,8 +928,10 @@ class ProjectCatalog(DataCatalog):
             self.meta_file, read_csv_kwargs=self.read_csv_kwargs
         )
         initlen = len(self.esmcat.df)
-        self.check_valid()
-        self.drop_duplicates()
+        if self.check_valid_flag:
+            self.check_valid()
+        if self.drop_duplicates_flag:
+            self.drop_duplicates()
         if len(self.df) != initlen:
             self.update()
 
