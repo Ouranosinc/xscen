@@ -39,7 +39,7 @@ dependencies = [
   "cftime",
   "cf_xarray >=0.7.6",
   "clisops >=0.15",
-  "dask >=2024.8.1,<2024.11", # FIXME: https://github.com/Ouranosinc/xclim/issues/1992
+  "dask >=2024.8.1,<2024.12.0", # FIXME: Remove upper pin when https://github.com/pangeo-data/rechunker/pull/156 is merged
   "flox !=0.9.14", # FIXME: 0.9.14 is a broken version. This pin could be removed eventually.
   "fsspec",
   "geopandas",
@@ -61,9 +61,9 @@ dependencies = [
   "shapely >=2.0",
   "sparse",
   "toolz",
-  "xarray >=2023.11.0, !=2024.6.0, <2024.10.0", # FIXME: 2024.10.0 breaks rechunker with zarr
+  "xarray >=2023.11.0, !=2024.6.0",
   "xclim >=0.55, <0.56",
-  "zarr >=2.13, <3.0" # FIXME: xarray is compatible with zarr 3.0 from 2025.01.1, but we pin xarray below that version"
+  "zarr >=2.13,<3"
 ]
 
 [project.optional-dependencies]
@@ -110,7 +110,7 @@ docs = [
   "sphinxcontrib-napoleon"
 ]
 extra = [
-  "xesmf >=0.7, !=0.8.8"
+  "xesmf >=0.7, !=0.8.8" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
 ]
 all = ["xscen[dev]", "xscen[docs]", "xscen[extra]"]
 
@@ -132,7 +132,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.11.1-dev.2"
+current_version = "0.11.1-dev.3"
 commit = true
 commit_args = "--no-verify"
 tag = false
