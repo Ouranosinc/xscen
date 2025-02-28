@@ -957,7 +957,7 @@ class TestClimatologicalOp:
         )
 
         assert (out.tas_clim_mean.values == np.tile(np.arange(1, o + 1), (5, 1))).all()
-        assert out.dims == {"horizon": 5} | freq[xrfreq]
+        assert out.sizes == {"horizon": 5} | freq[xrfreq]
         assert out.time.dims == ("horizon",) + (
             (next(iter(freq[xrfreq])),) if freq[xrfreq] else ()
         )

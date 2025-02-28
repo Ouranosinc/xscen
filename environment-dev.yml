@@ -2,16 +2,17 @@ name: xscen-dev
 channels:
   - conda-forge
 dependencies:
-  - python >=3.10,<3.13
+  - python >=3.10,<3.14
+  - pip >=25.0
   # Don't forget to sync changes between environment.yml, environment-dev.yml, and pyproject.toml!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
   - cartopy >=0.23.0
   - cftime
   - cf_xarray >=0.7.6
-  - clisops >=0.10
-  - dask >=2024.8.1,<2024.11 # FIXME: https://github.com/Ouranosinc/xclim/issues/1992
-  - flox !=0.9.14 # FIXME: 0.9.14 is a broken version. This pin could be removed eventually.
+  - clisops >=0.15
+  - dask >=2024.8.1,<2024.12  # FIXME: Remove upper pin when https://github.com/pangeo-data/rechunker/pull/156 is merged
+  - flox !=0.9.14  # FIXME: 0.9.14 is a broken version. This pin could be removed eventually.
   - fsspec
   - geopandas
   - h5netcdf
@@ -30,47 +31,46 @@ dependencies:
   - shapely >=2.0
   - sparse
   - toolz
-  - xarray >=2023.11.0, !=2024.6.0, <2024.10.0 # FIXME: 2024.10.0 breaks rechunker with zarr, https://github.com/pangeo-data/rechunker/issues/154
-  - xclim >=0.55.1
-  - xesmf >=0.7, <0.8.8 # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
-  - zarr >=2.13, <3.0 # FIXME: xarray is compatible with zarr 3.0 from 2025.01.1, but we pin xarray below that version
+  - xarray >=2023.11.0, !=2024.6.0
+  - xclim >=0.55.1, <0.56
+  - xesmf >=0.7, !=0.8.8
+  - zarr >=2.13, <3
+#  - xsdba >=0.3.0
+  - pip:
+    - git+https://git@github.com/Ouranosinc/xsdba.git@main # FIXME: Remove when xsdba v0.3.0 is released
   # Opt
   - nc-time-axis >=1.3.1
   - pyarrow >=10.0.1
   # Dev
   - babel >=2.17
-  - pip >=24.3.1
   - black ==25.1.0
   - blackdoc ==0.3.9
   - bump-my-version >=0.30.1
-  - click >=8.1.7
   - coverage >=7.5.0
-  - coveralls >=4.0.1
-  - flake8 >=7.1.0
-  - flake8-rst-docstrings>=0.3.0
+  - flake8 >=7.1.1
+  - flake8-rst-docstrings >=0.3.0
   - flit >=3.10.1,<4.0
   - ipykernel
   - ipython >=8.5.0
   - isort ==6.0.0
   - jupyter_client
   - mypy >=1.14.1
-  - nbsphinx
+  - nbsphinx >=0.9.5
   - nbval
   - numpydoc >=1.8.0
-  - pandoc
-  - pooch
+  - pooch >=1.8.0
   - pre-commit >=3.5.0
   - pytest >=8.3.2
   - pytest-cov >=5.0.0
   - pytest-xdist >=3.2.0
   - ruff >=0.9.0
-  - sphinx >=7.1.0
+  - sphinx >=7.1.0,<8.2  # FIXME: sphinx 8.2 breaks sphinx-autodoc-typehints
   - sphinx-autoapi
-  - sphinx-rtd-theme >=1.0
-  - sphinxcontrib-napoleon
+  - sphinx-autodoc-typehints
   - sphinx-codeautolink >=0.16.2
   - sphinx-copybutton
   - sphinx-mdinclude
+  - sphinx-rtd-theme >=1.0
   - watchdog >=4.0.0
   - xdoctest
   # Testing

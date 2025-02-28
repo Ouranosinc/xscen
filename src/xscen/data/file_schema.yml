@@ -192,10 +192,10 @@ derived-sims-raw:
     - xrfreq
     - variable
   filename: [ variable, xrfreq, bias_adjust_project, version, mip_era, activity, institution, source, driving_model, experiment, member, domain, processing_level, DATES ]
-derived-reconstruction:
+derived-non-sims:
   with:
     - facet: type
-      value: reconstruction
+      value: [ station-obs, reconstruction, forecast ]
   folders:
     - type
     - institution
