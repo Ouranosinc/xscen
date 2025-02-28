@@ -118,6 +118,7 @@ napoleon_use_ivar = True
 
 intersphinx_mapping = {
     "xclim": ("https://xclim.readthedocs.io/en/latest/", None),
+    "xsdba": ("https://xsdba.readthedocs.io/en/latest/", None),
     "xarray": ("https://docs.xarray.dev/en/stable/", None),
     "pandas": ("https://pandas.pydata.org/docs/", None),
     "intake-esm": ("https://intake-esm.readthedocs.io/en/stable/", None),
