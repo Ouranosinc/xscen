@@ -17,7 +17,6 @@ New features and enhancements
 * Project catalog now allows `check_valid` and `drop_duplicates` keyword arguments. (:pull:`536`, :issue:`535`).
 * Add annual global tas timeseries for CMIP6's models CanESM5 r1i1p2f1 (ssp126, ssp245, ssp370, ssp585), MPI-ESM1-2-LR ssp370 (r2i1p1f1, r3i1p1f1, r4i1p1f1, r5i1p1f1) (:pull:`544`).
 
-
 Bug fixes
 ^^^^^^^^^
 * Docstrings and documentation have been updated to remove several small grammatical errors. (:pull:`527`).
