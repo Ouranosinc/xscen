@@ -78,7 +78,7 @@ dev = [
   "flake8 >=7.1.1",
   "flake8-rst-docstrings >=0.3.0",
   "flit >=3.10.1,<4.0",
-  "isort ==6.0.0",
+  "isort ==6.0.1",
   "mypy >=1.14.1",
   "numpydoc >=1.8.0",
   "pip >=25.0",
@@ -133,7 +133,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.11.1-dev.4"
+current_version = "0.11.1-dev.5"
 commit = true
 commit_args = "--no-verify"
 tag = false
