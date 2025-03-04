@@ -30,7 +30,7 @@ Internal changes
 * The minimum supported `clisops` version has been raised to v0.15.0. (:pull:`533`).
 * Dependency pins have been synchronized across the repository. (:pull:`533`).
 * GitHub Workflows for conda builds now use the `coverallsapp/github-action` action for coverage reporting. (:pull:`533`).
-* `xsdba` is now used instead of `xclim.sdba`.
+* `xsdba` is now used instead of `xclim.sdba`. (:pull:`530`).
 
 v0.11.0 (2025-01-23)
 --------------------
