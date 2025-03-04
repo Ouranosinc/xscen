@@ -62,7 +62,7 @@ dependencies = [
   "sparse",
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0",
-  "xsdba @ git+https://git@github.com/Ouranosinc/xsdba.git@main",
+  "xsdba>0.3.0",
   "xclim >=0.55.1, <0.56",
   "zarr >=2.13,<3"
 ]
