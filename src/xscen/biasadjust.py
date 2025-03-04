@@ -123,7 +123,8 @@ def train(
         )
         if xsdba_train_args is not None:
             warnings.warn(
-                "`xclim_train_args` and `xsdba_train_args` were both given, but correspond to the same option. `xsdba_train_args` will be kept"
+                "`xclim_train_args` and `xsdba_train_args` were both given, but correspond to the same option. `xsdba_train_args` will be kept",
+                FutureWarning,
             )
         else:
             xsdba_train_args = deepcopy(xclim_train_args)
@@ -264,7 +265,8 @@ def adjust(
         )
         if xsdba_adjust_args is not None:
             warnings.warn(
-                "`xclim_adjust_args` and `xsdba_adjust_args` were both given, but correspond to the same option. `xsdba_adjust_args` will be kept"
+                "`xclim_adjust_args` and `xsdba_adjust_args` were both given, but correspond to the same option. `xsdba_adjust_args` will be kept",
+                FutureWarning,
             )
         else:
             xsdba_adjust_args = deepcopy(xclim_adjust_args)
