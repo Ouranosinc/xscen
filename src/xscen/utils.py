@@ -1301,7 +1301,7 @@ def standardize_periods(
     multiple: bool = True,
     out_dtype: str = "str",
 ) -> list[str] | list[list[str]] | None:
-    """Reformats the input to a list of strings, ['start', 'end'], or a list of such lists.
+    """Reformats the input to a list of strings, ['start', 'end'], or a list of such lists. Does not modify in-place.
 
     Parameters
     ----------
@@ -1315,6 +1315,7 @@ def standardize_periods(
     if periods is None:
         return periods
 
+    periods = periods.copy()
     if not isinstance(periods[0], list):
         periods = [periods]
 

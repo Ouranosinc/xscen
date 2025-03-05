@@ -45,12 +45,14 @@ class TestSearchDataCatalogs:
         ],
     )
     def test_periods(self, periods, coverage_kwargs):
+        print(periods)
         out = xs.search_data_catalogs(
             data_catalogs=self.cat,
             variables_and_freqs={"tasmin": "D"},
             periods=periods,
             coverage_kwargs=coverage_kwargs,
         )
+        print(periods)
         assert len(out) == (0 if periods[0] == ["1900", "2030"] else 5)
 
     def test_ids(self):
