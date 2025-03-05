@@ -1090,10 +1090,13 @@ class TestStandardPeriod:
     )
     def test_normal(self, period):
         out = xs.utils.standardize_periods(period, multiple=True)
-        assert out == [[pd.Timestamp("1981"), pd.Timestamp("2010")]]
+        assert out == [["1981", "2010"]]
 
         out = xs.utils.standardize_periods(period, multiple=False)
-        assert out == [pd.Timestamp("1981"), pd.Timestamp("2010")]
+        assert out == ["1981", "2010"]
+
+        out = xs.utils.standardize_periods(period, multiple=False, out_dtype="datetime")
+        assert out == [pd.Timestamp("1981-01-01"), pd.Timestamp("2010-01-01")]
 
     def test_error(self):
         assert xs.utils.standardize_periods(None) is None

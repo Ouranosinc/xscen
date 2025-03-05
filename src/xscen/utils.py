@@ -1297,7 +1297,9 @@ def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
 
 
 def standardize_periods(
-    periods: list[str] | list[list[str]] | None, multiple: bool = True
+    periods: list[str] | list[list[str]] | None,
+    multiple: bool = True,
+    out_dtype: str = "str",
 ) -> list[str] | list[list[str]] | None:
     """Reformats the input to a list of strings, ['start', 'end'], or a list of such lists.
 
@@ -1307,6 +1309,8 @@ def standardize_periods(
       The period(s) to standardize. If None, return None.
     multiple : bool
         If True, return a list of periods, otherwise return a single period.
+    out_dtype : str
+        Choices are 'datetime', 'period' or 'str'
     """
     if periods is None:
         return periods
@@ -1328,7 +1332,11 @@ def standardize_periods(
             raise ValueError(
                 f"'periods' should be in chronological order, received {periods[i]}."
             )
-        periods[i] = period
+        # TODO: allow more than year in periods for out_dtype = str
+        periods[i] = [
+            date_parser(period[0], out_dtype=out_dtype, strtime_format="%Y"),
+            date_parser(period[1], out_dtype=out_dtype, strtime_format="%Y"),
+        ]
     if multiple:
         return periods
     else:

@@ -132,7 +132,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.11.1-dev.5"
+current_version = "0.11.1-dev.6"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -165,7 +165,7 @@ values = [
 ]
 
 [tool.codespell]
-ignore-words-list = "ans,astroid,attributs,coo,mesure,nam,ond,socio-economic,vas,winn"
+ignore-words-list = "anc,ans,astroid,attributs,coo,mesure,nam,ond,socio-economic,vas,winn"
 
 [tool.coverage.paths]
 source = ["src/xscen/", "*/site-packages/xscen/"]
