@@ -1076,14 +1076,24 @@ class TestEnsureTime:
 
 class TestStandardPeriod:
     @pytest.mark.parametrize(
-        "period", [[1981, 2010], [[1981, 2010]], ["1981", "2010"], [["1981", "2010"]]]
+        "period",
+        [
+            [1981, 2010],
+            [[1981, 2010]],
+            ["1981", "2010"],
+            [["1981", "2010"]],
+            [[pd.Timestamp("1981"), pd.Timestamp("2010")]],
+            [[pd.Timestamp("1981"), pd.Timestamp("2010")]],
+            [[pd.Timestamp("1981-01"), pd.Timestamp("2010-01")]],
+            [["1981-01", "2010-01"]],
+        ],
     )
     def test_normal(self, period):
         out = xs.utils.standardize_periods(period, multiple=True)
-        assert out == [["1981", "2010"]]
+        assert out == [[pd.Timestamp("1981"), pd.Timestamp("2010")]]
 
         out = xs.utils.standardize_periods(period, multiple=False)
-        assert out == ["1981", "2010"]
+        assert out == [pd.Timestamp("1981"), pd.Timestamp("2010")]
 
     def test_error(self):
         assert xs.utils.standardize_periods(None) is None
