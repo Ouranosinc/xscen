@@ -843,7 +843,7 @@ def spatial_mean(  # noqa: C901
         if "output_chunks" in kwargs:
             call_kwargs["output_chunks"] = kwargs_copy.pop("output_chunks")
 
-        # Pre-emptive segmentization. Same threshold as xESMF, but there's not strong analysis behind this choice
+        # Preemptive segmentization. Same threshold as xESMF, but there isn't strong analysis behind this choice
         geoms = shapely.segmentize(polygon.geometry, 1)
 
         if (
