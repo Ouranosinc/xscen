@@ -165,7 +165,7 @@ values = [
 ]
 
 [tool.codespell]
-ignore-words-list = "ans,astroid,attributs,coo,mesure,nam,ond,socio-economic,vas,winn"
+ignore-words-list = "anc,ans,astroid,attributs,coo,mesure,nam,ond,socio-economic,vas,winn"
 
 [tool.coverage.paths]
 source = ["src/xscen/", "*/site-packages/xscen/"]
