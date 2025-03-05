@@ -1319,12 +1319,16 @@ def standardize_periods(
             raise ValueError(
                 "Each instance of 'periods' should be comprised of two elements: [start, end]."
             )
-        if int(periods[i][0]) > int(periods[i][1]):
+        period = periods[i].copy()
+        if isinstance(period[0], int) or isinstance(period[0], str):
+            period[0] = date_parser(str(period[0]), out_dtype="datetime")
+        if isinstance(period[1], int) or isinstance(period[1], str):
+            period[1] = date_parser(str(period[1]), out_dtype="datetime")
+        if period[0] > period[1]:
             raise ValueError(
                 f"'periods' should be in chronological order, received {periods[i]}."
             )
-        periods[i] = [str(p) for p in periods[i]]
-
+        periods[i] = period
     if multiple:
         return periods
     else:
