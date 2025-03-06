@@ -71,7 +71,7 @@ from .utils import clean_up
 
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.11.1-dev.6"
+__version__ = "0.11.1-dev.7"
 
 
 # FIXME: file and line are unused
