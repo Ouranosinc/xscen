@@ -4,7 +4,7 @@ Changelog
 
 v0.12.0 (unreleased)
 --------------------
-Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`).
+Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`), Éric Dupuis (:user:`coxipi`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -30,6 +30,7 @@ Internal changes
 * The minimum supported `clisops` version has been raised to v0.15.0. (:pull:`533`).
 * Dependency pins have been synchronized across the repository. (:pull:`533`).
 * GitHub Workflows for conda builds now use the `coverallsapp/github-action` action for coverage reporting. (:pull:`533`).
+* `xsdba` is now used instead of `xclim.sdba`. (:pull:`530`).
 
 v0.11.0 (2025-01-23)
 --------------------

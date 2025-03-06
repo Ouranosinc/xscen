@@ -18,7 +18,7 @@ Features
 * Climate dataset extraction, subsetting, and temporal aggregation.
 * Calculate missing variables through Intake-esm's DerivedVariableRegistry.
 * Regridding with xESMF.
-* Bias adjustment with xclim.
+* Bias adjustment with xsdba.
 
 .. toctree::
     :maxdepth: 2

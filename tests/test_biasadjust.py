@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 import xarray as xr
 import xclim as xc
+import xsdba
 from xclim.testing.helpers import test_timeseries as timeseries
 
 # Copied from xarray/core/nputils.py
@@ -15,10 +16,6 @@ except ImportError:
     from numpy import RankWarning
 
 import xscen as xs
-
-xc.set_options(
-    sdba_encode_cf=False
-)  # FIXME: A temporary bug fix waiting for xclim 0.49
 
 
 class TestTrain:
@@ -220,7 +217,7 @@ class TestAdjust:
             dtrain,
             self.dsim.copy(),
             periods=["2001", "2006"],
-            xclim_adjust_args={
+            xsdba_adjust_args={
                 "detrend": {
                     "LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}
                 }
@@ -231,7 +228,7 @@ class TestAdjust:
             dtrain2,
             self.dsim.copy(),
             periods=["2001", "2006"],
-            xclim_adjust_args={
+            xsdba_adjust_args={
                 "detrend": {
                     "LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}
                 }
@@ -258,7 +255,7 @@ class TestAdjust:
 
         assert out.equals(out2)
 
-    def test_xclim_vs_xscen(
+    def test_xsdba_vs_xscen(
         self,
     ):  # should give the same results  using xscen and xclim
         dref = (
@@ -293,14 +290,14 @@ class TestAdjust:
             var="pr",
             period=["2001", "2003"],
             adapt_freq={"thresh": "1 mm d-1"},
-            xclim_train_args={"kind": "*", "nquantiles": 50},
+            xsdba_train_args={"kind": "*", "nquantiles": 50},
         )
 
         out_xscen = xs.adjust(
             dtrain_xscen,
             dsim,
             periods=["2001", "2006"],
-            xclim_adjust_args={
+            xsdba_adjust_args={
                 "detrend": {
                     "LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}
                 },
@@ -309,27 +306,32 @@ class TestAdjust:
             },
         )
 
-        # xclim version
-        with xc.set_options(sdba_extra_output=True):
-            group = xc.sdba.Grouper(group="time.dayofyear", window=31)
+        # xsdba version
+        with xsdba.set_options(extra_output=True):
+            group = xsdba.Grouper(group="time.dayofyear", window=31)
 
             drefx = dref.sel(time=slice("2001", "2003")).convert_calendar("noleap")
             dhistx = dhist.sel(time=slice("2001", "2003")).convert_calendar("noleap")
             dsimx = dsim.sel(time=slice("2001", "2006")).convert_calendar("noleap")
 
-            dhist_ad, pth, dP0 = xc.sdba.processing.adapt_freq(
-                drefx["pr"], dhistx["pr"], group=group, thresh="1 mm d-1"
-            )
+            # xsdba is now climate agnostics, hydro context must be specified
+            with xc.core.units.units.context("hydro"):
+                dhist_ad, pth, dP0 = xsdba.processing.adapt_freq(
+                    drefx["pr"], dhistx["pr"], group=group, thresh="1 mm d-1"
+                )
 
-            QM = xc.sdba.DetrendedQuantileMapping.train(
-                drefx["pr"], dhist_ad, group=group, kind="*", nquantiles=50
-            )
+                QM = xsdba.DetrendedQuantileMapping.train(
+                    drefx["pr"], dhist_ad, group=group, kind="*", nquantiles=50
+                )
 
-            detrend = xc.sdba.detrending.LoessDetrend(
-                f=0.2, niter=1, d=0, weights="tricube", group=group, kind="*"
-            )
-            out_xclim = QM.adjust(
-                dsimx["pr"], detrend=detrend, interp="nearest", extrapolation="constant"
-            ).rename({"scen": "pr"})
+                detrend = xsdba.detrending.LoessDetrend(
+                    f=0.2, niter=1, d=0, weights="tricube", group=group, kind="*"
+                )
+                out_xclim = QM.adjust(
+                    dsimx["pr"],
+                    detrend=detrend,
+                    interp="nearest",
+                    extrapolation="constant",
+                ).rename({"scen": "pr"})
 
         assert out_xscen.equals(out_xclim)

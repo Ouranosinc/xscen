@@ -32,9 +32,10 @@ dependencies:
   - sparse
   - toolz
   - xarray >=2023.11.0, !=2024.6.0
-  - xclim >=0.55, <0.56
+  - xclim >=0.55.1, <0.56
   - xesmf >=0.7, !=0.8.8
   - zarr >=2.13, <3
+  - xsdba >=0.3.0
   # To install from source
   - flit >=3.10.1,<4.0
   # Opt

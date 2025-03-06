@@ -62,7 +62,8 @@ dependencies = [
   "sparse",
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0",
-  "xclim >=0.55, <0.56",
+  "xclim >=0.55.1, <0.56",
+  "xsdba>=0.3.0",
   "zarr >=2.13,<3"
 ]
 
@@ -352,7 +353,7 @@ lines-after-imports = 2
 no-lines-before = ["future", "standard-library"]
 
 [tool.ruff.lint.mccabe]
-max-complexity = 15
+max-complexity = 20
 
 [tool.ruff.lint.per-file-ignores]
 "docs/**/*.py" = ["E402"]
