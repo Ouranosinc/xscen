@@ -89,9 +89,9 @@ def train(
     group : str or xsdba.Grouper or dict, optional
       Grouping information. If a string, it is interpreted as a grouper on the time dimension. If a dict, it is passed to `xsdba.Grouper.from_kwargs`.
       Defaults to {"group": "time.dayofyear", "window": 31}.
-    xsdba_train_args : dict
+    xsdba_train_args : dict, optional
       Dict of arguments to pass to the `.train` of the adjustment object.
-    xclim_train_args : dict
+    xclim_train_args : dict, optional
       Dict of arguments to pass to the `.train` of the adjustment object.
       A warning will be emitted stating that this a legacy argument replaced with `xsdba_train_args`.
     maximal_calendar: str
