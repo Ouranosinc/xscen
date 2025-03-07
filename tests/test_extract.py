@@ -37,21 +37,36 @@ class TestSearchDataCatalogs:
         assert len(out) == 13 if other_arg is None else 2 if other_arg == "other" else 4
 
     @pytest.mark.parametrize(
-        "periods, coverage_kwargs",
+        "periods, coverage_kwargs, matches",
         [
-            ([["2020", "2030"], ["2035", "2040"]], None),
-            ([["1900", "2030"], ["2035", "2040"]], None),
-            ([["2020", "2130"]], {"coverage": 0.70}),
+            ([["2020", "2030"], ["2035", "2040"]], None, 5),
+            ([["2020-01", "2030-12"], ["2035-01", "2040-12"]], None, 5),
+            ([["2020-02", "2030-11"], ["2035", "2040"]], None, 5),
+            ([["1900", "2030"], ["2035", "2040"]], None, 0),
+            ([["1985-01-01", "2014-12-31"]], {"coverage": 1}, 8),  # 8
+            ([["1985-01-01", "2015-01-01"]], {"coverage": 1}, 0),  # 0
+            ([["1985-01-01", "2015-01-01"]], None, 8),  # default coverage = 0.99
+            ([["1985-01-01", "2015-04-20"]], None, 8),
+            ([["1985-01-01", "2015-04-20 16:00:01"]], None, 0),  # 0
+            ([["1985-01-01", "2015-04-20 15:59:00"]], None, 8),  # 8
+            ([["1985-01-02", "2015-04-20 15:45:00"]], None, 8),  # 8
+            (
+                [["1985-01-02", "2015-04-20 15:46:00"]],
+                None,
+                0,
+            ),  # ensure uses intersection
+            ([["1985-01-01", "2020"]], None, 0),  # 0
+            ([["2020", "2130"]], {"coverage": 0.70}, 5),
         ],
     )
-    def test_periods(self, periods, coverage_kwargs):
+    def test_periods(self, periods, coverage_kwargs, matches):
         out = xs.search_data_catalogs(
             data_catalogs=self.cat,
             variables_and_freqs={"tasmin": "D"},
             periods=periods,
             coverage_kwargs=coverage_kwargs,
         )
-        assert len(out) == (0 if periods[0] == ["1900", "2030"] else 5)
+        assert len(out) == matches
 
     def test_ids(self):
         out = xs.search_data_catalogs(

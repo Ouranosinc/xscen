@@ -1297,20 +1297,30 @@ def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
 
 
 def standardize_periods(
-    periods: list[str] | list[list[str]] | None, multiple: bool = True
+    periods: list[str | pd.Timestamp] | list[list[str | pd.Timestamp]] | None,
+    multiple: bool = True,
+    end_of_periods: bool = True,
+    out_dtype: str = "str",
 ) -> list[str] | list[list[str]] | None:
-    """Reformats the input to a list of strings, ['start', 'end'], or a list of such lists.
+    """Reformats the input to a list of strings or Timestamps, ['start', 'end'], or a list of such lists. Does not modify in-place.
 
     Parameters
     ----------
-    periods : list of str or list of lists of str, optional
+    periods : list of str or pd.Timestamp, or list of lists of str or pd.Timestamp, optional
       The period(s) to standardize. If None, return None.
     multiple : bool
         If True, return a list of periods, otherwise return a single period.
+    end_of_periods: bool or str
+        If 'YE' or 'ME', the returned date will be the end of the year or month that contains the received date.
+        If True (default), standardizes yearly and monthly periods to end on the last second of the last day of the year/month.
+        This parameter is only used for str periods that do not specify the month/day.
+    out_dtype : str
+        Choices are 'datetime', 'period' or 'str'. Defaults to 'str', which will only output the year.
     """
     if periods is None:
         return periods
 
+    periods = deepcopy(periods)
     if not isinstance(periods[0], list):
         periods = [periods]
 
@@ -1319,12 +1329,22 @@ def standardize_periods(
             raise ValueError(
                 "Each instance of 'periods' should be comprised of two elements: [start, end]."
             )
-        if int(periods[i][0]) > int(periods[i][1]):
+        period = periods[i]
+        if isinstance(period[0], int) or isinstance(period[0], str):
+            period[0] = date_parser(str(period[0]), out_dtype="datetime")
+        if isinstance(period[1], int) or isinstance(period[1], str):
+            period[1] = date_parser(
+                str(period[1]), out_dtype="datetime", end_of_period=end_of_periods
+            )
+        if period[0] > period[1]:
             raise ValueError(
                 f"'periods' should be in chronological order, received {periods[i]}."
             )
-        periods[i] = [str(p) for p in periods[i]]
-
+        # TODO: allow more than year in periods for out_dtype = str
+        periods[i] = [
+            date_parser(period[0], out_dtype=out_dtype, strtime_format="%Y"),
+            date_parser(period[1], out_dtype=out_dtype, strtime_format="%Y"),
+        ]
     if multiple:
         return periods
     else:
