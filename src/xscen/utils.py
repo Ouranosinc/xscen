@@ -1320,7 +1320,7 @@ def standardize_periods(
     if periods is None:
         return periods
 
-    periods = periods.copy()
+    periods = deepcopy(periods)
     if not isinstance(periods[0], list):
         periods = [periods]
 
@@ -1329,7 +1329,7 @@ def standardize_periods(
             raise ValueError(
                 "Each instance of 'periods' should be comprised of two elements: [start, end]."
             )
-        period = periods[i].copy()
+        period = periods[i]
         if isinstance(period[0], int) or isinstance(period[0], str):
             period[0] = date_parser(str(period[0]), out_dtype="datetime")
         if isinstance(period[1], int) or isinstance(period[1], str):
