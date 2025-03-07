@@ -1297,25 +1297,25 @@ def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
 
 
 def standardize_periods(
-    periods: list[str] | list[list[str]] | None,
+    periods: list[str | pd.Timestamp] | list[list[str | pd.Timestamp]] | None,
     multiple: bool = True,
     end_of_periods: bool = True,
     out_dtype: str = "str",
 ) -> list[str] | list[list[str]] | None:
-    """Reformats the input to a list of strings, ['start', 'end'], or a list of such lists. Does not modify in-place.
+    """Reformats the input to a list of strings or Timestamps, ['start', 'end'], or a list of such lists. Does not modify in-place.
 
     Parameters
     ----------
-    periods : list of str or list of lists of str, optional
+    periods : list of str or pd.Timestamp, or list of lists of str or pd.Timestamp, optional
       The period(s) to standardize. If None, return None.
     multiple : bool
         If True, return a list of periods, otherwise return a single period.
     end_of_periods: bool or str
         If 'YE' or 'ME', the returned date will be the end of the year or month that contains the received date.
         If True (default), standardizes yearly and monthly periods to end on the last second of the last day of the year/month.
-        Only used for str periods that do not specify the month/day.
+        This parameter is only used for str periods that do not specify the month/day.
     out_dtype : str
-        Choices are 'datetime', 'period' or 'str'
+        Choices are 'datetime', 'period' or 'str'. Defaults to 'str', which will only output the year.
     """
     if periods is None:
         return periods
