@@ -81,7 +81,7 @@ def train(
     dhist : xr.Dataset
       The timeseries to adjust, on the reference period.
     var : str or list of str
-      Variable on which to do the adjustment. Currently only supports one variable.
+      Variable(s) on which to do the adjustment.
     period : list of str
       [start, end] of the reference period
     method : str
