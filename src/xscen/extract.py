@@ -715,7 +715,7 @@ def search_data_catalogs(  # noqa: C901
         return {}
 
     coverage_kwargs = coverage_kwargs or {}
-    periods = standardize_periods(periods)
+    periods = standardize_periods(periods, out_dtype="datetime")
 
     msg = f"Iterating over {len(catalog.unique('id'))} potential datasets."
     logger.info(msg)

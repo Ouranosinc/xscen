@@ -1076,14 +1076,34 @@ class TestEnsureTime:
 
 class TestStandardPeriod:
     @pytest.mark.parametrize(
-        "period", [[1981, 2010], [[1981, 2010]], ["1981", "2010"], [["1981", "2010"]]]
+        "period, timestamp_eop_match, timestamp_neop_match",
+        [
+            ([1981, 2000], "2000-12-31 23:59:59", "2000-01-01"),
+            ([[1981, 2000]], "2000-12-31 23:59:59", "2000-01-01"),
+            (["1981", "2000"], "2000-12-31 23:59:59", "2000-01-01"),
+            ([["1981", "2000-02"]], "2000-02-29 23:59:59", "2000-02-01"),
+            ([["1981", "2000-12"]], "2000-12-31 23:59:59", "2000-12-01"),
+            (
+                [[pd.Timestamp("1981"), pd.Timestamp("2000")]],
+                "2000-01-01 00:00:00",
+                "2000-01-01",
+            ),
+        ],
     )
-    def test_normal(self, period):
+    def test_normal(self, period, timestamp_eop_match, timestamp_neop_match):
         out = xs.utils.standardize_periods(period, multiple=True)
-        assert out == [["1981", "2010"]]
+        assert out == [["1981", "2000"]]
 
         out = xs.utils.standardize_periods(period, multiple=False)
-        assert out == ["1981", "2010"]
+        assert out == ["1981", "2000"]
+
+        out = xs.utils.standardize_periods(period, multiple=False, out_dtype="datetime")
+        assert out == [pd.Timestamp("1981-01-01"), pd.Timestamp(timestamp_eop_match)]
+
+        out = xs.utils.standardize_periods(
+            period, multiple=False, out_dtype="datetime", end_of_periods=False
+        )
+        assert out == [pd.Timestamp("1981-01-01"), pd.Timestamp(timestamp_neop_match)]
 
     def test_error(self):
         assert xs.utils.standardize_periods(None) is None

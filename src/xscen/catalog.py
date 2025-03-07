@@ -301,7 +301,6 @@ class DataCatalog(intake_esm.esm_datastore):
         else:
             cat = self.__class__({"esmcat": self.esmcat.dict(), "df": self.esmcat._df})
         if periods is not False:
-            periods = standardize_periods(periods)
             cat.esmcat._df = subset_file_coverage(
                 cat.esmcat._df, periods=periods, coverage=0, duplicates_ok=True
             )
@@ -1080,7 +1079,7 @@ def subset_file_coverage(
     pd.DataFrame
         Subset of files that overlap the targeted periods.
     """
-    periods = standardize_periods(periods)
+    periods = standardize_periods(periods, out_dtype="datetime")
 
     # Create an Interval for each file
     intervals = pd.IntervalIndex.from_arrays(
