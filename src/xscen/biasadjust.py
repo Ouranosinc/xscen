@@ -1,18 +1,20 @@
 """Functions to train and adjust a dataset using a bias-adjustment algorithm."""
 
 import logging
+import warnings
 from copy import deepcopy
 
 import xarray as xr
 import xclim as xc
-from xclim import sdba
+import xsdba
+from xclim.core.units import infer_context
 
 from .catutils import parse_from_ds
 from .config import parse_config
 from .utils import minimum_calendar, standardize_periods
 
 logger = logging.getLogger(__name__)
-xc.set_options(sdba_encode_cf=True, sdba_extra_output=False)
+xsdba.set_options(extra_output=False)
 
 
 __all__ = [
@@ -60,7 +62,8 @@ def train(
     period: list[str],
     *,
     method: str = "DetrendedQuantileMapping",
-    group: sdba.Grouper | str | dict | None = None,
+    group: xsdba.Grouper | str | dict | None = None,
+    xsdba_train_args: dict | None = None,
     xclim_train_args: dict | None = None,
     maximal_calendar: str = "noleap",
     adapt_freq: dict | None = None,
@@ -82,12 +85,15 @@ def train(
     period : list of str
       [start, end] of the reference period
     method : str
-      Name of the `sdba.TrainAdjust` method of xclim.
-    group : str or sdba.Grouper or dict, optional
-      Grouping information. If a string, it is interpreted as a grouper on the time dimension. If a dict, it is passed to `sdba.Grouper.from_kwargs`.
+      Name of the `xsdba.TrainAdjust` method of xclim.
+    group : str or xsdba.Grouper or dict, optional
+      Grouping information. If a string, it is interpreted as a grouper on the time dimension. If a dict, it is passed to `xsdba.Grouper.from_kwargs`.
       Defaults to {"group": "time.dayofyear", "window": 31}.
-    xclim_train_args : dict
+    xsdba_train_args : dict, optional
       Dict of arguments to pass to the `.train` of the adjustment object.
+    xclim_train_args : dict, optional
+      Dict of arguments to pass to the `.train` of the adjustment object.
+      A warning will be emitted stating that this a legacy argument replaced with `xsdba_train_args`.
     maximal_calendar: str
       Maximal calendar dhist can be. The hierarchy: 360_day < noleap < standard < all_leap.
       If dhist's calendar is higher than maximal calendar, it will be converted to the maximal calendar.
@@ -107,9 +113,20 @@ def train(
 
     See Also
     --------
-    xclim.sdba.adjustment.DetrendedQuantileMapping, xclim.sdba.adjustment.ExtremeValues
+    xsdba.adjustment.DetrendedQuantileMapping, xsdba.adjustment.ExtremeValues
 
     """
+    if xclim_train_args is not None:
+        warnings.warn(
+            "`xclim_train_args` will be deprecated and replaced by `xsdba_train_args`.",
+            FutureWarning,
+        )
+        if xsdba_train_args is not None:
+            warnings.warn(
+                "`xclim_train_args` and `xsdba_train_args` were both given, but correspond to the same option. `xsdba_train_args` will be kept"
+            )
+        else:
+            xsdba_train_args = deepcopy(xclim_train_args)
     # TODO: To be adequately fixed later when we add multivariate
     if isinstance(var, str):
         var = [var]
@@ -121,13 +138,11 @@ def train(
         ref = dref[var[0]]
         hist = dhist[var[0]]
 
-    # we want to put default if group is None, but not if group is False
-    if group is None:
-        group = {"group": "time.dayofyear", "window": 31}
+    group = group if group is not None else {"group": "time.dayofyear", "window": 31}
 
-    xclim_train_args = xclim_train_args or {}
+    xsdba_train_args = xsdba_train_args or {}
     if method == "DetrendedQuantileMapping":
-        xclim_train_args.setdefault("nquantiles", 15)
+        xsdba_train_args.setdefault("nquantiles", 15)
 
     # cut out the right period
     period = standardize_periods(period, multiple=False)
@@ -143,28 +158,33 @@ def train(
     if refcal != mincal:
         ref = ref.convert_calendar(mincal, align_on=align_on)
 
-    if group:
-        if isinstance(group, dict):
-            # So we can specify window and add_dims in yaml.
-            group = sdba.Grouper.from_kwargs(**group)["group"]
-        elif isinstance(group, str):
-            group = sdba.Grouper(group)
-        xclim_train_args["group"] = group
+    if isinstance(group, dict):
+        # So we can specify window and add_dims in yaml.
+        group = xsdba.Grouper.from_kwargs(**group)["group"]
+    elif isinstance(group, str):
+        group = xsdba.Grouper(group)
+    xsdba_train_args["group"] = group
 
-    if jitter_over is not None:
-        ref = sdba.processing.jitter_over_thresh(ref, **jitter_over)
-        hist = sdba.processing.jitter_over_thresh(hist, **jitter_over)
+    # TODO: change this to be compatible with multivar too?
+    contexts = [
+        infer_context(da.attrs.get("standard_name", None)) for da in [ref, hist]
+    ]
+    cntx = "hydro" if "hydro" in contexts else "none"
+    with xc.core.units.units.context(cntx):
+        if jitter_over is not None:
+            ref = xsdba.processing.jitter_over_thresh(ref, **jitter_over)
+            hist = xsdba.processing.jitter_over_thresh(hist, **jitter_over)
 
-    if jitter_under is not None:
-        ref = sdba.processing.jitter_under_thresh(ref, **jitter_under)
-        hist = sdba.processing.jitter_under_thresh(hist, **jitter_under)
+        if jitter_under is not None:
+            ref = xsdba.processing.jitter_under_thresh(ref, **jitter_under)
+            hist = xsdba.processing.jitter_under_thresh(hist, **jitter_under)
 
-    if adapt_freq is not None:
-        adapt_freq.setdefault("group", group)
-        hist, pth, dP0 = sdba.processing.adapt_freq(ref, hist, **adapt_freq)
-        adapt_freq.pop("group")
+        if adapt_freq is not None:
+            adapt_freq.setdefault("group", group)
+            hist, pth, dP0 = xsdba.processing.adapt_freq(ref, hist, **adapt_freq)
+            adapt_freq.pop("group")
 
-    ADJ = getattr(sdba.adjustment, method).train(ref, hist, **xclim_train_args)
+        ADJ = getattr(xsdba.adjustment, method).train(ref, hist, **xsdba_train_args)
 
     if adapt_freq is not None:
         ds = ADJ.ds.assign(pth=pth, dP0=dP0)
@@ -194,6 +214,7 @@ def adjust(
     dsim: xr.Dataset,
     periods: list[str] | list[list[str]],
     *,
+    xsdba_adjust_args: dict | None = None,
     xclim_adjust_args: dict | None = None,
     to_level: str = "biasadjusted",
     bias_adjust_institution: str | None = None,
@@ -211,8 +232,11 @@ def adjust(
       Simulated timeseries, projected period.
     periods : list of str or list of lists of str
       Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
-    xclim_adjust_args : dict, optional
+    xsdba_adjust_args : dict, optional
       Dict of arguments to pass to the `.adjust` of the adjustment object.
+    xclim_adjust_args : dict, optional
+      Dict of arguments to pass to the `.adjust` of the adjustment object
+      A warning will be emitted stating that this a legacy argument replaced with `xclim_train_args`.
     to_level : str
       The processing level to assign to the output.
       Defaults to 'biasadjusted'
@@ -230,11 +254,22 @@ def adjust(
 
     See Also
     --------
-    xclim.sdba.adjustment.DetrendedQuantileMapping, xclim.sdba.adjustment.ExtremeValues
+    xsdba.adjustment.DetrendedQuantileMapping, xsdba.adjustment.ExtremeValues
 
     """
-    xclim_adjust_args = deepcopy(xclim_adjust_args)
-    xclim_adjust_args = xclim_adjust_args or {}
+    if xclim_adjust_args is not None:
+        warnings.warn(
+            "`xclim_adjust_args` will be deprecated and replaced by `xsdba_adjust_args`.",
+            FutureWarning,
+        )
+        if xsdba_adjust_args is not None:
+            warnings.warn(
+                "`xclim_adjust_args` and `xsdba_adjust_args` were both given, but correspond to the same option. `xsdba_adjust_args` will be kept"
+            )
+        else:
+            xsdba_adjust_args = deepcopy(xclim_adjust_args)
+    xsdba_adjust_args = deepcopy(xsdba_adjust_args)
+    xsdba_adjust_args = xsdba_adjust_args or {}
 
     # evaluate the dict that was stored as a string
     if not isinstance(dtrain.attrs["train_params"], dict):
@@ -257,26 +292,28 @@ def adjust(
         sim = sim.convert_calendar(mincal, align_on=align_on)
 
     # adjust
-    ADJ = sdba.adjustment.TrainAdjust.from_dataset(dtrain)
+    ADJ = xsdba.adjustment.TrainAdjust.from_dataset(dtrain)
 
-    if ("detrend" in xclim_adjust_args) and (
-        isinstance(xclim_adjust_args["detrend"], dict)
+    if ("detrend" in xsdba_adjust_args) and (
+        isinstance(xsdba_adjust_args["detrend"], dict)
     ):
-        name, kwargs = list(xclim_adjust_args["detrend"].items())[0]
+        name, kwargs = list(xsdba_adjust_args["detrend"].items())[0]
         kwargs = kwargs or {}
         kwargs.setdefault("group", ADJ.group)
         kwargs.setdefault("kind", ADJ.kind)
-        xclim_adjust_args["detrend"] = getattr(sdba.detrending, name)(**kwargs)
+        xsdba_adjust_args["detrend"] = getattr(xsdba.detrending, name)(**kwargs)
 
-    # do the adjustment for all the simulation_period lists
-    periods = standardize_periods(periods)
-    slices = []
-    for period in periods:
-        sim_sel = sim.sel(time=slice(period[0], period[1]))
+    cntx = infer_context(sim.attrs.get("standard_name", None))
+    with xc.core.units.units.context(cntx):
+        # do the adjustment for all the simulation_period lists
+        periods = standardize_periods(periods)
+        slices = []
+        for period in periods:
+            sim_sel = sim.sel(time=slice(period[0], period[1]))
 
-        out = ADJ.adjust(sim_sel, **xclim_adjust_args)
-        slices.extend([out])
-    # put all the adjusted period back together
+            out = ADJ.adjust(sim_sel, **xsdba_adjust_args)
+            slices.extend([out])
+        # put all the adjusted period back together
     dscen = xr.concat(slices, dim="time")
 
     dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
