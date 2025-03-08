@@ -6,6 +6,7 @@ import pytest
 import xarray as xr
 import xclim as xc
 import xsdba
+from xclim.testing import open_dataset
 from xclim.testing.helpers import test_timeseries as timeseries
 
 # Copied from xarray/core/nputils.py
@@ -335,3 +336,41 @@ class TestAdjust:
                 ).rename({"scen": "pr"})
 
         assert out_xscen.equals(out_xclim)
+
+
+class TestMultivariate:
+    def test_mbcn(self):
+        tasmax = timeseries(
+            np.arange(365 * 60),
+            variable="tasmax",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+        )
+        tasmin = timeseries(
+            np.arange(365 * 60) / 2,
+            variable="tasmin",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+        )
+        ds = xr.merge([tasmax, tasmin])
+        dtrain = xs.train(
+            ds,
+            ds,
+            var=["tasmax", "tasmin"],
+            method="MBCn",
+            period=["2001", "2030"],
+            xsdba_train_args={"base_kws": {"group": "time"}},
+        )
+        xs.adjust(
+            dtrain=dtrain,
+            dsim=ds,
+            periods=[
+                ["2001", "2030"],
+                ["2031", "2060"],
+            ],
+            xsdba_adjust_args={"ref": ds},
+        )
