@@ -141,10 +141,6 @@ def train(
     xsdba_train_args = xsdba_train_args or {}
 
     # xsdba could eventually have a more traditional approach to avoid this
-    if method == "MBCn":
-        xsdba_train_args.setdefault("base_kws", {})
-        group = xsdba_train_args["base_kws"].get("group", group)
-
     if method == "DetrendedQuantileMapping":
         xsdba_train_args.setdefault("nquantiles", 15)
 
@@ -171,6 +167,7 @@ def train(
     if method != "MBCn":
         xsdba_train_args["group"] = group
     else:
+        xsdba_train_args.setdefault("base_kws", {})
         xsdba_train_args["base_kws"]["group"] = group
 
     # TODO: change this to be compatible with multivar too?
