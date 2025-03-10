@@ -2,7 +2,7 @@
 Changelog
 =========
 
-v0.12.0 (unreleased)
+v0.12.0 (2025-03-10)
 --------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`), Éric Dupuis (:user:`coxipi`).
 
@@ -10,6 +10,7 @@ Breaking changes
 ^^^^^^^^^^^^^^^^
 * `xscen` now uses `flit` as its build-engine and no longer uses `setuptools`, `setuptools-scm`, or `wheel`. (:pull:`519`).
 * Update to support Python3.13 and `xclim` v0.55.0 (:pull:`532`).
+* `xsdba` is now used instead of `xclim.sdba`. (:pull:`530`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
