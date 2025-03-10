@@ -72,7 +72,7 @@ jobs:
           python -m pip install --require-hashes -r CI/requirements_ci.txt
       - name: Build a binary wheel and a source tarball
         run: |
-          python -m build --sdist --wheel
+          python -m flit build
       - name: Publish distribution 📦 to Test PyPI
         uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc # v1.12.4
         with:
