@@ -146,8 +146,8 @@ def train(
 
     # cut out the right period
     period = standardize_periods(period, multiple=False)
-    hist = hist.sel(time=slice(period[0], period[1]))
-    ref = ref.sel(time=slice(period[0], period[1]))
+    hist = hist.sel(time=slice(*period))
+    ref = ref.sel(time=slice(*period))
 
     # convert calendar if necessary
     simcal = hist.time.dt.calendar
@@ -220,6 +220,7 @@ def adjust(
     dsim: xr.Dataset,
     periods: list[str] | list[list[str]],
     *,
+    dref: xr.Dataset | None = None,
     xsdba_adjust_args: dict | None = None,
     xclim_adjust_args: dict | None = None,
     to_level: str = "biasadjusted",
@@ -238,6 +239,8 @@ def adjust(
       Simulated timeseries, projected period.
     periods : list of str or list of lists of str
       Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
+    dref : xr.Dataset, optional
+      Reference timeseries, needed only for certain methods.
     xsdba_adjust_args : dict, optional
       Dict of arguments to pass to the `.adjust` of the adjustment object.
     xclim_adjust_args : dict, optional
@@ -291,9 +294,9 @@ def adjust(
 
     # Used in MBCn adjusting
     # I'm just assuming that if `ref` is needed, so is `hist`
-    if "ref" in xsdba_adjust_args:
+    if dref is not None:
         train_period = dtrain.attrs["train_params"]["period"]
-        ref = xsdba.stack_variables((xsdba_adjust_args["ref"])[var])
+        ref = xsdba.stack_variables(dref[var])
         ref = ref.sel(time=slice(*train_period))
         hist = sim.sel(time=slice(*train_period))
         xsdba_adjust_args["ref"] = ref

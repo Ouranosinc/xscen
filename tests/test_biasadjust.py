@@ -372,5 +372,5 @@ class TestMultivariate:
                 ["2001", "2030"],
                 ["2031", "2060"],
             ],
-            xsdba_adjust_args={"ref": ds},
+            dref=ds,
         )
