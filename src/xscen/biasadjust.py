@@ -81,7 +81,7 @@ def train(
     dhist : xr.Dataset
       The timeseries to adjust, on the reference period.
     var : str or list of str
-      Variable on which to do the adjustment. Currently only supports one variable.
+      Variable(s) on which to do the adjustment.
     period : list of str
       [start, end] of the reference period
     method : str
@@ -127,27 +127,32 @@ def train(
             )
         else:
             xsdba_train_args = deepcopy(xclim_train_args)
-    # TODO: To be adequately fixed later when we add multivariate
+
     if isinstance(var, str):
         var = [var]
-    if len(var) != 1:
-        raise ValueError(
-            "biasadjust currently does not support entries with multiple variables."
-        )
-    else:
+    if len(var) == 1:
         ref = dref[var[0]]
         hist = dhist[var[0]]
+    else:
+        if method not in ["MBCn"]:
+            raise ValueError(
+                f"Multiple variables were given: {var}, but this only works with a multivariate method,"
+                f"got {method}."
+            )
+        ref = xsdba.stack_variables(dref[var])
+        hist = xsdba.stack_variables(dhist[var])
 
     group = group if group is not None else {"group": "time.dayofyear", "window": 31}
-
     xsdba_train_args = xsdba_train_args or {}
+
+    # xsdba could eventually have a more traditional approach to avoid this
     if method == "DetrendedQuantileMapping":
         xsdba_train_args.setdefault("nquantiles", 15)
 
     # cut out the right period
     period = standardize_periods(period, multiple=False)
-    hist = hist.sel(time=slice(period[0], period[1]))
-    ref = ref.sel(time=slice(period[0], period[1]))
+    hist = hist.sel(time=slice(*period))
+    ref = ref.sel(time=slice(*period))
 
     # convert calendar if necessary
     simcal = hist.time.dt.calendar
@@ -163,7 +168,12 @@ def train(
         group = xsdba.Grouper.from_kwargs(**group)["group"]
     elif isinstance(group, str):
         group = xsdba.Grouper(group)
-    xsdba_train_args["group"] = group
+
+    if method != "MBCn":
+        xsdba_train_args["group"] = group
+    else:
+        xsdba_train_args.setdefault("base_kws", {})
+        xsdba_train_args["base_kws"]["group"] = group
 
     # TODO: change this to be compatible with multivar too?
     contexts = [
@@ -198,12 +208,13 @@ def train(
         "adapt_freq": adapt_freq,
         "jitter_under": jitter_under,
         "jitter_over": jitter_over,
+        "period": period,
     }
 
     # attrs that are needed to open with .to_dataset_dict()
     for a in ["cat:xrfreq", "cat:domain", "cat:id"]:
         ds.attrs[a] = dhist.attrs[a] if a in dhist.attrs else None
-    ds.attrs["cat:processing_level"] = f"training_{var[0]}"
+    ds.attrs["cat:processing_level"] = f"training_{'_'.join(var)}"
 
     return ds
 
@@ -214,6 +225,7 @@ def adjust(
     dsim: xr.Dataset,
     periods: list[str] | list[list[str]],
     *,
+    dref: xr.Dataset | None = None,
     xsdba_adjust_args: dict | None = None,
     xclim_adjust_args: dict | None = None,
     to_level: str = "biasadjusted",
@@ -232,6 +244,8 @@ def adjust(
       Simulated timeseries, projected period.
     periods : list of str or list of lists of str
       Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
+    dref : xr.Dataset, optional
+      Reference timeseries, needed only for certain methods.
     xsdba_adjust_args : dict, optional
       Dict of arguments to pass to the `.adjust` of the adjustment object.
     xclim_adjust_args : dict, optional
@@ -277,13 +291,21 @@ def adjust(
         dtrain.attrs["train_params"] = eval(dtrain.attrs["train_params"])  # noqa: S307
 
     var = dtrain.attrs["train_params"]["var"]
-    if len(var) != 1:
-        raise ValueError(
-            "biasadjust currently does not support entries with multiple variables."
-        )
-    else:
+    if len(var) == 1:
         var = var[0]
         sim = dsim[var]
+    else:
+        sim = xsdba.stack_variables(dsim[var])
+
+    # Used in MBCn adjusting
+    # I'm just assuming that if `ref` is needed, so is `hist`
+    if dref is not None:
+        train_period = dtrain.attrs["train_params"]["period"]
+        ref = xsdba.stack_variables(dref[var])
+        ref = ref.sel(time=slice(*train_period))
+        hist = sim.sel(time=slice(*train_period))
+        xsdba_adjust_args["ref"] = ref
+        xsdba_adjust_args["hist"] = hist
 
     # get right calendar
     simcal = sim.time.dt.calendar
@@ -317,7 +339,11 @@ def adjust(
     dscen = xr.concat(slices, dim="time")
 
     dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
-    dscen = xr.Dataset(data_vars={var: dscen}, attrs=dsim.attrs)
+    if isinstance(var, str):
+        dscen = xr.Dataset(data_vars={var: dscen}, attrs=dsim.attrs)
+    else:
+        # TODO: Is that a good way to manage attrs?
+        dscen = xsdba.unstack_variables(dscen).assign_attrs(attrs=dscen.attrs)
     dscen.attrs["cat:processing_level"] = to_level
     dscen.attrs["cat:variable"] = parse_from_ds(dscen, ["variable"])["variable"]
     if bias_adjust_institution is not None:
