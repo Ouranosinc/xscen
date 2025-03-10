@@ -134,6 +134,11 @@ def train(
         ref = dref[var[0]]
         hist = dhist[var[0]]
     else:
+        if method not in ["MBCn"]:
+            raise ValueError(
+                f"Multiple variables were given: {var}, but this only works with a multivariate method,"
+                f"got {method}."
+            )
         ref = xsdba.stack_variables(dref[var])
         hist = xsdba.stack_variables(dhist[var])
 

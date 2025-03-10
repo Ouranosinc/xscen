@@ -72,6 +72,7 @@ class TestTrain:
             "adapt_freq": {"thresh": "2 K"},
             "jitter_over": {"upper_bnd": "3 K", "thresh": "2 K"},
             "jitter_under": {"thresh": "2 K"},
+            "period": ["2001", "2002"],
             "var": ["tas"],
         }
 
