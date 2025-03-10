@@ -294,8 +294,8 @@ def adjust(
     if "ref" in xsdba_adjust_args:
         train_period = dtrain.attrs["train_params"]["period"]
         ref = xsdba.stack_variables((xsdba_adjust_args["ref"])[var])
-        ref = ref.sel(time=slice(train_period[0], train_period[1]))
-        hist = sim.sel(time=slice(train_period[0], train_period[1]))
+        ref = ref.sel(time=slice(*train_period))
+        hist = sim.sel(time=slice(*train_period))
         xsdba_adjust_args["ref"] = ref
         xsdba_adjust_args["hist"] = hist
 
