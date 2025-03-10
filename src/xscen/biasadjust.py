@@ -329,14 +329,25 @@ def adjust(
     with xc.core.units.units.context(cntx):
         # do the adjustment for all the simulation_period lists
         periods = standardize_periods(periods)
-        slices = []
-        for period in periods:
-            sim_sel = sim.sel(time=slice(period[0], period[1]))
+        if period_dim := xsdba_adjust_args.get("period_dim", None):
+            if isinstance(periods[0], list):
+                raise ValueError(
+                    "Using period stacking (specifying `period_dim` "
+                    "in `MBCn` is only allowed with a list[str] for `periods`)"
+                )
+            out = ADJ.adjust(
+                xsdba.stack_periods(sim, dim=period_dim), **xsdba_adjust_args
+            )
+            dscen = xsdba.unstack_periods(out)
+        else:
+            slices = []
+            for period in periods:
+                sim_sel = sim.sel(time=slice(period[0], period[1]))
 
-            out = ADJ.adjust(sim_sel, **xsdba_adjust_args)
-            slices.extend([out])
-        # put all the adjusted period back together
-    dscen = xr.concat(slices, dim="time")
+                out = ADJ.adjust(sim_sel, **xsdba_adjust_args)
+                slices.extend([out])
+            # put all the adjusted period back together
+            dscen = xr.concat(slices, dim="time")
 
     dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
     if isinstance(var, str):
