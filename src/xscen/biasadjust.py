@@ -339,6 +339,7 @@ def adjust(
             sim_stacked = xsdba.stack_periods(
                 sim.sel(time=slice(*periods[0])), dim=period_dim
             )
+            sim_stacked = sim_stacked.chunk({period_dim: -1})
             out = ADJ.adjust(sim_stacked, **xsdba_adjust_args)
             dscen = xsdba.unstack_periods(out)
 
