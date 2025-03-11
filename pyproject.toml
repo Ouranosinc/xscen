@@ -166,6 +166,7 @@ values = [
 ]
 
 [tool.codespell]
+skip = "docs/notebooks/*.ipynb"
 ignore-words-list = "anc,ans,astroid,attributs,coo,mesure,nam,ond,socio-economic,vas,winn"
 
 [tool.coverage.paths]
