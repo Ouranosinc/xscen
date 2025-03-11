@@ -166,7 +166,7 @@ values = [
 ]
 
 [tool.codespell]
-skip = "docs/notebooks/*.ipynb"
+# skip = "docs/notebooks/*.ipynb"  # in case we need to skip specific notebooks
 ignore-words-list = "anc,ans,astroid,attributs,coo,mesure,nam,ond,socio-economic,vas,winn"
 
 [tool.coverage.paths]
