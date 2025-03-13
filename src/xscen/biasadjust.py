@@ -3,11 +3,11 @@
 import logging
 import warnings
 from copy import deepcopy
+from unittest.mock import patch
 
 import xarray as xr
 import xclim as xc
 import xsdba
-from xclim.core.units import infer_context
 
 from .catutils import parse_from_ds
 from .config import parse_config
@@ -52,6 +52,10 @@ def _add_preprocessing_attr(scen, train_kwargs):
             "bias_adjustment"
         ] += ", ref and hist were prepared with " + " and ".join(preproc)
     return scen
+
+
+def _convert_units_to_infer(source, target):
+    return xc.core.units.convert_units_to(source, target, context="infer")
 
 
 @parse_config
@@ -165,12 +169,7 @@ def train(
         group = xsdba.Grouper(group)
     xsdba_train_args["group"] = group
 
-    # TODO: change this to be compatible with multivar too?
-    contexts = [
-        infer_context(da.attrs.get("standard_name", None)) for da in [ref, hist]
-    ]
-    cntx = "hydro" if "hydro" in contexts else "none"
-    with xc.core.units.units.context(cntx):
+    with patch("xsdba.units.convert_units_to", _convert_units_to_infer):
         if jitter_over is not None:
             ref = xsdba.processing.jitter_over_thresh(ref, **jitter_over)
             hist = xsdba.processing.jitter_over_thresh(hist, **jitter_over)
@@ -303,8 +302,7 @@ def adjust(
         kwargs.setdefault("kind", ADJ.kind)
         xsdba_adjust_args["detrend"] = getattr(xsdba.detrending, name)(**kwargs)
 
-    cntx = infer_context(sim.attrs.get("standard_name", None))
-    with xc.core.units.units.context(cntx):
+    with patch("xsdba.units.convert_units_to", _convert_units_to_infer):
         # do the adjustment for all the simulation_period lists
         periods = standardize_periods(periods)
         slices = []
