@@ -2,6 +2,15 @@
 Changelog
 =========
 
+Unreleased
+----------
+Contributors to this version: Éric Dupuis (:user:`coxipi`).
+
+Bug fixes
+^^^^^^^^^
+* Patch ``xsdba.units.convert_units_to`` with ``xclim.core.units.convert_units_to`` with `context="infer"` locally in ``xs.train`` and ``xs.adjust`` instead of using ``xc.core.settings.context``.
+
+
 v0.12.0 (2025-03-10)
 --------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`), Éric Dupuis (:user:`coxipi`).
