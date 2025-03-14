@@ -2,6 +2,15 @@
 Changelog
 =========
 
+v0.13.0 (Unreleased)
+--------------------
+Contributors to this version:  Juliette Lavoie (:user:`juliettelavoie`)
+
+Bug fixes
+^^^^^^^^^
+* Fixed the default for ``xs.utils.maybe_unstack`` (:pull:`553`).
+
+
 v0.12.0 (2025-03-10)
 --------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`), Éric Dupuis (:user:`coxipi`).
