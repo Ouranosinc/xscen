@@ -850,7 +850,14 @@ def _convert_units_to_infer(source, target):
 
 @contextmanager
 def xclim_convert_units_to():
-    """Patch xsdba with xclim's units converter."""
+    """Patch xsdba with xclim's units converter.
+
+    Yields
+    ------
+    None
+        In this context, ``xsdba.units.convert_units_to`` is replaced with
+        ``xclim.core.units.convert_units_to`` with `context="infer"` activated.
+    """
     original_function = xsdba.units.convert_units_to
     new_function = _convert_units_to_infer
     try:
