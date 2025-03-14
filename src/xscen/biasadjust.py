@@ -2,7 +2,6 @@
 
 import logging
 import warnings
-from contextlib import contextmanager
 from copy import deepcopy
 
 import xarray as xr
@@ -11,7 +10,7 @@ import xsdba
 
 from .catutils import parse_from_ds
 from .config import parse_config
-from .utils import minimum_calendar, standardize_periods
+from .utils import minimum_calendar, standardize_periods, xclim_convert_units_to
 
 logger = logging.getLogger(__name__)
 xsdba.set_options(extra_output=False)
@@ -52,21 +51,6 @@ def _add_preprocessing_attr(scen, train_kwargs):
             "bias_adjustment"
         ] += ", ref and hist were prepared with " + " and ".join(preproc)
     return scen
-
-
-def _convert_units_to_infer(source, target):
-    return xc.core.units.convert_units_to(source, target, context="infer")
-
-
-@contextmanager
-def xclim_convert_units_to():
-    original_function = xsdba.units.convert_units_to
-    new_function = _convert_units_to_infer
-    try:
-        xsdba.units.convert_units_to = new_function
-        yield
-    finally:
-        xsdba.units.convert_units_to = original_function
 
 
 @parse_config
