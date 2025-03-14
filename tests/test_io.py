@@ -1,4 +1,5 @@
 import datetime
+import importlib
 from pathlib import Path
 
 import numpy as np
@@ -235,6 +236,8 @@ class TestRechunkForSaving:
 
 
 class TestToTable:
+    has_openpyxl = importlib.util.find_spec("openpyxl")
+
     ds = xs.utils.unstack_dates(
         xr.merge(
             [
@@ -259,6 +262,7 @@ class TestToTable:
     ).transpose("season", "time", "site")
     ds.attrs = {"foo": "bar", "baz": 1, "qux": 2.0}
 
+    @pytest.mark.skipif(not has_openpyxl, reason="test requires openpyxl")
     @pytest.mark.parametrize(
         "multiple, as_dataset", [(True, True), (False, True), (False, False)]
     )
@@ -335,6 +339,7 @@ class TestToTable:
             assert saved.iloc[0, 2] == "a"
             assert saved.iloc[2, 0] == datetime.datetime(1993, 1, 1, 0, 0)
 
+    @pytest.mark.skipif(not has_openpyxl, reason="test requires openpyxl")
     def test_sheet(self, tmpdir):
         xs.save_to_table(
             self.ds,
@@ -359,6 +364,7 @@ class TestToTable:
         assert tab[("a",)].shape == (15, 4)  # 5 time * 3 variable X 4 season
         assert saved["a"].shape == (15, 6)  # Because of the headers
 
+    @pytest.mark.skipif(not has_openpyxl, reason="test requires openpyxl")
     def test_kwargs(self, tmpdir):
         xs.save_to_table(
             self.ds,
@@ -388,6 +394,7 @@ class TestToTable:
         assert out.columns[0] == "time|variable"
         assert out.columns[1] == "JFM;a"
 
+    @pytest.mark.skipif(not has_openpyxl, reason="test requires openpyxl")
     def test_error(self, tmpdir):
         with pytest.raises(ValueError, match="Repeated dimension names."):
             xs.save_to_table(
@@ -423,6 +430,7 @@ class TestToTable:
         with pytest.raises(ValueError, match="but the output format is not Excel."):
             xs.save_to_table(self.ds, Path(tmpdir) / "test.csv", add_toc=True)
 
+    @pytest.mark.skipif(not has_openpyxl, reason="test requires openpyxl")
     @pytest.mark.parametrize("as_dataset", [True, False])
     def test_make_toc(self, tmpdir, as_dataset):
         ds = self.ds.copy()
@@ -460,6 +468,13 @@ class TestToTable:
             assert toc.index.tolist() == ["tas"]
             assert toc.loc["tas", "Description"] == "Nom long pour tas"
             assert toc.loc["tas", "Unités"] == "K"
+
+    @pytest.mark.skipif(has_openpyxl, reason="test requires openpyxl not be installed")
+    def test_no_openpyxl(self, tmpdir):
+        ds = self.ds.copy()
+
+        with pytest.raises(NotImplementedError):
+            xs.save_to_table(ds, Path(tmpdir) / "test.xlsx", add_toc=True)
 
 
 def test_round_bits():
