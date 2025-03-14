@@ -8,6 +8,8 @@ import xclim as xc
 import xsdba
 from xclim.testing.helpers import test_timeseries as timeseries
 
+from xscen.utils import xclim_convert_units_to
+
 # Copied from xarray/core/nputils.py
 # Can be removed once numpy 2.0+ is the oldest supported version
 try:
@@ -314,8 +316,8 @@ class TestAdjust:
             dhistx = dhist.sel(time=slice("2001", "2003")).convert_calendar("noleap")
             dsimx = dsim.sel(time=slice("2001", "2006")).convert_calendar("noleap")
 
-            # xsdba is now climate agnostics, hydro context must be specified
-            with xc.core.units.units.context("hydro"):
+            # xsdba is now climate-agnostic, patch xclim's converter
+            with xclim_convert_units_to():
                 dhist_ad, pth, dP0 = xsdba.processing.adapt_freq(
                     drefx["pr"], dhistx["pr"], group=group, thresh="1 mm d-1"
                 )

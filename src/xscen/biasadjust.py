@@ -7,11 +7,10 @@ from copy import deepcopy
 import xarray as xr
 import xclim as xc
 import xsdba
-from xclim.core.units import infer_context
 
 from .catutils import parse_from_ds
 from .config import parse_config
-from .utils import minimum_calendar, standardize_periods
+from .utils import minimum_calendar, standardize_periods, xclim_convert_units_to
 
 logger = logging.getLogger(__name__)
 xsdba.set_options(extra_output=False)
@@ -165,12 +164,7 @@ def train(
         group = xsdba.Grouper(group)
     xsdba_train_args["group"] = group
 
-    # TODO: change this to be compatible with multivar too?
-    contexts = [
-        infer_context(da.attrs.get("standard_name", None)) for da in [ref, hist]
-    ]
-    cntx = "hydro" if "hydro" in contexts else "none"
-    with xc.core.units.units.context(cntx):
+    with xclim_convert_units_to():
         if jitter_over is not None:
             ref = xsdba.processing.jitter_over_thresh(ref, **jitter_over)
             hist = xsdba.processing.jitter_over_thresh(hist, **jitter_over)
@@ -303,8 +297,7 @@ def adjust(
         kwargs.setdefault("kind", ADJ.kind)
         xsdba_adjust_args["detrend"] = getattr(xsdba.detrending, name)(**kwargs)
 
-    cntx = infer_context(sim.attrs.get("standard_name", None))
-    with xc.core.units.units.context(cntx):
+    with xclim_convert_units_to():
         # do the adjustment for all the simulation_period lists
         periods = standardize_periods(periods)
         slices = []
