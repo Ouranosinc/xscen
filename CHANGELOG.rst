@@ -6,9 +6,13 @@ v0.13.0 (Unreleased)
 --------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Éric Dupuis (:user:`coxipi`).
 
+Breaking changes
+^^^^^^^^^^^^^^^^
+* Make `strip_cat_metadata` False by default in ``xs.save_to_zarr`` and ``xs.save_to_netcdf``. (:pull:`556`,:issue:`555`).
+
 Bug fixes
 ^^^^^^^^^
-* Fixed the default for ``xs.utils.maybe_unstack`` (:pull:`553`).
+* Fixed the default for ``xs.utils.maybe_unstack``. (:pull:`553`).
 * Patch ``xsdba.units.convert_units_to`` with ``xclim.core.units.convert_units_to`` with `context="infer"` locally in ``xs.train`` and ``xs.adjust`` instead of using ``xc.core.settings.context``.
 
 v0.12.0 (2025-03-10)
