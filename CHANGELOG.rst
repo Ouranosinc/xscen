@@ -8,12 +8,11 @@ Contributors to this version:  Juliette Lavoie (:user:`juliettelavoie`)
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* Make `strip_cat_metadata` False by default in ``xs.save_to_zarr`` and ``xs.save_to_netcdf``. (:pull:`554`,:issue:`555`).
+* Make `strip_cat_metadata` False by default in ``xs.save_to_zarr`` and ``xs.save_to_netcdf``. (:pull:`556`,:issue:`555`).
 
 Bug fixes
 ^^^^^^^^^
 * Fixed the default for ``xs.utils.maybe_unstack``. (:pull:`553`).
-
 
 
 v0.12.0 (2025-03-10)
