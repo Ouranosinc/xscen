@@ -14,17 +14,17 @@ dependencies:
   - dask >=2024.8.1,<2024.12  # FIXME: Remove upper pin when https://github.com/pangeo-data/rechunker/pull/156 is merged
   - flox !=0.9.14  # FIXME: 0.9.14 is a broken version. This pin could be removed eventually.
   - fsspec
-  - geopandas
+  - geopandas >=1.0
   - h5netcdf
   - h5py
   - intake-esm >=2023.07.07
   - matplotlib >=3.6
-  - netCDF4
+  - netcdf4
   - numcodecs
   - numpy >=1.24
-  - openpyxl
   - pandas >=2.2
   - parse
+  - pyproj
   - pyyaml
   - rechunker
   - scipy >=1.10
@@ -40,4 +40,4 @@ dependencies:
   - flit >=3.10.1,<4.0
   # Opt
   - nc-time-axis >=1.3.1
-  - pyarrow >=10.0.1
+  - openpyxl
