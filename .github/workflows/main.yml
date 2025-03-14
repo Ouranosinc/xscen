@@ -67,7 +67,7 @@ jobs:
     env:
       COVERALLS_PARALLEL: true
       COVERALLS_SERVICE_NAME: github
-      esmf-version: 8.4.2
+      esmf-version: 8.7.0  # 8.8.0 breaks h5py
     strategy:
       matrix:
         os: [ 'ubuntu-latest' ]
