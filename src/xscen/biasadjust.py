@@ -60,15 +60,13 @@ def _convert_units_to_infer(source, target):
 
 @contextmanager
 def xclim_convert_units_to():
-    module = xsdba.units
-    attr_name = "convert_units_to"
-    new_value = _convert_units_to_infer
-    original_value = getattr(module, attr_name)
-    setattr(module, attr_name, new_value)
+    original_function = xsdba.units.convert_units_to
+    new_function = _convert_units_to_infer
     try:
+        xsdba.units.convert_units_to = new_function
         yield
     finally:
-        setattr(module, attr_name, original_value)
+        xsdba.units.convert_units_to = original_function
 
 
 @parse_config
