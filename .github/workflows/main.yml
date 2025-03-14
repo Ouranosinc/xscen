@@ -67,7 +67,6 @@ jobs:
     env:
       COVERALLS_PARALLEL: true
       COVERALLS_SERVICE_NAME: github
-      esmf-version: 8.4.2
     strategy:
       matrix:
         os: [ 'ubuntu-latest' ]
@@ -102,7 +101,6 @@ jobs:
           cache-environment: true
           environment-name: xscen-pypi
           create-args: >-
-            esmf=${{ env.esmf-version }}
             python=${{ matrix.python-version }}
             tox>=4.24.1
             tox-gh>=1.5.0
@@ -115,7 +113,6 @@ jobs:
         run: |
           python -m tox
         env:
-          ESMF_VERSION: ${{ env.esmf-version }}
           XCLIM_VERSION: ${{ matrix.xclim-min-version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
