@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-import h5py  # To fix a bug with ESMPy in pure 'pip install' environments
 import xscen as xs
 from xscen.testing import datablock_3d as _datablock_3d
 
