@@ -316,7 +316,7 @@ class TestAdjust:
             dhistx = dhist.sel(time=slice("2001", "2003")).convert_calendar("noleap")
             dsimx = dsim.sel(time=slice("2001", "2006")).convert_calendar("noleap")
 
-            # xsdba is now climate agnostics, patch xclim's converter
+            # xsdba is now climate-agnostic, patch xclim's converter
             with xclim_convert_units_to():
                 dhist_ad, pth, dP0 = xsdba.processing.adapt_freq(
                     drefx["pr"], dhistx["pr"], group=group, thresh="1 mm d-1"
