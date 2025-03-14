@@ -2,14 +2,14 @@
 Changelog
 =========
 
-Unreleased
-----------
-Contributors to this version: Éric Dupuis (:user:`coxipi`).
+v0.13.0 (Unreleased)
+--------------------
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Éric Dupuis (:user:`coxipi`).
 
 Bug fixes
 ^^^^^^^^^
+* Fixed the default for ``xs.utils.maybe_unstack`` (:pull:`553`).
 * Patch ``xsdba.units.convert_units_to`` with ``xclim.core.units.convert_units_to`` with `context="infer"` locally in ``xs.train`` and ``xs.adjust`` instead of using ``xc.core.settings.context``.
-
 
 v0.12.0 (2025-03-10)
 --------------------
