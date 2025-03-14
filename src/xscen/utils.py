@@ -645,7 +645,7 @@ def strip_cat_attrs(ds: xr.Dataset, prefix: str = "cat:"):
 @parse_config
 def maybe_unstack(
     ds: xr.Dataset,
-    dim: str | None = None,
+    dim: str | None = "loc",
     coords: str | None = None,
     rechunk: dict | None = None,
     stack_drop_nans: bool = False,
