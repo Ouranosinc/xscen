@@ -187,6 +187,7 @@ pep621_dev_dependency_groups = ["all", "dev", "docs"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = ["h5netcdf", "nc-time-axis", "openpyxl", "pyarrow"]
+DEP004 = ["xscen"]
 
 [tool.flit.sdist]
 include = [
