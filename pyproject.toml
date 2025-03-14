@@ -63,7 +63,7 @@ dependencies = [
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0",
   "xclim >=0.55.1, <0.56",
-  # "xesmf >=0.7, !=0.8.8", # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
+  "xesmf >=0.7, !=0.8.8", # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
   "xsdba>=0.3.0",
   "zarr >=2.13,<3"
 ]
@@ -111,10 +111,7 @@ docs = [
   "sphinx-rtd-theme >=1.0",
   "sphinxcontrib-napoleon"
 ]
-extra = [
-  "xesmf >=0.7, !=0.8.8" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
-]
-all = ["xscen[dev]", "xscen[docs]", "xscen[extra]"]
+all = ["xscen[dev]", "xscen[docs]"]
 
 [project.urls]
 "Homepage" = "https://xscen.readthedocs.io/"
