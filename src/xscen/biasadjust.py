@@ -2,8 +2,8 @@
 
 import logging
 import warnings
+from contextlib import contextmanager
 from copy import deepcopy
-from unittest.mock import patch
 
 import xarray as xr
 import xclim as xc
@@ -56,6 +56,19 @@ def _add_preprocessing_attr(scen, train_kwargs):
 
 def _convert_units_to_infer(source, target):
     return xc.core.units.convert_units_to(source, target, context="infer")
+
+
+@contextmanager
+def xclim_convert_units_to():
+    module = xsdba.units
+    attr_name = "convert_units_to"
+    new_value = _convert_units_to_infer
+    original_value = getattr(module, attr_name)
+    setattr(module, attr_name, new_value)
+    try:
+        yield
+    finally:
+        setattr(module, attr_name, original_value)
 
 
 @parse_config
@@ -169,7 +182,7 @@ def train(
         group = xsdba.Grouper(group)
     xsdba_train_args["group"] = group
 
-    with patch("xsdba.units.convert_units_to", _convert_units_to_infer):
+    with xclim_convert_units_to():
         if jitter_over is not None:
             ref = xsdba.processing.jitter_over_thresh(ref, **jitter_over)
             hist = xsdba.processing.jitter_over_thresh(hist, **jitter_over)
@@ -302,7 +315,7 @@ def adjust(
         kwargs.setdefault("kind", ADJ.kind)
         xsdba_adjust_args["detrend"] = getattr(xsdba.detrending, name)(**kwargs)
 
-    with patch("xsdba.units.convert_units_to", _convert_units_to_infer):
+    with xclim_convert_units_to():
         # do the adjustment for all the simulation_period lists
         periods = standardize_periods(periods)
         slices = []
