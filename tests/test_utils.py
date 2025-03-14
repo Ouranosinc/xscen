@@ -414,6 +414,47 @@ class TestStack:
             "lon": (10,),
         }
 
+    def test_maybe_default(self, tmp_path):
+        data = np.zeros((20, 10, 10))
+        data[:, 0, 0] = [np.nan] * 20
+        ds = datablock_3d(
+            data,
+            "tas",
+            "lon",
+            -5,
+            "lat",
+            80.5,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        mask = xr.where(ds.tas.isel(time=0).isnull(), False, True).drop_vars("time")
+        ds.attrs["cat:domain"] = "RegionEssai"
+        z = xr.DataArray(
+            np.ones([10, 10]),
+            dims=["lat", "lon"],
+            coords={"lat": ds.lat, "lon": ds.lon},
+        )
+        z1d = xr.DataArray(np.ones([10]), dims=["lat"], coords={"lat": ds.lat})
+        ds = ds.assign_coords(z=z, z1d=z1d)
+        out = xs.utils.stack_drop_nans(
+            ds,
+            mask=mask,
+            to_file=str(tmp_path / "coords_{domain}_{shape}.nc"),
+        )
+
+        maybe_unstacked = xs.utils.maybe_unstack(
+            out,
+            coords=str(tmp_path / "coords_{domain}_{shape}.nc"),
+            stack_drop_nans=True,
+        )
+        unstacked = xs.utils.unstack_fill_nan(
+            out, coords=str(tmp_path / "coords_{domain}_{shape}.nc")
+        )
+
+        assert maybe_unstacked.equals(unstacked)
+
 
 class TestVariablesUnits:
     def test_variables_same(self):
