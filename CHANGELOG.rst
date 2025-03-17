@@ -4,7 +4,12 @@ Changelog
 
 v0.13.0 (Unreleased)
 --------------------
-Contributors to this version:  Juliette Lavoie (:user:`juliettelavoie`)
+Contributors to this version:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
+
+Announcements
+^^^^^^^^^^^^^
+* `xESMF` is no longer an optional dependency for `pip` installations, but nonetheless requires `ESMPy` to be installed using `conda`. (:pull:`554`).
+  * All measures are still in place to ensure that `xESMF` does not make `xscen` crash if it cannot be imported.
 
 Bug fixes
 ^^^^^^^^^
