@@ -39,8 +39,7 @@ If for some reason you wish to install the `PyPI` version of `xscen` into an exi
 
     python -m pip install xscen
 
-This will install the latest stable release from `PyPI`. It is very likely that you will encounter issues with this method. In particular, the `xESMF` package may require `ESMPy` to be installed separately using `conda`.
-Measures have been taken to ensure that `xscen` will not break if `xESMF` fails to import, but some functionalities will be disabled.
+This will install the latest stable release from `PyPI`. It is very likely that you will encounter issues with this method. In particular, the `xESMF` package may require `ESMPy` to be installed separately using `conda`. Measures have been taken to ensure that `xscen` will not break if `xESMF` fails to import, but some functionalities will be disabled.
 
 Development Installation (Anaconda + pip)
 -----------------------------------------
