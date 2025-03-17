@@ -8,7 +8,7 @@ Contributors to this version:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* Make `strip_cat_metadata` False by default in ``xs.save_to_zarr`` and ``xs.save_to_netcdf``. (:pull:`556`,:issue:`555`).
+* Make `strip_cat_metadata` False by default in ``xs.save_to_zarr`` and ``xs.save_to_netcdf``. (:pull:`556`, :issue:`555`).
 
 Bug fixes
 ^^^^^^^^^
