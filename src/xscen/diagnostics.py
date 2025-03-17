@@ -30,6 +30,7 @@ from .utils import (
     standardize_periods,
     unstack_fill_nan,
     update_attr,
+    xclim_convert_units_to,
 )
 
 logger = logging.getLogger(__name__)
@@ -414,7 +415,8 @@ def properties_and_measures(  # noqa: C901
         # Make the call to xclim
         msg = f"{i} - Computing {iden}."
         logger.info(msg)
-        out = ind(ds=ds)
+        with xclim_convert_units_to():
+            out = ind(ds=ds)
         vname = out.name
         prop[vname] = out
 
@@ -423,9 +425,10 @@ def properties_and_measures(  # noqa: C901
 
         # calculate the measure if a reference dataset is given for the measure
         if dref_for_measure and vname in dref_for_measure:
-            meas[vname] = ind.get_measure()(
-                sim=prop[vname], ref=dref_for_measure[vname]
-            )
+            with xclim_convert_units_to():
+                meas[vname] = ind.get_measure()(
+                    sim=prop[vname], ref=dref_for_measure[vname]
+                )
             # create a merged long_name
             update_attr(
                 meas[vname],
