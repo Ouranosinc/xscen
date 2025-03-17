@@ -374,7 +374,7 @@ def save_to_netcdf(
     bitround: bool | int | dict = False,
     compute: bool = True,
     netcdf_kwargs: dict | None = None,
-    strip_cat_metadata: bool = True,
+    strip_cat_metadata: bool = False,
 ):
     """Save a Dataset to NetCDF, rechunking or compressing if requested.
 
@@ -451,7 +451,7 @@ def save_to_zarr(  # noqa: C901
     mode: str = "f",
     itervar: bool = False,
     timeout_cleanup: bool = True,
-    strip_cat_metadata: bool = True,
+    strip_cat_metadata: bool = False,
 ):
     """
     Save a Dataset to Zarr format, rechunking and compressing if requested.
