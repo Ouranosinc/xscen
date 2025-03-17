@@ -11,9 +11,13 @@ Announcements
 * `xESMF` is no longer an optional dependency for `pip` installations, but nonetheless requires `ESMPy` to be installed using `conda`. (:pull:`554`).
   * All measures are still in place to ensure that `xESMF` does not make `xscen` crash if it cannot be imported.
 
+Breaking changes
+^^^^^^^^^^^^^^^^
+* Make `strip_cat_metadata` False by default in ``xs.save_to_zarr`` and ``xs.save_to_netcdf``. (:pull:`556`,:issue:`555`).
+
 Bug fixes
 ^^^^^^^^^
-* Fixed the default for ``xs.utils.maybe_unstack`` (:pull:`553`).
+* Fixed the default for ``xs.utils.maybe_unstack``. (:pull:`553`).
 
 
 v0.12.0 (2025-03-10)
