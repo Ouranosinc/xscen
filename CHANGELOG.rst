@@ -4,15 +4,19 @@ Changelog
 
 v0.13.0 (Unreleased)
 --------------------
-Contributors to this version:  Juliette Lavoie (:user:`juliettelavoie`)
+Contributors to this version:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* Make `strip_cat_metadata` False by default in ``xs.save_to_zarr`` and ``xs.save_to_netcdf``. (:pull:`556`,:issue:`555`).
+* Make `strip_cat_metadata` False by default in ``xs.save_to_zarr`` and ``xs.save_to_netcdf``. (:pull:`556`, :issue:`555`).
 
 Bug fixes
 ^^^^^^^^^
 * Fixed the default for ``xs.utils.maybe_unstack``. (:pull:`553`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Added the ability to test `xESMF`-related functions with `tox / pip`. (:pull:`554`).
 
 
 v0.12.0 (2025-03-10)
