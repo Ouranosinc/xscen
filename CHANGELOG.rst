@@ -4,7 +4,7 @@ Changelog
 
 v0.13.0 (Unreleased)
 --------------------
-Contributors to this version:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
+Contributors to this version:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Éric Dupuis (:user:`coxipi`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -13,11 +13,11 @@ Breaking changes
 Bug fixes
 ^^^^^^^^^
 * Fixed the default for ``xs.utils.maybe_unstack``. (:pull:`553`).
+* Patch ``xsdba.units.convert_units_to`` with ``xclim.core.units.convert_units_to`` with `context="infer"` locally in ``xs.train`` and ``xs.adjust`` instead of using ``xc.core.settings.context``.
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Added the ability to test `xESMF`-related functions with `tox / pip`. (:pull:`554`).
-
 
 v0.12.0 (2025-03-10)
 --------------------

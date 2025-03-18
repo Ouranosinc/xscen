@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 import xclim as xc
+import xsdba
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
@@ -454,6 +455,13 @@ class TestStack:
         )
 
         assert maybe_unstacked.equals(unstacked)
+
+
+class TestXclimConvertUnitsContext:
+    def test_simple(self):
+        pr = timeseries([0, 1, 2], variable="pr", start="2001-01-01", units="mm d-1")
+        with xs.utils.xclim_convert_units_to():
+            xsdba.units.convert_units_to(pr, "kg m-2 s-1")
 
 
 class TestVariablesUnits:
