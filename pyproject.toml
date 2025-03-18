@@ -112,10 +112,10 @@ docs = [
   "sphinx-rtd-theme >=1.0",
   "sphinxcontrib-napoleon"
 ]
-extra = [
+extras = [
   "xesmf >=0.7, !=0.8.8" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
 ]
-all = ["xscen[dev]", "xscen[docs]", "xscen[extra]"]
+all = ["xscen[dev]", "xscen[docs]", "xscen[extras]"]
 
 [project.urls]
 "Homepage" = "https://xscen.readthedocs.io/"

@@ -114,7 +114,7 @@ jobs:
       - name: Test with tox
         run: |
           if [ ${{ matrix.python-version }} == "3.13" ]; then
-            python -m tox -e py${{ matrix.python-version }}-xsdba
+            python -m tox -e py${{ matrix.python-version }}
           else
             python -m tox
           fi
