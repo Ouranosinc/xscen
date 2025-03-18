@@ -38,13 +38,13 @@ dependencies = [
   "cartopy >=0.23.0",
   "cftime",
   "cf_xarray >=0.7.6",
-  "clisops >=0.15",
-  "dask >=2024.8.1,<2024.12.0", # FIXME: Remove upper pin when https://github.com/pangeo-data/rechunker/pull/156 is merged
+  "clisops >=0.16.0",
+  "dask >=2024.8.1,<2024.12.0", # FIXME: Remove upper pin when rechunker >0.5.2
   "flox !=0.9.14", # FIXME: 0.9.14 is a broken version. This pin could be removed eventually.
   "fsspec",
-  "geopandas",
+  "geopandas >=1.0",
   "h5netcdf",
-  "h5py", # <3.11", # writing and reading with engine h5netcdf was broken
+  "h5py",
   "intake-esm >=2023.07.07",
   "matplotlib >=3.6",
   "netCDF4",
@@ -66,7 +66,7 @@ dependencies = [
   "xarray >=2023.11.0, !=2024.6.0",
   "xclim >=0.55.1, <0.56",
   "xsdba>=0.3.0",
-  "zarr >=2.13,<3"
+  "zarr >=2.13,<3.0"
 ]
 
 [project.optional-dependencies]
