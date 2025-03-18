@@ -1,7 +1,6 @@
 """Input/Output functions for xscen."""
 
 import datetime
-import importlib.util as _util
 import json
 import logging
 import os
@@ -29,7 +28,6 @@ from .utils import TRANSLATOR, season_sort_key, strip_cat_attrs, translate_time_
 
 logger = logging.getLogger(__name__)
 KEEPBITS = defaultdict(lambda: 12)
-openpyxl_installed = _util.find_spec("openpyxl")
 
 
 __all__ = [
@@ -200,7 +198,7 @@ def subset_maxsize(
     Parameters
     ----------
     ds : xr.Dataset
-        Dataset to be saved.
+        The Dataset to be saved.
     maxsize_gb : float
         Target size for the NetCDF files.
         If the dataset is bigger than this number, it will be separated alongside the 'time' dimension.
@@ -383,7 +381,7 @@ def save_to_netcdf(
     Parameters
     ----------
     ds : xr.Dataset
-        Dataset to be saved.
+        The Dataset to be saved.
     filename : str or os.PathLike
         Name of the NetCDF file to be saved.
     rechunk : dict, optional
@@ -463,7 +461,7 @@ def save_to_zarr(  # noqa: C901
     Parameters
     ----------
     ds : xr.Dataset
-        Dataset to be saved.
+        The Dataset to be saved.
     filename : str
         Name of the Zarr file to be saved.
     rechunk : dict, optional
@@ -472,7 +470,7 @@ def save_to_zarr(  # noqa: C901
         dimension names.
         Rechunking is only done on *data* variables sharing dimensions with this argument.
     zarr_kwargs : dict, optional
-        Additional arguments to send to_zarr()
+        Additional arguments to send `to_zarr()`.
     compute : bool
         Whether to start the computation or return a delayed object.
     mode : {'f', 'o', 'a'}
@@ -677,7 +675,8 @@ def to_table(
     sheet: str | Sequence[str] | None = None,
     coords: bool | str | Sequence[str] = True,
 ) -> pd.DataFrame | dict:
-    """Convert a dataset to a pandas DataFrame with support for multicolumns and multisheet.
+    """
+    Convert a dataset to a pandas DataFrame with support for multicolumns and multisheet.
 
     This function will trigger a computation of the dataset.
 
@@ -932,8 +931,6 @@ def save_to_table(  # noqa: C901
 
     # Get engine_kwargs
     if output_format == "excel":
-        if not openpyxl_installed:
-            raise NotImplementedError("Excel output requires openpyxl to be installed.")
         engine_kwargs = {}  # Extract engine kwargs
         for arg in signature(pd.ExcelWriter).parameters:
             if arg in kwargs:
@@ -970,8 +967,8 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
     ds : xr.Dataset
         The xr.Dataset to be rechunked.
     rechunk : dict
-        A dictionary with the dimension names of ds and the new chunk size. Spatial dimensions
-        can be provided as X/Y.
+        A dictionary with the dimension names of ds and the new chunk size.
+        Spatial dimensions can be provided as X/Y.
 
     Returns
     -------
@@ -1130,8 +1127,8 @@ def unzip_directory(zipfile: str | os.PathLike, root: str | os.PathLike):
         The zip file to read.
     root : path
         The directory where to put the content to archive.
-        If doesn't exist, it will be created (and all its parents).
-        If it exists, should be empty.
+        If it doesn't exist, it will be created (and all its parents).
+        If it does exist, it should be empty.
     """
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
