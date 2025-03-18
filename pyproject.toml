@@ -58,6 +58,8 @@ dependencies = [
   "pyyaml",
   "rechunker",
   "scipy >=1.10",
+  "setuptools >=65.0", # FIXME: Remove when intake-esm is newer than 2025.2.3
+  "setuptools_scm >=6.2", # FIXME: Remove when intake-esm is newer than 2025.2.3
   "shapely >=2.0",
   "sparse",
   "toolz",
