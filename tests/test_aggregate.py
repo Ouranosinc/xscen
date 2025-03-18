@@ -599,7 +599,62 @@ class TestSpatialMean:
             as_dataset=True,
         )
         poly = gpd.GeoDataFrame(
-            geometry=[Polygon([(60, 50), (30, 50), (30, 60), (60, 60)])]
+            geometry=[
+                Polygon(
+                    [
+                        (60.12345, 50.67891),
+                        (55.23456, 55.78901),
+                        (50.34567, 50.89012),
+                        (45.45678, 55.90123),
+                        (40.56789, 50.01234),
+                        (45.67890, 45.12345),
+                        (40.78901, 40.23456),
+                        (50.89012, 45.34567),
+                        (60.90123, 40.45678),
+                        (55.01234, 45.56789),
+                        (60.12345, 50.67891),
+                        (55.23456, 55.78901),
+                        (50.34567, 50.89012),
+                        (45.45678, 55.90123),
+                        (40.56789, 50.01234),
+                        (45.67890, 45.12345),
+                        (40.78901, 40.23456),
+                        (50.89012, 45.34567),
+                        (60.90123, 40.45678),
+                        (55.01234, 45.56789),
+                        (60.12345, 50.67891),
+                        (55.23456, 55.78901),
+                        (50.34567, 50.89012),
+                        (45.45678, 55.90123),
+                        (40.56789, 50.01234),
+                        (45.67890, 45.12345),
+                        (40.78901, 40.23456),
+                        (50.89012, 45.34567),
+                        (60.90123, 40.45678),
+                        (55.01234, 45.56789),
+                        (60.12345, 50.67891),
+                        (55.23456, 55.78901),
+                        (50.34567, 50.89012),
+                        (45.45678, 55.90123),
+                        (40.56789, 50.01234),
+                        (45.67890, 45.12345),
+                        (40.78901, 40.23456),
+                        (50.89012, 45.34567),
+                        (60.90123, 40.45678),
+                        (55.01234, 45.56789),
+                        (60.12345, 50.67891),
+                        (55.23456, 55.78901),
+                        (50.34567, 50.89012),
+                        (45.45678, 55.90123),
+                        (40.56789, 50.01234),
+                        (45.67890, 45.12345),
+                        (40.78901, 40.23456),
+                        (50.89012, 45.34567),
+                        (60.90123, 40.45678),
+                        (55.01234, 45.56789),
+                    ]
+                )
+            ]
         )
         region = {"method": "shape", "shape": poly}
 
@@ -612,20 +667,20 @@ class TestSpatialMean:
             to_domain="for_testing2",
         )
         if simplify_tolerance is None:
-            np.testing.assert_allclose(avg.tas, 3.302546, rtol=1e-6)
+            np.testing.assert_allclose(avg.tas, 3.98836844, rtol=1e-6)
             assert avg.attrs["regrid_method"] == "conservative"
             assert "rotated_pole" not in avg
             assert "grid_mapping" not in avg.tas.attrs
             assert all(c in avg.coords for c in ["lon_bounds", "lat_bounds"])
-            np.testing.assert_array_equal(avg["lon"], np.mean([60, 30]))
-            np.testing.assert_array_equal(avg["lat"], np.mean([50, 60]))
+            np.testing.assert_array_almost_equal(avg["lon"], 50.277302)
+            np.testing.assert_array_almost_equal(avg["lat"], 48.95076028)
             assert avg.attrs["cat:processing_level"] == "for_testing"
             assert avg.attrs["cat:domain"] == "for_testing2"
         else:
             # Essentially just test that it changes the results
-            np.testing.assert_allclose(avg.tas, 2.967405, rtol=1e-6)
-            np.testing.assert_array_almost_equal(avg["lon"], 40)
-            np.testing.assert_array_almost_equal(avg["lat"], 56.66666667)
+            np.testing.assert_allclose(avg.tas, 3.9941415, rtol=1e-6)
+            np.testing.assert_array_almost_equal(avg["lon"], 50.77920197)
+            np.testing.assert_array_almost_equal(avg["lat"], 50.36276034)
 
     def test_errors(self):
         if xe is None:
