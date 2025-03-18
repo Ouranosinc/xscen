@@ -9,6 +9,7 @@ import re
 import warnings
 from collections import defaultdict
 from collections.abc import Sequence
+from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime
 from itertools import chain
@@ -20,6 +21,7 @@ import flox.xarray
 import numpy as np
 import pandas as pd
 import xarray as xr
+import xsdba
 from xarray.coding import cftime_offsets as cfoff
 from xclim.core import units
 from xclim.core.calendar import parse_offset
@@ -49,6 +51,7 @@ __all__ = [
     "unstack_dates",
     "unstack_fill_nan",
     "update_attr",
+    "xclim_convert_units_to",
     "xrfreq_to_timedelta",
 ]
 
@@ -645,7 +648,7 @@ def strip_cat_attrs(ds: xr.Dataset, prefix: str = "cat:"):
 @parse_config
 def maybe_unstack(
     ds: xr.Dataset,
-    dim: str | None = None,
+    dim: str | None = "loc",
     coords: str | None = None,
     rechunk: dict | None = None,
     stack_drop_nans: bool = False,
@@ -839,6 +842,29 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
                 ds = ds.assign({v: ds[v].assign_attrs(units=variables_and_units[v])})
 
     return ds
+
+
+def _convert_units_to_infer(source, target):
+    return units.convert_units_to(source, target, context="infer")
+
+
+@contextmanager
+def xclim_convert_units_to():
+    """Patch xsdba with xclim's units converter.
+
+    Yields
+    ------
+    None
+        In this context, ``xsdba.units.convert_units_to`` is replaced with
+        ``xclim.core.units.convert_units_to`` with `context="infer"` activated.
+    """
+    original_function = xsdba.units.convert_units_to
+    new_function = _convert_units_to_infer
+    try:
+        xsdba.units.convert_units_to = new_function
+        yield
+    finally:
+        xsdba.units.convert_units_to = original_function
 
 
 def clean_up(  # noqa: C901
