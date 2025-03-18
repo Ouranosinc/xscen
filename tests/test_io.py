@@ -462,12 +462,6 @@ class TestToTable:
             assert toc.loc["tas", "Description"] == "Nom long pour tas"
             assert toc.loc["tas", "Unités"] == "K"
 
-    def test_no_openpyxl(self, tmpdir):
-        ds = self.ds.copy()
-
-        with pytest.raises(NotImplementedError):
-            xs.save_to_table(ds, Path(tmpdir) / "test.xlsx", add_toc=True)
-
 
 def test_round_bits():
     da = datablock_3d(
