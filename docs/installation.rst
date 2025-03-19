@@ -39,6 +39,8 @@ If for some reason you wish to install the `PyPI` version of `xscen` into an exi
 
     python -m pip install xscen
 
+This will install the latest stable release from `PyPI`, but will not include `xESMF` and other packages that are not available on `PyPI`. Measures have been taken to ensure that `xscen` will not break if `xESMF` fails to import, but some functionalities will be disabled.
+
 Development Installation (Anaconda + pip)
 -----------------------------------------
 
