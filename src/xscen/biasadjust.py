@@ -352,8 +352,7 @@ def adjust(
     if isinstance(var, str):
         dscen = xr.Dataset(data_vars={var: dscen}, attrs=dsim.attrs)
     else:
-        # TODO: Is that a good way to manage attrs?
-        dscen = xsdba.unstack_variables(dscen).assign_attrs(attrs=dscen.attrs)
+        dscen = xsdba.unstack_variables(dscen)
     dscen.attrs["cat:processing_level"] = to_level
     dscen.attrs["cat:variable"] = parse_from_ds(dscen, ["variable"])["variable"]
     if bias_adjust_institution is not None:
