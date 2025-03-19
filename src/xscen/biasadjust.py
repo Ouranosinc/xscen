@@ -135,7 +135,7 @@ def train(
     else:
         if method not in ["MBCn"]:
             raise ValueError(
-                f"Multiple variables were given: {var}, but this only works with a multivariate method,"
+                f"Multiple variables were given: {var}, but this treatment only works with a multivariate method,"
                 f"got {method}."
             )
         ref = xsdba.stack_variables(dref[var])
