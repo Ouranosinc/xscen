@@ -53,6 +53,7 @@ dependencies = [
   "openpyxl",
   "pandas >=2.2",
   "parse",
+  "pyarrow >=15.0.0",
   "pyproj",
   "pyyaml",
   "rechunker",
