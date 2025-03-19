@@ -143,8 +143,6 @@ def train(
 
     group = group if group is not None else {"group": "time.dayofyear", "window": 31}
     xsdba_train_args = xsdba_train_args or {}
-
-    # xsdba could eventually have a more traditional approach to avoid this
     if method == "DetrendedQuantileMapping":
         xsdba_train_args.setdefault("nquantiles", 15)
 
