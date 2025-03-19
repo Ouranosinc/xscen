@@ -6,7 +6,6 @@ import pytest
 import xarray as xr
 import xclim as xc
 import xsdba
-from xclim.testing import open_dataset
 from xclim.testing.helpers import test_timeseries as timeseries
 
 from xscen.utils import xclim_convert_units_to
