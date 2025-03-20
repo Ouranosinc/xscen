@@ -258,6 +258,11 @@ def adjust(
     xr.Dataset
       dscen, the bias-adjusted timeseries.
 
+    Notes
+    -----
+    If `dref` is given as input,  `dref` and `dsim` must have the same (non-zero) number
+    of time steps over training period given as input in ``xscen.train``.
+
     See Also
     --------
     xsdba.adjustment.DetrendedQuantileMapping, xsdba.adjustment.ExtremeValues
@@ -296,6 +301,11 @@ def adjust(
         ref = xsdba.stack_variables(dref[var])
         ref = ref.sel(time=slice(*train_period))
         hist = sim.sel(time=slice(*train_period))
+        if (hist.time.size != ref.time.size) or (ref.time.size == 0):
+            raise ValueError(
+                " If `dref` was given as input, `dref` and `dsim` must have the same (non-zero) number of time steps "
+                "over the training period `period` defined in the ``xscen.train``, but this is not the case."
+            )
         xsdba_adjust_args["ref"] = ref
         xsdba_adjust_args["hist"] = hist
 
