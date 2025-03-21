@@ -235,6 +235,7 @@ class TestRechunkForSaving:
 
 
 class TestToTable:
+
     ds = xs.utils.unstack_dates(
         xr.merge(
             [
