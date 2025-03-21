@@ -1706,7 +1706,12 @@ def _restrict_multimembers(
 
     for i in pd.unique(df["id_nomem"]):
         df_sim = df[df["id_nomem"] == i]
-        fullmembers = df_sim.member.fillna("") + df_sim.driving_member.fillna("")
+        # We create a compound member for sorting
+        # We can't use fillna("") as the columns might be categorical.
+        # This order (member + driving_member) makes it so that the driving member priority over the rcm member.
+        fullmembers = df_sim.member.astype(str).replace(
+            "nan", "r1"
+        ) + df_sim.driving_member.astype(str).replace("nan", "r1")
         members = pd.unique(fullmembers)
 
         if len(members) > 1:
