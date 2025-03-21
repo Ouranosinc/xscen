@@ -548,7 +548,7 @@ def parse_directory(  # noqa: C901
     Notes
     -----
     - Official columns names are controlled and ordered by :py:data:`COLUMNS`:
-        ["id", "type", "processing_level", "mip_era", "activity", "driving_institution", "driving_model", "institution",
+        ["id", "type", "processing_level", "mip_era", "activity", "driving_model", "driving_member", "institution",
          "source", "bias_adjust_institution", "bias_adjust_project","experiment", "member",
          "xrfreq", "frequency", "variable", "domain", "date_start", "date_end", "version"]
     - Not all column names have to be present, but "xrfreq" (obtainable through "frequency"), "variable",
