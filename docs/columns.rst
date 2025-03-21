@@ -25,22 +25,25 @@ the four columns will be combined in a single Dataset when any of the first thre
 - ``mip_era``: CMIP generation associated with the data.
     - E.g. "CMIP6", "CMIP5"
 
-- ``activity``: Model Intercomparison Project (MIP) associated with the data. This is the same as `activity_id` in CMIP6 data. CMIP is the activity for the historical experiment and the DECK experiments.
+- ``activity``: Model Intercomparison Project (MIP) associated with the data. This is the same as ``activity_id`` in CMIP6 data. CMIP is the activity for the historical experiment and the DECK experiments.
     - E.g. "CMIP", "CORDEX", "HighResMIP"
 
-- ``driving_model``: Name of the driver. Following the `driving_model` convention from ES-DOC, this is in the format "institution-model".
-    - E.g. "CCCma-CanESM2"
+- ``driving_model``: For RCM data, name of the driver. For CMIP6, this is only includes the model name. In CMIP5, following the ``driving_model`` convention from ES-DOC, this was in the format "institution-model".
+    - E.g. "CanESM5"
+
+- ``driving_member``:  For RCM data, member (realisation) of the driver. In CMIP6 this looks like "rAiBpCfD". New for CMIP6, in CMIP5 the ``driving_member`` was given in ``member``.
+    - E.g. "r1i1p1f1"
 
 - ``institution``: Institution associated with the source.
     - E.g. "CCCma", "Ouranos", "ECMWF"
 
-- ``source``: For simulation type, this is the model. For GCMs, this is the name of the model (`source_id` in CMIP6 and `rcm_name` in ES-DOC for CORDEX). For reconstruction type, this is the name of the dataset.
+- ``source``: For simulation types, this is the model. For GCMs, this is the name of the model (`source_id` in CMIP6 and `rcm_name` in ES-DOC for CORDEX-CMIP5). For reconstruction types, this is the name of the dataset.
     - E.g. "CanESM5", "CRCM5", "ERA5", "ERA5-Land, ERA5-Preliminary"
 
 - ``experiment``: Name of the experiment of the model.
     - E.g. "historical", "ssp245", "rcp85"
 
-- ``member``: Name of the realisation. For RCMs, this is the member associated with the driver.
+- ``member``: Name of the realisation. For CMIP6 RCMs, this is the RCM member "rX", the realization part of the ``version_realization`` CORDEX-CMIP6 spec. In CMIP5, this is the member associated with the driver (i.e. ``driving_member``).
     - E.g. "r1i1p1f1"
 
 - ``xrfreq``: Pandas/xarray frequency.
@@ -61,8 +64,8 @@ the four columns will be combined in a single Dataset when any of the first thre
 - ``date_end``: Last date of the dataset. This usually is a Datetime object with a ms resolution.
     - E.g. "2022-06-03 00:00:00"
 
-- ``version``: Version of the dataset.
-    - E.g. "1.0"
+- ``version``: Version of the dataset. For RCMs, this is the version of the ``version_realization`` CORDEX-CMIP6 spec.
+    - E.g. "1.0" "v1"
 
 - ``format``: Format of the dataset.
     - E.g. "zarr", "nc"

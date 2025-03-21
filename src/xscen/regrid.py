@@ -91,11 +91,12 @@ def regrid_dataset(  # noqa: C901
     has_lon_bounds = "lon_bounds" in ds
     has_lat_bounds = "lat_bounds" in ds
 
-    # Generate unique IDs to name the weights file, but remove the member and experiment from the dataset ID
+    # Generate unique IDs to name the weights file, but remove the members and experiment from the dataset ID
     if weights_location is not None:
         dsid = (
             ds.attrs.get("cat:id", _generate_random_string(15))
             .replace(ds.attrs.get("cat:member", ""), "")
+            .replace(ds.attrs.get("cat:driving_member", ""), "")
             .replace(ds.attrs.get("cat:experiment", ""), "")
         )
         dsid = f"{dsid}_{ds.attrs.get('cat:domain', _generate_random_string(15))}"
