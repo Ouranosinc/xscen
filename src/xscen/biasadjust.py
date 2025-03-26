@@ -133,6 +133,7 @@ def train(
         ref = dref[var[0]]
         hist = dhist[var[0]]
     else:
+        # Eventually, we can change ["MBCn"] and add more supported multivariate methods
         if method not in ["MBCn"]:
             raise ValueError(
                 f"Multiple variables were given: {var}, but this treatment only works with a multivariate method,"
@@ -294,11 +295,24 @@ def adjust(
     else:
         sim = xsdba.stack_variables(dsim[var])
 
-    # Used in MBCn adjusting
-    # I'm just assuming that if `ref` is needed, so is `hist`
+    # get right calendar
+    simcal = sim.time.dt.calendar
+    mincal = minimum_calendar(simcal, dtrain.attrs["train_params"]["maximal_calendar"])
+    if simcal != mincal:
+        sim = sim.convert_calendar(mincal, align_on=align_on)
+    # get right calendar for `dref` too, if defined
     if dref is not None:
-        train_period = dtrain.attrs["train_params"]["period"]
         ref = xsdba.stack_variables(dref[var])
+        refcal = dref.time.dt.calendar
+        mincal = minimum_calendar(
+            refcal, dtrain.attrs["train_params"]["maximal_calendar"]
+        )
+        if refcal != mincal:
+            ref = ref.convert_calendar(mincal, align_on=align_on)
+
+    if dref is not None:
+        # Used in MBCn adjusting (maybe other multivariate methods in the future)
+        train_period = dtrain.attrs["train_params"]["period"]
         ref = ref.sel(time=slice(*train_period))
         hist = sim.sel(time=slice(*train_period))
         if (hist.time.size != ref.time.size) or (ref.time.size == 0):
@@ -308,12 +322,6 @@ def adjust(
             )
         xsdba_adjust_args["ref"] = ref
         xsdba_adjust_args["hist"] = hist
-
-    # get right calendar
-    simcal = sim.time.dt.calendar
-    mincal = minimum_calendar(simcal, dtrain.attrs["train_params"]["maximal_calendar"])
-    if simcal != mincal:
-        sim = sim.convert_calendar(mincal, align_on=align_on)
 
     # adjust
     ADJ = xsdba.adjustment.TrainAdjust.from_dataset(dtrain)
