@@ -310,7 +310,6 @@ def adjust(
         if refcal != mincal:
             ref = ref.convert_calendar(mincal, align_on=align_on)
 
-    if dref is not None:
         # Used in MBCn adjusting (maybe other multivariate methods in the future)
         train_period = dtrain.attrs["train_params"]["period"]
         ref = ref.sel(time=slice(*train_period))
