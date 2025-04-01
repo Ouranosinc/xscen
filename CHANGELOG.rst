@@ -14,7 +14,7 @@ Bug fixes
 ^^^^^^^^^
 * Fixed the default for ``xs.utils.maybe_unstack``. (:pull:`553`).
 * Patch ``xsdba.units.convert_units_to`` with ``xclim.core.units.convert_units_to`` with `context="infer"` locally in ``xs.train`` and ``xs.adjust`` instead of using ``xc.core.settings.context``.
-* Allow undetectable frequencies in ``xs.extract.resample``.
+* Allow undetectable frequencies in ``xs.extract.resample``. (:pull:`567`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
