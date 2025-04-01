@@ -14,6 +14,7 @@ Bug fixes
 ^^^^^^^^^
 * Fixed the default for ``xs.utils.maybe_unstack``. (:pull:`553`).
 * Patch ``xsdba.units.convert_units_to`` with ``xclim.core.units.convert_units_to`` with `context="infer"` locally in ``xs.train`` and ``xs.adjust`` instead of using ``xc.core.settings.context``.
+* Fixed a bug in ``xs.utils.clean_up`` where attributes would be dropped when using the `missing_by_vars` argument. (:pull:`569`, :issue:`568`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
