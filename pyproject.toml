@@ -39,7 +39,7 @@ dependencies = [
   "cftime",
   "cf_xarray >=0.7.6",
   "clisops >=0.15",
-  "dask >=2024.8.1,<2024.12.0", # FIXME: Remove upper pin when https://github.com/pangeo-data/rechunker/pull/156 is merged
+  "dask >=2024.8.1,<2025.4.0", # FIXME: Remove upper pin when https://github.com/pangeo-data/rechunker/pull/156 is merged
   "flox !=0.9.14", # FIXME: 0.9.14 is a broken version. This pin could be removed eventually.
   "fsspec",
   "geopandas",
