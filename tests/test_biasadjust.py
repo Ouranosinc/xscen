@@ -63,9 +63,11 @@ class TestTrain:
             dhist360,
             var="tas",
             period=["2001", "2002"],
-            adapt_freq={"thresh": "2 K"},
-            jitter_over={"upper_bnd": "3 K", "thresh": "2 K"},
-            jitter_under={"thresh": "2 K"},
+            xsdba_train_args=dict(
+                adapt_freq={"thresh": "2 K"},
+                jitter_over={"upper_bnd": "3 K", "thresh": "2 K"},
+                jitter_under={"thresh": "2 K"},
+            ),
         )
 
         assert out.attrs["train_params"] == {

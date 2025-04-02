@@ -65,9 +65,6 @@ def train(
     xsdba_train_args: dict | None = None,
     xclim_train_args: dict | None = None,
     maximal_calendar: str = "noleap",
-    adapt_freq: dict | None = None,
-    jitter_under: dict | None = None,
-    jitter_over: dict | None = None,
     align_on: str | None = "year",
 ) -> xr.Dataset:
     """
@@ -96,12 +93,6 @@ def train(
     maximal_calendar: str
       Maximal calendar dhist can be. The hierarchy: 360_day < noleap < standard < all_leap.
       If dhist's calendar is higher than maximal calendar, it will be converted to the maximal calendar.
-    adapt_freq: dict, optional
-      If given, a dictionary of args to pass to the frequency adaptation function.
-    jitter_under: dict, optional
-      If given, a dictionary of args to pass to `jitter_under_thresh`.
-    jitter_over: dict, optional
-      If given, a dictionary of args to pass to `jitter_over_thresh`.
     align_on: str, optional
       `align_on` argument for the function `xr.DataArray.convert_calendar`.
 
@@ -173,33 +164,13 @@ def train(
         xsdba_train_args["base_kws"]["group"] = group
 
     with xclim_convert_units_to():
-        if jitter_over is not None:
-            ref = xsdba.processing.jitter_over_thresh(ref, **jitter_over)
-            hist = xsdba.processing.jitter_over_thresh(hist, **jitter_over)
-
-        if jitter_under is not None:
-            ref = xsdba.processing.jitter_under_thresh(ref, **jitter_under)
-            hist = xsdba.processing.jitter_under_thresh(hist, **jitter_under)
-
-        if adapt_freq is not None:
-            adapt_freq.setdefault("group", group)
-            hist, pth, dP0 = xsdba.processing.adapt_freq(ref, hist, **adapt_freq)
-            adapt_freq.pop("group")
-
         ADJ = getattr(xsdba.adjustment, method).train(ref, hist, **xsdba_train_args)
-
-    if adapt_freq is not None:
-        ds = ADJ.ds.assign(pth=pth, dP0=dP0)
-    else:
-        ds = ADJ.ds
+    ds = ADJ.ds
 
     # Arguments that need to be transferred to the adjust() function
     ds.attrs["train_params"] = {
         "var": var,
         "maximal_calendar": maximal_calendar,
-        "adapt_freq": adapt_freq,
-        "jitter_under": jitter_under,
-        "jitter_over": jitter_over,
         "period": period,
     }
 
@@ -356,7 +327,8 @@ def adjust(
             # put all the adjusted period back together
             dscen = xr.concat(slices, dim="time")
 
-    dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
+    # TODO: check if this is in xsdba
+    # dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
     if isinstance(var, str):
         dscen = xr.Dataset(data_vars={var: dscen}, attrs=dsim.attrs)
     else:
