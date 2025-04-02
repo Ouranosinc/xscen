@@ -997,10 +997,8 @@ def clean_up(  # noqa: C901
                         "time", method="linear"
                     )
                 else:
-                    var_attrs = ds[var].attrs
-                    converted_var = xr.where(ds[var] == -9999, missing, ds[var])
-                    converted_var.attrs = var_attrs
-                ds[var] = converted_var
+                    converted_var = ds[var].where(ds[var] != -9999, other=missing)
+                ds = ds.assign({var: converted_var})
 
     # unstack nans
     if maybe_unstack_dict:

@@ -16,10 +16,12 @@ Bug fixes
 ^^^^^^^^^
 * Fixed the default for ``xs.utils.maybe_unstack``. (:pull:`553`).
 * Patch ``xsdba.units.convert_units_to`` with ``xclim.core.units.convert_units_to`` with `context="infer"` locally in ``xs.train`` and ``xs.adjust`` instead of using ``xc.core.settings.context``.
+* Fixed a bug in ``xs.utils.clean_up`` where attributes would be dropped when using the `missing_by_vars` argument. (:pull:`569`, :issue:`568`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Added the ability to test `xESMF`-related functions with `tox / pip`. (:pull:`554`).
+* Updated the pins for `xclim`, `xarray`, `dask`, and `rechunker`. (:pull:`570`).
 
 v0.12.0 (2025-03-10)
 --------------------
