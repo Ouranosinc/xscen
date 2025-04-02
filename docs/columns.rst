@@ -25,11 +25,11 @@ the four columns will be combined in a single Dataset when any of the first thre
 - ``mip_era``: CMIP generation associated with the data.
     - E.g. "CMIP6", "CMIP5"
 
-- ``activity``: Model Intercomparison Project (MIP) associated with the data. This is the same as ``activity_id`` in CMIP6 data. CMIP is the activity for the historical experiment and the DECK experiments.
+- ``activity``: Model Intercomparison Project (MIP) associated with the data. This is the same as ``activity_id`` in CMIP6 data. CMIP is the activity for the historical experiment and the DECK experiments. It can also be "MRCC5" for simulations that are not part of CORDEX.
     - E.g. "CMIP", "CORDEX", "HighResMIP"
 
 - ``driving_model``: For RCM data, name of the driver. For CMIP6, this is only includes the model name. In CMIP5, following the ``driving_model`` convention from ES-DOC, this was in the format "institution-model".
-    - E.g. "CanESM5"
+    - E.g. "CanESM5", "CCCma-CanESM2"
 
 - ``driving_member``:  For RCM data, member (realisation) of the driver. In CMIP6 this looks like "rAiBpCfD". New for CMIP6, in CMIP5 the ``driving_member`` was given in ``member``.
     - E.g. "r1i1p1f1"
