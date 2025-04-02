@@ -27,7 +27,7 @@ dependencies:
   - parse
   - pyyaml
   - rechunker >=0.5.3
-  - scipy >=1.10
+  - scipy >=1.11.0
   - shapely >=2.0
   - sparse
   - toolz
