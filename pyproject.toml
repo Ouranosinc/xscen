@@ -39,7 +39,7 @@ dependencies = [
   "cftime",
   "cf_xarray >=0.7.6",
   "clisops >=0.15",
-  "dask >=2024.8.1,",
+  "dask >=2024.8.1",
   "flox",
   "fsspec",
   "geopandas",
