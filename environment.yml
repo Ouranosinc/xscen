@@ -11,8 +11,8 @@ dependencies:
   - cftime
   - cf_xarray >=0.7.6
   - clisops >=0.15
-  - dask >=2024.8.1,<2024.12  # FIXME: Remove upper pin when https://github.com/pangeo-data/rechunker/pull/156 is merged
-  - flox !=0.9.14  # FIXME: 0.9.14 is a broken version. This pin could be removed eventually.
+  - dask >=2024.8.1
+  - flox
   - fsspec
   - geopandas
   - h5netcdf
@@ -26,12 +26,12 @@ dependencies:
   - pandas >=2.2
   - parse
   - pyyaml
-  - rechunker
+  - rechunker >=0.5.3
   - scipy >=1.10
   - shapely >=2.0
   - sparse
   - toolz
-  - xarray >=2023.11.0, !=2024.6.0
+  - xarray >=2023.11.0, !=2024.6.0, <=2025.3.0,  # FIXME: Remove the highest version when rechunker is updated.
   - xclim >=0.56, <0.57
   - xesmf >=0.7, !=0.8.8
   - zarr >=2.13, <3
