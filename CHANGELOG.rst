@@ -19,6 +19,7 @@ Bug fixes
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Added the ability to test `xESMF`-related functions with `tox / pip`. (:pull:`554`).
+* Updated the pins for `xclim`, `xarray`, `dask`, and `rechunker`. (:pull:`570`).
 
 v0.12.0 (2025-03-10)
 --------------------

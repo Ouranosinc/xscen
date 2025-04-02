@@ -12,13 +12,11 @@ import numpy as np
 import xarray as xr
 import xclim as xc
 import xclim.core.dataflags
+from xclim.core import ValidationError
+from xclim.core.formatting import (  # noqa: F401
+    _merge_attrs_drop_conflicts as merge_attrs,
+)
 from xclim.core.indicator import Indicator
-
-# FIXME: Remove this when updating minimum xclim version to 0.53
-try:  # Changed in xclim 0.53
-    from xclim.core import ValidationError
-except ImportError:
-    from xclim.core.utils import ValidationError
 
 from .config import parse_config
 from .indicators import load_xclim_module
@@ -522,9 +520,7 @@ def measures_heatmap(
     )
     ds_hmap = ds_hmap.to_dataset(name="heatmap")
 
-    ds_hmap.attrs = xr.core.merge.merge_attrs(
-        [ds.attrs for ds in meas_datasets], combine_attrs="drop_conflicts"
-    )
+    ds_hmap.attrs = merge_attrs(*[ds for ds in meas_datasets])
     ds_hmap = clean_up(
         ds=ds_hmap,
         common_attrs_only=meas_datasets,
