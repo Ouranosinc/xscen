@@ -42,7 +42,7 @@ dependencies = [
   "dask >=2024.8.1",
   "flox",
   "fsspec",
-  "geopandas",
+  "geopandas >=1.0",
   "h5netcdf",
   "h5py", # <3.11", # writing and reading with engine h5netcdf was broken
   "intake-esm >=2023.07.07",
@@ -57,7 +57,7 @@ dependencies = [
   "pyarrow >=10.0.1",
   "pyyaml",
   "rechunker >=0.5.3",
-  "scipy >=1.10",
+  "scipy >=1.11.0",
   "shapely >=2.0",
   "sparse",
   "toolz",

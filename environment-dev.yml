@@ -14,7 +14,7 @@ dependencies:
   - dask >=2024.8.1
   - flox
   - fsspec
-  - geopandas
+  - geopandas >=1.0
   - h5netcdf
   - h5py
   - intake-esm >=2023.07.07

@@ -14,7 +14,7 @@ dependencies:
   - dask >=2024.8.1
   - flox
   - fsspec
-  - geopandas
+  - geopandas >=1.0
   - h5netcdf
   - h5py
   - intake-esm >=2023.07.07
@@ -27,7 +27,7 @@ dependencies:
   - parse
   - pyyaml
   - rechunker >=0.5.3
-  - scipy >=1.10
+  - scipy >=1.11.0
   - shapely >=2.0
   - sparse
   - toolz
