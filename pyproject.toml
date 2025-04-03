@@ -58,8 +58,6 @@ dependencies = [
   "pyyaml",
   "rechunker >=0.5.3",
   "scipy >=1.11.0",
-  "setuptools >=65.0", # FIXME: Remove when intake-esm is newer than 2025.2.3
-  "setuptools_scm >=6.2", # FIXME: Remove when intake-esm is newer than 2025.2.3
   "shapely >=2.0",
   "sparse",
   "toolz",
@@ -195,7 +193,7 @@ pep621_dev_dependency_groups = ["all", "dev", "docs"]
 "netcdf4" = "netCDF4"
 
 [tool.deptry.per_rule_ignores]
-DEP002 = ["h5netcdf", "nc-time-axis", "openpyxl", "pyarrow", "setuptools", "setuptools_scm"]
+DEP002 = ["h5netcdf", "nc-time-axis", "openpyxl", "pyarrow"]
 DEP004 = ["xscen"]
 
 [tool.flit.sdist]
