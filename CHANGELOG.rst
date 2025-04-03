@@ -22,6 +22,9 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * Added the ability to test `xESMF`-related functions with `tox / pip`. (:pull:`554`).
 * Updated the pins for `xclim`, `xarray`, `dask`, and `rechunker`. (:pull:`570`).
+* More accurate listing of dependencies for the project in `pyproject.toml` and `environment*.yml`. (:pull:`557`).
+* `sphinx` dependencies are more streamlined in the `docs` environment. (:pull:`557`).
+* Added `codespell`, `deptry`, `vulture`, and `yamllint` to the linting checks. (:pull:`557`).
 
 v0.12.0 (2025-03-10)
 --------------------
