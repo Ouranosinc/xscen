@@ -53,7 +53,7 @@ dependencies:
   - flit >=3.10.1,<4.0
   - ipykernel
   - ipython >=8.5.0
-  - isort >=6.0.0
+  - isort >=6.0.1
   - jupyter_client
   - mypy >=1.14.1
   - nbsphinx >=0.9.5
