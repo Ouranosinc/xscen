@@ -6,11 +6,16 @@ v0.13.0 (Unreleased)
 --------------------
 Contributors to this version:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Éric Dupuis (:user:`coxipi`), Pascal Bourgault (:user:`aulemahal`).
 
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* `xscen` officially supports Python 3.13. (:pull:`551`).
+
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * Make `strip_cat_metadata` False by default in ``xs.save_to_zarr`` and ``xs.save_to_netcdf``. (:pull:`556`, :issue:`555`).
 * New official column ``driving_member``. For RCMs, this should store the driver's realisation number, while the ``member`` column should now store the RCM simulation's realisation number, noted as "rX". This ``member`` should approximately map to the "realization" part of CORDEX-CMIP6's "version_realization" facet (the version part mapping to the already existing ``version`` column). The member restricting feature of ``search_data_catalogs`` has been adapted, but continues to work with catalogs missing the ``driving_member`` column (:pull:`559`).
 * Also adapted from the CORDEX-CMIP6 specifications, the ``driving_model`` column does not need to indicate the driver's institution name anymore (:pull:`559`).
+* For Python 3.13 support, `xscen` now requires `clisops>=0.16.0`. (:pull:`551`).
 
 Bug fixes
 ^^^^^^^^^
@@ -30,21 +35,18 @@ v0.12.0 (2025-03-10)
 --------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`), Éric Dupuis (:user:`coxipi`).
 
+Breaking changes
+^^^^^^^^^^^^^^^^
+* `xscen` now uses `flit` as its build-engine and no longer uses `setuptools`, `setuptools-scm`, or `wheel`. (:pull:`519`).
+* Update to support Python3.13 and `xclim` v0.55.0 (:pull:`532`).
+* `xscen` now requires the `xsdba` package for bias adjustment functionality (replacement for `xclim.sdba`). (:pull:`530`).
+
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Include station-obs and forecasts in the derived schema for `build_path`. (:pull:`534`).
 * Project catalog now allows `check_valid` and `drop_duplicates` keyword arguments. (:pull:`536`, :issue:`535`).
 * Add annual global tas timeseries for CMIP6's models CanESM5 r1i1p2f1 (ssp126, ssp245, ssp370, ssp585), MPI-ESM1-2-LR ssp370 (r2i1p1f1, r3i1p1f1, r4i1p1f1, r5i1p1f1) (:pull:`544`).
 * Allow ``pd.Timestamp`` and more precise datetime strings for ``xs.search_data_catalogs`` and ``dc.search``. (:pull:`547`, :issue:`546`).
-* `xscen` officially supports Python 3.13. (:pull:`551`).
-
-Breaking changes
-^^^^^^^^^^^^^^^^
-* `xscen` now uses `flit` as its build-engine and no longer uses `setuptools`, `setuptools-scm`, or `wheel`. (:pull:`519`).
-    * Due to a packaging issue with `intake-esm<=2025.2.3`, `setuptools` and `setuptools-scm` have been temporarily marked as dependencies. (:pull:`551`).
-* Update to support Python 3.13 and `xclim` v0.55.0 (:pull:`532`).
-* `xscen` now requires the `xsdba` package (v0.4.0+) for bias adjustment functionality (replacement for `xclim.sdba`). (:pull:`530`, :pull:`551`).
-* For Python 3.13 support, `xscen` now requires `clisops>=0.16.0`. (:pull:`551`).
 
 Bug fixes
 ^^^^^^^^^
