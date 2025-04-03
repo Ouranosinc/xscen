@@ -37,9 +37,7 @@ dependencies:
   - xclim >=0.56, <0.57
   - xesmf >=0.7, !=0.8.8
   - zarr >=2.13, <3.0
-#  - xsdba >=0.3.0  # FIXME: uncomment when xsdba v4.0 is released
-  - pip:
-      - xsdba @ git+https://github.com/Ouranosinc/xsdba.git@main
+  - xsdba >=0.4.0
   # Opt
   - nc-time-axis >=1.3.1
   - pyarrow >=10.0.1
