@@ -574,18 +574,41 @@ class TestCalendar:
         assert len(out.time.sel(time="2000-02-30")) == 1
 
     def test_missing_by_var(self):
-        ds = timeseries(
-            np.arange(1, 365 * 4 + 2),
+        ds = datablock_3d(
+            np.array(
+                [
+                    [np.arange(1, 365 * 4 + 2), np.arange(1, 365 * 4 + 2)],
+                    [np.arange(1, 365 * 4 + 2), np.arange(1, 365 * 4 + 2)],
+                ]
+            ).T,
             variable="tas",
             start="2000-01-01",
             freq="D",
             as_dataset=True,
+            x_start=0,
+            x_step=1,
+            x="rlon",
+            y_start=0,
+            y_step=1,
+            y="rlat",
         )
-        ds["pr"] = timeseries(
-            np.arange(1, 365 * 4 + 2),
+        ds["pr"] = datablock_3d(
+            np.array(
+                [
+                    [np.arange(1, 365 * 4 + 2), np.arange(1, 365 * 4 + 2)],
+                    [np.arange(1, 365 * 4 + 2), np.arange(1, 365 * 4 + 2)],
+                ]
+            ).T,
             variable="pr",
             start="2000-01-01",
             freq="D",
+            as_dataset=False,
+            x_start=0,
+            x_step=1,
+            x="rlon",
+            y_start=0,
+            y_step=1,
+            y="rlat",
         )
         ds = xs.clean_up(ds, convert_calendar_kwargs={"calendar": "noleap"})
         missing_by_vars = {"tas": "interpolate", "pr": 9999}
@@ -599,6 +622,10 @@ class TestCalendar:
         np.testing.assert_array_equal(out.tas.sel(time="2000-02-29"), 60)
         assert out.pr.isnull().sum() == 0
         np.testing.assert_array_equal(out.pr.sel(time="2000-02-29"), 9999)
+        assert ds.rlon.attrs["axis"] == "X"  # Check that the attributes are preserved
+        assert ds.lon.attrs["units"] == "degrees_east"
+        assert out.rlon.attrs["axis"] == "X"
+        assert out.lon.attrs["units"] == "degrees_east"
 
     def test_missing_by_var_error(self):
         ds = timeseries(

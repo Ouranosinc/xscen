@@ -1071,8 +1071,8 @@ def get_warming_level_from_period(
        Lists of dicts, strings or Datasets are also accepted, in which case the output will be a dict.
        Regex wildcards (.*) are accepted, but may lead to unexpected results.
        Datasets should include the catalogue attributes (starting by "cat:") required to create such a string:
-       'cat:mip_era', 'cat:experiment', 'cat:member',
-       and either 'cat:source' for global models or 'cat:driving_model' for regional models.
+       'cat:mip_era', 'cat:experiment', 'cat:member', and 'cat:source' for global models.
+       For regional models : 'cat:mip_era', 'cat:experiment', 'cat:driving_member', and 'cat:driving_model'.
        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
     period : list of str
        [start, end] of the period for which to compute the warming level.
@@ -1162,7 +1162,12 @@ def _wl_prep_infomodels(realization, ignore_member, fields):
             else:
                 info["source"] = attrs["driving_model"]
             info["experiment"] = attrs["experiment"]
-            info["member"] = ".*" if ignore_member else attrs["member"]
+            if ignore_member:
+                info["member"] = ".*"
+            elif attrs.get("driving_member") is None:
+                info["member"] = attrs["member"]
+            else:
+                info["member"] = attrs["driving_member"]
             info["mip_era"] = attrs["mip_era"]
         elif isinstance(real, str):
             (
@@ -1182,6 +1187,8 @@ def _wl_prep_infomodels(realization, ignore_member, fields):
                 info["source"] = info["driving_model"]
             if ignore_member:
                 info["member"] = ".*"
+            elif info.get("driving_member") is not None:
+                info["member"] = info["driving_member"]
         else:
             raise ValueError(
                 f"'realization' must be a Dataset, dict, string or list. Received {type(real)}."
@@ -1628,7 +1635,7 @@ def _restrict_by_resolution(
                 for d in cordex_doms:
                     sub = [doms for doms in domains if d in doms]
                     order = [
-                        int(re.split("^([A-Z]{3})-([0-9]{2})([i]{0,1})$", s)[2])
+                        float(re.split(r"^([A-Z]{3})-([0-9\.]*)([i]{0,1})$", s)[2])
                         for s in sub
                     ]
 
@@ -1707,31 +1714,36 @@ def _restrict_multimembers(
         list(
             set(id_columns or ID_COLUMNS)
             .intersection(df.columns)
-            .difference(["member"])
+            .difference(["member", "driving_member"])
         )
     ].apply(lambda row: "_".join(map(str, filter(pd.notna, row.values))), axis=1)
 
     for i in pd.unique(df["id_nomem"]):
         df_sim = df[df["id_nomem"] == i]
-        members = pd.unique(df_sim["member"])
+        if "driving_member" in df_sim:
+            # We create a compound member for sorting
+            # We can't use fillna("") as the columns might be categorical.
+            # This order (member + driving_member) makes it so that the driving member priority over the rcm member.
+            fullmembers = df_sim.member.astype(str).replace(
+                "nan", "r1"
+            ) + df_sim.driving_member.astype(str).replace("nan", "r1")
+        else:
+            fullmembers = df_sim.member.astype(str).replace("nan", "r1")
+        members = pd.unique(fullmembers)
 
         if len(members) > 1:
             msg = f"Dataset {i} has {len(members)} valid members. Restricting as per requested."
             logger.info(msg)
 
             if "ordered" in restrictions:
-                members = natural_sort(members)[0 : restrictions["ordered"]]
+                to_keep = natural_sort(members)[0 : restrictions["ordered"]]
             else:
                 raise NotImplementedError(
                     "Subsetting multiple members currently only supports 'ordered'."
                 )
 
             to_remove = pd.unique(
-                df_sim[
-                    df_sim["member"].isin(
-                        list(set(pd.unique(df_sim["member"])).difference(members))
-                    )
-                ]["id"]
+                df_sim[fullmembers.isin(list(set(members).difference(to_keep)))]["id"]
             )
 
             for k in to_remove:
