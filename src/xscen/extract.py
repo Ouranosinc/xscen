@@ -323,6 +323,7 @@ def resample(  # noqa: C901
     target_frequency: str,
     *,
     ds: xr.Dataset | None = None,
+    initial_frequency: str | None = None,
     method: str | None = None,
     missing: str | dict | None = None,
 ) -> xr.DataArray:
@@ -340,6 +341,8 @@ def resample(  # noqa: C901
         The target frequency/freq str, must be one of the frequency supported by xarray.
     ds : xr.Dataset, optional
         The "wind_direction" resampling method needs extra variables, which can be given here.
+    initial_frequency : str, optional
+        The data frequency. It will be inferred, but can be given here instead if the data has missing time steps.
     method : {'mean', 'min', 'max', 'sum', 'wind_direction'}, optional
         The resampling method. If None (default), it is guessed from the variable name and frequency,
         using the mapping in CVs/resampling_methods.json. If the variable is not found there,
@@ -359,11 +362,18 @@ def resample(  # noqa: C901
     """
     var_name = da.name
 
-    initial_frequency = xr.infer_freq(da.time.dt.round("min")) or "undetected"
-    if initial_frequency == "undetected":
-        warnings.warn(
-            "Could not infer the frequency of the dataset. Be aware that this might result in erroneous manipulations."
-        )
+    if initial_frequency is None:
+        initial_frequency = xr.infer_freq(da.time.dt.round("min")) or "undetected"
+        if initial_frequency == "undetected":
+            warnings.warn(
+                "Could not infer the frequency of the dataset. "
+                "Be aware that this might result in erroneous manipulations if the actual timestep is monthly or longer."
+            )
+            if missing is not None:
+                raise ValueError(
+                    "Can't perform missing checks if the data's frequency is not inferable. "
+                    "You can pass `initial_frequency` to avoid this, or disable missing checks with `missing=None`."
+                )
 
     if method is None:
         if (
@@ -491,7 +501,11 @@ def resample(  # noqa: C901
         )
 
     missing_note = " "
-    initial_td = xrfreq_to_timedelta(initial_frequency)
+    initial_td = (
+        xrfreq_to_timedelta(initial_frequency)
+        if initial_frequency != "undetected"
+        else None
+    )
     if missing in ["mask", "drop"] and not pd.isnull(initial_td):
         steps_per_period = (
             xr.ones_like(da.time, dtype="int").resample(time=target_frequency).sum()
