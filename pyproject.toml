@@ -173,7 +173,7 @@ values = [
 ]
 
 [tool.codespell]
-# skip = "docs/notebooks/*.ipynb"  # in case we need to skip specific notebooks
+skip = "docs/_build" # "docs/notebooks/*.ipynb"  # in case we need to skip specific notebooks
 ignore-words-list = "anc,ans,astroid,attributs,coo,mesure,nam,ond,socio-economic,vas,winn"
 
 [tool.coverage.paths]
@@ -195,7 +195,7 @@ pep621_dev_dependency_groups = ["all", "dev", "docs"]
 "netcdf4" = "netCDF4"
 
 [tool.deptry.per_rule_ignores]
-DEP002 = ["h5netcdf", "nc-time-axis", "openpyxl", "pyarrow"]
+DEP002 = ["h5netcdf", "nc-time-axis", "openpyxl", "pyarrow", "setuptools", "setuptools_scm"]
 DEP004 = ["xscen"]
 
 [tool.flit.sdist]
