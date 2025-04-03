@@ -47,14 +47,14 @@ dependencies = [
   "h5py",
   "intake-esm >=2023.07.07",
   "matplotlib >=3.6",
-  "netCDF4",
+  "netcdf4",
   "numcodecs",
   "numpy >=1.24",
   "openpyxl",
   "pandas >=2.2",
   "parse",
-  # Used when opening catalogs.
-  "pyarrow >=10.0.1",
+  "pyarrow >=15.0.0",
+  "pyproj",
   "pyyaml",
   "rechunker >=0.5.3",
   "scipy >=1.11.0",
@@ -76,7 +76,9 @@ dev = [
   "black >=25.1.0",
   "blackdoc >=0.3.9",
   "bump-my-version >=0.30.1",
+  "codespell >=2.4.1",
   "coverage >=7.5.0",
+  "deptry >=0.23.0",
   "flake8 >=7.1.1",
   "flake8-rst-docstrings >=0.3.0",
   "flit >=3.10.1,<4.0",
@@ -91,8 +93,10 @@ dev = [
   "pytest-xdist[psutil] >=3.2.0",
   "ruff >=0.9.0",
   "tox >=4.24.1",
+  "vulture >=2.14",
   "watchdog >=4.0.0",
-  "xdoctest"
+  "xdoctest",
+  "yamllint >=1.35.1"
 ]
 docs = [
   # Documentation and examples
@@ -101,19 +105,20 @@ docs = [
   "jupyter_client",
   "nbsphinx >=0.9.5",
   "nbval",
-  "nc-time-axis >=1.3.1",
-  "sphinx >=7.1.0",
-  "sphinx-autoapi",
-  "sphinx-autodoc-typehints >=3.1.0",
-  "sphinx-codeautolink >=0.16.2",
+  "sphinx >=7.1.0,<8.2.0",
+  "sphinx-autodoc-typehints",
+  "sphinx-codeautolink",
   "sphinx-copybutton",
   "sphinx-intl",
   "sphinx-mdinclude",
-  "sphinx-rtd-theme >=1.0",
-  "sphinxcontrib-napoleon"
+  "sphinx-rtd-theme >=1.0"
+]
+xesmf = [
+  "xesmf >=0.7, !=0.8.8" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
 ]
 extras = [
-  "xesmf >=0.7, !=0.8.8" # FIXME: 0.8.8 currently creates segfaults on ReadTheDocs.
+  "nc-time-axis >=1.3.1",
+  "xscen[xesmf]"
 ]
 all = ["xscen[dev]", "xscen[docs]", "xscen[extras]"]
 
@@ -135,7 +140,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.12.1-dev.5"
+current_version = "0.12.1-dev.6"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -178,6 +183,20 @@ source = ["src/xscen/", "*/site-packages/xscen/"]
 omit = ["docs/notebooks/*.ipynb", "tests/*.py"]
 relative_files = true
 source = ["xscen"]
+
+[tool.deptry]
+extend_exclude = ["docs"]
+ignore_notebooks = true
+pep621_dev_dependency_groups = ["all", "dev", "docs"]
+
+[tool.deptry.package_module_name_map]
+"pyyaml" = "yaml"
+"toolz" = "tlz"
+"netcdf4" = "netCDF4"
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["h5netcdf", "nc-time-axis", "openpyxl", "pyarrow"]
+DEP004 = ["xscen"]
 
 [tool.flit.sdist]
 include = [
