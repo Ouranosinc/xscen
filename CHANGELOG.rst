@@ -6,11 +6,17 @@ v0.13.0 (Unreleased)
 --------------------
 Contributors to this version:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Éric Dupuis (:user:`coxipi`), Pascal Bourgault (:user:`aulemahal`).
 
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* `xscen` officially supports Python 3.13. (:pull:`551`).
+
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * Make `strip_cat_metadata` False by default in ``xs.save_to_zarr`` and ``xs.save_to_netcdf``. (:pull:`556`, :issue:`555`).
 * New official column ``driving_member``. For RCMs, this should store the driver's realisation number, while the ``member`` column should now store the RCM simulation's realisation number, noted as "rX". This ``member`` should approximately map to the "realization" part of CORDEX-CMIP6's "version_realization" facet (the version part mapping to the already existing ``version`` column). The member restricting feature of ``search_data_catalogs`` has been adapted, but continues to work with catalogs missing the ``driving_member`` column (:pull:`559`).
 * Also adapted from the CORDEX-CMIP6 specifications, the ``driving_model`` column does not need to indicate the driver's institution name anymore (:pull:`559`).
+* For Python 3.13 support, `xscen` now requires `clisops>=0.16.1` and `xsdba>=0.4.0`. (:pull:`551`).
+* Minimum required `intake-esm` has been updated to `>=2025.2.3`. (:pull:`551`).
 
 Bug fixes
 ^^^^^^^^^
@@ -23,6 +29,10 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * Added the ability to test `xESMF`-related functions with `tox / pip`. (:pull:`554`).
 * Updated the pins for `xclim`, `xarray`, `dask`, and `rechunker`. (:pull:`570`).
+* More accurate listing of dependencies for the project in `pyproject.toml` and `environment*.yml`. (:pull:`557`).
+* `sphinx` dependencies are more streamlined in the `docs` environment. (:pull:`557`).
+* Added `codespell`, `deptry`, `vulture`, and `yamllint` to the linting checks. (:pull:`557`).
+*
 
 v0.12.0 (2025-03-10)
 --------------------
@@ -39,7 +49,8 @@ New features and enhancements
 * Include station-obs and forecasts in the derived schema for `build_path`. (:pull:`534`).
 * Project catalog now allows `check_valid` and `drop_duplicates` keyword arguments. (:pull:`536`, :issue:`535`).
 * Add annual global tas timeseries for CMIP6's models CanESM5 r1i1p2f1 (ssp126, ssp245, ssp370, ssp585), MPI-ESM1-2-LR ssp370 (r2i1p1f1, r3i1p1f1, r4i1p1f1, r5i1p1f1) (:pull:`544`).
-* Allow pd.Timestamp and more precise datetime strings for xs.search_data_catalogs and dc.search (:pull:`547`, :issue:`546`)
+* Allow ``pd.Timestamp`` and more precise datetime strings for ``xs.search_data_catalogs`` and ``dc.search``. (:pull:`547`, :issue:`546`).
+* ``xscen.train`` now accepts a list of two or more variables, in which case, the variables are stacked. ``xsdba.MBCn`` is supported. (:pull:`548`).
 
 Bug fixes
 ^^^^^^^^^

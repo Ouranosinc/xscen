@@ -73,6 +73,7 @@ class TestTrain:
             "adapt_freq": {"thresh": "2 K"},
             "jitter_over": {"upper_bnd": "3 K", "thresh": "2 K"},
             "jitter_under": {"thresh": "2 K"},
+            "period": ["2001", "2002"],
             "var": ["tas"],
         }
 
@@ -337,3 +338,93 @@ class TestAdjust:
                 ).rename({"scen": "pr"})
 
         assert out_xscen.equals(out_xclim)
+
+
+class TestMultivariate:
+    def test_mbcn(self):
+        tasmax = timeseries(
+            np.arange(365 * 60),
+            variable="tasmax",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+        )
+        tasmin = timeseries(
+            np.arange(365 * 60) / 2,
+            variable="tasmin",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+        )
+        ds = xr.merge([tasmax, tasmin])
+        dtrain = xs.train(
+            ds,
+            ds,
+            var=["tasmax", "tasmin"],
+            method="MBCn",
+            period=["2001", "2030"],
+            xsdba_train_args={"base_kws": {"group": "time"}},
+        )
+        xs.adjust(
+            dtrain=dtrain,
+            dsim=ds,
+            periods=[
+                ["2001", "2030"],
+                ["2031", "2060"],
+            ],
+            dref=ds,
+        )
+
+    def test_stacking(self):
+        tasmax = timeseries(
+            np.arange(365 * 60),
+            variable="tasmax",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+        )
+        tasmin = timeseries(
+            np.arange(365 * 60) / 2,
+            variable="tasmin",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+        )
+        ds = xr.merge([tasmax, tasmin])
+        # define a slightly different dataset
+        np.random.seed(42)
+        dtx = np.random.rand(tasmax.time.size)
+        dtn = np.random.rand(tasmin.time.size)
+        with xr.set_options(keep_attrs=True):
+            ds2 = xr.merge([tasmax + dtx, tasmin + dtn])
+        dtrain = xs.train(
+            ds,
+            ds2,
+            var=["tasmax", "tasmin"],
+            method="MBCn",
+            period=["2001", "2030"],
+            xsdba_train_args={"base_kws": {"group": "time"}},
+        )
+        dscen_looped = xs.adjust(
+            dtrain=dtrain,
+            dsim=ds2,
+            periods=[
+                ["2001", "2030"],
+                ["2031", "2060"],
+            ],
+            dref=ds,
+        )
+        dscen_stacked = xs.adjust(
+            dtrain=dtrain,
+            dsim=ds2,
+            periods=["2001", "2060"],
+            xsdba_adjust_args={"period_dim": "period"},
+            dref=ds,
+        )
+        np.testing.assert_array_equal(
+            dscen_looped.tasmax.values, dscen_stacked.tasmax.values
+        )
