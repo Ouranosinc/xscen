@@ -643,3 +643,24 @@ class TestResample:
         )
         assert out.isel(time=0).notnull().all()
         assert out.isel(time=-1).isnull().all()
+
+    def test_nofreq(self):
+        da = timeseries(
+            np.arange(72),
+            variable="tas",
+            start="2001-01-01",
+            freq="h",
+        )
+        da = xr.concat((da[:50], da[55:]), "time")
+
+        out = xs.extract.resample(da, "D")
+        np.testing.assert_allclose(out, [11.5, 35.5, 61.473684])
+
+        with pytest.raises(ValueError, match="Can't perform missing checks"):
+            out = xs.extract.resample(da, "D", missing="drop")
+
+        out = xs.extract.resample(da, "D", initial_frequency="h", missing="drop")
+        assert out.size == 2
+
+        out = xs.extract.resample(da, "D", initial_frequency="h", missing="mask")
+        np.testing.assert_array_equal(out.isnull(), [False, False, True])
