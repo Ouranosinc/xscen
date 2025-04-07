@@ -17,6 +17,7 @@ Breaking changes
 * Also adapted from the CORDEX-CMIP6 specifications, the ``driving_model`` column does not need to indicate the driver's institution name anymore. (:pull:`559`).
 * For Python 3.13 support, `xscen` now requires `clisops>=0.16.1` and `xsdba>=0.4.0`. (:pull:`551`).
 * Minimum required `intake-esm` has been updated to `>=2025.2.3`. (:pull:`551`).
+* Temporarily pinned `numcodecs` to `<0.16.0` for compatibility with `zarr`. (:pull:`571`).
 
 Bug fixes
 ^^^^^^^^^
