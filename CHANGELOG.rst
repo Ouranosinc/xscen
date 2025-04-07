@@ -2,9 +2,9 @@
 Changelog
 =========
 
-v0.13.0 (Unreleased)
+v0.12.1 (2025-04-07)
 --------------------
-Contributors to this version:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Éric Dupuis (:user:`coxipi`), Pascal Bourgault (:user:`aulemahal`).
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Éric Dupuis (:user:`coxipi`), Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -13,15 +13,16 @@ New features and enhancements
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * Make `strip_cat_metadata` False by default in ``xs.save_to_zarr`` and ``xs.save_to_netcdf``. (:pull:`556`, :issue:`555`).
-* New official column ``driving_member``. For RCMs, this should store the driver's realisation number, while the ``member`` column should now store the RCM simulation's realisation number, noted as "rX". This ``member`` should approximately map to the "realization" part of CORDEX-CMIP6's "version_realization" facet (the version part mapping to the already existing ``version`` column). The member restricting feature of ``search_data_catalogs`` has been adapted, but continues to work with catalogs missing the ``driving_member`` column (:pull:`559`).
-* Also adapted from the CORDEX-CMIP6 specifications, the ``driving_model`` column does not need to indicate the driver's institution name anymore (:pull:`559`).
+* New official column ``driving_member``. For RCMs, this should store the driver's realisation number, while the ``member`` column should now store the RCM simulation's realisation number, noted as "rX". This ``member`` should approximately map to the "realization" part of CORDEX-CMIP6's "version_realization" facet (the version part mapping to the already existing ``version`` column). The member restricting feature of ``search_data_catalogs`` has been adapted, but continues to work with catalogs missing the ``driving_member`` column. (:pull:`559`).
+* Also adapted from the CORDEX-CMIP6 specifications, the ``driving_model`` column does not need to indicate the driver's institution name anymore. (:pull:`559`).
 * For Python 3.13 support, `xscen` now requires `clisops>=0.16.1` and `xsdba>=0.4.0`. (:pull:`551`).
 * Minimum required `intake-esm` has been updated to `>=2025.2.3`. (:pull:`551`).
+* Temporarily pinned `numcodecs` to `<0.16.0` for compatibility with `zarr`. (:pull:`571`).
 
 Bug fixes
 ^^^^^^^^^
 * Fixed the default for ``xs.utils.maybe_unstack``. (:pull:`553`).
-* Patch ``xsdba.units.convert_units_to`` with ``xclim.core.units.convert_units_to`` with `context="infer"` locally in ``xs.train`` and ``xs.adjust`` instead of using ``xc.core.settings.context``.
+* Patch ``xsdba.units.convert_units_to`` with ``xclim.core.units.convert_units_to`` with `context="infer"` locally in ``xs.train`` and ``xs.adjust`` instead of using ``xc.core.settings.context``. (:pull:`552`).
 * Fixed a bug in ``xs.utils.clean_up`` where attributes would be dropped when using the `missing_by_vars` argument. (:pull:`569`, :issue:`568`).
 * Allow undetectable frequencies in ``xs.extract.resample``. (:pull:`567`).
 
@@ -32,7 +33,6 @@ Internal changes
 * More accurate listing of dependencies for the project in `pyproject.toml` and `environment*.yml`. (:pull:`557`).
 * `sphinx` dependencies are more streamlined in the `docs` environment. (:pull:`557`).
 * Added `codespell`, `deptry`, `vulture`, and `yamllint` to the linting checks. (:pull:`557`).
-*
 
 v0.12.0 (2025-03-10)
 --------------------
