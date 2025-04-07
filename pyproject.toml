@@ -38,14 +38,14 @@ dependencies = [
   "cartopy >=0.23.0",
   "cftime",
   "cf_xarray >=0.7.6",
-  "clisops >=0.15",
+  "clisops >=0.16.1",
   "dask >=2024.8.1",
   "flox",
   "fsspec",
   "geopandas >=1.0",
   "h5netcdf",
   "h5py",
-  "intake-esm >=2023.07.07",
+  "intake-esm >=2025.2.3",
   "matplotlib >=3.6",
   "netcdf4",
   "numcodecs",
@@ -63,16 +63,16 @@ dependencies = [
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0, <=2025.3.0", # FIXME: Remove the highest version when rechunker is updated.
   "xclim >=0.56, <0.57",
-  "xsdba>=0.3.0",
-  "zarr >=2.13,<3"
+  "xsdba >=0.4.0",
+  "zarr >=2.13,<3.0"
 ]
 
 [project.optional-dependencies]
 dev = [
   # Dev tools and testing
   "babel >=2.17",
-  "black ==25.1.0",
-  "blackdoc ==0.3.9",
+  "black >=25.1.0",
+  "blackdoc >=0.3.9",
   "bump-my-version >=0.30.1",
   "codespell >=2.4.1",
   "coverage >=7.5.0",
@@ -80,7 +80,7 @@ dev = [
   "flake8 >=7.1.1",
   "flake8-rst-docstrings >=0.3.0",
   "flit >=3.10.1,<4.0",
-  "isort ==6.0.1",
+  "isort >=6.0.1",
   "mypy >=1.14.1",
   "numpydoc >=1.8.0",
   "pip >=25.0",
@@ -171,6 +171,7 @@ values = [
 ]
 
 [tool.codespell]
+skip = "docs/_build" # "docs/notebooks/*.ipynb"  # in case we need to skip specific notebooks
 ignore-words-list = "anc,ans,astroid,attributs,coo,mesure,nam,ond,socio-economic,vas,winn"
 
 [tool.coverage.paths]
