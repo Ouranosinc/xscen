@@ -48,7 +48,7 @@ dependencies = [
   "intake-esm >=2025.2.3",
   "matplotlib >=3.6",
   "netcdf4",
-  "numcodecs",
+  "numcodecs <0.16.0",
   "numpy >=1.24",
   "openpyxl",
   "pandas >=2.2",
@@ -138,7 +138,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.12.1-dev.7"
+current_version = "0.12.1"
 commit = true
 commit_args = "--no-verify"
 tag = false
