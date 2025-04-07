@@ -1,1 +1,2 @@
 xclim @ git+https://github.com/Ouranosinc/xclim.git@main
+xsdba @ git+https://github.com/Ouranosinc/xsdba.git@main

@@ -65,4 +65,4 @@ def test_show_version(tmpdir):
     assert "pandas" in out
     assert "dask" in out
     assert "cftime" in out
-    assert "netCDF4" in out
+    assert "netcdf4" in out

@@ -85,7 +85,7 @@ def estimate_chunks(  # noqa: C901
 
     Parameters
     ----------
-    ds : xr.Dataset, str
+    ds : xr.Dataset or os.PathLike or str
         Either a xr.Dataset or the path to a NetCDF file. Existing chunks are not taken into account.
     dims : list
         Dimension(s) on which to estimate the chunking. Not implemented for more than 2 dimensions.
@@ -198,7 +198,7 @@ def subset_maxsize(
     Parameters
     ----------
     ds : xr.Dataset
-        Dataset to be saved.
+        The Dataset to be saved.
     maxsize_gb : float
         Target size for the NetCDF files.
         If the dataset is bigger than this number, it will be separated alongside the 'time' dimension.
@@ -381,7 +381,7 @@ def save_to_netcdf(
     Parameters
     ----------
     ds : xr.Dataset
-        Dataset to be saved.
+        The Dataset to be saved.
     filename : str or os.PathLike
         Name of the NetCDF file to be saved.
     rechunk : dict, optional
@@ -461,7 +461,7 @@ def save_to_zarr(  # noqa: C901
     Parameters
     ----------
     ds : xr.Dataset
-        Dataset to be saved.
+        The Dataset to be saved.
     filename : str
         Name of the Zarr file to be saved.
     rechunk : dict, optional
@@ -470,7 +470,7 @@ def save_to_zarr(  # noqa: C901
         dimension names.
         Rechunking is only done on *data* variables sharing dimensions with this argument.
     zarr_kwargs : dict, optional
-        Additional arguments to send to_zarr()
+        Additional arguments to send `to_zarr()`.
     compute : bool
         Whether to start the computation or return a delayed object.
     mode : {'f', 'o', 'a'}
@@ -675,34 +675,35 @@ def to_table(
     sheet: str | Sequence[str] | None = None,
     coords: bool | str | Sequence[str] = True,
 ) -> pd.DataFrame | dict:
-    """Convert a dataset to a pandas DataFrame with support for multicolumns and multisheet.
+    """
+    Convert a dataset to a pandas DataFrame with support for multicolumns and multisheet.
 
     This function will trigger a computation of the dataset.
 
     Parameters
     ----------
     ds : xr.Dataset or xr.DataArray
-      Dataset or DataArray to be saved.
-      If a Dataset with more than one variable is given, the dimension "variable"
-      must appear in one of `row`, `column` or `sheet`.
+        Dataset or DataArray to be saved.
+        If a Dataset with more than one variable is given, the dimension "variable"
+        must appear in one of `row`, `column` or `sheet`.
     row : str or sequence of str, optional
-      Name of the dimension(s) to use as indexes (rows).
-      Default is all data dimensions.
+        Name of the dimension(s) to use as indexes (rows).
+        Default is all data dimensions.
     column : str or sequence of str, optional
-      Name of the dimension(s) to use as columns.
-      Default is "variable", i.e. the name of the variable(s).
+        Name of the dimension(s) to use as columns.
+        Default is "variable", i.e. the name of the variable(s).
     sheet : str or sequence of str, optional
-      Name of the dimension(s) to use as sheet names.
+        Name of the dimension(s) to use as sheet names.
     coords: bool or str or sequence of str
-      A list of auxiliary coordinates to add to the columns (as would variables).
-      If True, all (if any) are added.
+        A list of auxiliary coordinates to add to the columns (as would variables).
+        If True, all (if any) are added.
 
     Returns
     -------
     pd.DataFrame or dict
-      DataFrame with a MultiIndex with levels `row` and MultiColumn with levels `column`.
-      If `sheet` is given, the output is dictionary with keys for each unique "sheet" dimensions tuple, values are DataFrames.
-      The DataFrames are always sorted with level priority as given in `row` and in ascending order.
+        DataFrame with a MultiIndex with levels `row` and MultiColumn with levels `column`.
+        If `sheet` is given, the output is dictionary with keys for each unique "sheet" dimensions tuple, values are DataFrames.
+        The DataFrames are always sorted with level priority as given in `row` and in ascending order.
     """
     if isinstance(ds, xr.Dataset):
         da = ds.to_array(name="data")
@@ -786,7 +787,7 @@ def make_toc(ds: xr.Dataset | xr.DataArray, loc: str | None = None) -> pd.DataFr
     Parameters
     ----------
     ds : xr.Dataset or xr.DataArray
-      Dataset or DataArray from which to extract the relevant metadata.
+        Dataset or DataArray from which to extract the relevant metadata.
     loc : str, optional
         The locale to use. If None, either the first locale in the list of activated xclim locales is used, or "en" if none is activated.
 
@@ -863,40 +864,40 @@ def save_to_table(  # noqa: C901
     Parameters
     ----------
     ds : xr.Dataset or xr.DataArray
-      Dataset or DataArray to be saved.
-      If a Dataset with more than one variable is given, the dimension "variable"
-      must appear in one of `row`, `column` or `sheet`.
+        Dataset or DataArray to be saved.
+        If a Dataset with more than one variable is given, the dimension "variable"
+        must appear in one of `row`, `column` or `sheet`.
     filename : str or os.PathLike
-      Name of the file to be saved.
+        Name of the file to be saved.
     output_format: {'csv', 'excel', ...}, optional
-      The output format. If None (default), it is inferred
-      from the extension of `filename`. Not all possible output format are supported for inference.
-      Valid values are any that matches a :py:class:`pandas.DataFrame` method like "df.to_{format}".
+        The output format. If None (default), it is inferred
+        from the extension of `filename`. Not all possible output format are supported for inference.
+        Valid values are any that matches a :py:class:`pandas.DataFrame` method like "df.to_{format}".
     row : str or sequence of str, optional
-      Name of the dimension(s) to use as indexes (rows).
-      Default is all data dimensions.
+        Name of the dimension(s) to use as indexes (rows).
+        Default is all data dimensions.
     column : str or sequence of str, optional
-      Name of the dimension(s) to use as columns.
-      When using a Dataset with more than 1 variable, default is "variable", i.e. the name of the variable(s).
-      When using a DataArray, default is None.
+        Name of the dimension(s) to use as columns.
+        When using a Dataset with more than 1 variable, default is "variable", i.e. the name of the variable(s).
+        When using a DataArray, default is None.
     sheet : str or sequence of str, optional
-      Name of the dimension(s) to use as sheet names.
-      Only valid if the output format is excel.
+        Name of the dimension(s) to use as sheet names.
+        Only valid if the output format is excel.
     coords: bool or sequence of str
-      A list of auxiliary coordinates to add to the columns (as would variables).
-      If True, all (if any) are added.
+        A list of auxiliary coordinates to add to the columns (as would variables).
+        If True, all (if any) are added.
     col_sep : str,
-      Multi-columns (except in excel) and sheet names are concatenated with this separator.
+        Multi-columns (except in Excel) and sheet names are concatenated with this separator.
     row_sep : str, optional
-      Multi-index names are concatenated with this separator, except in excel.
-      If None (default), each level is written in its own column.
+        Multi-index names are concatenated with this separator, except in Excel.
+        If None (default), each level is written in its own column.
     add_toc : bool or DataFrame
-      A table of content to add as the first sheet. Only valid if the output format is excel.
-      If True, :py:func:`make_toc` is used to generate the toc.
-      The sheet name of the toc can be given through the "name" attribute of the DataFrame, otherwise "Content" is used.
+        A table of content to add as the first sheet. Only valid if the output format is excel.
+        If True, :py:func:`make_toc` is used to generate the toc.
+        The sheet name of the toc can be given through the "name" attribute of the DataFrame, otherwise "Content" is used.
     \*\*kwargs:
-      Other arguments passed to the pandas function.
-      If the output format is excel, kwargs to :py:class:`pandas.ExcelWriter` can be given here as well.
+        Other arguments passed to the pandas function.
+        If the output format is excel, kwargs to :py:class:`pandas.ExcelWriter` can be given here as well.
     """
     filename = Path(filename)
 
@@ -966,8 +967,8 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
     ds : xr.Dataset
         The xr.Dataset to be rechunked.
     rechunk : dict
-        A dictionary with the dimension names of ds and the new chunk size. Spatial dimensions
-        can be provided as X/Y.
+        A dictionary with the dimension names of ds and the new chunk size.
+        Spatial dimensions can be provided as X/Y.
 
     Returns
     -------
@@ -1126,8 +1127,8 @@ def unzip_directory(zipfile: str | os.PathLike, root: str | os.PathLike):
         The zip file to read.
     root : path
         The directory where to put the content to archive.
-        If doesn't exist, it will be created (and all its parents).
-        If it exists, should be empty.
+        If it doesn't exist, it will be created (and all its parents).
+        If it does exist, it should be empty.
     """
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)

@@ -300,7 +300,7 @@ def _parse_dir(  # noqa: C901
         This pattern can not include the asset's basename.
     skip_dirs : list of strings or Paths, optional
         A list of directories to skip in the walk.
-    checks: list of strings, optional
+    checks: list of str, optional
         A list of checks to perform, available values are:
         - "readable" : Check that the file is readable by the current user.
         - "writable" : Check that the file is writable by the current user.
@@ -316,8 +316,8 @@ def _parse_dir(  # noqa: C901
     progress : bool
         If True, the number of found files is printed to stdout.
 
-    Return
-    ------
+    Returns
+    -------
     List of dictionaries
         Metadata parsed from each found asset.
     """
