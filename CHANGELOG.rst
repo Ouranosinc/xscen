@@ -2,6 +2,14 @@
 Changelog
 =========
 
+v0.13 (unreleased)
+--------------------
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Add annual global tas timeseries for CMIP6's model UKESM1-0-LL ssp585 r4i1p1f2 (:pull:`573`).
+
 v0.12.1 (2025-04-07)
 --------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Éric Dupuis (:user:`coxipi`), Pascal Bourgault (:user:`aulemahal`).
