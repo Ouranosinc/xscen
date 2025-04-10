@@ -221,7 +221,7 @@ def health_checks(  # noqa: C901
                         _error(f"'{v}' ValidationError: {e}", "variables_and_units")
                 # are they technically the same
                 close_enough = xc.units.str2pint(
-                    ds[v].attrs.get("units", None)
+                    ds[v].attrs["units"]
                 ) == xc.units.str2pint(variables_and_units[v])
 
                 if strict_units or not close_enough:
