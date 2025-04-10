@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import xarray as xr
+import xclim as xc
 from conftest import notebooks
 from xclim.testing.helpers import test_timeseries as timeseries
 
@@ -130,6 +131,27 @@ class TestHealthChecks:
             match="are not compatible with requested mm.",
         ):
             xs.diagnostics.health_checks(ds, variables_and_units={"tas": "mm"})
+
+        # this gives "°C" as units
+        ds1 = xc.units.convert_units_to(ds, "degC")
+        # It should be okay by default
+        xs.diagnostics.health_checks(
+            ds1, variables_and_units={"tas": "degC"}, raise_on=["all"]
+        )
+        xs.diagnostics.health_checks(
+            ds1, variables_and_units={"tas": "°C"}, raise_on=["all"]
+        )
+        # but raise an error if we want something stritcly the same
+        with pytest.raises(
+            ValueError,
+            match="The variable 'tas' does not have the expected units 'degC'. Received '°C'.",
+        ):
+            xs.diagnostics.health_checks(
+                ds1,
+                variables_and_units={"tas": "degC"},
+                strict_units=True,
+                raise_on=["all"],
+            )
 
     def test_cfchecks(self):
         ds = timeseries(np.arange(0, 365), "tas", "1/1/2000", freq="D", as_dataset=True)

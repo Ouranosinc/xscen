@@ -55,6 +55,7 @@ def health_checks(  # noqa: C901
     start_date: str | None = None,
     end_date: str | None = None,
     variables_and_units: dict | None = None,
+    strict_units: bool = False,
     cfchecks: dict | None = None,
     freq: str | None = None,
     missing: dict | str | list | None = None,
@@ -81,6 +82,8 @@ def health_checks(  # noqa: C901
         To check if the dataset ends at least at this date.
     variables_and_units: dict, optional
         Dictionary containing the expected variables and units.
+    strict_units: bool
+        If True, the units in variables_and_units need to match exactly.
     cfchecks: dict, optional
         Dictionary where the key is the variable to check and the values are the cfchecks.
         The cfchecks themselves must be a dictionary with the keys being the cfcheck names
@@ -216,10 +219,16 @@ def health_checks(  # noqa: C901
                         xc.core.units.check_units(ds[v], variables_and_units[v])
                     except ValidationError as e:
                         _error(f"'{v}' ValidationError: {e}", "variables_and_units")
-                _error(
-                    f"The variable '{v}' does not have the expected units '{variables_and_units[v]}'. Received '{ds[v].attrs['units']}'.",
-                    "variables_and_units",
-                )
+                # are they technically the same
+                close_enough = xc.units.str2pint(
+                    ds[v].attrs.get("units", None)
+                ) == xc.units.str2pint(variables_and_units[v])
+
+                if strict_units or not close_enough:
+                    _error(
+                        f"The variable '{v}' does not have the expected units '{variables_and_units[v]}'. Received '{ds[v].attrs['units']}'.",
+                        "variables_and_units",
+                    )
 
     # Check CF conventions
     if cfchecks is not None:
