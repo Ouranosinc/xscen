@@ -9,7 +9,7 @@ Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add annual global tas timeseries for CMIP6's model UKESM1-0-LL ssp585 r4i1p1f2 (:pull:`573`).
-* Add `strict_units` option to health checks. (:pull:`574`, :issue: `574`).
+* Add `strict_units` option to health checks. (:pull:`574`, :issue:`574`).
 
 v0.12.1 (2025-04-07)
 --------------------
