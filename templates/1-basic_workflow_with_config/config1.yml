@@ -65,6 +65,7 @@ extract:
       threads_per_worker: 3
       memory_limit: 15GB
     search_data_catalogs: # these arguments will be passed manually to xs.search_data_catalogs
+      data_catalogs: ${paths.catalogues}/reconstruction.json
       variables_and_freqs: &var_and_freq # this is an anchor. more on anchors:  https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/
         tasmax: D
         tasmin: D
@@ -130,6 +131,7 @@ extract:
       threads_per_worker: 3
       memory_limit: 10GB
     search_data_catalogs:
+      data_catalogs: ${paths.catalogues}/simulations.json
       variables_and_freqs: *var_and_freq
       match_hist_and_fut: True
       allow_conversion: True
@@ -190,6 +192,7 @@ regrid:
       extrap_method: inverse_dist
       locstream_out: *stack
       reuse_weights: False
+    weights_location: ${paths.regrid.weightsdir}
     #intermediate_grids:
     #to_level:
   save: &save_time_-1
@@ -314,6 +317,7 @@ cleanup:
     allow_resampling: False
     other_search_criteria:
       processing_level: biasadjusted
+    data_catalogs: ${paths.project_catalog}
   xscen_clean_up:
     to_level: cleaned
     maybe_unstack_dict:
@@ -366,6 +370,7 @@ rechunk:
       lon: 3
       time: 4year
     overwrite: True
+    temp_store: ${paths.tmp}
     #chunks_over_var:
 
 
@@ -406,6 +411,7 @@ diagnostics:
         unstack: *stack
         change_units_arg: *units
         to_level_prop: diag-properties-ref
+        properties: ${paths.properties}
         #rechunk:
         #to_level_meas:
       save:
@@ -425,6 +431,7 @@ diagnostics:
         change_units_arg: *units
         to_level_prop: diag-properties-sim
         to_level_meas: diag-measures-sim
+        properties: ${paths.properties}
       save:
         mode: o
         rechunk:
@@ -441,6 +448,7 @@ diagnostics:
         unstack: False
         to_level_prop: diag-properties-scen
         to_level_meas: diag-measures-scen
+        properties: ${paths.properties}
       save:
         mode: o
         rechunk:
@@ -452,10 +460,13 @@ diagnostics:
     #to_level:
 
 indicators:
+  load_xclim_module:
+    filename: ${paths.indicators}
   dask:
     n_workers: 8
     threads_per_worker: 5
     memory_limit: "2GB"
+    local_directory: ${paths.dask}
   inputs:
     processing_level: final
   compute_indicators: {} # automatically passed to the function
@@ -529,7 +540,9 @@ scripting: # send an email when code fails or succeed
 
 dask: # general dask arguments
   array.slicing.split_large_chunks: False
-
+  client:
+    dashboard_address: YOUR_RANDOM_NUMBER
+    local_directory: ${paths.dask}
 
 logging: # general logging args
   formatters:
@@ -541,10 +554,11 @@ logging: # general logging args
       class : logging.StreamHandler
       formatter: default
       level : INFO
-#    file: #Uncomment if you want a log file, don't forget to also uncomment the filename in paths1.yml.
-#      class: logging.FileHandler
-#      formatter: default
-#      level : DEBUG
+    # file: #Uncomment if you want a log file, don't forget to also uncomment the filename in paths1.yml.
+    #   filename: ${paths.logging}
+    #   class: logging.FileHandler
+    #   formatter: default
+    #   level : DEBUG
   loggers:
     xscen:
       propagate: False
