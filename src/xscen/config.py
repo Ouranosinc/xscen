@@ -94,6 +94,14 @@ class ConfigDict(dict):
                 )
         d[parts[-1]] = value
 
+    # nested get, similar equivalent of set
+    def nget(self, key):
+        parts = key.split(".")
+        d = self
+        for part in parts:
+            d = d[part]
+        return d
+
     def update_from_list(self, pairs):
         for key, valstr in pairs:
             try:
