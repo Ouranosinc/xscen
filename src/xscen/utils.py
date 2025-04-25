@@ -844,14 +844,13 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
                         raise ValueError(
                             f"No known transformation between {ds[v].units} and {variables_and_units[v]} (temporal dimensionality mismatch)."
                         )
-                    # update unit name if physical units are equal but not their name (ex. degC vs °C)
-                    if (
-                        units.units2pint(ds[v])
-                        != units.units2pint(variables_and_units[v])
-                    ) and (ds[v].units != variables_and_units[v]):
-                        ds = ds.assign(
-                            {v: ds[v].assign_attrs(units=variables_and_units[v])}
-                        )
+                # update unit name if physical units are equal but not their name (ex. degC vs °C)
+                if (
+                    units.units2pint(ds[v]) != units.units2pint(variables_and_units[v])
+                ) and (ds[v].units != variables_and_units[v]):
+                    ds = ds.assign(
+                        {v: ds[v].assign_attrs(units=variables_and_units[v])}
+                    )
 
     return ds
 
