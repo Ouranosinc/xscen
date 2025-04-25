@@ -2,67 +2,36 @@
 # Make sure to add this file to your .gitignore
 
 paths:
-  project_catalog: &pcat
-    PATH/pcat_test1.json
-  task: PATH/{processing_level}/{id}_{xrfreq}_{processing_level}.zarr
-  ba: PATH/{processing_level}/{id}_{xrfreq}_{processing_level}_{variable}.zarr
+  # general exec
+  exec: PATH/TO/YOUR/FAST/STORAGE
+  tmp: ${paths.exec}/tmp
+  dask: ${paths.tmp}
 
-# Task Arguments
+  # project and configs
+  pdir: ${paths.exec}/PATH/TO/YOUR/PROJECT
+  project_catalog: ${paths.pdir}/pcat_test1.json
+  config: ${paths.pdir}/config
+  properties: ${paths.config}/properties1.yml
+  indicators: ${paths.config}/indicators1.yml
+  # logging: ${paths.pdir}/logger.log # Uncomment if you want a log file
 
-extract:
-  reconstruction:
-    search_data_catalogs:
-      data_catalogs:
-        - PATH_TO_OFFICIAL_CATALOGUES/reconstruction.json
-  simulation:
-    search_data_catalogs:
-      data_catalogs:
-        - PATH_TO_OFFICIAL_CATALOGUES/simulation.json
+  # data, input and output
+  execdir: ${paths.pdir}/OUTPUTS
+  bulkdir: PATH/TO/YOUR/LARGE/STORAGE
+  catalogues: PATH/TO/CATALOGUES
+  regrid:
+    regriddir: ${paths.execdir}/regridded
+    weightsdir: ${paths.regriddir}/weights
 
-regrid:
-  regrid_dataset:
-    weights_location: PATH/regridded/weights/
+  # other tasks, like regrid.
+  task: ${paths.execdir}/{processing_level}/{id}_{xrfreq}_{processing_level}.zarr
+  ba: ${paths.execdir}/{processing_level}/{id}_{xrfreq}_{processing_level}_{variable}.zarr
 
-cleanup:
-  search_data_catalogs:
-    data_catalogs:
-      - *pcat
-
-rechunk:
-  xscen_rechunk:
-    temp_store: PATH/tmp/
-
-indicators:
-  path_yml: indicators1.yml
-
-diagnostics:
-  kind:
-    reference:
-      properties_and_measures:
-        properties: properties1.yml
-    simulation:
-      properties_and_measures:
-        properties: properties1.yml
-    scenario:
-      properties_and_measures:
-        properties: properties1.yml
-
-# General Arguments
-
-dask:
-  client:
-    local_directory: DASK_PATH
-    dashboard_address: YOUR_RANDOM_NUMBER
-
-#logging: #Uncomment if you want a log file
-#    handlers:
-#        file:
-#            filename: PATH/logger.log
 
 utils:
   stack_drop_nans:
     to_file: &coords
-      PATH/stack_coords/coords_{domain}_{shape}.nc
+      ${paths.execdir}/stack_coords/coords_{domain}_{shape}.nc
   unstack_fill_nan:
     coords: *coords
   maybe_unstack:

@@ -51,12 +51,16 @@ import types
 import warnings
 from copy import deepcopy
 from functools import wraps
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
 
 import xarray as xr
 import xclim as xc
 import yaml
+
+if OMEGACONF_INSTALLED := find_spec("omegaconf") is not None:
+    from omegaconf import OmegaConf
 
 logger = logging.getLogger(__name__)
 EXTERNAL_MODULES = ["logging", "xarray", "xclim", "warnings"]
@@ -90,6 +94,13 @@ class ConfigDict(dict):
                 )
         d[parts[-1]] = value
 
+    # nested get, similar equivalent of set
+    def nget(self, key):
+        d = self
+        for k in key.split("."):
+            d = d[k]
+        return d
+
     def update_from_list(self, pairs):
         for key, valstr in pairs:
             try:
@@ -97,6 +108,14 @@ class ConfigDict(dict):
             except (SyntaxError, ValueError):
                 val = valstr
             self.set(key, val)
+
+    def omegaconf_resolve(self):
+        if not OMEGACONF_INSTALLED:
+            raise ImportError("`omegaconf` not installed.")
+        cfg = dict(deepcopy(self))
+        cfg = OmegaConf.create(cfg)
+        cfg = OmegaConf.to_container(cfg, resolve=True)
+        recursive_update(self, cfg)
 
 
 CONFIG = ConfigDict()
@@ -201,6 +220,9 @@ def load_config(
     for module, old in zip(EXTERNAL_MODULES, old_external):
         if old != CONFIG.get(module, {}):
             _setup_external(module, CONFIG.get(module, {}))
+
+    if OMEGACONF_INSTALLED:
+        CONFIG.omegaconf_resolve()
 
 
 def parse_config(func_or_cls):  # noqa: D103
