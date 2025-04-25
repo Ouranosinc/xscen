@@ -96,10 +96,9 @@ class ConfigDict(dict):
 
     # nested get, similar equivalent of set
     def nget(self, key):
-        parts = key.split(".")
         d = self
-        for part in parts:
-            d = d[part]
+        for k in key.split("."):
+            d = d[k]
         return d
 
     def update_from_list(self, pairs):
