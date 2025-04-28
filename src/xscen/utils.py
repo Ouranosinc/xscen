@@ -960,6 +960,7 @@ def clean_up(  # noqa: C901
         ds = change_units(ds=ds, variables_and_units=variables_and_units)
     # convert calendar
     if convert_calendar_kwargs:
+        vars_with_no_time = [v for v in ds.data_vars if "time" not in ds[v].dims]
         # create mask of grid point that should always be nan
         ocean = ds.isnull().all("time")
         # if missing_by_var exist make sure missing data are added to time axis
@@ -983,6 +984,11 @@ def clean_up(  # noqa: C901
         msg = f"Converting calendar with {convert_calendar_kwargs}."
         logger.info(msg)
         ds = ds.convert_calendar(**convert_calendar_kwargs).where(~ocean)
+
+        # FIXME: Temporary fix for https://github.com/pydata/xarray/issues/10266
+        for vv in vars_with_no_time:
+            if "time" in ds[vv].dims:
+                ds[vv] = ds[vv].isel(time=0).drop_vars("time")
 
         # convert each variable individually
         if missing_by_var:
