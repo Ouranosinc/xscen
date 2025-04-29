@@ -404,7 +404,7 @@ class TestPropertiesMeasures:
         p, m = xs.properties_and_measures(
             self.ds,
             properties=self.yaml_file,
-            change_units_arg={"tas": "degC"},
+            change_units_arg={"tas": "°C"},
         )
 
         assert p["mean-tas"].attrs["units"] == "°C"
