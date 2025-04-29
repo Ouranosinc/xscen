@@ -477,6 +477,9 @@ class TestVariablesUnits:
         assert out.tas.attrs["units"] == "degK"
         np.testing.assert_array_equal(out.tas, ds.tas)
 
+        out2 = xs.clean_up(ds, variables_and_units={"tas": "°K"})
+        assert out2.tas.attrs["units"] == "°K"
+
     def test_variables_2(self):
         ds = timeseries(
             np.tile(np.arange(1, 13), 3),
@@ -504,7 +507,7 @@ class TestVariablesUnits:
             as_dataset=True,
         )
         out = xs.clean_up(ds, variables_and_units={"pr": "mm/day"})
-        assert out.pr.attrs["units"] == "mm d-1"
+        assert out.pr.attrs["units"] == "mm/day"
         np.testing.assert_array_almost_equal(out.pr, ds.pr * 86400)
 
     def test_variables_amount2rate(self):
@@ -516,7 +519,7 @@ class TestVariablesUnits:
             units="mm",
             as_dataset=True,
         )
-        out = xs.clean_up(ds, variables_and_units={"pr": "mm/day"})
+        out = xs.clean_up(ds, variables_and_units={"pr": "mm d-1"})
         assert out.pr.attrs["units"] == "mm d-1"
         np.testing.assert_array_almost_equal(out.pr, ds.pr)
 
