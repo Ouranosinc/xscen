@@ -652,6 +652,22 @@ class TestCalendar:
                 missing_by_var=missing_by_vars,
             )
 
+    def test_no_time(self):
+        ds = timeseries(
+            np.arange(1, 365 * 4 + 2),
+            variable="tas",
+            start="2000-01-01",
+            freq="D",
+            as_dataset=True,
+        )
+        ds["orog"] = ds["tas"].isel(time=0).drop_vars("time")
+        out = xs.clean_up(
+            ds,
+            convert_calendar_kwargs={"calendar": "standard"},
+        )
+        assert "time" in out.tas.dims
+        assert "time" not in out.orog.dims
+
 
 def test_round():
     ds = timeseries(
