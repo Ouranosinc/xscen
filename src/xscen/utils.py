@@ -996,7 +996,7 @@ def clean_up(  # noqa: C901
         logger.info(msg)
         ds = ds.convert_calendar(**convert_calendar_kwargs).where(~ocean)
 
-        # FIXME: Temporary fix for https://github.com/pydata/xarray/issues/10266
+        # FIXME: Fix for xarray <= 2025.04.0: https://github.com/pydata/xarray/issues/10266
         for vv in vars_with_no_time:
             if "time" in ds[vv].dims:
                 ds[vv] = ds[vv].isel(time=0).drop_vars("time")
