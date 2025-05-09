@@ -44,12 +44,6 @@ def _add_preprocessing_attr(scen, train_kwargs):
                 "jitter_over_thresh", fake_ref, fake_hist, train_kwargs["jitter_over"]
             )
         )
-    if train_kwargs["adapt_freq"] is not None:
-        preproc.append(
-            xc.core.formatting.gen_call_string(
-                "adapt_freq", fake_ref, fake_hist, train_kwargs["adapt_freq"]
-            )
-        )
 
     if preproc:
         scen.attrs[
