@@ -6,6 +6,10 @@ v0.13 (unreleased)
 --------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Éric Dupuis (:user:`coxipi`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
+Breaking changes
+^^^^^^^^^^^^^^^^
+* Remove `adapt_freq` argument from `xs.train`. This argument should be passed to xsdba directly. (:pull:`586`).
+
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add annual global tas timeseries for CMIP6's model UKESM1-0-LL ssp585 r4i1p1f2 (:pull:`573`).

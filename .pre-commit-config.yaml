@@ -123,10 +123,10 @@ repos:
     hooks:
       - id: zizmor
         args: [ '--config=.zizmor.yml' ]
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.25.1
-    hooks:
-      - id: gitleaks
+#  - repo: https://github.com/gitleaks/gitleaks
+#    rev: v8.25.1
+#    hooks:
+#      - id: gitleaks
   - repo: meta
     hooks:
       - id: check-hooks-apply
