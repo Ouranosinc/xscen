@@ -8,7 +8,7 @@ Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Éric Du
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* Remove `adapt_freq` argument from `xs.train`. This argument should be passed to xsdba directly. (:pull:`586`).
+* Remove `adapt_freq` argument from `xs.train`. This argument should be passed to xsdba directly. (:pull:`589`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
