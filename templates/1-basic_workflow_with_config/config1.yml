@@ -220,7 +220,6 @@ biasadjust:
         kind: "*"
         nquantiles: 50
       #maximal_calendar:
-      #adapt_freq:
       #jitter_under:
       #jitter_over:
       #align_on:

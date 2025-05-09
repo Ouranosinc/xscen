@@ -26,7 +26,12 @@ def _add_preprocessing_attr(scen, train_kwargs):
     fake_ref = xr.DataArray(name="ref")
     fake_hist = xr.DataArray(name="hist")
 
+    scen.attrs[
+        "bias_adjustment"
+    ] += f" with xsdba_train_args: {train_kwargs['xsdba_train_args']}"
+
     preproc = []
+
     if train_kwargs["jitter_under"] is not None:
         preproc.append(
             xc.core.formatting.gen_call_string(
@@ -37,12 +42,6 @@ def _add_preprocessing_attr(scen, train_kwargs):
         preproc.append(
             xc.core.formatting.gen_call_string(
                 "jitter_over_thresh", fake_ref, fake_hist, train_kwargs["jitter_over"]
-            )
-        )
-    if train_kwargs["adapt_freq"] is not None:
-        preproc.append(
-            xc.core.formatting.gen_call_string(
-                "adapt_freq", fake_ref, fake_hist, train_kwargs["adapt_freq"]
             )
         )
 
@@ -65,7 +64,6 @@ def train(
     xsdba_train_args: dict | None = None,
     xclim_train_args: dict | None = None,
     maximal_calendar: str = "noleap",
-    adapt_freq: dict | None = None,
     jitter_under: dict | None = None,
     jitter_over: dict | None = None,
     align_on: str | None = "year",
@@ -96,8 +94,6 @@ def train(
     maximal_calendar: str
       Maximal calendar dhist can be. The hierarchy: 360_day < noleap < standard < all_leap.
       If dhist's calendar is higher than maximal calendar, it will be converted to the maximal calendar.
-    adapt_freq: dict, optional
-      If given, a dictionary of args to pass to the frequency adaptation function.
     jitter_under: dict, optional
       If given, a dictionary of args to pass to `jitter_under_thresh`.
     jitter_over: dict, optional
@@ -182,23 +178,16 @@ def train(
             ref = xsdba.processing.jitter_under_thresh(ref, **jitter_under)
             hist = xsdba.processing.jitter_under_thresh(hist, **jitter_under)
 
-        if adapt_freq is not None:
-            adapt_freq.setdefault("group", group)
-            hist, pth, dP0 = xsdba.processing.adapt_freq(ref, hist, **adapt_freq)
-            adapt_freq.pop("group")
-
         ADJ = getattr(xsdba.adjustment, method).train(ref, hist, **xsdba_train_args)
 
-    if adapt_freq is not None:
-        ds = ADJ.ds.assign(pth=pth, dP0=dP0)
-    else:
-        ds = ADJ.ds
+    ds = ADJ.ds
 
     # Arguments that need to be transferred to the adjust() function
+    xsdba_train_args.pop("group", None)
     ds.attrs["train_params"] = {
         "var": var,
         "maximal_calendar": maximal_calendar,
-        "adapt_freq": adapt_freq,
+        "xsdba_train_args": xsdba_train_args,
         "jitter_under": jitter_under,
         "jitter_over": jitter_over,
         "period": period,
