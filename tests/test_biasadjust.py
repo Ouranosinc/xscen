@@ -63,22 +63,20 @@ class TestTrain:
             dhist360,
             var="tas",
             period=["2001", "2002"],
-            adapt_freq={"thresh": "2 K"},
+            xsdba_train_args=dict(adapt_freq_thresh="2 K"),
             jitter_over={"upper_bnd": "3 K", "thresh": "2 K"},
             jitter_under={"thresh": "2 K"},
         )
 
         assert out.attrs["train_params"] == {
             "maximal_calendar": "noleap",
-            "adapt_freq": {"thresh": "2 K"},
             "jitter_over": {"upper_bnd": "3 K", "thresh": "2 K"},
             "jitter_under": {"thresh": "2 K"},
             "period": ["2001", "2002"],
             "var": ["tas"],
+            "xsdba_train_args": {"adapt_freq_thresh": "2 K", "nquantiles": 15},
         }
 
-        assert "pth" in out
-        assert "dP0" in out
         assert "dayofyear" in out
         assert "quantiles" in out
 
@@ -172,7 +170,7 @@ class TestAdjust:
             out["tas"].attrs["bias_adjustment"]
             == "DetrendedQuantileMapping(group=Grouper("
             "name='time.dayofyear', window=31), kind='+'"
-            ").adjust(sim, )"
+            ").adjust(sim, ) with xsdba_train_args: {'nquantiles': 15}"
         )
         assert out.time.dt.calendar == "noleap"
 
@@ -203,7 +201,7 @@ class TestAdjust:
             self.dsim.sel(time=slice("2001", "2003")),
             var="tas",
             period=["2001", "2003"],
-            adapt_freq={"thresh": "2 K"},
+            xsdba_train_args=dict(adapt_freq_thresh="2 K"),
             jitter_over={"upper_bnd": "3 K", "thresh": "2 K"},
             jitter_under={"thresh": "2 K"},
         )
@@ -241,19 +239,21 @@ class TestAdjust:
         assert (
             out.tas.attrs["bias_adjustment"]
             == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
-            " window=31), kind='+').adjust(sim, detrend=<LoessDetrend>),"
+            " window=31), kind='+').adjust(sim, detrend=<LoessDetrend>)"
+            " with xsdba_train_args: {'adapt_freq_thresh': '2 K', 'nquantiles': 15},"
             " ref and hist were prepared with jitter_under_thresh(ref, hist,"
             " {'thresh': '2 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd':"
-            " '3 K', 'thresh': '2 K'}) and adapt_freq(ref, hist, {'thresh': '2 K'})"
+            " '3 K', 'thresh': '2 K'})"
         )
 
         assert (
             out2.tas.attrs["bias_adjustment"]
             == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
-            " window=31), kind='+').adjust(sim, detrend=<LoessDetrend>), ref and"
-            " hist were prepared with jitter_under_thresh(ref, hist, {'thresh':"
+            " window=31), kind='+').adjust(sim, detrend=<LoessDetrend>)"
+            " with xsdba_train_args: {'adapt_freq_thresh': '2 K', 'nquantiles': 15}, "
+            "ref and hist were prepared with jitter_under_thresh(ref, hist, {'thresh':"
             " '2 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd': '3 K',"
-            " 'thresh': '2 K'}) and adapt_freq(ref, hist, {'thresh': '2 K'})"
+            " 'thresh': '2 K'})"
         )
 
         assert out.equals(out2)
@@ -292,8 +292,12 @@ class TestAdjust:
             dhist,
             var="pr",
             period=["2001", "2003"],
-            adapt_freq={"thresh": "1 mm d-1"},
-            xsdba_train_args={"kind": "*", "nquantiles": 50},
+            xsdba_train_args={
+                "kind": "*",
+                "nquantiles": 50,
+                # FIXME: when xsdba can handle mm/d correctly
+                "adapt_freq_thresh": "1.157e-05 kg/m2/s",
+            },
         )
 
         out_xscen = xs.adjust(
@@ -319,12 +323,14 @@ class TestAdjust:
 
             # xsdba is now climate-agnostic, patch xclim's converter
             with xclim_convert_units_to():
-                dhist_ad, pth, dP0 = xsdba.processing.adapt_freq(
-                    drefx["pr"], dhistx["pr"], group=group, thresh="1 mm d-1"
-                )
 
                 QM = xsdba.DetrendedQuantileMapping.train(
-                    drefx["pr"], dhist_ad, group=group, kind="*", nquantiles=50
+                    drefx["pr"],
+                    dhistx["pr"],
+                    group=group,
+                    kind="*",
+                    nquantiles=50,
+                    adapt_freq_thresh="1.157e-05 kg/m2/s",
                 )
 
                 detrend = xsdba.detrending.LoessDetrend(
