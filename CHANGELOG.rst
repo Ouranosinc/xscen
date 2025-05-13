@@ -10,7 +10,7 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add annual global tas timeseries for CMIP6's model UKESM1-0-LL ssp585 r4i1p1f2 (:pull:`573`).
 * Add `strict_units` option to health checks. (:pull:`574`, :issue:`574`).
-* New converters `hurslogit_from_hurs` and `hurs_from_hurslogit`.
+* New converters `hurslogit_from_hurs` and `hurs_from_hurslogit`. (:pull:`590`).
 
 v0.12.1 (2025-04-07)
 --------------------
