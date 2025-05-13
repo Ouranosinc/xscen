@@ -9,5 +9,7 @@
   "qtr": "QS-DEC",
   "6mon": "2QS-DEC",
   "yr": "YS",
+  "10yr": "10YS",
+  "30yr": "30YS",
   "fx": "fx"
 }

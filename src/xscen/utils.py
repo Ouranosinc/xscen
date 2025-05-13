@@ -811,35 +811,46 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
     """
     with xr.set_options(keep_attrs=True):
         for v in variables_and_units:
-            if (v in ds) and (
-                units.units2pint(ds[v]) != units.units2pint(variables_and_units[v])
-            ):
-                time_in_ds = units.units2pint(ds[v]).dimensionality.get("[time]")
-                time_in_out = units.units2pint(
-                    variables_and_units[v]
-                ).dimensionality.get("[time]")
+            if v in ds:
+                if units.units2pint(ds[v]) != units.units2pint(variables_and_units[v]):
+                    time_in_ds = units.units2pint(ds[v]).dimensionality.get("[time]")
+                    time_in_out = units.units2pint(
+                        variables_and_units[v]
+                    ).dimensionality.get("[time]")
 
-                if time_in_ds == time_in_out:
-                    ds = ds.assign(
-                        {v: units.convert_units_to(ds[v], variables_and_units[v])}
-                    )
-                elif time_in_ds - time_in_out == 1:
-                    # ds is an amount
-                    ds = ds.assign(
-                        {v: units.amount2rate(ds[v], out_units=variables_and_units[v])}
-                    )
-                elif time_in_ds - time_in_out == -1:
-                    # ds is a rate
-                    ds = ds.assign(
-                        {v: units.rate2amount(ds[v], out_units=variables_and_units[v])}
-                    )
-                else:
-                    raise ValueError(
-                        f"No known transformation between {ds[v].units} and {variables_and_units[v]} (temporal dimensionality mismatch)."
-                    )
-            elif (v in ds) and (ds[v].units != variables_and_units[v]):
+                    if time_in_ds == time_in_out:
+                        ds = ds.assign(
+                            {v: units.convert_units_to(ds[v], variables_and_units[v])}
+                        )
+                    elif time_in_ds - time_in_out == 1:
+                        # ds is an amount
+                        ds = ds.assign(
+                            {
+                                v: units.amount2rate(
+                                    ds[v], out_units=variables_and_units[v]
+                                )
+                            }
+                        )
+                    elif time_in_ds - time_in_out == -1:
+                        # ds is a rate
+                        ds = ds.assign(
+                            {
+                                v: units.rate2amount(
+                                    ds[v], out_units=variables_and_units[v]
+                                )
+                            }
+                        )
+                    else:
+                        raise ValueError(
+                            f"No known transformation between {ds[v].units} and {variables_and_units[v]} (temporal dimensionality mismatch)."
+                        )
                 # update unit name if physical units are equal but not their name (ex. degC vs °C)
-                ds = ds.assign({v: ds[v].assign_attrs(units=variables_and_units[v])})
+                if (
+                    units.units2pint(ds[v]) == units.units2pint(variables_and_units[v])
+                ) and (ds[v].units != variables_and_units[v]):
+                    ds = ds.assign(
+                        {v: ds[v].assign_attrs(units=variables_and_units[v])}
+                    )
 
     return ds
 
@@ -960,6 +971,7 @@ def clean_up(  # noqa: C901
         ds = change_units(ds=ds, variables_and_units=variables_and_units)
     # convert calendar
     if convert_calendar_kwargs:
+        vars_with_no_time = [v for v in ds.data_vars if "time" not in ds[v].dims]
         # create mask of grid point that should always be nan
         ocean = ds.isnull().all("time")
         # if missing_by_var exist make sure missing data are added to time axis
@@ -983,6 +995,11 @@ def clean_up(  # noqa: C901
         msg = f"Converting calendar with {convert_calendar_kwargs}."
         logger.info(msg)
         ds = ds.convert_calendar(**convert_calendar_kwargs).where(~ocean)
+
+        # FIXME: Fix for xarray <= 2025.04.0: https://github.com/pydata/xarray/issues/10266
+        for vv in vars_with_no_time:
+            if "time" in ds[vv].dims:
+                ds[vv] = ds[vv].isel(time=0).drop_vars("time")
 
         # convert each variable individually
         if missing_by_var:

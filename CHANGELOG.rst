@@ -4,13 +4,22 @@ Changelog
 
 v0.13 (unreleased)
 --------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Éric Dupuis (:user:`coxipi`).
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Éric Dupuis (:user:`coxipi`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* Remove `adapt_freq` argument from `xs.train`. This argument should be passed to xsdba directly. (:pull:`589`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add annual global tas timeseries for CMIP6's model UKESM1-0-LL ssp585 r4i1p1f2 (:pull:`573`).
 * Add `strict_units` option to health checks. (:pull:`574`, :issue:`574`).
+* Add 10yr and 30yr frequencies support in CVs. (:pull:`576`).
 * New converters `hurslogit_from_hurs` and `hurs_from_hurslogit`. (:pull:`590`).
+
+Bug fixes
+^^^^^^^^^
+* ``xs.utils.change_units`` will now always check that the units returned are exactly the same as the requested units. (:pull:`578`).
 
 v0.12.1 (2025-04-07)
 --------------------
