@@ -121,8 +121,7 @@ def hurslogit_from_hurs(hurs: xr.DataArray) -> xr.DataArray:
 
     Returns
     -------
-    xr.DataArray
-      Daily relative humidity in logit space.
+    in logit space.
 
     Notes
     -----
@@ -152,6 +151,4 @@ def hurs_from_hurslogit(hurslogit: xr.DataArray) -> xr.DataArray:
     -----
     This converts the range of `hurslogit` from ]-np.inf, np.inf[ to [0,100].
     """
-    return from_additive_space(
-        hurslogit, lower_bound="0 %", upper_bound="100 %", trans="logit", units="%"
-    )
+    return from_additive_space(hurslogit)

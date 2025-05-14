@@ -80,9 +80,11 @@ def test_hurslogit_from_hurs(use_pct):
 
 def test_hurs_from_hurslogit():
     hurs_truth = timeseries(
-        [20, 40, 60], variable="hurs", start="2001-01-01", freq="D", units="%"
+        [20.0, 40.0, 60.0], variable="hurs", start="2001-01-01", freq="D", units="%"
     )
-    hurslogit = (np.log(hurs_truth / (100 - hurs_truth))).assign_attrs({"units": "1"})
+    # we already know that this transformation works from the test above
+    hurslogit = conv.hurslogit_from_hurs(hurs_truth)
+    # this tests the transformation back, and how argument xsdba_transform args are used
     hurs = conv.hurs_from_hurslogit(hurslogit)
     assert hurs.attrs["units"] == "%"
-    np.testing.assert_array_equal(hurs, hurs_truth)
+    np.testing.assert_array_almost_equal(hurs, hurs_truth)
