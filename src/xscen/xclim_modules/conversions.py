@@ -4,6 +4,7 @@ from __future__ import annotations  # for xclim 0.37
 
 import xarray as xr
 from xclim.core.units import convert_units_to, declare_units
+from xsdba.processing import from_additive_space, to_additive_space
 
 
 @declare_units(prsn="[precipitation]", prlp="[precipitation]")
@@ -107,3 +108,47 @@ def dtr_from_minmax(tasmin: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
     dtr.attrs["units"] = tasmin.attrs["units"]
     dtr.attrs["units_metadata"] = "temperature: difference"
     return dtr
+
+
+@declare_units(hurs="[]")
+def hurslogit_from_hurs(hurs: xr.DataArray) -> xr.DataArray:
+    """Hurslogit computed from hurs.
+
+    Parameters
+    ----------
+    hurs: xr.DataArray
+      Daily relative humidity.
+
+    Returns
+    -------
+    in logit space.
+
+    Notes
+    -----
+    This converts the range of `hurs` from [0,100] to ]-np.inf, np.inf[.
+    """
+    hurs = convert_units_to(hurs, "%")
+    return to_additive_space(
+        hurs, lower_bound="0 %", upper_bound="100 %", trans="logit"
+    )
+
+
+@declare_units(hurslogit="[]")
+def hurs_from_hurslogit(hurslogit: xr.DataArray) -> xr.DataArray:
+    """Hurslogit computed from hurs.
+
+    Parameters
+    ----------
+    hurslogit: xr.DataArray
+      Daily relative humidity in logit space.
+
+    Returns
+    -------
+    xr.DataArray
+      Daily relative humidity.
+
+    Notes
+    -----
+    This converts the range of `hurslogit` from ]-np.inf, np.inf[ to [0,100].
+    """
+    return from_additive_space(hurslogit)
