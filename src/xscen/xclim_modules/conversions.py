@@ -112,17 +112,17 @@ def dtr_from_minmax(tasmin: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
 
 @declare_units(hurs="[]")
 def hurslogit_from_hurs(hurs: xr.DataArray) -> xr.DataArray:
-    """Hurslogit computed from hurs
+    """Hurslogit computed from hurs.
 
     Parameters
     ----------
     hurs: xr.DataArray
-      Daily relative humidity
+      Daily relative humidity.
 
     Returns
     -------
     xr.DataArray
-      Daily relative humidity in logit space
+      Daily relative humidity in logit space.
 
     Notes
     -----
@@ -136,7 +136,7 @@ def hurslogit_from_hurs(hurs: xr.DataArray) -> xr.DataArray:
 
 @declare_units(hurslogit="[]")
 def hurs_from_hurslogit(hurslogit: xr.DataArray) -> xr.DataArray:
-    """Hurslogit computed from hurs
+    """Hurslogit computed from hurs.
 
     Parameters
     ----------
@@ -146,7 +146,7 @@ def hurs_from_hurslogit(hurslogit: xr.DataArray) -> xr.DataArray:
     Returns
     -------
     xr.DataArray
-      Daily relative humidity
+      Daily relative humidity.
 
     Notes
     -----
