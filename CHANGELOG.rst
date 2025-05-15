@@ -20,6 +20,7 @@ New features and enhancements
 Bug fixes
 ^^^^^^^^^
 * ``xs.utils.change_units`` will now always check that the units returned are exactly the same as the requested units. (:pull:`578`).
+* Fixed a bug in ``xs.catalog.subset_file_coverage`` where the function could not process dates after 2262. (:pull:`591`).
 
 v0.12.1 (2025-04-07)
 --------------------
