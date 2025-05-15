@@ -1085,7 +1085,9 @@ def subset_file_coverage(
 
     # Create an Interval for each file
     intervals = pd.IntervalIndex.from_arrays(
-        df["date_start"], df["date_end"], closed="both"
+        df["date_start"].astype("<M8[ms]"),
+        df["date_end"].astype("<M8[ms]"),
+        closed="both",
     )
 
     # Check for duplicated Intervals
@@ -1116,12 +1118,12 @@ def subset_file_coverage(
             period_length = period_interval.length
             # Sum of hours in all selected files, restricted by the requested period
             guessed_length = pd.IntervalIndex.from_arrays(
-                intervals[files_in_range].map(
-                    lambda x: max(x.left, period_interval.left)
-                ),
-                intervals[files_in_range].map(
-                    lambda x: min(x.right, period_interval.right)
-                ),
+                intervals[files_in_range]
+                .map(lambda x: max(x.left, period_interval.left))
+                .astype("<M8[ms]"),
+                intervals[files_in_range]
+                .map(lambda x: min(x.right, period_interval.right))
+                .astype("<M8[ms]"),
             ).length.sum()
 
             if guessed_length / period_length < coverage:
