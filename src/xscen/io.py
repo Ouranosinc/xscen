@@ -15,6 +15,7 @@ import h5py
 import netCDF4
 import numpy as np
 import pandas as pd
+import sparse as sp
 import xarray as xr
 import zarr
 from numcodecs.bitround import BitRound
@@ -34,10 +35,12 @@ __all__ = [
     "clean_incomplete",
     "estimate_chunks",
     "get_engine",
+    "load_sparse",
     "make_toc",
     "rechunk",
     "rechunk_for_saving",
     "round_bits",
+    "save_sparse",
     "save_to_netcdf",
     "save_to_table",
     "save_to_zarr",
@@ -1135,3 +1138,61 @@ def unzip_directory(zipfile: str | os.PathLike, root: str | os.PathLike):
 
     with ZipFile(zipfile, "r") as zf:
         zf.extractall(root)
+
+
+# TODO: Implement as CF compression-by-gathering in cf-xarray instead
+def save_sparse(
+    da: xr.DataArray,
+    filename: str | os.PathLike,
+):
+    """Utility to save a sparse array to disk.
+
+    This is useful for saving :py:func:`~xscen.spatial.creep_weights` to disk, for example.
+    Code inspired by xESMF. The output dataset preserves all coordinates, dimensions and attributes
+    of the input dataarray, but in a syntax specific to xscen.
+
+    Parameters
+    ----------
+    da : xr.DataArray
+        Must be wrapping a :py:class:`sparse.COO` array.
+    filename : pathlike
+        Path of the netCDF to write.
+
+    See Also
+    --------
+    load_sparse
+    """
+    arr = da.data
+    ds = xr.Dataset(
+        {
+            "sp_values": ("nnz", arr.data),
+            "sp_coords": (("sp_dims", "nnz"), arr.coords),
+            "sp_names": (("sp_dims",), list(da.dims)),
+            "sp_shape": (("sp_dims",), list(da.shape)),
+        },
+        coords=da.coords,
+        attrs={"original_name": da.name or "weights", **da.attrs},
+    )
+    ds.to_netcdf(filename)
+
+
+def load_sparse(filename: str | os.PathLike):
+    """Load a sparse array that was saved with :py:func:`~xscen.io.save_sparse`.
+
+    Parameters
+    ----------
+    filename: pathlike
+        Path of the netCDF to read.
+
+    Returns
+    -------
+    xr.DataArray: DataArray wrapping a sparse.COO array.
+    """
+    ds = xr.open_dataset(filename)
+    return xr.DataArray(
+        sp.COO(ds.sp_coords.values, ds.sp_values.values, ds.sp_shape.values),
+        dims=ds.sp_names.values,
+        coords=ds.coords,
+        name=ds.attrs.pop("original_name"),
+        attrs=ds.attrs,
+    )

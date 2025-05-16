@@ -2,6 +2,15 @@
 Changelog
 =========
 
+v0.13 (unreleased)
+------------------
+Contributors to this version: Pascal Bourgault (:user:`aulemahal`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Add possibility to "creep fill" iteratively with argument ``steps`` in ``xs.spatial.creep_weights``. (:pull:`594`).
+* Ability to save and load sparse arrays like the creep or regridding weights to disk with ``xs.io.save_sparse``  and ``xs.io.load_sparse``. (:pull:`594`).
+
 v0.12.2 (2025-05-16)
 --------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Éric Dupuis (:user:`coxipi`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
