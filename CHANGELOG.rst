@@ -2,6 +2,14 @@
 Changelog
 =========
 
+v0.13 (unreleased)
+--------------------
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`)
+
+Bug fixes
+^^^^^^^^^
+* Fixed bugs in template 1.
+
 v0.12.2 (2025-05-16)
 --------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Éric Dupuis (:user:`coxipi`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
