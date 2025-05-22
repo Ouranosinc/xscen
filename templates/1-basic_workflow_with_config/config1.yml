@@ -145,7 +145,7 @@ extract:
           - ssp370
         source:
           - CMCC-ESM2
-          - KACE-1-0-G
+          #- UKESM1-0-LL #FIXME: put back when https://github.com/Ouranosinc/xsdba/issues/148 is fixed
         member:
           - r1i1p1f1
     extract_dataset:
@@ -331,7 +331,7 @@ cleanup:
     missing_by_var:
       tasmax: interpolate
       tasmin: interpolate
-      pr: [ 0 ]
+      pr:  0
     #round_var:
     #common_attrs_only:
     #common_attrs_open_kwargs:
