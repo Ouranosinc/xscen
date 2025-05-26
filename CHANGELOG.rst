@@ -2,13 +2,17 @@
 Changelog
 =========
 
-v0.13 (unreleased)
+v0.12.3 (2025-05-26)
 --------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`)
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
 
 Bug fixes
 ^^^^^^^^^
-* Fixed bugs in template 1.
+* Fixed bugs in template 1. (:pull:`595`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Updated ``xclim`` to v0.57.0. (:pull:`596`).
 
 v0.12.2 (2025-05-16)
 --------------------
