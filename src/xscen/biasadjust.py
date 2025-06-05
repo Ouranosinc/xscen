@@ -7,6 +7,7 @@ from copy import deepcopy
 import xarray as xr
 import xclim as xc
 import xsdba
+from xsdba.processing import from_additive_space, to_additive_space
 
 from .catutils import parse_from_ds
 from .config import parse_config
@@ -67,6 +68,7 @@ def train(
     jitter_under: dict | None = None,
     jitter_over: dict | None = None,
     align_on: str | None = "year",
+    additive_space: dict | None = None,
 ) -> xr.Dataset:
     """
     Train a bias-adjustment.
@@ -100,6 +102,13 @@ def train(
       If given, a dictionary of args to pass to `jitter_over_thresh`.
     align_on: str, optional
       `align_on` argument for the function `xr.DataArray.convert_calendar`.
+    additive_space : dict, optional
+        A dictionary of variables and their arguments to convert them to additive space.
+        The transfomration will be applied to both `dref` and `dhist` datasets,
+        as well as `dsim` and `dref` in `adjust`.
+        Finally, `from_additive_space` will be called on the output of `adjust`.
+        The keys are the variable names, and the values are the arguments for `to_additive_space`.
+        If given, `kind` in `xsdba_train_args` must be '+'.
 
     Returns
     -------
@@ -108,7 +117,8 @@ def train(
 
     See Also
     --------
-    xsdba.adjustment.DetrendedQuantileMapping, xsdba.adjustment.ExtremeValues
+    xsdba.adjustment.DetrendedQuantileMapping, xsdba.adjustment.ExtremeValues,
+     xsdba.processing.to_additive_space, xsdba.processing.from_additive_space
 
     """
     if xclim_train_args is not None:
@@ -125,6 +135,18 @@ def train(
 
     if isinstance(var, str):
         var = [var]
+
+    # transforms
+    additive_space = additive_space or {}
+    if additive_space:
+        for add_var, add_args in additive_space.items():
+            dref[add_var] = to_additive_space(dref[add_var], **add_args)
+            dhist[add_var] = to_additive_space(dhist[add_var], **add_args)
+        if "kind" in xsdba_train_args and xsdba_train_args["kind"] != "+":
+            warnings.warn(
+                "`additive_space` was given, but `kind` in `xsdba_train_args` is not '+'."
+            )
+
     if len(var) == 1:
         ref = dref[var[0]]
         hist = dhist[var[0]]
@@ -191,6 +213,7 @@ def train(
         "jitter_under": jitter_under,
         "jitter_over": jitter_over,
         "period": period,
+        "additive_space": additive_space,
     }
 
     # attrs that are needed to open with .to_dataset_dict()
@@ -277,6 +300,14 @@ def adjust(
         # FIXME: eval is bad. There has to be a better way!™
         dtrain.attrs["train_params"] = eval(dtrain.attrs["train_params"])  # noqa: S307
 
+    # transforms
+    additive_space = dtrain.attrs["train_params"]["additive_space"]
+    if additive_space:
+        for add_var, add_args in additive_space.items():
+            if dref:
+                dref[add_var] = to_additive_space(dref[add_var], **add_args)
+            dsim[add_var] = to_additive_space(dsim[add_var], **add_args)
+
     var = dtrain.attrs["train_params"]["var"]
     if len(var) == 1:
         var = var[0]
@@ -357,11 +388,14 @@ def adjust(
         dscen = xr.Dataset(data_vars={var: dscen}, attrs=dsim.attrs)
     else:
         dscen = xsdba.unstack_variables(dscen)
+
+    if additive_space:
+        for add_var, add_args in additive_space.items():
+            dscen[add_var] = from_additive_space(dscen[add_var])
+
     dscen.attrs["cat:processing_level"] = to_level
     dscen.attrs["cat:variable"] = parse_from_ds(dscen, ["variable"])["variable"]
-    if bias_adjust_institution is not None:
-        dscen.attrs["cat:bias_adjust_institution"] = bias_adjust_institution
-    if bias_adjust_project is not None:
-        dscen.attrs["cat:bias_adjust_project"] = bias_adjust_project
+    dscen.attrs["cat:bias_adjust_institution"] = bias_adjust_institution or "unknown"
+    dscen.attrs["cat:bias_adjust_project"] = bias_adjust_project or "unknown"
 
     return dscen
