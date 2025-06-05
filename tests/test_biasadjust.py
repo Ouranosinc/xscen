@@ -75,6 +75,7 @@ class TestTrain:
             "period": ["2001", "2002"],
             "var": ["tas"],
             "xsdba_train_args": {"adapt_freq_thresh": "2 K", "nquantiles": 15},
+            "additive_space": {},
         }
 
         assert "dayofyear" in out
