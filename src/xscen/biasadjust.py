@@ -104,7 +104,7 @@ def train(
       `align_on` argument for the function `xr.DataArray.convert_calendar`.
     additive_space : dict, optional
         A dictionary of variables and their arguments to convert them to additive space.
-        The transfomration will be applied to both `dref` and `dhist` datasets,
+        The transformation will be applied to both `dref` and `dhist` datasets,
         as well as `dsim` and `dref` in `adjust`.
         Finally, `from_additive_space` will be called on the output of `adjust`.
         The keys are the variable names, and the values are the arguments for `to_additive_space`.
