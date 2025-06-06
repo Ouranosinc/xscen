@@ -75,6 +75,7 @@ class TestTrain:
             "period": ["2001", "2002"],
             "var": ["tas"],
             "xsdba_train_args": {"adapt_freq_thresh": "2 K", "nquantiles": 15},
+            "additive_space": {},
         }
 
         assert "dayofyear" in out
@@ -344,6 +345,41 @@ class TestAdjust:
                 ).rename({"scen": "pr"})
 
         assert out_xscen.equals(out_xclim)
+
+    def test_additive_space(self):
+        data = np.random.random(365 * 3) * 90
+        dhist = timeseries(
+            data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
+        )
+        data = np.random.random(365 * 3) * 100
+
+        dref = timeseries(
+            data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
+        )
+        data2 = np.random.random(365 * 6) * 100
+        dsim = timeseries(
+            data2, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
+        )
+
+        dtrain = xs.train(
+            dref,
+            dhist,
+            var="hurs",
+            period=["2001", "2003"],
+            group="time",
+            xsdba_train_args={"kind": "+"},
+            additive_space={
+                "hurs": dict(lower_bound="0 %", upper_bound="100 %", trans="logit")
+            },
+        )
+
+        assert dtrain.attrs["train_params"]["additive_space"] == {
+            "hurs": {"lower_bound": "0 %", "upper_bound": "100 %", "trans": "logit"}
+        }
+
+        dadjust = xs.adjust(dtrain, dsim, periods=["2001", "2007"])
+
+        assert dadjust.hurs.max().values <= 100
 
 
 class TestMultivariate:
