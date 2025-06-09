@@ -4,11 +4,15 @@ Changelog
 
 v0.13 (unreleased)
 --------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Éric Dupuis (:user:`coxipi`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add `additive_space` option to ``xs.train``. (:pull:`603`).
+
+Bug fixes
+^^^^^^^^^
+* Fixed `xs.utils.xclim_convert_units_to` context patching. (:pull:`604`).
 
 v0.12.3 (2025-05-26)
 --------------------
