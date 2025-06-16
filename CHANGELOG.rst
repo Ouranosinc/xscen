@@ -8,7 +8,11 @@ Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* Add `additive_space` option to ``xs.train``. (:pull:`603`).
+* Add `additive_space` option to ``xs.train``. (:pull:`607`, :issue:`607`).
+
+Bug fixes
+^^^^^^^^^
+* Better handling of attributes in ``xs.train``. (:pull:)
 
 v0.12.3 (2025-05-26)
 --------------------
