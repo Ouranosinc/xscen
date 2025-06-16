@@ -13,6 +13,7 @@ New features and enhancements
 Bug fixes
 ^^^^^^^^^
 * Better handling of attributes in ``xs.train``. (:pull:`608`, :issue:`607`)
+
 v0.12.3 (2025-05-26)
 --------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
