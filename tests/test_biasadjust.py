@@ -75,7 +75,7 @@ class TestTrain:
             "jitter_under": {"thresh": "2 K"},
             "period": ["2001", "2002"],
             "var": ["tas"],
-            "xsdba_train_args": {"adapt_freq_thresh": "2 K", "nquantiles": 15},
+            "xsdba_train_args": {"adapt_freq_thresh": "2 K"},
             "additive_space": {},
         }
 
@@ -172,7 +172,7 @@ class TestAdjust:
             out["tas"].attrs["bias_adjustment"]
             == "DetrendedQuantileMapping(group=Grouper("
             "name='time.dayofyear', window=31), kind='+'"
-            ").adjust(sim, ) with xsdba_train_args: {'nquantiles': 15}"
+            ").adjust(sim, ) with xsdba_train_args: {}"
         )
         assert out.time.dt.calendar == "noleap"
 
@@ -242,7 +242,7 @@ class TestAdjust:
             out.tas.attrs["bias_adjustment"]
             == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
             " window=31), kind='+').adjust(sim, detrend=<LoessDetrend>)"
-            " with xsdba_train_args: {'adapt_freq_thresh': '2 K', 'nquantiles': 15},"
+            " with xsdba_train_args: {'adapt_freq_thresh': '2 K'},"
             " ref and hist were prepared with jitter_under_thresh(ref, hist,"
             " {'thresh': '2 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd':"
             " '3 K', 'thresh': '2 K'})"
@@ -252,7 +252,7 @@ class TestAdjust:
             out2.tas.attrs["bias_adjustment"]
             == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
             " window=31), kind='+').adjust(sim, detrend=<LoessDetrend>)"
-            " with xsdba_train_args: {'adapt_freq_thresh': '2 K', 'nquantiles': 15}, "
+            " with xsdba_train_args: {'adapt_freq_thresh': '2 K'}, "
             "ref and hist were prepared with jitter_under_thresh(ref, hist, {'thresh':"
             " '2 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd': '3 K',"
             " 'thresh': '2 K'})"
