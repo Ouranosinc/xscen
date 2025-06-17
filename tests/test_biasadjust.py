@@ -381,6 +381,49 @@ class TestAdjust:
 
         assert dadjust.hurs.max().values <= 100
 
+    def test_additive_space_clip(self):
+        data = np.random.random(365 * 3) * 90
+        data[-1] = 100
+        dhist = timeseries(
+            data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
+        )
+        data = np.random.random(365 * 3) * 100
+
+        dref = timeseries(
+            data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
+        )
+        data2 = np.random.random(365 * 6) * 100
+        dsim = timeseries(
+            data2, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
+        )
+
+        dtrain = xs.train(
+            dref,
+            dhist,
+            var="hurs",
+            period=["2001", "2003"],
+            group={"group": "time.dayofyear", "window": 31},
+            xsdba_train_args={"kind": "+"},
+            additive_space={
+                "hurs": dict(
+                    lower_bound="0 %", upper_bound="100 %", trans="logit", clip=[100, 0]
+                )
+            },
+        )
+
+        assert dtrain.attrs["train_params"]["additive_space"] == {
+            "hurs": {
+                "lower_bound": "0 %",
+                "upper_bound": "100 %",
+                "trans": "logit",
+                "clip": [100, 0],
+            }
+        }
+
+        dadjust = xs.adjust(dtrain, dsim, periods=["2001", "2007"])
+
+        assert dadjust.hurs.max().values <= 100
+
 
 class TestMultivariate:
     def test_mbcn(self):

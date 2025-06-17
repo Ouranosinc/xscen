@@ -4,6 +4,7 @@ import logging
 import warnings
 from copy import deepcopy
 
+import numpy as np
 import xarray as xr
 import xclim as xc
 import xsdba
@@ -108,6 +109,8 @@ def train(
         as well as `dsim` and `dref` in `adjust`.
         Finally, `from_additive_space` will be called on the output of `adjust`.
         The keys are the variable names, and the values are the arguments for `to_additive_space`.
+        Add `clip=[bound1, bound2]` to apply `.clip(None, np.nextafter(bound1,bound2))` before
+        the transformation to avoid values that make the transformation explode( e.g. 100% for hurs)
         If given, `kind` in `xsdba_train_args` must be '+'.
 
     Returns
@@ -140,6 +143,16 @@ def train(
     additive_space = additive_space or {}
     if additive_space:
         for add_var, add_args in additive_space.items():
+            add_args = deepcopy(add_args)
+            if "clip" in add_args:
+                clip = add_args.pop("clip")
+                dref[add_var] = dref[add_var].clip(
+                    None, np.nextafter(clip[0], clip[1], dtype=dref[add_var].dtype)
+                )
+                dhist[add_var] = dhist[add_var].clip(
+                    None, np.nextafter(clip[0], clip[1], dtype=dhist[add_var].dtype)
+                )
+
             dref[add_var] = to_additive_space(dref[add_var], **add_args)
             dhist[add_var] = to_additive_space(dhist[add_var], **add_args)
         if "kind" in xsdba_train_args and xsdba_train_args["kind"] != "+":
@@ -303,10 +316,9 @@ def adjust(
     # transforms
     additive_space = dtrain.attrs["train_params"]["additive_space"]
     if additive_space:
-        for add_var, add_args in additive_space.items():
-            if dref:
-                dref[add_var] = to_additive_space(dref[add_var], **add_args)
-            dsim[add_var] = to_additive_space(dsim[add_var], **add_args)
+        dsim = _apply_additive_space(dsim, additive_space)
+        if dref:
+            dref = _apply_additive_space(dref, additive_space)
 
     var = dtrain.attrs["train_params"]["var"]
     if len(var) == 1:
@@ -390,7 +402,7 @@ def adjust(
         dscen = xsdba.unstack_variables(dscen)
 
     if additive_space:
-        for add_var, add_args in additive_space.items():
+        for add_var in additive_space.keys():
             dscen[add_var] = from_additive_space(dscen[add_var])
 
     dscen.attrs["cat:processing_level"] = to_level
@@ -399,3 +411,15 @@ def adjust(
     dscen.attrs["cat:bias_adjust_project"] = bias_adjust_project or "unknown"
 
     return dscen
+
+
+def _apply_additive_space(ds, args):
+    for add_var, add_args in args.items():
+        add_args = deepcopy(add_args)
+        clip = add_args.pop("clip", None)
+        if clip:
+            ds[add_var] = ds[add_var].clip(
+                None, np.nextafter(clip[0], clip[1], dtype=ds[add_var].dtype)
+            )
+        ds[add_var] = to_additive_space(ds[add_var], **add_args)
+    return ds
