@@ -142,19 +142,9 @@ def train(
     # transforms
     additive_space = additive_space or {}
     if additive_space:
-        for add_var, add_args in additive_space.items():
-            add_args = deepcopy(add_args)
-            if "clip" in add_args:
-                clip = add_args.pop("clip")
-                dref[add_var] = dref[add_var].clip(
-                    None, np.nextafter(clip[0], clip[1], dtype=dref[add_var].dtype)
-                )
-                dhist[add_var] = dhist[add_var].clip(
-                    None, np.nextafter(clip[0], clip[1], dtype=dhist[add_var].dtype)
-                )
+        dref = _apply_additive_space(dref, additive_space)
+        dhist = _apply_additive_space(dhist, additive_space)
 
-            dref[add_var] = to_additive_space(dref[add_var], **add_args)
-            dhist[add_var] = to_additive_space(dhist[add_var], **add_args)
         if "kind" in xsdba_train_args and xsdba_train_args["kind"] != "+":
             warnings.warn(
                 "`additive_space` was given, but `kind` in `xsdba_train_args` is not '+'."
