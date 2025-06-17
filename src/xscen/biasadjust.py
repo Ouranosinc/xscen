@@ -1,5 +1,6 @@
 """Functions to train and adjust a dataset using a bias-adjustment algorithm."""
 
+import ast
 import logging
 import warnings
 from copy import deepcopy
@@ -165,6 +166,7 @@ def train(
 
     group = group if group is not None else {"group": "time.dayofyear", "window": 31}
     xsdba_train_args = xsdba_train_args or {}
+    xsdba_train_args_copy = deepcopy(xsdba_train_args)  # for train args
     if method == "DetrendedQuantileMapping":
         xsdba_train_args.setdefault("nquantiles", 15)
 
@@ -212,7 +214,7 @@ def train(
     ds.attrs["train_params"] = {
         "var": var,
         "maximal_calendar": maximal_calendar,
-        "xsdba_train_args": xsdba_train_args,
+        "xsdba_train_args": xsdba_train_args_copy,
         "jitter_under": jitter_under,
         "jitter_over": jitter_over,
         "period": period,
@@ -301,7 +303,9 @@ def adjust(
     # evaluate the dict that was stored as a string
     if not isinstance(dtrain.attrs["train_params"], dict):
         # FIXME: eval is bad. There has to be a better way!™
-        dtrain.attrs["train_params"] = eval(dtrain.attrs["train_params"])  # noqa: S307
+        dtrain.attrs["train_params"] = ast.literal_eval(
+            dtrain.attrs["train_params"]
+        )  # noqa: S307
 
     # transforms
     additive_space = dtrain.attrs["train_params"]["additive_space"]
