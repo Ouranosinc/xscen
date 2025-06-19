@@ -294,6 +294,22 @@ class TestHealthChecks:
                     ]
                 )
 
+    def test_cfchecks_dtr(self):
+        cat = xs.DataCatalog(notebooks / "samples" / "pangeo-cmip6.json")
+        cat_dict = xs.search_data_catalogs(
+            data_catalogs=cat,
+            variables_and_freqs={"dtr": "D"},
+            allow_conversion=True,
+            other_search_criteria={"source": "NorESM2-LM"},
+        )
+        ds = xs.extract_dataset(cat_dict["CMIP_NCC_NorESM2-LM_historical_r1i1p1f1_gn"])[
+            "D"
+        ]
+        # should not fail
+        xs.diagnostics.health_checks(
+            ds, cfchecks={"dtr": {"cfcheck_from_name": {}}}, raise_on=["all"]
+        )
+
 
 class TestPropertiesMeasures:
     yaml_file = notebooks / "samples" / "properties.yml"
