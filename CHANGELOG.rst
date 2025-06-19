@@ -10,6 +10,10 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add `additive_space` option to ``xs.train``. (:pull:`603`).
 
+Bug fixes
+^^^^^^^^^
+* Add standard_name to dtr definition in conversions. (:pull:`611`).
+
 v0.12.3 (2025-05-26)
 --------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
