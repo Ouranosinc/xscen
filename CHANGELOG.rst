@@ -13,6 +13,8 @@ New features and enhancements
 Bug fixes
 ^^^^^^^^^
 * Add standard_name to dtr definition in conversions. (:pull:`611`).
+* Better handling of attributes in ``xs.train``. (:pull:`608`, :issue:`607`)
+
 
 v0.12.3 (2025-05-26)
 --------------------
