@@ -72,6 +72,7 @@ indicators:
       description: Daily temperature range.
       cell_methods: "time: range within days"
       var_name: dtr
+      standard_name: air_temperature
   tasmin_from_dtr:
     src_freq: D
     compute: tasmin_from_dtr
