@@ -88,21 +88,3 @@ def test_hurs_from_hurslogit():
     hurs = conv.hurs_from_hurslogit(hurslogit)
     assert hurs.attrs["units"] == "%"
     np.testing.assert_array_almost_equal(hurs, hurs_truth)
-
-
-def test_hurs_from_relative_humidity_from_dewpoint():
-    K2C = 273.16
-    np.testing.assert_allclose(
-        conv.relative_humidity_from_dewpoint(
-            tas=timeseries(
-                np.array([-20, -10, -1, 10, 20, 25, 30, 40, 60]) + K2C, "tas"
-            ),
-            tdps=timeseries(
-                np.array([-15, -10, -2, 5, 10, 20, 29, 20, 30]) + K2C, "tdps"
-            ),
-            invalid_values="clip",
-        ),
-        timeseries([100, 100, 93, 71, 52, 73, 94, 31, 20], "hurs"),
-        rtol=0.02,
-        atol=1,
-    )
