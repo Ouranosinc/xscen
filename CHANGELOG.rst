@@ -9,6 +9,7 @@ Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add `additive_space` option to ``xs.train``. (:pull:`603`).
+* Modify the xclim modules definition of ``relative_humidity_from_dewpoint`` to include ``invalid_values='clip'``.(:pull:`616`).
 
 v0.12.3 (2025-05-26)
 --------------------

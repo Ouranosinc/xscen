@@ -21,6 +21,7 @@ indicators:
     parameters:
       method: tetens30
       ice_thresh: 0 degC
+      invalid_values: clip
     cf_attrs:
       - var_name: hurs
   specific_humidity:
