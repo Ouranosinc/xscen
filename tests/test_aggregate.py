@@ -784,6 +784,8 @@ class TestClimatologicalOp:
         "op", ["max", "mean", "median", "min", "std", "sum", "var", "linregress"]
     )
     def test_options(self, xrfreq, op):
+        if op == "linregress" and Version(__scipy_version__) < Version("1.16.0"):
+            pytest.skip("Skipping linregress on older scipy")
         o = 12 if xrfreq == "MS" else 1
 
         ds = timeseries(
@@ -818,10 +820,10 @@ class TestClimatologicalOp:
                             [
                                 np.zeros(o),
                                 np.arange(1, o + 1),
-                                np.zeros(o),
-                                np.ones(o),
-                                np.zeros(o),
-                                np.zeros(o),
+                                np.zeros(o) * np.nan,
+                                np.ones(o) * np.nan,
+                                np.zeros(o) * np.nan,
+                                np.zeros(o) * np.nan,
                             ]
                         ),
                         len(np.unique(out.horizon.values)),
@@ -913,6 +915,8 @@ class TestClimatologicalOp:
 
     @pytest.mark.parametrize("op", ["mean", "linregress"])
     def test_minperiods(self, op):
+        if op == "linregress" and Version(__scipy_version__) < Version("1.16.0"):
+            pytest.skip("Skipping linregress on older scipy")
         ds = timeseries(
             np.tile(np.arange(1, 5), 30),
             variable="tas",
@@ -932,10 +936,38 @@ class TestClimatologicalOp:
                 out[f"tas_clim_{op}"],
                 np.array(
                     [
-                        [0.0, 1.0, 0.0, 1.0, 0.0, 0.0],
-                        [0.0, 2.0, 0.0, 1.0, 0.0, 0.0],
-                        [0.0, 3.0, 0.0, 1.0, 0.0, 0.0],
-                        [0.0, 4.0, 0.0, 1.0, 0.0, 0.0],
+                        [
+                            0.0,
+                            1.0,
+                            np.nan,
+                            np.nan,
+                            np.nan,
+                            np.nan,
+                        ],
+                        [
+                            0.0,
+                            2.0,
+                            np.nan,
+                            np.nan,
+                            np.nan,
+                            np.nan,
+                        ],
+                        [
+                            0.0,
+                            3.0,
+                            np.nan,
+                            np.nan,
+                            np.nan,
+                            np.nan,
+                        ],
+                        [
+                            0.0,
+                            4.0,
+                            np.nan,
+                            np.nan,
+                            np.nan,
+                            np.nan,
+                        ],
                     ]
                 ),
             )
