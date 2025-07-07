@@ -4,6 +4,8 @@ import pytest
 import xarray as xr
 import xclim
 from conftest import notebooks
+from packaging.version import Version
+from scipy import __version__ as __scipy_version__
 from shapely.geometry import Polygon
 from xclim.testing.helpers import test_timeseries as timeseries
 
@@ -728,6 +730,8 @@ class TestClimatologicalOp:
         "op", ["max", "mean", "median", "min", "std", "sum", "var", "linregress"]
     )
     def test_all_default(self, xrfreq, op):
+        if op == "linregress" and Version(__scipy_version__) < Version("1.16.0"):
+            pytest.skip("Skipping linregress on older scipy")
         o = 12 if xrfreq == "MS" else 1
 
         ds = timeseries(
