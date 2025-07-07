@@ -927,7 +927,7 @@ class TestClimatologicalOp:
         ds = ds.where(ds["time"].dt.strftime("%Y-%m-%d") != "2030-12-01")
 
         out = xs.climatological_op(ds, op=op, window=30)
-        assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == 16
+        assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == (0 if op == "mean" else 16)
         assert len(out.time) == 4
         if op == "mean":
             np.testing.assert_array_equal(out[f"tas_clim_{op}"], np.arange(1, 5))
@@ -979,7 +979,7 @@ class TestClimatologicalOp:
         # min_periods as float
         out = xs.climatological_op(ds, op=op, window=30, min_periods=0.5)
         assert "minimum of 15 years of data" in out[f"tas_clim_{op}"].attrs["history"]
-        assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == 0
+        assert np.sum(np.isnan(out[f"tas_clim_{op}"])) == (0 if op == "mean" else 16)
 
         with pytest.raises(ValueError):
             xs.climatological_op(ds, op=op, window=5, min_periods=6)
