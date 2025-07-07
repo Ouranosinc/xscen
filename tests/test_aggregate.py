@@ -748,10 +748,10 @@ class TestClimatologicalOp:
                         [
                             np.zeros(o),
                             np.arange(1, o + 1),
-                            np.zeros(o),
-                            np.ones(o),
-                            np.zeros(o),
-                            np.zeros(o),
+                            np.zeros(o) * np.nan,
+                            np.zeros(o) * np.nan,
+                            np.zeros(o) * np.nan,
+                            np.zeros(o) * np.nan,
                         ]
                     ).T
                 }
