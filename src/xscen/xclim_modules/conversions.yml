@@ -19,8 +19,7 @@ indicators:
   relative_humidity_from_dewpoint:
     base: hurs_fromdewpoint
     parameters:
-      method: tetens30
-      ice_thresh: 0 degC
+      method: ECMWF
       invalid_values: clip
     cf_attrs:
       - var_name: hurs
