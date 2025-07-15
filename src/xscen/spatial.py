@@ -27,7 +27,9 @@ __all__ = [
     "creep_weights",
     "dataset_extent",
     "get_grid_mapping",
+    "merge_duplicated_stations",
     "subset",
+    "voronoi_weights",
 ]
 
 
@@ -451,8 +453,14 @@ def _load_lon_lat(ds: xr.Dataset) -> xr.Dataset:
 
 
 def get_grid_mapping(ds: xr.Dataset) -> str:
-    """Get the name of the grid_mapping variable from the dataset."""
-    gridmap = list(itertools.chain(*ds.cf.grid_mapping_names.values()))
+    """Get the grid_mapping attribute from the dataset."""
+    gridmap = [
+        ds[v].attrs["grid_mapping"]
+        for v in ds.data_vars
+        if "grid_mapping" in ds[v].attrs
+    ]
+    gridmap += [c for c in ds.variables if ds[c].attrs.get("grid_mapping_name", None)]
+    gridmap = list(np.unique(gridmap))
 
     if len(gridmap) > 1:
         warnings.warn(
@@ -547,7 +555,7 @@ def dataset_extent(
     return region
 
 
-def merge_duplicate_stations(ds: xr.Dataset) -> xr.Dataset:
+def merge_duplicated_stations(ds: xr.Dataset) -> xr.Dataset:
     """Merge identical locations of a dataset.
 
     Identical locations are merged by combination of float values (priority from order of the location dimension).
@@ -590,10 +598,10 @@ def merge_duplicate_stations(ds: xr.Dataset) -> xr.Dataset:
 def voronoi_weights(
     ds: xr.Dataset, extent: shp.Polygon | None = None, maxfrac: float | None = None
 ) -> xr.DataArray:
-    """Compute a weight for each point in the dataset inversely proportionnate to the point density.
+    """Compute a weight for each location in the dataset inversely proportionnate to the location density.
 
     The total extent of the dataset is divided in regions using the Voronoi partition and weights are
-    computed from the area of these regions.
+    computed from the area of these regions. This is meant for station data for example.
 
     Parameters
     ----------

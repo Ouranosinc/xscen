@@ -197,6 +197,7 @@ class TestGetGrid:
             as_dataset=True,
         )
         ds["tas"].attrs["grid_mapping"] = "lambert_conformal_conic"
+
         with pytest.warns(
             UserWarning, match="There are conflicting grid_mapping attributes"
         ):
