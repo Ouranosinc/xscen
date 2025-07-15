@@ -476,3 +476,16 @@ def update_history_and_name(ds_subset, new_history, name):
     if name is not None:
         ds_subset.attrs["cat:domain"] = name
     return ds_subset
+
+
+def dataset_extent(ds, method: str = 'shape', name=None) -> dict:
+    """The dataset's spatial extent expressed a xscen Region spec.
+
+    Parameters
+    ----------
+    ds: Dataset
+        A dataset containing a grid with latitude and longitude coordinates.
+    method : {'shape', 'bbox'}
+        One of the two methods recognized by xscen to specify an area.
+        "shape" will compute a shapely polygon in latitude longitude coordinates from
+        the cell bounds which requires a grid mapping understood by :`py:
