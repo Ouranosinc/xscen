@@ -2,6 +2,7 @@ import dask.array
 import geopandas as gpd
 import numpy as np
 import pytest
+import shapely as shp
 import xarray as xr
 import xclim as xc
 from shapely.geometry import Polygon
@@ -223,6 +224,13 @@ class TestSubset:
         [
             ({"lon": -70, "lat": 45}, None),
             ({"lon": [-53.3, -69.6], "lat": [49.3, 46.6]}, "foo"),
+            (
+                {
+                    "lon": xr.DataArray([-53.3, -69.6], dims=("station",)),
+                    "lat": xr.DataArray([49.3, 46.6], dims=("station",)),
+                },
+                "foo",
+            ),
         ],
     )
     def test_subset_gridpoint(self, kwargs, name):
@@ -231,7 +239,7 @@ class TestSubset:
                 self.ds, "gridpoint", name=name, tile_buffer=5, **kwargs
             )
 
-        if isinstance(kwargs["lon"], list):
+        if not isinstance(kwargs["lon"], (float, int)):
             expected = {
                 "lon": [np.round(k) for k in kwargs["lon"]],
                 "lat": [np.round(k) for k in kwargs["lat"]],
@@ -252,23 +260,28 @@ class TestSubset:
             assert out.attrs["cat:domain"] == name
         else:
             assert "cat:domain" not in out.attrs
+        if isinstance(kwargs["lon"], xr.DataArray):
+            assert out.lon.dims == kwargs["lon"].dims
 
     @pytest.mark.parametrize(
         ("kwargs", "tile_buffer", "method"),
         [
             ({"lon_bnds": [-63, -60], "lat_bnds": [47, 50]}, 0, "bbox"),
             ({"lon_bnds": [-63, -60], "lat_bnds": [47, 50]}, 5, "bbox"),
-            ({}, 0, "shape"),
-            ({}, 5, "shape"),
-            ({"buffer": 3}, 5, "shape"),
+            ({}, 0, "shape-gdf"),
+            ({}, 5, "shape-poly"),
+            ({"buffer": 3}, 5, "shape-gdf"),
         ],
     )
     def test_subset_bboxshape(self, kwargs, tile_buffer, method):
-        if method == "shape":
-            gdf = gpd.GeoDataFrame(
-                {"geometry": [Polygon([(-63, 47), (-63, 50), (-60, 50), (-60, 47)])]}
-            )
-            kwargs["shape"] = gdf
+        if method.startswith("shape"):
+            poly = Polygon([(-63, 47), (-63, 50), (-60, 50), (-60, 47)])
+            if method == "shape-gdf":
+                gdf = gpd.GeoDataFrame({"geometry": [poly]})
+                kwargs["shape"] = gdf
+            else:
+                kwargs["shape"] = poly
+            method = "shape"
 
         if "buffer" in kwargs:
             with pytest.raises(
@@ -442,3 +455,38 @@ def test_estimate_res_2d(lon_res, lat_res):
     lon_res_est, lat_res_est = _estimate_grid_resolution(ds)
     np.testing.assert_allclose(lon_res_est, ds.lon.diff("rlon").max())
     np.testing.assert_allclose(lat_res_est, ds.lat.diff("rlat").max())
+
+
+def test_dataset_extent():
+    # curvilinear
+    ds = datablock_3d(
+        np.ones((3, 5, 5)),
+        "tas",
+        "rlon",
+        -10,
+        "rlat",
+        0,
+        0.5,
+        0.5,
+        "2000-01-01",
+        as_dataset=True,
+    )
+    bbox = xs.spatial.dataset_extent(ds, method="bbox")
+    np.testing.assert_allclose(bbox["lon_bnds"], [-112.635, -108.336], atol=1e-3)
+    np.testing.assert_allclose(bbox["lat_bnds"], [46.266, 49.157], atol=1e-3)
+
+    # rectilinear
+    ds = datablock_3d(
+        np.ones((3, 2, 2)),
+        "tas",
+        "lon",
+        -10.5,
+        "lat",
+        -0.5,
+        1,
+        1,
+        "2000-01-01",
+        as_dataset=True,
+    )
+    shape = xs.spatial.dataset_extent(ds)["shape"]
+    assert shape == shp.Polygon(([-9, -1], [-11, -1], [-11, 1], [-9, 1], [-9, -1]))

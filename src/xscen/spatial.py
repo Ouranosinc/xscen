@@ -534,12 +534,16 @@ def dataset_extent(
     if name is not None:
         region["name"] = name
 
-    p = shp.unary_union(
-        shp.polygons(
-            shp.linearrings(
-                lonb.transpose(..., "bounds"), latb.transpose(..., "bounds")
+    # Tolerance 0 is to merge colinear segments, without degrading anything else
+    p = shp.simplify(
+        shp.unary_union(
+            shp.polygons(
+                shp.linearrings(
+                    lonb.transpose(..., "bounds"), latb.transpose(..., "bounds")
+                )
             )
-        )
+        ),
+        tolerance=0,
     )
 
     match method:
