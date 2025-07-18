@@ -19,7 +19,7 @@ indicators:
   relative_humidity_from_dewpoint:
     base: hurs_fromdewpoint
     parameters:
-      method: ECMWF
+      method: buck81
       invalid_values: clip
     cf_attrs:
       - var_name: hurs
