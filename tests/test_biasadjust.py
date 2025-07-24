@@ -1,3 +1,4 @@
+import ast
 import contextlib
 import warnings
 
@@ -74,7 +75,8 @@ class TestTrain:
             "jitter_under": {"thresh": "2 K"},
             "period": ["2001", "2002"],
             "var": ["tas"],
-            "xsdba_train_args": {"adapt_freq_thresh": "2 K", "nquantiles": 15},
+            "xsdba_train_args": {"adapt_freq_thresh": "2 K"},
+            "additive_space": {},
         }
 
         assert "dayofyear" in out
@@ -170,7 +172,7 @@ class TestAdjust:
             out["tas"].attrs["bias_adjustment"]
             == "DetrendedQuantileMapping(group=Grouper("
             "name='time.dayofyear', window=31), kind='+'"
-            ").adjust(sim, ) with xsdba_train_args: {'nquantiles': 15}"
+            ").adjust(sim, ) with xsdba_train_args: {}"
         )
         assert out.time.dt.calendar == "noleap"
 
@@ -240,7 +242,7 @@ class TestAdjust:
             out.tas.attrs["bias_adjustment"]
             == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
             " window=31), kind='+').adjust(sim, detrend=<LoessDetrend>)"
-            " with xsdba_train_args: {'adapt_freq_thresh': '2 K', 'nquantiles': 15},"
+            " with xsdba_train_args: {'adapt_freq_thresh': '2 K'},"
             " ref and hist were prepared with jitter_under_thresh(ref, hist,"
             " {'thresh': '2 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd':"
             " '3 K', 'thresh': '2 K'})"
@@ -250,13 +252,65 @@ class TestAdjust:
             out2.tas.attrs["bias_adjustment"]
             == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
             " window=31), kind='+').adjust(sim, detrend=<LoessDetrend>)"
-            " with xsdba_train_args: {'adapt_freq_thresh': '2 K', 'nquantiles': 15}, "
+            " with xsdba_train_args: {'adapt_freq_thresh': '2 K'}, "
             "ref and hist were prepared with jitter_under_thresh(ref, hist, {'thresh':"
             " '2 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd': '3 K',"
             " 'thresh': '2 K'})"
         )
 
         assert out.equals(out2)
+
+    def test_write_train_mbcn(self, tmpdir):
+        tasmax = timeseries(
+            np.arange(365 * 60),
+            variable="tasmax",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+        )
+        tasmin = timeseries(
+            np.arange(365 * 60) / 2,
+            variable="tasmin",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+        )
+        ds = xr.merge([tasmax, tasmin])
+        dtrain = xs.train(
+            ds,
+            ds,
+            var=["tasmax", "tasmin"],
+            method="MBCn",
+            period=["2001", "2030"],
+            xsdba_train_args={"base_kws": {"group": "time", "nquantiles": 15}},
+        )
+
+        root = str(tmpdir / "_data")
+        xs.save_to_zarr(dtrain, f"{root}/test.zarr", mode="o")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            dtrain2 = xr.open_dataset(f"{root}/test.zarr")
+
+        params = {
+            "var": ["tasmax", "tasmin"],
+            "maximal_calendar": "noleap",
+            "xsdba_train_args": {"base_kws": {"group": "time", "nquantiles": 15}},
+            "jitter_under": None,
+            "jitter_over": None,
+            "period": ["2001", "2030"],
+            "additive_space": {},
+        }
+
+        assert ast.literal_eval(dtrain.attrs["train_params"]) == params
+
+        out = xs.adjust(
+            dtrain=dtrain,
+            dsim=ds,
+            periods=["2031", "2060"],
+            dref=ds,
+        )
 
     def test_xsdba_vs_xscen(
         self,
@@ -344,6 +398,41 @@ class TestAdjust:
                 ).rename({"scen": "pr"})
 
         assert out_xscen.equals(out_xclim)
+
+    def test_additive_space(self):
+        data = np.random.random(365 * 3) * 90
+        dhist = timeseries(
+            data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
+        )
+        data = np.random.random(365 * 3) * 100
+
+        dref = timeseries(
+            data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
+        )
+        data2 = np.random.random(365 * 6) * 100
+        dsim = timeseries(
+            data2, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
+        )
+
+        dtrain = xs.train(
+            dref,
+            dhist,
+            var="hurs",
+            period=["2001", "2003"],
+            group="time",
+            xsdba_train_args={"kind": "+"},
+            additive_space={
+                "hurs": dict(lower_bound="0 %", upper_bound="100 %", trans="logit")
+            },
+        )
+
+        assert dtrain.attrs["train_params"]["additive_space"] == {
+            "hurs": {"lower_bound": "0 %", "upper_bound": "100 %", "trans": "logit"}
+        }
+
+        dadjust = xs.adjust(dtrain, dsim, periods=["2001", "2007"])
+
+        assert dadjust.hurs.max().values <= 100
 
 
 class TestMultivariate:
