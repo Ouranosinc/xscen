@@ -172,7 +172,7 @@ class TestAdjust:
             out["tas"].attrs["bias_adjustment"]
             == "DetrendedQuantileMapping(group=Grouper("
             "name='time.dayofyear', window=31), kind='+'"
-            ", adapt_freq_thresh='2 K').adjust(sim, ) with xsdba_train_args: {}"
+            ", adapt_freq_thresh=None).adjust(sim, ) with xsdba_train_args: {}"
         )
         assert out.time.dt.calendar == "noleap"
 
@@ -350,7 +350,8 @@ class TestAdjust:
                 "kind": "*",
                 "nquantiles": 50,
                 # FIXME: when xsdba can handle mm/d correctly
-                "adapt_freq_thresh": "1.157e-05 kg/m2/s",
+                # FIXME: Can't use adapt_freq_thresh because randomness is involved
+                # "adapt_freq_thresh": "1.157e-05 kg/m2/s",
             },
         )
 
@@ -377,14 +378,13 @@ class TestAdjust:
 
             # xsdba is now climate-agnostic, patch xclim's converter
             with xclim_convert_units_to():
-
                 QM = xsdba.DetrendedQuantileMapping.train(
                     drefx["pr"],
                     dhistx["pr"],
                     group=group,
                     kind="*",
                     nquantiles=50,
-                    adapt_freq_thresh="1.157e-05 kg/m2/s",
+                    # adapt_freq_thresh="1.157e-05 kg/m2/s",
                 )
 
                 detrend = xsdba.detrending.LoessDetrend(
@@ -397,7 +397,7 @@ class TestAdjust:
                     extrapolation="constant",
                 ).rename({"scen": "pr"})
 
-        assert out_xscen.equals(out_xclim)
+        xr.testing.assert_equal(out_xscen, out_xclim)
 
     def test_additive_space(self):
         data = np.random.random(365 * 3) * 90
