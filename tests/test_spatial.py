@@ -143,6 +143,12 @@ class TestCreepFill:
         np.testing.assert_equal(out.isel(lat=0, lon=0), np.tile(np.nan, 3))
         np.testing.assert_equal(out.isel(lat=3, lon=3), np.tile(np.nan, 3))
 
+    def test_steps(self):
+        # TODO: More in-depth testing ?
+        w = xs.spatial.creep_weights(self.ds["mask"], n=1, steps=2, mode="clip")
+        out = xs.spatial.creep_fill(self.ds["tas"], w)
+        assert "step" in w.dims
+
 
 class TestGetGrid:
     def test_none(self):

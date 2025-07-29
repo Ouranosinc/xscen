@@ -29,10 +29,13 @@ __all__ = [
 
 
 @parse_config
-def creep_weights(mask: xr.DataArray, n: int = 1, mode: str = "clip") -> xr.DataArray:
+def creep_weights(
+    mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "clip"
+) -> xr.DataArray:
     """Compute weights for the creep fill.
 
     The output is a sparse matrix with the same dimensions as `mask`, twice.
+    If `steps` is larger than 1, the output has a "step" dimension of that length.
 
     Parameters
     ----------
@@ -42,16 +45,30 @@ def creep_weights(mask: xr.DataArray, n: int = 1, mode: str = "clip") -> xr.Data
       All dimensions are creep filled.
     n : int
       The order of neighbouring to use. 1 means only the adjacent grid cells are used.
+    steps: int
+      Apply the algorithm this number of times, creeping `n` neighbours at each step.
     mode : {'clip', 'wrap'}
       If a cell is on the edge of the domain, `mode='wrap'` will wrap around to find neighbours.
 
     Returns
     -------
     DataArray
-       Weights. The dot product must be taken over the last N dimensions.
+       Weights. The dot product must be taken over the last N dimensions, in sequence for each step.
     """
     if mode not in ["clip", "wrap"]:
         raise ValueError("mode must be either 'clip' or 'wrap'")
+
+    if steps > 1:
+        da = xr.ones_like(mask).where(mask)
+        weights = []
+        for i in range(steps):
+            w = creep_weights(da.notnull())
+            weights.append(w)
+            if i < steps - 1:  # no need to do it one the last step
+                da = creep_fill(da, w)
+        # TODO: If we treated the nan differently we could maybe collapse all weights with dot instead of having to apply them iteratively
+        return xr.concat(weights, "step")
+
     da = mask
     mask = da.values
     neighbors = np.array(
@@ -118,6 +135,11 @@ def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
     >>> w = creep_weights(da.isel(time=0).notnull(), n=1)
     >>> da_filled = creep_fill(da, w)
     """
+    if "step" in w.dims:
+        out = da
+        for step in w.step:
+            out = creep_fill(out, w.sel(step=step))
+        return out
 
     def _dot(arr, wei):
         N = wei.ndim // 2
