@@ -9,6 +9,7 @@ Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`),  Pascal 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add `additive_space` option to ``xs.train``. (:pull:`603`).
+* Modify the xclim modules definition of ``relative_humidity_from_dewpoint`` to include ``invalid_values='clip'``.(:pull:`616`).
 * Add possibility to "creep fill" iteratively with argument ``steps`` in ``xs.spatial.creep_weights``. (:pull:`594`).
 * Ability to save and load sparse arrays like the creep or regridding weights to disk with ``xs.io.save_sparse``  and ``xs.io.load_sparse``. (:pull:`594`).
 
