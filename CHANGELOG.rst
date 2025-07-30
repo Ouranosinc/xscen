@@ -4,7 +4,7 @@ Changelog
 
 v0.13 (unreleased)
 --------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`),  Pascal Bourgault (:user:`aulemahal`).
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`),  Pascal Bourgault (:user:`aulemahal`), Artem Buyalo (:user:`ArtemBuyalo`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -16,6 +16,7 @@ Bug fixes
 ^^^^^^^^^
 * Add standard_name to dtr definition in conversions. (:pull:`611`).
 * Better handling of attributes in ``xs.train``. (:pull:`608`, :issue:`607`)
+* Fix dimension renaming in ``xs.spatial_mean``. (:pull:`620`)
 
 v0.12.3 (2025-05-26)
 --------------------
