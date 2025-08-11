@@ -1031,20 +1031,19 @@ def get_period_from_warming_level(  # noqa: C901
             copy=False,
             assume_sorted=True,
         )
-        years = interp(wl)
-        if return_central_year:
-            if len(years) > 1:
-                return years.astype("int").astype("str")
+        # interpolate, make list,
+        years = interp(wl).tolist()
+        for i, year in enumerate(years):
+            if np.isnan(year):
+                years[i] = None if return_central_year else [None, None]
             else:
-                return str(int(years[0]))
-        else:
-            start_yrs = (years - window / 2 + 1).astype("int").astype("str")
-            end_yrs = (years + window / 2).astype("int").astype("str")
-            if len(years) > 1:
-                # return [(ys, ye), (ys, ye)]
-                return list(zip(start_yrs, end_yrs))
-            else:
-                return (start_yrs[0], end_yrs[0])
+                years[i] = (
+                    str(int(year))
+                    if return_central_year
+                    else [str(int(year - window / 2 + 1)), str(int(year + window / 2))]
+                )
+        if len(years) == 1:
+            return years[0]
 
     out = list(map(_get_warming_level, info_models))
     if isinstance(realization, pd.DataFrame):
