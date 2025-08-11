@@ -11,6 +11,7 @@ from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
+from scipy.interpolate import interp1d
 import pandas as pd
 import xarray as xr
 import xclim as xc
@@ -922,7 +923,6 @@ def get_warming_level(
     )
     return get_period_from_warming_level(*args, **kwargs)
 
-
 @parse_config
 def get_period_from_warming_level(  # noqa: C901
     realization: (
@@ -952,8 +952,8 @@ def get_period_from_warming_level(  # noqa: C901
        'cat:mip_era', 'cat:experiment', 'cat:member',
        and either 'cat:source' for global models or 'cat:driving_model' for regional models.
        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
-    wl : float
-       Warming level.
+    wl : float, np.ndarray
+       Warming level(s).
        e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
     window : int
        Size of the rolling window in years over which to compute the warming level.
@@ -991,7 +991,8 @@ def get_period_from_warming_level(  # noqa: C901
 
     # open nc
     tas = xr.open_dataset(tas_src).tas
-
+    if isinstance(wl,float):
+        wl = np.array([wl])
     def _get_warming_level(model):
         tas_sel = _wl_find_column(tas, model)
         if tas_sel is None:
@@ -1010,29 +1011,39 @@ def get_period_from_warming_level(  # noqa: C901
         rolling_diff = yearly_diff.rolling(
             time=window, min_periods=window, center=True
         ).mean()
-        # shift(-1) is needed to reproduce IPCC results.
+        # shift(+1) is needed to reproduce IPCC results.
         # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
-        if window % 2 == 0:  # Even window
-            rolling_diff = rolling_diff.shift(time=-1)
+        # interpolate will shift by -1, so +1 shift required on odd windows.
 
-        yrs = rolling_diff.where(rolling_diff >= wl, drop=True)
-        if yrs.size == 0:
-            msg = (
-                f"Global warming level of +{wl}C is not reached by the last year "
-                f"({tas.time[-1].dt.year.item()}) of the provided 'tas_src' database for {selected}."
-            )
-            logger.info(msg)
-            return None if return_central_year else [None, None]
-
-        yr = yrs.isel(time=0).time.dt.year.item()
-        start_yr = int(yr - window / 2 + 1)
-        end_yr = int(yr + window / 2)
-        return (
-            str(yr)
-            if return_central_year
-            else standardize_periods([start_yr, end_yr], multiple=False)
+        if window % 2 != 0:  # odd window
+            rolling_diff = rolling_diff.shift(time=1)
+        # ensure series is monotonic -- keep only first year above point
+        rolling_diff = rolling_diff.cumulative("time").max()
+        # create interpolator
+        interp = interp1d(
+            rolling_diff,
+            rolling_diff.time.dt.year,
+            bounds_error = False,
+            fill_value = (rolling_diff.time[0].dt.year.item(), np.nan),
+            kind="previous",
+            copy=False,
+            assume_sorted=True
         )
-
+        years = interp(wl).astype("int")
+        if return_central_year:
+            if len(years) > 1:
+                return years.astype("str")
+            else:
+                return str(years[0])
+        else:
+            start_yrs = (years - window / 2 + 1).astype("str")
+            end_yrs = (years + window / 2).astype("str")
+            if len(years) > 1:
+                # return [(ys, ye), (ys, ye)]
+                return list(zip(start_yrs, end_yrs))
+            else:
+                return (start_yrs[0], end_yrs[0])
+        
     out = list(map(_get_warming_level, info_models))
     if isinstance(realization, pd.DataFrame):
         return pd.Series(out, index=realization.index)
