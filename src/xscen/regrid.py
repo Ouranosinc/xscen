@@ -393,6 +393,8 @@ def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str | None = None) -> xr.
         gridmap = get_grid_mapping(ds)
         if gridmap == "":
             raise ValueError("Grid mapping could not be inferred from the dataset.")
+    if gridmap not in ds:
+        raise ValueError("Input `gridmap`={gridmap} is not a coordinate of ds.")
 
     xname = ds.cf.axes["X"][0]
     yname = ds.cf.axes["Y"][0]

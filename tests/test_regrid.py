@@ -83,7 +83,28 @@ class TestCreateBoundsGridmapping:
             "2000-01-01",
             as_dataset=True,
         )
+        ds = ds.rename({"oblique_mercator": "lambert_conformal_conic"})
+        ds["lambert_conformal_conic"].attrs[
+            "grid_mapping_name"
+        ] = "lambert_conformal_conic"
+        ds.tas.attrs["grid_mapping"] = "lambert_conformal_conic"
         with pytest.raises(NotImplementedError):
+            xs.regrid.create_bounds_gridmapping(ds, "lambert_conformal_conic")
+
+    def test_error_gridmap(self):
+        ds = datablock_3d(
+            np.zeros((20, 10, 10)),
+            "tas",
+            "x",
+            -5000,
+            "y",
+            5000,
+            100000,
+            100000,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        with pytest.raises(ValueError):
             xs.regrid.create_bounds_gridmapping(ds, "lambert_conformal_conic")
 
 
