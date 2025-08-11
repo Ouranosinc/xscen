@@ -11,11 +11,11 @@ from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
-from scipy.interpolate import interp1d
 import pandas as pd
 import xarray as xr
 import xclim as xc
 from intake_esm.derived import DerivedVariableRegistry
+from scipy.interpolate import interp1d
 from xclim.core.calendar import compare_offsets
 
 from .catalog import (
@@ -923,6 +923,7 @@ def get_warming_level(
     )
     return get_period_from_warming_level(*args, **kwargs)
 
+
 @parse_config
 def get_period_from_warming_level(  # noqa: C901
     realization: (
@@ -991,8 +992,9 @@ def get_period_from_warming_level(  # noqa: C901
 
     # open nc
     tas = xr.open_dataset(tas_src).tas
-    if isinstance(wl,float):
+    if isinstance(wl, float):
         wl = np.array([wl])
+
     def _get_warming_level(model):
         tas_sel = _wl_find_column(tas, model)
         if tas_sel is None:
@@ -1023,11 +1025,11 @@ def get_period_from_warming_level(  # noqa: C901
         interp = interp1d(
             rolling_diff,
             rolling_diff.time.dt.year,
-            bounds_error = False,
-            fill_value = (rolling_diff.time[0].dt.year.item(), np.nan),
+            bounds_error=False,
+            fill_value=(rolling_diff.time[0].dt.year.item(), np.nan),
             kind="previous",
             copy=False,
-            assume_sorted=True
+            assume_sorted=True,
         )
         years = interp(wl).astype("int")
         if return_central_year:
@@ -1043,7 +1045,7 @@ def get_period_from_warming_level(  # noqa: C901
                 return list(zip(start_yrs, end_yrs))
             else:
                 return (start_yrs[0], end_yrs[0])
-        
+
     out = list(map(_get_warming_level, info_models))
     if isinstance(realization, pd.DataFrame):
         return pd.Series(out, index=realization.index)
