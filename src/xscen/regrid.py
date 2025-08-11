@@ -393,6 +393,8 @@ def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str | None = None) -> xr.
         gridmap = get_grid_mapping(ds)
         if gridmap == "":
             raise ValueError("Grid mapping could not be inferred from the dataset.")
+    if gridmap not in ds:
+        raise ValueError("Input `gridmap`={gridmap} is not a coordinate of ds.")
 
     xname = ds.cf.axes["X"][0]
     yname = ds.cf.axes["Y"][0]
@@ -413,25 +415,23 @@ def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str | None = None) -> xr.
     def _get_opt_attr_as_float(da: xr.DataArray, attr: str) -> float | None:
         return float(da.attrs[attr]) if attr in da.attrs else None
 
-    if gridmap == "rotated_pole":
+    if ds[gridmap].attrs["grid_mapping_name"] == "rotated_latitude_longitude":
         # Get cartopy's crs for the projection
         RP = ccrs.RotatedPole(
-            pole_longitude=float(ds.rotated_pole.grid_north_pole_longitude),
-            pole_latitude=float(ds.rotated_pole.grid_north_pole_latitude),
+            pole_longitude=float(ds[gridmap].grid_north_pole_longitude),
+            pole_latitude=float(ds[gridmap].grid_north_pole_latitude),
             central_rotated_longitude=_get_opt_attr_as_float(
-                ds.rotated_pole, "north_pole_grid_longitude"
+                ds[gridmap], "north_pole_grid_longitude"
             ),
         )
-    elif gridmap == "oblique_mercator":
+    elif ds[gridmap].attrs["grid_mapping_name"] == "oblique_mercator":
         RP = ccrs.ObliqueMercator(
-            central_longitude=float(ds.oblique_mercator.longitude_of_projection_origin),
-            central_latitude=float(ds.oblique_mercator.latitude_of_projection_origin),
-            false_easting=_get_opt_attr_as_float(ds.oblique_mercator, "false_easting"),
-            false_northing=_get_opt_attr_as_float(
-                ds.oblique_mercator, "false_northing"
-            ),
-            scale_factor=float(ds.oblique_mercator.scale_factor_at_projection_origin),
-            azimuth=float(ds.oblique_mercator.azimuth_of_central_line),
+            central_longitude=float(ds[gridmap].longitude_of_projection_origin),
+            central_latitude=float(ds[gridmap].latitude_of_projection_origin),
+            false_easting=_get_opt_attr_as_float(ds[gridmap], "false_easting"),
+            false_northing=_get_opt_attr_as_float(ds[gridmap], "false_northing"),
+            scale_factor=float(ds[gridmap].scale_factor_at_projection_origin),
+            azimuth=float(ds[gridmap].azimuth_of_central_line),
         )
     else:
         raise NotImplementedError(f"Grid mapping {gridmap} not yet implemented.")
