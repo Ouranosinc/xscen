@@ -12,6 +12,7 @@ from pathlib import Path
 import cartopy.crs as ccrs
 import cf_xarray as cfxr
 import xarray as xr
+from pyproj import CRS
 from xclim.core.units import convert_units_to
 
 try:
@@ -399,11 +400,11 @@ def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str | None = None) -> xr.
     xname = ds.cf.axes["X"][0]
     yname = ds.cf.axes["Y"][0]
 
-    ds = ds.cf.add_bounds([yname, xname])
+    dsb = ds.cf.add_bounds([yname, xname])
 
     # In "vertices" format then expand to 2D. From (N, 2) to (N+1,) to (N+1, M+1)
-    yv1D = cfxr.bounds_to_vertices(ds[f"{yname}_bounds"], "bounds")
-    xv1D = cfxr.bounds_to_vertices(ds[f"{xname}_bounds"], "bounds")
+    yv1D = cfxr.bounds_to_vertices(dsb[f"{yname}_bounds"], "bounds")
+    xv1D = cfxr.bounds_to_vertices(dsb[f"{xname}_bounds"], "bounds")
     yv = yv1D.expand_dims(dict([(f"{xname}_vertices", xv1D)])).transpose(
         f"{xname}_vertices", f"{yname}_vertices"
     )
