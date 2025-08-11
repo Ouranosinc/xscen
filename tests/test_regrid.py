@@ -34,6 +34,25 @@ class TestCreateBoundsGridmapping:
         with pytest.warns(FutureWarning):
             assert xs.regrid.create_bounds_rotated_pole(ds).equals(bnds)
 
+    def test_create_bounds_crs(self):
+        ds = datablock_3d(
+            np.zeros((20, 10, 10)),
+            "tas",
+            "rlon",
+            -5,
+            "rlat",
+            80.5,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        ds = ds.rename({"rotated_pole": "crs"})
+        ds.tas.attrs["grid_mapping"] = "crs"
+        bnds = xs.regrid.create_bounds_gridmapping(ds)
+        np.testing.assert_allclose(bnds.lon_bounds[-1, -1, 1], 83)
+        np.testing.assert_allclose(bnds.lat_bounds[-1, -1, 1], 42.5)
+
     def test_create_bounds_oblique(self):
         ds = datablock_3d(
             np.zeros((20, 10, 10)),
