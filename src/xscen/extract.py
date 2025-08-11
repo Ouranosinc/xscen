@@ -992,7 +992,7 @@ def get_period_from_warming_level(  # noqa: C901
 
     # open nc
     tas = xr.open_dataset(tas_src).tas
-    if isinstance(wl, float):
+    if np.isscalar(wl):
         wl = np.array([wl])
 
     def _get_warming_level(model):
@@ -1031,15 +1031,15 @@ def get_period_from_warming_level(  # noqa: C901
             copy=False,
             assume_sorted=True,
         )
-        years = interp(wl).astype("int")
+        years = interp(wl)
         if return_central_year:
             if len(years) > 1:
-                return years.astype("str")
+                return years.astype("int").astype("str")
             else:
-                return str(years[0])
+                return str(int(years[0]))
         else:
-            start_yrs = (years - window / 2 + 1).astype("str")
-            end_yrs = (years + window / 2).astype("str")
+            start_yrs = (years - window / 2 + 1).astype("int").astype("str")
+            end_yrs = (years + window / 2).astype("int").astype("str")
             if len(years) > 1:
                 # return [(ys, ye), (ys, ye)]
                 return list(zip(start_yrs, end_yrs))
