@@ -360,6 +360,22 @@ class TestGetWarmingLevel:
             2.0418553,
         )
 
+    def test_multiple_levels(self):
+        # ensure returns multiple warming periods when multiple levels are requested:
+        assert xs.get_period_from_warming_level(
+            "CMIP6_CanESM5_ssp126_r1i1p1f1",
+            wl=np.array([1.5, 2, 2.5, 3]),
+            window=21,
+            return_central_year=False,
+        ) == [["2004", "2024"], ["2016", "2036"], ["2030", "2050"], [None, None]]
+
+        assert xs.get_period_from_warming_level(
+            "CMIP6_CanESM5_ssp126_r1i1p1f1",
+            wl=np.array([1.5, 2, 2.5, 3]),
+            window=20,
+            return_central_year=True,
+        ) == ["2013", "2026", "2040", None]
+
     def test_multiple_matches(self):
         # 55 instances of CanESM2-rcp85 in the CSV, but it should still return a single value
         assert (
