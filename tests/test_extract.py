@@ -462,6 +462,21 @@ class TestGetWarmingLevel:
         out2 = xs.get_warming_level_from_period(reals, [2026 - 9, 2026 + 10])
         np.testing.assert_array_almost_equal(out2, [2.0418553921])
 
+        reals = xr.DataArray(
+            ["CMIP6_CanESM5_ssp126_r1i1p1f1", "CMIP6_CanESM5_ssp370_r1i1p1f1"],
+            dims=("x",),
+            coords={"x": [1, 2]},
+        )
+        out = xs.get_period_from_warming_level(
+            reals, wl=[1, 1.5, 2, 2.5], return_central_year=True
+        )
+        assert_out = xr.DataArray(
+            [["1999", "2013", "2026", "2040"], ["1999", "2013", "2023", "2033"]],
+            dims=("x", "wl"),
+            coords=dict(**reals.coords, wl=[1, 1.5, 2, 2.5]),
+        )
+        xr.testing.assert_identical(out, assert_out)
+
     def test_DataFrame(self):  # noqa: N802
         reals = pd.DataFrame.from_records(
             [
@@ -488,6 +503,20 @@ class TestGetWarmingLevel:
         )
         pd.testing.assert_series_equal(
             out, pd.Series(["2026", "2024"], index=["a", "b"])
+        )
+
+        out = xs.get_period_from_warming_level(
+            reals,
+            wl=[2, 2.5],
+            window=20,
+            return_central_year=True,
+        )
+        pd.testing.assert_series_equal(
+            out,
+            pd.Series(
+                ["2026", "2040", "2024", "2036"],
+                index=[("a", 2), ("a", 2.5), ("b", 2), ("b", 2.5)],
+            ),
         )
 
         out2 = xs.get_warming_level_from_period(reals, [2026 - 9, 2026 + 10])
