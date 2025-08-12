@@ -1044,6 +1044,7 @@ def get_period_from_warming_level(  # noqa: C901
                 )
         if len(years) == 1:
             return years[0]
+        return years
 
     out = list(map(_get_warming_level, info_models))
     if isinstance(realization, pd.DataFrame):
