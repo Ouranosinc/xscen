@@ -1048,13 +1048,21 @@ def get_period_from_warming_level(  # noqa: C901
 
     out = list(map(_get_warming_level, info_models))
     if isinstance(realization, pd.DataFrame):
-        return pd.Series(out, index=realization.index)
+        index = realization.index
+        if len(wl) > 1:
+            index = [(i, w) for i in index for w in wl]
+            out = [period for realization in out for period in realization]
+        return pd.Series(out, index=index)
     if isinstance(realization, xr.DataArray):
+        coords = {**realization.coords}
+        dims = [realization.dims[0]]
+        if len(wl) > 1:
+            coords["wl"] = wl
+            dims.append("wl")
         if return_central_year is False:
-            return xr.DataArray(
-                out, dims=(realization.dims[0], "wl_bounds"), coords=realization.coords
-            )
-        return xr.DataArray(out, dims=(realization.dims[0],), coords=realization.coords)
+            coords["wl_bounds"] = [0, 1]
+            dims.append("wl_bounds")
+        return xr.DataArray(out, dims=dims, coords=coords)
 
     if len(out) == 1:
         return out[0]
