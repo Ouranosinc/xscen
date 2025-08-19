@@ -869,13 +869,13 @@ def xclim_convert_units_to():
         In this context, ``xsdba.units.convert_units_to`` is replaced with
         ``xclim.core.units.convert_units_to`` with `context="infer"` activated.
     """
-    original_function = xsdba.units.convert_units_to
+    original_function = xsdba.units._convert_units_to
     new_function = _convert_units_to_infer
     try:
-        xsdba.units.convert_units_to = new_function
+        xsdba.units._convert_units_to = new_function
         yield
     finally:
-        xsdba.units.convert_units_to = original_function
+        xsdba.units._convert_units_to = original_function
 
 
 def clean_up(  # noqa: C901

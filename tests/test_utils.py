@@ -463,6 +463,14 @@ class TestXclimConvertUnitsContext:
         with xs.utils.xclim_convert_units_to():
             xsdba.units.convert_units_to(pr, "kg m-2 s-1")
 
+    def test_functions_outside_units(self):
+        pr_mm = timeseries([0, 1, 2], variable="pr", start="2001-01-01", units="mm d-1")
+        pr_kg = timeseries(
+            [0, 1, 2], variable="pr", start="2001-01-01", units="kg m-2 s-1"
+        )
+        with xs.utils.xclim_convert_units_to():
+            xsdba.DetrendedQuantileMapping.train(pr_mm, pr_kg).ds.load()
+
 
 class TestVariablesUnits:
     def test_variables_same(self):
