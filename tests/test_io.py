@@ -791,3 +791,22 @@ def test_zip_zip(tmpdir):
     xs.io.unzip_directory(Path(tmpdir) / "test.zarr.zip", Path(tmpdir) / "test2.zarr")
     with xr.open_zarr(Path(tmpdir) / "test2.zarr") as ds3:
         assert ds3.equals(ds)
+
+
+def test_save_load_sparse(tmpdir):
+    rng = np.random.default_rng()
+    da = datablock_3d(
+        rng.integers(0, 10, (50, 50, 1)),
+        variable="tas",
+        units="°C",
+        x="lon",
+        x_start=-70,
+        y="lat",
+        y_start=45,
+    )
+    da = da.where(da > 2)
+    w1 = xs.spatial.creep_weights(da.isel(time=0).notnull())
+    xs.io.save_sparse(w1, Path(tmpdir) / "sparse.nc")
+    w2 = xs.io.load_sparse(Path(tmpdir) / "sparse.nc")
+
+    xr.testing.assert_identical(w1, w2)

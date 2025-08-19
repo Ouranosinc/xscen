@@ -45,7 +45,7 @@ dependencies = [
   "geopandas >=1.0",
   "h5netcdf",
   "h5py",
-  "intake-esm >=2025.2.3",
+  "intake-esm ==2025.2.3",
   "matplotlib >=3.6",
   "netcdf4",
   "numcodecs <0.16.0",
@@ -138,7 +138,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.12.4-dev.0"
+current_version = "0.12.4-dev.7"
 commit = true
 commit_args = "--no-verify"
 tag = false

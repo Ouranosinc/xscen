@@ -4,11 +4,22 @@ Changelog
 
 v0.13 (unreleased)
 --------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Éric Dupuis (:user:`coxipi`).
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`),  Pascal Bourgault (:user:`aulemahal`), Artem Buyalo (:user:`ArtemBuyalo`), Éric Dupuis (:user:`coxipi`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add `additive_space` option to ``xs.train``. (:pull:`603`).
+* Modify the xclim modules definition of ``relative_humidity_from_dewpoint`` to include ``invalid_values='clip'``.(:pull:`616`).
+* Add possibility to "creep fill" iteratively with argument ``steps`` in ``xs.spatial.creep_weights``. (:pull:`594`).
+* Ability to save and load sparse arrays like the creep or regridding weights to disk with ``xs.io.save_sparse``  and ``xs.io.load_sparse``. (:pull:`594`).
+* Generalize ``xs.regrid.create_bounds_gridmapping`` to include dataset with `crs`. (:pull:`628`, :issue:`627`).
+* Ability to return multiple periods if passed multiple warming levels in ``xs.extract.get_period_from_warming_level``. (:pull:`630`, :issue:`629`).
+
+Bug fixes
+^^^^^^^^^
+* Add standard_name to dtr definition in conversions. (:pull:`611`).
+* Better handling of attributes in ``xs.train``. (:pull:`608`, :issue:`607`)
+* Fix dimension renaming in ``xs.spatial_mean``. (:pull:`620`)
 
 Bug fixes
 ^^^^^^^^^
@@ -16,7 +27,7 @@ Bug fixes
 
 v0.12.3 (2025-05-26)
 --------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`).
 
 Bug fixes
 ^^^^^^^^^

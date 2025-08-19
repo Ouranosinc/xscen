@@ -19,8 +19,8 @@ indicators:
   relative_humidity_from_dewpoint:
     base: hurs_fromdewpoint
     parameters:
-      method: tetens30
-      ice_thresh: 0 degC
+      method: buck81
+      invalid_values: clip
     cf_attrs:
       - var_name: hurs
   specific_humidity:
@@ -71,6 +71,7 @@ indicators:
       description: Daily temperature range.
       cell_methods: "time: range within days"
       var_name: dtr
+      standard_name: air_temperature
   tasmin_from_dtr:
     src_freq: D
     compute: tasmin_from_dtr
