@@ -7,6 +7,7 @@ import warnings
 from collections.abc import Sequence
 from pathlib import Path
 
+import cartopy.crs
 import clisops.core.subset
 import dask
 import geopandas as gpd
@@ -23,7 +24,9 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "creep_fill",
     "creep_weights",
+    "get_crs",
     "get_grid_mapping",
+    "rotate_vectors",
     "subset",
 ]
 
@@ -156,6 +159,73 @@ def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
         dask="parallelized",
         output_dtypes=["float64"],
     )
+
+
+def rotate_vectors(
+    uu: xr.DataArray,
+    vv: xr.DataArray,
+    crs: cartopy.crs.Projection | None = None,
+    reverse: bool = False,
+) -> tuple[xr.DataArray, xr.DataArray]:
+    """
+    Rotate a vector field defined in its grid space to the real south-north / west-east axes.
+
+    Parameters
+    ----------
+    uu : xr.DataArray
+      The u component of the vector (along the X grid axis).
+      Must be CF-compliant, so its coordinate are correctly found.
+    vv : xr.DataArray
+      The v component of the vector (along the Y grid axis)
+      Must be CF-compliant, so its coordinate are correctly found.
+    crs : pyproj.CRS, optional
+      The projection of the UU and VV grid. If not given, the grid mapping attribute from UU is read.
+    reverse: bool
+      If True, the opposite rotation is performed : inputs are understood as in the real S-N, W-E axes and are
+      rotated back to the grid axes.
+
+    Returns
+    -------
+    uuc : xr.DataArray
+      The west-east component of the vector
+    vvc : xr.DataArray
+      The south-north component of the vector
+    """
+    if crs is None:
+        crs = get_crs(uu.rename("uu").to_dataset())
+
+    lalo = cartopy.crs.PlateCarree(globe=crs.globe)
+    geod = lalo.get_geod()
+
+    X = uu.cf["X"]
+    Y = uu.cf["Y"]
+    # ensure everything has the same dim order
+    YY, XX = xr.broadcast(Y, X)
+    XXarr = XX.values
+    YYarr = YY.values
+    # a very small increment along the y axis
+    if X.dims == Y.dims:
+        # we got a list of points, can't infer the grid resolution
+        dy = 1e-5
+    else:
+        dy = (Y[1] - Y[0]).item() / 1000
+
+    # Get lat lon of center points
+    crds_c = lalo.transform_points(crs, XXarr, YYarr)
+    # Get lat lon of points just slightly above along the y axis
+    crds_y = lalo.transform_points(crs, XXarr, YYarr + dy)
+    # The azimuth of this short vector
+    az, _, _ = geod.inv(crds_c[..., 0], crds_c[..., 1], crds_y[..., 0], crds_y[..., 1])
+    if reverse:
+        az = -az
+    # The rotation angle : opposite of the azimuth, in rad
+    th = xr.DataArray(-np.deg2rad(az), dims=YY.dims, coords=YY.coords)
+    # Rotation matrix like in Algèbre linéaire et géométrie vectoriel
+    c = np.cos(th)
+    s = np.sin(th)
+    uuc = uu * c - vv * s
+    vvc = uu * s + vv * c
+    return uuc, vvc
 
 
 def subset(
@@ -473,6 +543,57 @@ def get_grid_mapping(ds: xr.Dataset) -> str:
         )
 
     return gridmap[0] if gridmap else ""
+
+
+def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
+    """
+    Get the cartopy CRS.
+
+    Parameters
+    ----------
+    gridmap: xr.Dataset or xr.DataArray
+      Either a dataset that has a grid mapping variable or that grid mapping variable directly.
+
+    Returns
+    -------
+    cartopy.crs.Projection
+      The cartopy crs. Only RotatedPole and ObliqueMercator are supported.
+    """
+    if isinstance(gridmap, xr.Dataset):
+        gridmap = gridmap[get_grid_mapping(gridmap)]
+    cf_params = gridmap.attrs
+    globe = cartopy.crs.Globe(
+        datum=cf_params.get("horizontal_datum_name"),
+        ellipse=cf_params.get("reference_ellipsoid_name", "WGS84"),
+        semimajor_axis=(
+            cf_params.get("earth_radius") or cf_params.get("semi_major_axis")
+        ),
+        semiminor_axis=cf_params.get("semi_minor_axis"),
+        inverse_flattening=cf_params.get("inverse_flattening"),
+        towgs84=cf_params.get("towgs84"),
+    )
+    if cf_params["grid_mapping_name"] == "rotated_latitude_longitude":
+        crs = cartopy.crs.RotatedPole(
+            pole_longitude=cf_params["grid_north_pole_longitude"],
+            pole_latitude=cf_params["grid_north_pole_latitude"],
+            central_rotated_longitude=cf_params.get("north_pole_grid_longitude", 0),
+            globe=globe,
+        )
+    elif cf_params["grid_mapping_name"] == "oblique_mercator":
+        crs = cartopy.crs.ObliqueMercator(
+            central_longitude=cf_params["longitude_of_projection_origin"],
+            central_latitude=cf_params["latitude_of_projection_origin"],
+            scale_factor=cf_params["scale_factor_at_projection_origin"],
+            azimuth=cf_params["azimuth_of_central_line"],
+            false_easting=cf_params.get("false_easting", 0),
+            false_northing=cf_params.get("false_northing", 0),
+            globe=globe,
+        )
+    else:
+        raise NotImplementedError(
+            f"Grid mapping {cf_params['grid_mapping_name']} not implemented."
+        )
+    return crs
 
 
 def _estimate_grid_resolution(ds: xr.Dataset) -> tuple[float, float]:

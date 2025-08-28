@@ -22,7 +22,7 @@ except ImportError:
     Regridder = "xesmf.Regridder"
 
 from .config import parse_config
-from .spatial import get_grid_mapping
+from .spatial import get_crs, get_grid_mapping
 
 __all__ = ["create_bounds_gridmapping", "create_mask", "regrid_dataset"]
 
@@ -411,32 +411,8 @@ def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str | None = None) -> xr.
         f"{xname}_vertices", f"{yname}_vertices"
     )
 
-    # Some CRS have additional attributes according to CF conventions
-    def _get_opt_attr_as_float(da: xr.DataArray, attr: str) -> float | None:
-        return float(da.attrs[attr]) if attr in da.attrs else None
-
-    if ds[gridmap].attrs["grid_mapping_name"] == "rotated_latitude_longitude":
-        # Get cartopy's crs for the projection
-        RP = ccrs.RotatedPole(
-            pole_longitude=float(ds[gridmap].grid_north_pole_longitude),
-            pole_latitude=float(ds[gridmap].grid_north_pole_latitude),
-            central_rotated_longitude=_get_opt_attr_as_float(
-                ds[gridmap], "north_pole_grid_longitude"
-            ),
-        )
-    elif ds[gridmap].attrs["grid_mapping_name"] == "oblique_mercator":
-        RP = ccrs.ObliqueMercator(
-            central_longitude=float(ds[gridmap].longitude_of_projection_origin),
-            central_latitude=float(ds[gridmap].latitude_of_projection_origin),
-            false_easting=_get_opt_attr_as_float(ds[gridmap], "false_easting"),
-            false_northing=_get_opt_attr_as_float(ds[gridmap], "false_northing"),
-            scale_factor=float(ds[gridmap].scale_factor_at_projection_origin),
-            azimuth=float(ds[gridmap].azimuth_of_central_line),
-        )
-    else:
-        raise NotImplementedError(f"Grid mapping {gridmap} not yet implemented.")
-
-    PC = ccrs.PlateCarree()
+    crs = get_crs(ds[gridmap])
+    PC = ccrs.PlateCarree(globe=crs.globe)
 
     # Project points
     pts = PC.transform_points(RP, xv.values, yv.values)
