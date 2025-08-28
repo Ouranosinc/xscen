@@ -5,7 +5,8 @@ doc: |
 
   This module provides indicators generating base variables
   from other base variables. All indicators are non-resampling.
-realm: convert
+# FIXME: Change to "convert" when we pin xclim  >= 0.58
+realm: atmos
 base: Indicator
 indicators:
   wind_speed_from_vector:
