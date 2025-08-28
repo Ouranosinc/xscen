@@ -20,7 +20,7 @@ from xclim.core.calendar import compare_offsets
 
 try:
     import xclim.indicators.convert as convert
-except ImportError:
+except ImportError:  # FIXME: Remove when we pin xclim >= 0.58
     import xclim.indicators.atmos as convert
 
 from .catalog import (

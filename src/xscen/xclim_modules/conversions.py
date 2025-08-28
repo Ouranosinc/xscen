@@ -7,8 +7,10 @@ from xclim.core.units import convert_units_to, declare_units
 from xsdba.processing import from_additive_space, to_additive_space
 
 try:
-    from xclim.indicators.convert import mean_temperature_from_min_max as tas_midpoint
-except ImportError:
+    from xclim.indicators.convert import (
+        mean_temperature_from_max_and_min as tas_midpoint,
+    )
+except ImportError:  # FIXME: Remove when we pin xclim >= 0.58
     from xclim.indicators.atmos import tg as tas_midpoint
 
 
