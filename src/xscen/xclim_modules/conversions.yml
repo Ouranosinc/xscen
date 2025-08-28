@@ -13,7 +13,7 @@ indicators:
   wind_vector_from_speed:
     base: wind_vector_from_speed
   tas_midpoint:
-    base: tas_midpoint
+    compute: tas_midpoint
     cf_attrs:
       - var_name: tas
   relative_humidity_from_dewpoint:
