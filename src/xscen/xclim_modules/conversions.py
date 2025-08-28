@@ -6,6 +6,11 @@ import xarray as xr
 from xclim.core.units import convert_units_to, declare_units
 from xsdba.processing import from_additive_space, to_additive_space
 
+try:
+    from xclim.indices.converters import tas_from_tasmin_tasmax as tas_midpoint
+except ImportError:  # FIXME: Remove when we pin xclim >= 0.58
+    from xclim.indices import tas as tas_midpoint
+
 
 @declare_units(prsn="[precipitation]", prlp="[precipitation]")
 def precipitation(prsn: xr.DataArray, prlp: xr.DataArray) -> xr.DataArray:

@@ -4,7 +4,7 @@ Changelog
 
 v0.13 (unreleased)
 --------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`),  Pascal Bourgault (:user:`aulemahal`), Artem Buyalo (:user:`ArtemBuyalo`).
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Artem Buyalo (:user:`ArtemBuyalo`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -14,6 +14,7 @@ New features and enhancements
 * Ability to save and load sparse arrays like the creep or regridding weights to disk with ``xs.io.save_sparse``  and ``xs.io.load_sparse``. (:pull:`594`).
 * Generalize ``xs.regrid.create_bounds_gridmapping`` to include dataset with `crs`. (:pull:`628`, :issue:`627`).
 * Ability to return multiple periods if passed multiple warming levels in ``xs.extract.get_period_from_warming_level``. (:pull:`630`, :issue:`629`).
+* Update xscen to xclim 0.58 (:pull:`634`).
 
 Bug fixes
 ^^^^^^^^^

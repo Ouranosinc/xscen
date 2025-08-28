@@ -18,6 +18,11 @@ from intake_esm.derived import DerivedVariableRegistry
 from scipy.interpolate import interp1d
 from xclim.core.calendar import compare_offsets
 
+try:
+    import xclim.indicators.convert as convert
+except ImportError:  # FIXME: Remove when we pin xclim >= 0.58
+    import xclim.indicators.atmos as convert
+
 from .catalog import (
     ID_COLUMNS,
     DataCatalog,
@@ -443,11 +448,9 @@ def resample(  # noqa: C901
         if all(v in ds for v in ["uas", "vas"]):
             uas, vas = ds.uas, ds.vas
         else:
-            uas, vas = xc.indicators.atmos.wind_vector_from_speed(
-                ds.sfcWind, ds.sfcWindfromdir
-            )
+            uas, vas = convert.wind_vector_from_speed(ds.sfcWind, ds.sfcWindfromdir)
         if "sfcWind" not in ds:
-            ds["sfcWind"], _ = xc.indicators.atmos.wind_speed_from_vector(
+            ds["sfcWind"], _ = convert.wind_speed_from_vector(
                 uas=ds["uas"], vas=ds["vas"]
             )
 
@@ -473,7 +476,7 @@ def resample(  # noqa: C901
 
         # Prepare output
         if var_name in ["sfcWindfromdir"]:
-            _, out = xc.indicators.atmos.wind_speed_from_vector(uas=uas, vas=vas)
+            _, out = convert.wind_speed_from_vector(uas=uas, vas=vas)
         else:
             out = ds[var_name]
 
