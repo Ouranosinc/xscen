@@ -415,7 +415,7 @@ def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str | None = None) -> xr.
     PC = ccrs.PlateCarree(globe=crs.globe)
 
     # Project points
-    pts = PC.transform_points(RP, xv.values, yv.values)
+    pts = PC.transform_points(crs, xv.values, yv.values)
     lonv = xv.copy(data=pts[..., 0]).rename("lon_vertices")
     latv = yv.copy(data=pts[..., 1]).rename("lat_vertices")
 
