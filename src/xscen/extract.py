@@ -443,11 +443,11 @@ def resample(  # noqa: C901
         if all(v in ds for v in ["uas", "vas"]):
             uas, vas = ds.uas, ds.vas
         else:
-            uas, vas = xc.indicators.atmos.wind_vector_from_speed(
+            uas, vas = xc.indicators.convert.wind_vector_from_speed(
                 ds.sfcWind, ds.sfcWindfromdir
             )
         if "sfcWind" not in ds:
-            ds["sfcWind"], _ = xc.indicators.atmos.wind_speed_from_vector(
+            ds["sfcWind"], _ = xc.indicators.convert.wind_speed_from_vector(
                 uas=ds["uas"], vas=ds["vas"]
             )
 
@@ -473,7 +473,7 @@ def resample(  # noqa: C901
 
         # Prepare output
         if var_name in ["sfcWindfromdir"]:
-            _, out = xc.indicators.atmos.wind_speed_from_vector(uas=uas, vas=vas)
+            _, out = xc.indicators.convert.wind_speed_from_vector(uas=uas, vas=vas)
         else:
             out = ds[var_name]
 
