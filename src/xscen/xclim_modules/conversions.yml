@@ -13,7 +13,7 @@ indicators:
   wind_vector_from_speed:
     base: wind_vector_from_speed
   tas_midpoint:
-    base: mean_temperature_from_max_and_min
+    base: tas_midpoint
     cf_attrs:
       - var_name: tas
   relative_humidity_from_dewpoint:

@@ -6,6 +6,11 @@ import xarray as xr
 from xclim.core.units import convert_units_to, declare_units
 from xsdba.processing import from_additive_space, to_additive_space
 
+try:
+    from xclim.indicators.convert import mean_temperature_from_min_max as tas_midpoint
+except ImportError:
+    from xclim.indicators.atmos import tg as tas_midpoint
+
 
 @declare_units(prsn="[precipitation]", prlp="[precipitation]")
 def precipitation(prsn: xr.DataArray, prlp: xr.DataArray) -> xr.DataArray:
