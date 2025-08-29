@@ -15,6 +15,8 @@ New features and enhancements
 * Generalize ``xs.regrid.create_bounds_gridmapping`` to include dataset with `crs`. (:pull:`628`, :issue:`627`).
 * Ability to return multiple periods if passed multiple warming levels in ``xs.extract.get_period_from_warming_level``. (:pull:`630`, :issue:`629`).
 * Update xscen to xclim 0.58 (:pull:`634`).
+* New function ``xs.spatial.rotate_vectors`` to rotate vectors from/to their native grid axes to/from real west-east/south-north axes. (:pull:`635`).
+* New function ``xs.spatial.get_crs`` to get a cartopy crs from a grid mapping variable (only Rotated Pole and Oblique Mercator) (:pull:`635`).
 
 Bug fixes
 ^^^^^^^^^

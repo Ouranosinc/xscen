@@ -447,3 +447,62 @@ def test_estimate_res_2d(lon_res, lat_res):
     lon_res_est, lat_res_est = _estimate_grid_resolution(ds)
     np.testing.assert_allclose(lon_res_est, ds.lon.diff("rlon").max())
     np.testing.assert_allclose(lat_res_est, ds.lat.diff("rlat").max())
+
+
+def test_rotate_vectors():
+    # Test data from CaSR 3.1, original rotation done by ECCC using librmn
+    rlon = xr.DataArray(
+        [20.042786, 20.042786, -29.997223, -29.997223],
+        dims=("x",),
+        name="rlon",
+        attrs={"axis": "X", "standard_name": "grid_longitude"},
+    )
+    rlat = xr.DataArray(
+        [-29.970001, 19.980001, -29.970001, 19.980001],
+        dims=("x",),
+        name="rlat",
+        attrs={"axis": "Y", "standard_name": "grid_latitude"},
+    )
+    crs = xr.DataArray(
+        attrs={
+            "grid_mapping_name": "rotated_latitude_longitude",
+            "semi_major_axis": 6370997,
+            "semi_minor_axis": 6370997,
+            "grid_north_pole_latitude": 31.758312454493154,
+            "grid_north_pole_longitude": 87.59703130293302,
+            "north_pole_grid_longitude": 0,
+            "reference_ellipsoid_name": "sphere",
+        }
+    )
+    UU = xr.DataArray(
+        [0.01779366, 10.668184, -7.882597, 1.4650593],
+        dims=("x",),
+        attrs={"grid_mapping": "crs"},
+    )
+    VV = xr.DataArray(
+        [8.246281, -6.699032, -8.255672, -5.027157],
+        dims=("x",),
+        attrs={"grid_mapping": "crs"},
+    )
+    UUC = xr.DataArray(
+        [2.6767654, 1.1289139, -3.2187424, 5.0918045],
+        dims=("x",),
+        attrs={"grid_mapping": "crs"},
+    )
+    VVC = xr.DataArray(
+        [7.800007, -12.545696, -10.951946, -1.2234306],
+        dims=("x",),
+        attrs={"grid_mapping": "crs"},
+    )
+    ds = xr.Dataset(
+        data_vars={"uu": UU, "vv": VV, "uuc": UUC, "vvc": VVC},
+        coords={"rlon": rlon, "rlat": rlat, "crs": crs},
+    )
+
+    myuuc, myvvc = xs.spatial.rotate_vectors(ds.uu, ds.vv)
+    np.testing.assert_allclose(myuuc, ds.uuc, atol=1e-3)
+    np.testing.assert_allclose(myvvc, ds.vvc, atol=1e-3)
+
+    myuu, myvv = xs.spatial.rotate_vectors(ds.uuc, ds.vvc, reverse=True)
+    np.testing.assert_allclose(myuu, ds.uu, atol=1e-3)
+    np.testing.assert_allclose(myvv, ds.vv, atol=1e-3)
