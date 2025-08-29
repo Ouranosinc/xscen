@@ -26,7 +26,6 @@ from .utils import (
     _xarray_defaults,
     date_parser,
     ensure_correct_time,
-    ensure_new_xrfreq,
     standardize_periods,
 )
 
@@ -92,7 +91,7 @@ ID_COLUMNS = [
 
 
 esm_col_data = {
-    "esmcat_version": "0.1.0",  # intake-esm JSON file structure version, as per: https://github.com/NCAR/esm-collection-spec
+    "esmcat_version": "0.1.0",  # intake-esm JSON file structure version, as per: https://github.com/intake/intake-esm/blob/main/docs/source/reference/esm-catalog-spec.md
     "assets": {"column_name": "path", "format_column_name": "format"},
     "aggregation_control": {
         "variable_column_name": "variable",
@@ -109,40 +108,6 @@ esm_col_data = {
     "attributes": [],
 }
 """Default ESM column data for the official catalogs."""
-
-
-def _parse_list_of_strings(elem):
-    """Parse an element of a csv in case it is a tuple of strings."""
-    if elem.startswith("(") or elem.startswith("["):
-        out = ast.literal_eval(elem)
-        return tuple(out)
-    return (elem,)
-
-
-def _parse_dates(elem):
-    """Parse an array of dates (strings) into a PeriodIndex of hourly frequency."""
-    # Cast to normal datetime as this is much faster than to period for in-bounds dates
-    # errors are coerced to NaT, we convert to a PeriodIndex and then to a (mutable) series
-    time = pd.to_datetime(elem, errors="coerce").astype(pd.PeriodDtype("H")).to_series()
-    nat = time.isnull()
-    # Only where we have NaT (parser errors and empty fields), parse into a Period
-    # This will raise DateParseError as expected if the string is not parsable.
-    time[nat] = pd.PeriodIndex(elem[nat], freq="H")
-    return pd.PeriodIndex(time)
-
-
-csv_kwargs = {
-    "dtype": {
-        key: "category" if not key == "path" else "string[pyarrow]"
-        for key in COLUMNS
-        if key not in ["xrfreq", "variable", "date_start", "date_end"]
-    },
-    "converters": {
-        "variable": _parse_list_of_strings,
-        "xrfreq": ensure_new_xrfreq,
-    },
-}
-"""Kwargs to pass to `pd.read_csv` when opening an official Ouranos catalog."""
 
 
 class DataCatalog(intake_esm.esm_datastore):
@@ -176,17 +141,18 @@ class DataCatalog(intake_esm.esm_datastore):
     def __init__(
         self, *args, check_valid: bool = False, drop_duplicates: bool = False, **kwargs
     ):
-        kwargs["read_csv_kwargs"] = recursive_update(
-            csv_kwargs.copy(), kwargs.get("read_csv_kwargs", {})
-        )
-        args = args_as_str(args)
+        kwargs.setdefault("columns_with_iterables", []).append("variable")
+        # args = args_as_str(args)
 
         super().__init__(*args, **kwargs)
 
         # Cast date columns into datetime (with ms reso, that's why we do it here and not in the `read_csv_kwargs`)
         # Pandas >=2 supports [ms] resolution, but can't parse strings with this resolution, so we need to go through numpy
         for datecol in ["date_start", "date_end"]:
-            if datecol in self.df.columns and self.df[datecol].dtype == "O":
+            if datecol in self.df.columns and self.df[datecol].dtype in (
+                "O",
+                "large_string[pyarrow]",
+            ):
                 # Missing values in object columns are np.nan, which numpy can't convert to datetime64 (what's up with that numpy???)
                 self.df[datecol] = self.df[datecol].dropna().astype("datetime64[ms]")
 
@@ -591,7 +557,7 @@ class DataCatalog(intake_esm.esm_datastore):
                         new = dest / (name + f"_{i:02d}" + suffixes)
                         i += 1
                 new_paths.append(new)
-            data["new_path"] = new_paths
+            data["new_path"] = list(map(str, new_paths))
         else:
             data = build_path(data, root=dest).drop(columns=["new_path_type"])
 
