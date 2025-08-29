@@ -1307,7 +1307,7 @@ def subset_warming_level(
     if (
         fake_time is None
         and not isinstance(wl, int | float)
-        or "realization" in ds.dims
+        or "realization" in ds.coords
     ):
         freq = xr.infer_freq(ds.time)
         # FIXME: This is because I couldn't think of an elegant way to generate a fake_time otherwise.
