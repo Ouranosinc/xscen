@@ -276,7 +276,11 @@ def test_pattern_from_schema(samplecat):
 @pytest.mark.parametrize("hasver", [True, False])
 def test_build_path_ds(hasver):
     ds = xr.tutorial.open_dataset("air_temperature")
-    ds = ds.assign(time=xr.cftime_range("0001-01-01", freq="6h", periods=ds.time.size))
+    ds = ds.assign(
+        time=xr.date_range(
+            "0001-01-01", freq="6h", periods=ds.time.size, use_cftime=True
+        )
+    )
     ds.attrs.update(source="source", institution="institution")
     if hasver:
         ds.attrs["version"] = "v1"
