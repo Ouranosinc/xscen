@@ -16,6 +16,7 @@ from itertools import chain
 from pathlib import Path
 from types import ModuleType
 
+import cartopy.crs as ccrs
 import cftime
 import flox.xarray
 import numpy as np
