@@ -174,10 +174,10 @@ def rotate_vectors(
     ----------
     uu : xr.DataArray
       The u component of the vector (along the X grid axis).
-      Must be CF-compliant, so its coordinate are correctly found.
+      Must be CF-compliant, so its coordinates are correctly found.
     vv : xr.DataArray
       The v component of the vector (along the Y grid axis)
-      Must be CF-compliant, so its coordinate are correctly found.
+      Must be CF-compliant, so its coordinates are correctly found.
     crs : pyproj.CRS, optional
       The projection of the UU and VV grid. If not given, the grid mapping attribute from UU is read.
     reverse: bool
@@ -220,7 +220,7 @@ def rotate_vectors(
         az = -az
     # The rotation angle : opposite of the azimuth, in rad
     th = xr.DataArray(-np.deg2rad(az), dims=YY.dims, coords=YY.coords)
-    # Rotation matrix like in Algèbre linéaire et géométrie vectoriel
+    # Rotation matrix like in Algèbre linéaire et géométrie vectorielle
     c = np.cos(th)
     s = np.sin(th)
     uuc = uu * c - vv * s
