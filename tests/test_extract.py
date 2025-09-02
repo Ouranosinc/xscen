@@ -578,14 +578,27 @@ class TestSubsetWarmingLevel:
                     ds.tas.isnull().all(dim="time"), [False, True, True, True]
                 )
 
-    def test_multireals(self):
-        ds = self.ds.expand_dims(
-            realization=[
-                "CMIP6_CanESM5_ssp126_r1i1p1f1",
-                "CMIP6_CanESM5_ssp245_r1i1p1f1",
-                "fake_faux_falsch_falso",
-            ]
-        )
+    @pytest.mark.parametrize("asaux", [True, False])
+    def test_multireals(self, asaux):
+        if asaux:
+            ds = self.ds.expand_dims(real=[0, 1, 2]).assign_coords(
+                realization=(
+                    ("real",),
+                    [
+                        "CMIP6_CanESM5_ssp126_r1i1p1f1",
+                        "CMIP6_CanESM5_ssp245_r1i1p1f1",
+                        "fake_faux_falsch_falso",
+                    ],
+                )
+            )
+        else:
+            ds = self.ds.expand_dims(
+                realization=[
+                    "CMIP6_CanESM5_ssp126_r1i1p1f1",
+                    "CMIP6_CanESM5_ssp245_r1i1p1f1",
+                    "fake_faux_falsch_falso",
+                ]
+            )
         ds_sub = xs.subset_warming_level(
             ds,
             wl=1.5,
@@ -596,6 +609,8 @@ class TestSubsetWarmingLevel:
             ds_sub.warminglevel_bounds[:2].dt.year, [[[2004, 2023]], [[2004, 2023]]]
         )
         assert ds_sub.warminglevel_bounds[2].isnull().all()
+
+        ds
 
     def test_multilevels(self):
         ds_sub = xs.subset_warming_level(

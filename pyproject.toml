@@ -62,7 +62,7 @@ dependencies = [
   "sparse",
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0",
-  "xclim >=0.56, <0.58",
+  "xclim >=0.56, <0.59",
   "xsdba >=0.4.0",
   "zarr >=2.13,<3.0"
 ]
@@ -138,7 +138,7 @@ target-version = [
 ]
 
 [tool.bumpversion]
-current_version = "0.12.4-dev.7"
+current_version = "0.12.4-dev.9"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -389,7 +389,7 @@ convention = "numpy"
 [tool.vulture]
 exclude = []
 ignore_decorators = ["@pytest.fixture"]
-ignore_names = []
+ignore_names = ["tas_midpoint"]
 min_confidence = 90
 paths = ["src/xscen", "tests"]
 sort_by_size = true

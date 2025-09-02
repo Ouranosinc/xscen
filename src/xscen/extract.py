@@ -18,6 +18,11 @@ from intake_esm.derived import DerivedVariableRegistry
 from scipy.interpolate import interp1d
 from xclim.core.calendar import compare_offsets
 
+try:
+    import xclim.indicators.convert as convert
+except ImportError:  # FIXME: Remove when we pin xclim >= 0.58
+    import xclim.indicators.atmos as convert
+
 from .catalog import (
     ID_COLUMNS,
     DataCatalog,
@@ -443,11 +448,9 @@ def resample(  # noqa: C901
         if all(v in ds for v in ["uas", "vas"]):
             uas, vas = ds.uas, ds.vas
         else:
-            uas, vas = xc.indicators.atmos.wind_vector_from_speed(
-                ds.sfcWind, ds.sfcWindfromdir
-            )
+            uas, vas = convert.wind_vector_from_speed(ds.sfcWind, ds.sfcWindfromdir)
         if "sfcWind" not in ds:
-            ds["sfcWind"], _ = xc.indicators.atmos.wind_speed_from_vector(
+            ds["sfcWind"], _ = convert.wind_speed_from_vector(
                 uas=ds["uas"], vas=ds["vas"]
             )
 
@@ -473,7 +476,7 @@ def resample(  # noqa: C901
 
         # Prepare output
         if var_name in ["sfcWindfromdir"]:
-            _, out = xc.indicators.atmos.wind_speed_from_vector(uas=uas, vas=vas)
+            _, out = convert.wind_speed_from_vector(uas=uas, vas=vas)
         else:
             out = ds[var_name]
 
@@ -1304,7 +1307,7 @@ def subset_warming_level(
     if (
         fake_time is None
         and not isinstance(wl, int | float)
-        or "realization" in ds.dims
+        or "realization" in ds.coords
     ):
         freq = xr.infer_freq(ds.time)
         # FIXME: This is because I couldn't think of an elegant way to generate a fake_time otherwise.
@@ -1358,15 +1361,16 @@ def subset_warming_level(
 
     # For generating the bounds coord
     date_cls = xc.core.calendar.datetime_classes[ds.time.dt.calendar]
-    if "realization" in ds.dims:
+    if "realization" in ds.coords:
         # Vectorized subset
+        realdim = ds.realization.dims[0]
         bounds = get_period_from_warming_level(
             ds.realization, wl, return_central_year=False, **kwargs
         )
         reals = []
-        for real in bounds.realization.values:
-            start, end = bounds.sel(realization=real).values
-            data = ds.sel(realization=[real], time=slice(start, end))
+        for real in bounds[realdim].values:
+            start, end = bounds.sel({realdim: real}).values
+            data = ds.sel({realdim: [real], "time": slice(start, end)})
             wl_not_reached = (
                 (start is None)
                 or (data.time.size == 0)
@@ -1381,7 +1385,7 @@ def subset_warming_level(
                 # In the case of not reaching the WL, data might be too short
                 # We create it again with the proper length
                 data = (
-                    ds.sel(realization=[real]).isel(time=slice(0, fake_time.size))
+                    ds.sel({realdim: [real]}).isel(time=slice(0, fake_time.size))
                     * np.nan
                 )
                 bnds_crd = [np.nan, np.nan]
@@ -1389,12 +1393,12 @@ def subset_warming_level(
                 data.expand_dims(warminglevel=wl_crd).assign_coords(
                     time=fake_time[: data.time.size],
                     warminglevel_bounds=(
-                        ("realization", "warminglevel", "wl_bounds"),
+                        (realdim, "warminglevel", "wl_bounds"),
                         [[bnds_crd]],
                     ),
                 )
             )
-        ds_wl = xr.concat(reals, "realization")
+        ds_wl = xr.concat(reals, realdim)
     else:
         # Scalar subset, single level
         start_yr, end_yr = get_period_from_warming_level(
