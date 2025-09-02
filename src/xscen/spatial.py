@@ -187,9 +187,9 @@ def rotate_vectors(
     Returns
     -------
     uuc : xr.DataArray
-      The west-east component of the vector
+      The west-east component of the vector. Attributes from uu are copied.
     vvc : xr.DataArray
-      The south-north component of the vector
+      The south-north component of the vector. Attributes from vv are copied.
     """
     if crs is None:
         crs = get_crs(uu.rename("uu").to_dataset())
@@ -225,7 +225,7 @@ def rotate_vectors(
     s = np.sin(th)
     uuc = uu * c - vv * s
     vvc = uu * s + vv * c
-    return uuc, vvc
+    return uuc.assign_attrs(uu.attrs), vvc.assign_attrs(vv.attrs)
 
 
 def subset(
