@@ -1134,11 +1134,23 @@ def clean_up(  # noqa: C901
     return ds
 
 
+def _unstack_doy(ds: xr.Dataset, new_dim: str | None):
+    """Unstack a daily timeseries into dayofyear and year."""
+    ds = ds.assign_coords(
+        xr.Coordinates.from_pandas_multiindex(
+            pd.MultiIndex.from_arrays((ds.time.dt.year.values, ds.time.dt.dayofyear.values), names=('year', new_dim or 'dayofyear')),
+            'time'
+        )
+    ).unstack('time')
+    return ds.rename(year='time').assign_coords(time=pd.to_datetime({'year': ds.year, 'month': 1, 'day': 1}))
+
+
 def unstack_dates(  # noqa: C901
     ds: xr.Dataset,
     seasons: dict[int, str] | None = None,
     new_dim: str | None = None,
     winter_starts_year: bool = False,
+    year_start_month: int = 1,
 ):
     """Unstack a multi-season timeseries into a yearly axis and a season one.
 
@@ -1146,19 +1158,21 @@ def unstack_dates(  # noqa: C901
     ----------
     ds : xr.Dataset or DataArray
       The xarray object with a "time" coordinate.
-      Only supports monthly or coarser frequencies.
+      Only supports daily or coarser frequencies (excluding weekly).
       The time axis must be complete and regular (`xr.infer_freq(ds.time)` doesn't fail).
     seasons : dict, optional
       A dictionary from month number (as int) to a season name.
       If not given, it is guessed from the time coordinate frequency.
-      See notes.
+      Not used with daily data. See notes.
     new_dim : str, optional
       The name of the new dimension.
       If None, the name is inferred from the frequency of the time axis.
       See notes.
-    winter_starts_year : bool
-      If True, the year of winter (DJF) is built from the year of January, not December.
-      i.e. DJF made from [Dec 1980, Jan 1981, and Feb 1981] will be associated with the year 1981, not 1980.
+    year_start_month: int, optional
+      Change on which month the year starts. If greater than 1, seasons/months between that and 12 (included)
+      are associated with the following year. Usually this is used as 12 with seasonal data, so that the DJF season is
+      associated with the next year, i.e. DJF made from [Dec 1980, Jan 1981, and Feb 1981] will be associated with the year 1981, not 1980.
+      Not used with daily data. Replaces `winter_starts_year`.
 
     Returns
     -------
@@ -1178,6 +1192,14 @@ def unstack_dates(  # noqa: C901
     - For MS, the new dimension is "month".
 
     """
+    if winter_starts_year:
+        warnings.warn(
+            "Since xscen 0.14, `winter_starts_year=True` has been deprecated in favor of `year_start_month=12`."
+            " It will be removed in a future release.",
+            FutureWarning
+        )
+        year_start_month = 12
+
     # Get some info about the time axis
     freq = xr.infer_freq(ds.time)
     if freq is None:
@@ -1191,9 +1213,11 @@ def unstack_dates(  # noqa: C901
     calendar = ds.time.dt.calendar
     mult, base, isstart, anchor = parse_offset(freq)
 
+    if base == 'D':  # fast-track for daily
+        return _unstack_doy(ds, new_dim)
     if base not in "YAQM":
         raise ValueError(
-            f"Only monthly frequencies or coarser are supported. Got: {freq}."
+            f"Only daily frequencies or coarser are supported. Got: {freq}."
         )
 
     if new_dim is None:
@@ -1212,7 +1236,7 @@ def unstack_dates(  # noqa: C901
         if mult > 1:
             seaname = f"{mult}{seaname}"
         # Fast track for annual, if nothing more needs to be done.
-        if winter_starts_year is False:
+        if year_start_month == 1:
             dso = ds.expand_dims({new_dim: [seaname]})
             dso["time"] = xr.date_range(
                 f"{first.year}-01-01",
@@ -1246,18 +1270,15 @@ def unstack_dates(  # noqa: C901
     else:
         # Only keep the entries for the months in the data
         seasons = {m: seasons[m] for m in np.unique(ds.time.dt.month)}
-    # The ordered season names
-    seas_list = [seasons[month] for month in sorted(seasons.keys())]
 
-    # Multi-month seasons that isn't synced with january
-    if winter_starts_year and 1 not in seasons:
-        # The last label is the period that overlaps the year
-        winter_month = max(seasons.keys())
-        # Put it back in the beginning
-        seas_list = [seasons[winter_month]] + seas_list[:-1]
-        # The year associated with each timestamp (add 1 in winter)
-        years = ds.time.dt.year + xr.where(ds.time.dt.month == winter_month, 1, 0)
-    else:  # Monthly or aligned seasons
+    if year_start_month > 1:
+        # Sort season names from the beginning of the year
+        seas_list = [seasons[m] for m in sorted(seasons.keys()) if m >= year_start_month] + [seasons[m] for m in sorted(seasons.keys()) if m < year_start_month]
+        # The year associated with each timestamp
+        years = ds.time.dt.year + xr.where(ds.time.dt.month >= year_start_month, 1, 0)
+    else:
+        # The ordered season names
+        seas_list = [seasons[month] for month in sorted(seasons.keys())]
         years = ds.time.dt.year
 
     # The goal here is to use `reshape()` instead of `unstack` to limit the number of dask operations.

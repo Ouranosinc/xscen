@@ -1054,7 +1054,7 @@ class TestUnstackDates:
         assert pd.Timestamp(str(out.time[0].values).split("T")[0]) == pd.Timestamp(
             "2000-01-01"
         )
-        out = xs.utils.unstack_dates(ds, winter_starts_year=True)
+        out = xs.utils.unstack_dates(ds, year_start_month=12)
         assert pd.Timestamp(str(out.time[0].values).split("T")[0]) == pd.Timestamp(
             "2001-01-01"
         )
@@ -1090,13 +1090,13 @@ class TestUnstackDates:
 
     def test_errors(self):
         ds = timeseries(
-            np.arange(1, 365 * 4 + 2),
+            np.arange(1, 365 * 8 + 4),
             variable="tas",
             start="2000-01-01",
-            freq="D",
+            freq="12h",
             as_dataset=True,
         )
-        with pytest.raises(ValueError, match="Only monthly frequencies"):
+        with pytest.raises(ValueError, match="Only daily frequencies"):
             xs.utils.unstack_dates(ds)
         ds = ds.where(ds.time.dt.day != 1, drop=True)
         with pytest.raises(
@@ -1115,6 +1115,18 @@ class TestUnstackDates:
             ValueError, match="Only periods that divide the year evenly are supported."
         ):
             xs.utils.unstack_dates(ds)
+
+    def test_daily(self):
+        ds = timeseries(
+            np.arange(1, 365 * 4 + 2),
+            variable="tas",
+            start="2004-01-01",
+            freq="D",
+            as_dataset=True,
+        )
+        out = xs.utils.unstack_dates(ds)
+        assert tuple(out.dims) == ('dayofyear', 'time')
+        np.testing.assert_array_equal(out.tas.isel(time=0), ds.tas.isel(time=slice(None, 366)))
 
 
 class TestEnsureTime:
