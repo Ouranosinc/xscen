@@ -1125,8 +1125,10 @@ class TestUnstackDates:
             as_dataset=True,
         )
         out = xs.utils.unstack_dates(ds)
-        assert tuple(out.dims) == ('dayofyear', 'time')
-        np.testing.assert_array_equal(out.tas.isel(time=0), ds.tas.isel(time=slice(None, 366)))
+        assert tuple(out.dims) == ("dayofyear", "time")
+        np.testing.assert_array_equal(
+            out.tas.isel(time=0), ds.tas.isel(time=slice(None, 366))
+        )
 
 
 class TestEnsureTime:
