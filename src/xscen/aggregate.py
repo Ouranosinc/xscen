@@ -857,15 +857,18 @@ def spatial_mean(  # noqa: C901
 
         savg = xe.SpatialAverager(ds, geoms, **kwargs_copy)
         ds_agg = savg(ds, keep_attrs=True, **call_kwargs)
+
+        geom_dim_name = kwargs_copy.pop("geom_dim_name", "geom")
+
         extra_coords = {
-            col: xr.DataArray(polygon[col], dims=("geom",))
+            col: xr.DataArray(polygon[col], dims=(geom_dim_name,))
             for col in polygon.columns
             if col != "geometry"
         }
-        extra_coords["geom"] = xr.DataArray(polygon.index, dims=("geom",))
+        extra_coords[geom_dim_name] = xr.DataArray(polygon.index, dims=(geom_dim_name,))
         ds_agg = ds_agg.assign_coords(**extra_coords)
         if len(polygon) == 1:
-            ds_agg = ds_agg.squeeze("geom")
+            ds_agg = ds_agg.squeeze(geom_dim_name)
         if "lon_bounds" in ds_agg:
             ds_agg = ds_agg.assign_coords(
                 {"lon_bounds": ds_agg.lon_bounds, "lat_bounds": ds_agg.lat_bounds}

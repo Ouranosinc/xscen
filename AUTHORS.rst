@@ -25,3 +25,4 @@ Contributors
 * Sarah-Claude Bourdeau-Goulet <bourdeau-goulet.sarah-claude@ouranos.ca> `@sarahclaude <https://github.com/sarahclaude>`_
 * Blaise Gauvin St-Denis <gauvin-st-denis.blaise@ouranos.ca> `@bstdenis <https://github.com/bstdenis>`_
 * Éric Dupuis <dupuis.eric@ouranos.ca> `@coxipi <https://github.com/coxipi>`_
+* Artem Buyalo <artbuy1@ouranos.ca> `@ArtemBuyalo <https://github.com/ArtemBuyalo>`_

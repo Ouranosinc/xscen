@@ -15,7 +15,13 @@ import pandas as pd
 import xarray as xr
 import xclim as xc
 from intake_esm.derived import DerivedVariableRegistry
+from scipy.interpolate import interp1d
 from xclim.core.calendar import compare_offsets
+
+try:
+    import xclim.indicators.convert as convert
+except ImportError:  # FIXME: Remove when we pin xclim >= 0.58
+    import xclim.indicators.atmos as convert
 
 from .catalog import (
     ID_COLUMNS,
@@ -442,11 +448,9 @@ def resample(  # noqa: C901
         if all(v in ds for v in ["uas", "vas"]):
             uas, vas = ds.uas, ds.vas
         else:
-            uas, vas = xc.indicators.atmos.wind_vector_from_speed(
-                ds.sfcWind, ds.sfcWindfromdir
-            )
+            uas, vas = convert.wind_vector_from_speed(ds.sfcWind, ds.sfcWindfromdir)
         if "sfcWind" not in ds:
-            ds["sfcWind"], _ = xc.indicators.atmos.wind_speed_from_vector(
+            ds["sfcWind"], _ = convert.wind_speed_from_vector(
                 uas=ds["uas"], vas=ds["vas"]
             )
 
@@ -472,7 +476,7 @@ def resample(  # noqa: C901
 
         # Prepare output
         if var_name in ["sfcWindfromdir"]:
-            _, out = xc.indicators.atmos.wind_speed_from_vector(uas=uas, vas=vas)
+            _, out = convert.wind_speed_from_vector(uas=uas, vas=vas)
         else:
             out = ds[var_name]
 
@@ -952,8 +956,8 @@ def get_period_from_warming_level(  # noqa: C901
        'cat:mip_era', 'cat:experiment', 'cat:member',
        and either 'cat:source' for global models or 'cat:driving_model' for regional models.
        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
-    wl : float
-       Warming level.
+    wl : float, np.ndarray
+       Warming level(s).
        e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
     window : int
        Size of the rolling window in years over which to compute the warming level.
@@ -991,6 +995,8 @@ def get_period_from_warming_level(  # noqa: C901
 
     # open nc
     tas = xr.open_dataset(tas_src).tas
+    if np.isscalar(wl):
+        wl = np.array([wl])
 
     def _get_warming_level(model):
         tas_sel = _wl_find_column(tas, model)
@@ -1010,38 +1016,56 @@ def get_period_from_warming_level(  # noqa: C901
         rolling_diff = yearly_diff.rolling(
             time=window, min_periods=window, center=True
         ).mean()
-        # shift(-1) is needed to reproduce IPCC results.
+        # shift(+1) is needed to reproduce IPCC results.
         # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
-        if window % 2 == 0:  # Even window
-            rolling_diff = rolling_diff.shift(time=-1)
+        # interpolate will shift by -1, so +1 shift required on odd windows.
 
-        yrs = rolling_diff.where(rolling_diff >= wl, drop=True)
-        if yrs.size == 0:
-            msg = (
-                f"Global warming level of +{wl}C is not reached by the last year "
-                f"({tas.time[-1].dt.year.item()}) of the provided 'tas_src' database for {selected}."
-            )
-            logger.info(msg)
-            return None if return_central_year else [None, None]
-
-        yr = yrs.isel(time=0).time.dt.year.item()
-        start_yr = int(yr - window / 2 + 1)
-        end_yr = int(yr + window / 2)
-        return (
-            str(yr)
-            if return_central_year
-            else standardize_periods([start_yr, end_yr], multiple=False)
+        if window % 2 != 0:  # odd window
+            rolling_diff = rolling_diff.shift(time=1)
+        # ensure series is monotonic -- keep only first year above point
+        rolling_diff = rolling_diff.cumulative("time").max()
+        # create interpolator
+        interp = interp1d(
+            rolling_diff,
+            rolling_diff.time.dt.year,
+            bounds_error=False,
+            fill_value=(rolling_diff.time[0].dt.year.item(), np.nan),
+            kind="previous",
+            copy=False,
+            assume_sorted=True,
         )
+        # interpolate, make list,
+        years = interp(wl).tolist()
+        for i, year in enumerate(years):
+            if np.isnan(year):
+                years[i] = None if return_central_year else [None, None]
+            else:
+                years[i] = (
+                    str(int(year))
+                    if return_central_year
+                    else [str(int(year - window / 2 + 1)), str(int(year + window / 2))]
+                )
+        if len(years) == 1:
+            return years[0]
+        return years
 
     out = list(map(_get_warming_level, info_models))
     if isinstance(realization, pd.DataFrame):
-        return pd.Series(out, index=realization.index)
+        index = realization.index
+        if len(wl) > 1:
+            index = [(i, w) for i in index for w in wl]
+            out = [period for realization in out for period in realization]
+        return pd.Series(out, index=index)
     if isinstance(realization, xr.DataArray):
+        coords = {**realization.coords}
+        dims = [realization.dims[0]]
+        if len(wl) > 1:
+            coords["wl"] = wl
+            dims.append("wl")
         if return_central_year is False:
-            return xr.DataArray(
-                out, dims=(realization.dims[0], "wl_bounds"), coords=realization.coords
-            )
-        return xr.DataArray(out, dims=(realization.dims[0],), coords=realization.coords)
+            coords["wl_bounds"] = [0, 1]
+            dims.append("wl_bounds")
+        return xr.DataArray(out, dims=dims, coords=coords)
 
     if len(out) == 1:
         return out[0]
@@ -1283,7 +1307,7 @@ def subset_warming_level(
     if (
         fake_time is None
         and not isinstance(wl, int | float)
-        or "realization" in ds.dims
+        or "realization" in ds.coords
     ):
         freq = xr.infer_freq(ds.time)
         # FIXME: This is because I couldn't think of an elegant way to generate a fake_time otherwise.
@@ -1337,15 +1361,16 @@ def subset_warming_level(
 
     # For generating the bounds coord
     date_cls = xc.core.calendar.datetime_classes[ds.time.dt.calendar]
-    if "realization" in ds.dims:
+    if "realization" in ds.coords:
         # Vectorized subset
+        realdim = ds.realization.dims[0]
         bounds = get_period_from_warming_level(
             ds.realization, wl, return_central_year=False, **kwargs
         )
         reals = []
-        for real in bounds.realization.values:
-            start, end = bounds.sel(realization=real).values
-            data = ds.sel(realization=[real], time=slice(start, end))
+        for real in bounds[realdim].values:
+            start, end = bounds.sel({realdim: real}).values
+            data = ds.sel({realdim: [real], "time": slice(start, end)})
             wl_not_reached = (
                 (start is None)
                 or (data.time.size == 0)
@@ -1360,7 +1385,7 @@ def subset_warming_level(
                 # In the case of not reaching the WL, data might be too short
                 # We create it again with the proper length
                 data = (
-                    ds.sel(realization=[real]).isel(time=slice(0, fake_time.size))
+                    ds.sel({realdim: [real]}).isel(time=slice(0, fake_time.size))
                     * np.nan
                 )
                 bnds_crd = [np.nan, np.nan]
@@ -1368,12 +1393,12 @@ def subset_warming_level(
                 data.expand_dims(warminglevel=wl_crd).assign_coords(
                     time=fake_time[: data.time.size],
                     warminglevel_bounds=(
-                        ("realization", "warminglevel", "wl_bounds"),
+                        (realdim, "warminglevel", "wl_bounds"),
                         [[bnds_crd]],
                     ),
                 )
             )
-        ds_wl = xr.concat(reals, "realization")
+        ds_wl = xr.concat(reals, realdim)
     else:
         # Scalar subset, single level
         start_yr, end_yr = get_period_from_warming_level(

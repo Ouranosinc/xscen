@@ -23,7 +23,7 @@ except ImportError:
     Regridder = "xesmf.Regridder"
 
 from .config import parse_config
-from .spatial import get_grid_mapping
+from .spatial import get_crs, get_grid_mapping
 
 __all__ = ["create_bounds_gridmapping", "create_mask", "regrid_dataset"]
 
@@ -394,6 +394,8 @@ def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str | None = None) -> xr.
         gridmap = get_grid_mapping(ds)
         if gridmap == "":
             raise ValueError("Grid mapping could not be inferred from the dataset.")
+    if gridmap not in ds:
+        raise ValueError("Input `gridmap`={gridmap} is not a coordinate of ds.")
 
     xname = ds.cf.axes["X"][0]
     yname = ds.cf.axes["Y"][0]
@@ -410,37 +412,11 @@ def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str | None = None) -> xr.
         f"{xname}_vertices", f"{yname}_vertices"
     )
 
-    # Some CRS have additional attributes according to CF conventions
-    def _get_opt_attr_as_float(da: xr.DataArray, attr: str) -> float | None:
-        return float(da.attrs[attr]) if attr in da.attrs else None
-
-    if gridmap == "rotated_pole":
-        # Get cartopy's crs for the projection
-        RP = ccrs.RotatedPole(
-            pole_longitude=float(ds.rotated_pole.grid_north_pole_longitude),
-            pole_latitude=float(ds.rotated_pole.grid_north_pole_latitude),
-            central_rotated_longitude=_get_opt_attr_as_float(
-                ds.rotated_pole, "north_pole_grid_longitude"
-            ),
-        )
-    elif gridmap == "oblique_mercator":
-        RP = ccrs.ObliqueMercator(
-            central_longitude=float(ds.oblique_mercator.longitude_of_projection_origin),
-            central_latitude=float(ds.oblique_mercator.latitude_of_projection_origin),
-            false_easting=_get_opt_attr_as_float(ds.oblique_mercator, "false_easting"),
-            false_northing=_get_opt_attr_as_float(
-                ds.oblique_mercator, "false_northing"
-            ),
-            scale_factor=float(ds.oblique_mercator.scale_factor_at_projection_origin),
-            azimuth=float(ds.oblique_mercator.azimuth_of_central_line),
-        )
-    else:
-        raise NotImplementedError(f"Grid mapping {gridmap} not yet implemented.")
-
-    PC = ccrs.PlateCarree()
+    crs = get_crs(ds[gridmap])
+    PC = ccrs.PlateCarree(globe=crs.globe)
 
     # Project points
-    pts = PC.transform_points(RP, xv.values, yv.values)
+    pts = PC.transform_points(crs, xv.values, yv.values)
     lonv = xv.copy(data=pts[..., 0]).rename("lon_vertices")
     latv = yv.copy(data=pts[..., 1]).rename("lat_vertices")
 
