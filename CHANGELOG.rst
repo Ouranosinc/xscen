@@ -2,7 +2,7 @@
 Changelog
 =========
 
-v0.13 (unreleased)
+v0.13 (2025-09-03)
 --------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Artem Buyalo (:user:`ArtemBuyalo`), Éric Dupuis (:user:`coxipi`).
 
