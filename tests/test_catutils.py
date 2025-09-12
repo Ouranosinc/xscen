@@ -350,7 +350,7 @@ def test_build_path_ba_ref(samplecat):
         processing_level="biasadjusted",
         bias_adjust_institution="Ouranos",
         bias_adjust_project="ESPO6",
-        bias_adjust_reference="C3",
+        bias_adjust_reference="CaSRv32",
         mip_era="CMIP6",
         activity="ScenarioMIP",
         experiment="ssp245",
@@ -368,7 +368,7 @@ def test_build_path_ba_ref(samplecat):
     )
     new = str(cu.build_path(ds))
     test = (
-        "simulation/biasadjusted/ESPO6_v20_C3/CMIP6/ScenarioMIP/NAM/MIROC/MIROC6/ssp245/r1i1p1f1/day/"  # pragma: allowlist secret
-        "tasmax/tasmax_day_ESPO6_v20_C3_CMIP6_ScenarioMIP_NAM_MIROC_MIROC6_ssp245_r1i1p1f1_1950-2100.zarr"  # pragma: allowlist secret
+        "simulation/biasadjusted/ESPO6_v20_CaSRv32/CMIP6/ScenarioMIP/NAM/MIROC/MIROC6/ssp245/r1i1p1f1/day/"  # pragma: allowlist secret
+        "tasmax/tasmax_day_ESPO6_v20_CaSRv32_CMIP6_ScenarioMIP_NAM_MIROC_MIROC6_ssp245_r1i1p1f1_1950-2100.zarr"  # pragma: allowlist secret
     )
     test == new

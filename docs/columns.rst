@@ -22,8 +22,8 @@ the four columns will be combined in a single Dataset when any of the first thre
 - ``bias_adjust_project``: Name of the project that computed the bias adjustment.
     - E.g. "ESPO-R5", "BCCAQv2", "ESPO6"
 
-- ``bias_adjust_reference``: Code of the reference that was used in the training of the bias adjustment. Only specified when there is more than one by project.
-    E.g. "R2", "C3", "E5L"
+- ``bias_adjust_reference``: Name of the reference that was used in the training of the bias adjustment. Only specified when there is more than one by project.
+    E.g. "RDRSv21", "CaSRv32", "ERA5-Land"
 
 - ``mip_era``: CMIP generation associated with the data.
     - E.g. "CMIP6", "CMIP5"
