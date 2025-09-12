@@ -309,3 +309,66 @@ def test_build_path_multivar(samplecat):
         match="Selected schema original-sims-raw is meant to be used with single-variable datasets.",
     ):
         cu.build_path(info)
+
+
+def test_build_path_ba_ref(samplecat):
+    # no ref
+    ds = xr.tutorial.open_dataset("air_temperature")
+    ds.attrs.update(
+        type="simulation",
+        processing_level="biasadjusted",
+        bias_adjust_institution="Ouranos",
+        bias_adjust_project="ESPO-G6-R2",
+        # "bias_adjust_reference",
+        mip_era="CMIP6",
+        activity="ScenarioMIP",
+        experiment="ssp245",
+        member="r1i1p1f1",
+        xrfreq="D",
+        frequency="day",
+        variable="tasmax",
+        domain="NAM",
+        date_start="1950-01-01",
+        date_end="2100-12-31",
+        version="v10",
+        format="zarr",
+        source="MIROC6",
+        institution="MIROC",
+    )
+    new = str(cu.build_path(ds))
+    test = (
+        "simulation/biasadjusted/ESPO-G6-R2_v10/CMIP6/ScenarioMIP/NAM/MIROC/MIROC6/ssp245/r1i1p1f1/day/"  # pragma: allowlist secret
+        "tasmax/tasmax_day_ESPO-G6-R2_v10_CMIP6_ScenarioMIP_NAM_MIROC_MIROC6_ssp245_r1i1p1f1_1950-2100.zarr"  # pragma: allowlist secret
+    )
+    assert test == new
+
+    # with ref
+    ds = xr.tutorial.open_dataset("air_temperature")
+
+    ds.attrs.update(
+        type="simulation",
+        processing_level="biasadjusted",
+        bias_adjust_institution="Ouranos",
+        bias_adjust_project="ESPO6",
+        bias_adjust_reference="CaSRv32",
+        mip_era="CMIP6",
+        activity="ScenarioMIP",
+        experiment="ssp245",
+        member="r1i1p1f1",
+        xrfreq="D",
+        frequency="day",
+        variable="tasmax",
+        domain="NAM",
+        date_start="1950-01-01",
+        date_end="2100-12-31",
+        version="v20",
+        format="zarr",
+        source="MIROC6",
+        institution="MIROC",
+    )
+    new = str(cu.build_path(ds))
+    test = (
+        "simulation/biasadjusted/ESPO6_v20_CaSRv32/CMIP6/ScenarioMIP/NAM/MIROC/MIROC6/ssp245/r1i1p1f1/day/"  # pragma: allowlist secret
+        "tasmax/tasmax_day_ESPO6_v20_CaSRv32_CMIP6_ScenarioMIP_NAM_MIROC_MIROC6_ssp245_r1i1p1f1_1950-2100.zarr"  # pragma: allowlist secret
+    )
+    test == new
