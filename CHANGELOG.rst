@@ -3,8 +3,8 @@ Changelog
 =========
 
 v0.13.1 (unreleased)
-------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`)
+--------------------
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
