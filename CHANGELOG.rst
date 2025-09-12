@@ -2,6 +2,14 @@
 Changelog
 =========
 
+v0.13.1 (unreleased)
+------------------
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`)
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* New official column ``bias_adjust_reference``. When a bias_adjust_project has multiple references (e.g., CanLead, ESPO6 v2.0), the information is stored in this column.
+
 v0.13 (2025-09-03)
 ------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Artem Buyalo (:user:`ArtemBuyalo`), Éric Dupuis (:user:`coxipi`).
