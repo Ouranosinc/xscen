@@ -743,7 +743,11 @@ def merge_duplicated_stations(ds: xr.Dataset) -> xr.Dataset:
 
 
 def voronoi_weights(
-    ds: xr.Dataset, extent: shp.Polygon | None = None, maxfrac: float | None = None
+    ds: xr.Dataset,
+    region: gpd.GeoDataFrame | shp.Polygon | None = None,
+    maxfrac: float | None = None,
+    minlocs: int = 0,
+    _pts=None
 ) -> xr.DataArray:
     """Compute a weight for each location in the dataset inversely proportionnate to the location density.
 
@@ -754,22 +758,50 @@ def voronoi_weights(
     ----------
     ds: Dataset
         Dataset with `lon` and `lat` coordinates. Both must be 1D and share the same dimension.
-    extent: Polygon
+    region: GeoDataFrame or Polygon, optional
         A polygon to constrain the total area to partition with Voronoi polygons.
+        Can also be a GeoDataFrame, in which case the weights are done for each feature.
         Defaults to a convex hull around ds with a buffer of 1°.
         See :py:func:`dataset_extent`.
     maxfrac: float, optional
         Limits the maximal region area to this fraction of the total area.
+    minlocs : int
+        When `region` is a GeoDataFrame, features containing less than this number of locations are removed from the output.
+
+    Returns
+    -------
+    DataArray
+        The weights along the same dimension as the locations on the input.
+        If region was a GeoDataFrame, another dimension "geom" partitions the weights
+        for each feature and other columns are added as auxiliary coordinates (as with :py:func:`xs.spatial_mean`).
     """
     dim = ds.lon.dims[0]
-    pts = gpd.GeoDataFrame(
-        index=ds[dim], geometry=[shp.Point(lo, la) for lo, la in zip(ds.lon, ds.lat)]
-    )
-    if extent is None:
-        extent = stations.union_all().convex_hull.buffer(1)
-    zones = gpd.GeoDataFrame(geometry=pts.voronoi_polygons(extend_to=extent)).clip(
-        extent
-    )
+    if _pts is None:
+        pts = gpd.GeoDataFrame(
+            index=ds[dim], geometry=[shp.Point(lo, la) for lo, la in zip(ds.lon, ds.lat)]
+        )
+    else:  # Shortcut for when iterating over regions
+        pts = _pts
+
+    if region is None:
+        region = pts.union_all().convex_hull.buffer(1)
+    elif isinstance(region, gpd.GeoDataFrame):
+        weights = []
+        for i, row in region.iterrows():
+            weights.append(
+                voronoi_weights(
+                    ds, row.geometry, maxfrac=maxfrac, _pts=pts
+                ).expand_dims(geom=[row.name])
+            )
+        weight = xr.concat(weights, 'geom')
+        weight = weight.assign_coords(region.drop(columns=['geometry']).to_xarray().rename({region.index.name or 'index': 'geom'}))
+        if minlocs > 0:
+            weight = weight.where((weight > 0).sum(ds.lon.dims) >= minlocs, drop=True)
+            weight = weight.where((weight > 0).any('geom'), drop=True)
+        return weight
+
+    zones = gpd.GeoDataFrame(geometry=pts.voronoi_polygons(extend_to=region)).clip(region)
+    zones['geometry'] = zones.buffer(0)
     zones["zone_area"] = zones.geometry.area
 
     # overlay aligns points with their intersecting polygon
@@ -778,12 +810,13 @@ def voronoi_weights(
         gpd.overlay(pts.reset_index(names="station"), zones)
         .set_index("station")
         .reindex(pts.index)["zone_area"]
-    )
+    ).fillna(0)
 
     if maxfrac is not None:
         maxarea = area.sum() * maxfrac
         area = area.clip(0, maxarea)
 
     return xr.DataArray(
-        area / area.sum(), dims=(dim,), coords={dim: ds[dim]}, name="weights"
+        0 if area.sum() == 0 else area / area.sum(),
+        dims=(dim,), coords=ds[dim].coords, name="weights"
     )
