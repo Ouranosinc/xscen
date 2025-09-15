@@ -966,7 +966,7 @@ def clean_up(  # noqa: C901
 
     See Also
     --------
-    xclim.core.calendar.convert_calendar, xarray.DataArray.clip
+    xarray.Dataset.convert_calendar, xarray.DataArray.round, xarray.DataArray.clip
     """
     ds = ds.copy()
 
