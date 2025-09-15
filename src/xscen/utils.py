@@ -1138,11 +1138,16 @@ def _unstack_doy(ds: xr.Dataset, new_dim: str | None):
     """Unstack a daily timeseries into dayofyear and year."""
     ds = ds.assign_coords(
         xr.Coordinates.from_pandas_multiindex(
-            pd.MultiIndex.from_arrays((ds.time.dt.year.values, ds.time.dt.dayofyear.values), names=('year', new_dim or 'dayofyear')),
-            'time'
+            pd.MultiIndex.from_arrays(
+                (ds.time.dt.year.values, ds.time.dt.dayofyear.values),
+                names=("year", new_dim or "dayofyear"),
+            ),
+            "time",
         )
-    ).unstack('time')
-    return ds.rename(year='time').assign_coords(time=pd.to_datetime({'year': ds.year, 'month': 1, 'day': 1}))
+    ).unstack("time")
+    return ds.rename(year="time").assign_coords(
+        time=pd.to_datetime({"year": ds.year, "month": 1, "day": 1})
+    )
 
 
 def unstack_dates(  # noqa: C901
@@ -1196,7 +1201,7 @@ def unstack_dates(  # noqa: C901
         warnings.warn(
             "Since xscen 0.14, `winter_starts_year=True` has been deprecated in favor of `year_start_month=12`."
             " It will be removed in a future release.",
-            FutureWarning
+            FutureWarning,
         )
         year_start_month = 12
 
@@ -1213,7 +1218,7 @@ def unstack_dates(  # noqa: C901
     calendar = ds.time.dt.calendar
     mult, base, isstart, anchor = parse_offset(freq)
 
-    if base == 'D':  # fast-track for daily
+    if base == "D":  # fast-track for daily
         return _unstack_doy(ds, new_dim)
     if base not in "YAQM":
         raise ValueError(
@@ -1273,7 +1278,9 @@ def unstack_dates(  # noqa: C901
 
     if year_start_month > 1:
         # Sort season names from the beginning of the year
-        seas_list = [seasons[m] for m in sorted(seasons.keys()) if m >= year_start_month] + [seasons[m] for m in sorted(seasons.keys()) if m < year_start_month]
+        seas_list = [
+            seasons[m] for m in sorted(seasons.keys()) if m >= year_start_month
+        ] + [seasons[m] for m in sorted(seasons.keys()) if m < year_start_month]
         # The year associated with each timestamp
         years = ds.time.dt.year + xr.where(ds.time.dt.month >= year_start_month, 1, 0)
     else:
