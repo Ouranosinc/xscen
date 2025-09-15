@@ -131,12 +131,17 @@ class TestAdjust:
     @pytest.mark.parametrize(
         "periods, to_level, bias_adjust_institution, bias_adjust_project",
         [
-            (["2001", "2006"], None, None, None),
-            ([["2001", "2001"], ["2006", "2006"]], "test", "i", "p"),
+            (["2001", "2006"], None, None, None, None),
+            ([["2001", "2001"], ["2006", "2006"]], "test", "i", "p", "r"),
         ],
     )
     def test_basic(
-        self, periods, to_level, bias_adjust_institution, bias_adjust_project
+        self,
+        periods,
+        to_level,
+        bias_adjust_institution,
+        bias_adjust_project,
+        bias_adjust_reference,
     ):
         dtrain = xs.train(
             self.dref.copy(),
@@ -150,6 +155,7 @@ class TestAdjust:
             to_level is None
             and bias_adjust_institution is None
             and bias_adjust_project is None
+            and bias_adjust_reference is None
         ):
             # No warning is expected
             context = contextlib.nullcontext()
@@ -163,6 +169,7 @@ class TestAdjust:
                 to_level=to_level,
                 bias_adjust_institution=bias_adjust_institution,
                 bias_adjust_project=bias_adjust_project,
+                bias_adjust_reference=bias_adjust_reference,
             )
 
         assert out.attrs["cat:processing_level"] == to_level or "biasadjusted"
@@ -180,6 +187,8 @@ class TestAdjust:
             assert out.attrs["cat:bias_adjust_institution"] == "i"
         if bias_adjust_project is not None:
             assert out.attrs["cat:bias_adjust_project"] == "p"
+        if bias_adjust_reference is not None:
+            assert out.attrs["cat:bias_adjust_reference"] == "r"
 
         assert out.time.dt.year.values[0] == 2001
         assert out.time.dt.year.values[-1] == 2006
