@@ -130,6 +130,7 @@ class TestAdjust:
 
     @pytest.mark.parametrize(
         "periods, to_level, bias_adjust_institution, bias_adjust_project",
+        "bias_adjust_reference",
         [
             (["2001", "2006"], None, None, None, None),
             ([["2001", "2001"], ["2006", "2006"]], "test", "i", "p", "r"),
