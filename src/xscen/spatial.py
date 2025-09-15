@@ -747,7 +747,7 @@ def voronoi_weights(
     region: gpd.GeoDataFrame | shp.Polygon | None = None,
     maxfrac: float | None = None,
     minlocs: int = 0,
-    _pts=None
+    _pts=None,
 ) -> xr.DataArray:
     """Compute a weight for each location in the dataset inversely proportionnate to the location density.
 
@@ -778,7 +778,8 @@ def voronoi_weights(
     dim = ds.lon.dims[0]
     if _pts is None:
         pts = gpd.GeoDataFrame(
-            index=ds[dim], geometry=[shp.Point(lo, la) for lo, la in zip(ds.lon, ds.lat)]
+            index=ds[dim],
+            geometry=[shp.Point(lo, la) for lo, la in zip(ds.lon, ds.lat)],
         )
     else:  # Shortcut for when iterating over regions
         pts = _pts
@@ -793,15 +794,21 @@ def voronoi_weights(
                     ds, row.geometry, maxfrac=maxfrac, _pts=pts
                 ).expand_dims(geom=[row.name])
             )
-        weight = xr.concat(weights, 'geom')
-        weight = weight.assign_coords(region.drop(columns=['geometry']).to_xarray().rename({region.index.name or 'index': 'geom'}))
+        weight = xr.concat(weights, "geom")
+        weight = weight.assign_coords(
+            region.drop(columns=["geometry"])
+            .to_xarray()
+            .rename({region.index.name or "index": "geom"})
+        )
         if minlocs > 0:
             weight = weight.where((weight > 0).sum(ds.lon.dims) >= minlocs, drop=True)
-            weight = weight.where((weight > 0).any('geom'), drop=True)
+            weight = weight.where((weight > 0).any("geom"), drop=True)
         return weight
 
-    zones = gpd.GeoDataFrame(geometry=pts.voronoi_polygons(extend_to=region)).clip(region)
-    zones['geometry'] = zones.buffer(0)
+    zones = gpd.GeoDataFrame(geometry=pts.voronoi_polygons(extend_to=region)).clip(
+        region
+    )
+    zones["geometry"] = zones.buffer(0)
     zones["zone_area"] = zones.geometry.area
 
     # overlay aligns points with their intersecting polygon
@@ -818,5 +825,7 @@ def voronoi_weights(
 
     return xr.DataArray(
         0 if area.sum() == 0 else area / area.sum(),
-        dims=(dim,), coords=ds[dim].coords, name="weights"
+        dims=(dim,),
+        coords=ds[dim].coords,
+        name="weights",
     )
