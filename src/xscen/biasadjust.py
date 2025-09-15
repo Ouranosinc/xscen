@@ -238,6 +238,7 @@ def adjust(
     to_level: str = "biasadjusted",
     bias_adjust_institution: str | None = None,
     bias_adjust_project: str | None = None,
+    bias_adjust_reference: str | None = None,
     align_on: str | None = "year",
 ) -> xr.Dataset:
     """
@@ -401,5 +402,6 @@ def adjust(
     dscen.attrs["cat:variable"] = parse_from_ds(dscen, ["variable"])["variable"]
     dscen.attrs["cat:bias_adjust_institution"] = bias_adjust_institution or "unknown"
     dscen.attrs["cat:bias_adjust_project"] = bias_adjust_project or "unknown"
+    dscen.attrs["cat:bias_adjust_reference"] = bias_adjust_reference or "unknown"
 
     return dscen
