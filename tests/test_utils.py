@@ -697,6 +697,20 @@ def test_round():
     assert "Rounded 'pr' to 1 decimal" in out["pr"].attrs["history"]
 
 
+def test_clip():
+    ds = timeseries(
+        np.arange(1, 365),
+        variable="hurs",
+        start="2000-01-01",
+        freq="D",
+        as_dataset=True,
+    )
+
+    out = xs.clean_up(ds, clip_var={"hurs": [0, 100]})
+    np.testing.assert_array_equal(out.hurs.isel(time=-1), 100)
+    assert "Clipped 'hurs' to [0, 100]" in out["hurs"].attrs["history"]
+
+
 class TestAttrs:
     def test_common(self):
         ds1 = timeseries(
