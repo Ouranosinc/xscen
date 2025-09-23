@@ -350,7 +350,7 @@ def _subset_gridpoint(
     if not hasattr(lat, "__iter__"):
         lat = [lat]
 
-    ds_subset = clisops.core.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
+    ds_subset = cl.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"gridpoint spatial subsetting on {len(lon)} coordinates - clisops v{clisops.__version__}"
@@ -409,7 +409,7 @@ def _subset_bbox(
             lat_bnds[1] + lat_res * tile_buffer,
         )
 
-    ds_subset = clisops.core.subset_bbox(
+    ds_subset = cl.subset_bbox(
         ds, lon_bnds=lon_bnds, lat_bnds=lat_bnds, **kwargs
     )
     new_history = (
@@ -488,7 +488,7 @@ def _subset_shape(
 
         kwargs["buffer"] = np.max([lon_res, lat_res]) * tile_buffer
 
-    ds_subset = clisops.core.subset_shape(ds, shape=shape, **kwargs)
+    ds_subset = cl.subset_shape(ds, shape=shape, **kwargs)
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"shape spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
