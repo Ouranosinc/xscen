@@ -10,6 +10,7 @@ from pathlib import Path
 import cartopy.crs
 
 try:
+    import clisops  # For version info
     import clisops.core as cl
 except KeyError as e:
     if e.args[0] == "Author":
@@ -22,6 +23,7 @@ except KeyError as e:
     else:
         raise e
     cl = None
+    clisops = None
 import dask
 import geopandas as gpd
 import numpy as np
