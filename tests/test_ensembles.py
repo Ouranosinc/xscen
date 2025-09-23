@@ -10,7 +10,7 @@ try:
     import xesmf as xe
 except (ImportError, KeyError) as e:
     if type(e) == KeyError:
-        if e.args[0] != 'Author':
+        if e.args[0] != "Author":
             raise e
     xe = None
 
