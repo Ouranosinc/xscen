@@ -8,7 +8,19 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import cartopy.crs
-import clisops.core.subset
+try:
+    import clisops.core as cl
+except (ImportError, KeyError) as e:
+    if type(e) == KeyError:
+        if e.args[0] == 'Author':
+            warnings.warn(
+                "The clisops package could not be imported due to a known KeyError bug that occurs with some older versions of ESMF "
+                "and specific execution setups (such as debugging on a Windows machine). As a workaround, try installing "
+                "'importlib-metadata <8.0.0' and/or updating ESMF. If you do not need 'clisops.core' functionalities (e.g. spatial subsetting), you can ignore this warning."
+            )
+        else:
+            raise e
+    cl = None
 import dask
 import geopandas as gpd
 import numpy as np
@@ -269,6 +281,10 @@ def subset(
     --------
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
+    if cl is None and method in ["gridpoint", "bbox", "shape"]:
+        raise ImportError(
+            "The clisops package is required for the 'gridpoint', 'bbox' and 'shape' methods."
+        )
     if tile_buffer > 0 and method in ["gridpoint", "sel"]:
         warnings.warn(
             f"tile_buffer is not used for the '{method}' method. Ignoring the argument.",
