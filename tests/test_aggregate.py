@@ -14,7 +14,10 @@ from xscen.testing import datablock_3d
 
 try:
     import xesmf as xe
-except ImportError:
+except (ImportError, KeyError) as e:
+    if isinstance(e, KeyError):
+        if e.args[0] != "Author":
+            raise e
     xe = None
 
 

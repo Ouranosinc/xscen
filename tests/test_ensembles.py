@@ -8,7 +8,10 @@ import xclim as xc
 
 try:
     import xesmf as xe
-except ImportError:
+except (ImportError, KeyError) as e:
+    if isinstance(e, KeyError):
+        if e.args[0] != "Author":
+            raise e
     xe = None
 
 from xclim.testing.helpers import test_timeseries as timeseries

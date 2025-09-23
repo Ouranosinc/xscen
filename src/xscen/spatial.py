@@ -8,7 +8,22 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import cartopy.crs
-import clisops.core.subset
+
+try:
+    import clisops  # For version info
+    import clisops.core as cl
+except KeyError as e:
+    if e.args[0] == "Author":
+        warnings.warn(
+            "The clisops package could not be imported due to a known KeyError bug that occurs with some "
+            "older versions of ESMF and specific execution setups (such as debugging on a Windows machine). "
+            "As a workaround, try installing 'importlib-metadata <8.0.0' and/or updating ESMF. If you do not "
+            "need 'clisops.core' functionalities (e.g. spatial subsetting), you can ignore this warning."
+        )
+    else:
+        raise e
+    cl = None
+    clisops = None
 import dask
 import geopandas as gpd
 import numpy as np
@@ -269,6 +284,10 @@ def subset(
     --------
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
+    if cl is None and method in ["gridpoint", "bbox", "shape"]:
+        raise ImportError(
+            "The clisops package is required for the 'gridpoint', 'bbox' and 'shape' methods."
+        )
     if tile_buffer > 0 and method in ["gridpoint", "sel"]:
         warnings.warn(
             f"tile_buffer is not used for the '{method}' method. Ignoring the argument.",
@@ -334,7 +353,7 @@ def _subset_gridpoint(
     if not hasattr(lat, "__iter__"):
         lat = [lat]
 
-    ds_subset = clisops.core.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
+    ds_subset = cl.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"gridpoint spatial subsetting on {len(lon)} coordinates - clisops v{clisops.__version__}"
@@ -393,9 +412,7 @@ def _subset_bbox(
             lat_bnds[1] + lat_res * tile_buffer,
         )
 
-    ds_subset = clisops.core.subset_bbox(
-        ds, lon_bnds=lon_bnds, lat_bnds=lat_bnds, **kwargs
-    )
+    ds_subset = cl.subset_bbox(ds, lon_bnds=lon_bnds, lat_bnds=lat_bnds, **kwargs)
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"bbox spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
@@ -472,7 +489,7 @@ def _subset_shape(
 
         kwargs["buffer"] = np.max([lon_res, lat_res]) * tile_buffer
 
-    ds_subset = clisops.core.subset_shape(ds, shape=shape, **kwargs)
+    ds_subset = cl.subset_shape(ds, shape=shape, **kwargs)
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"shape spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
