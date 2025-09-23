@@ -1,8 +1,6 @@
 import logging
 from copy import deepcopy
 
-import warnings
-
 import numpy as np
 import pytest
 import xarray as xr
@@ -12,13 +10,7 @@ try:
     import xesmf as xe
 except (ImportError, KeyError) as e:
     if type(e) == KeyError:
-        if e.args[0] == 'Author':
-            warnings.warn(
-                "The xesmf package could not be imported due to a known KeyError bug that occurs with some older versions of ESMF "
-                "and specific execution setups (such as debugging on a Windows machine). As a workaround, try installing "
-                "'importlib-metadata <8.0.0' and/or updating ESMF. If you do not need 'xesmf' functionalities (e.g. regridding), you can ignore this warning."
-            )
-        else:
+        if e.args[0] != 'Author':
             raise e
     xe = None
 
