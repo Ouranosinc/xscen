@@ -2,9 +2,18 @@
 Changelog
 =========
 
-v0.13 (unreleased)
+v0.13.1 (unreleased)
 --------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Artem Buyalo (:user:`ArtemBuyalo`).
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* New official column ``bias_adjust_reference``. When a bias_adjust_project has multiple references (e.g., CanLead, ESPO6 v2.0), the information is stored in this column. (:pull:`643`, :pull:`644`).
+* Add ``clip_var`` option in ``xs.clean_up`` to clip values outside a given range. (:pull:`645`).
+
+v0.13 (2025-09-03)
+------------------
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Artem Buyalo (:user:`ArtemBuyalo`), Éric Dupuis (:user:`coxipi`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -15,12 +24,18 @@ New features and enhancements
 * Generalize ``xs.regrid.create_bounds_gridmapping`` to include dataset with `crs`. (:pull:`628`, :issue:`627`).
 * Ability to return multiple periods if passed multiple warming levels in ``xs.extract.get_period_from_warming_level``. (:pull:`630`, :issue:`629`).
 * Update xscen to xclim 0.58 (:pull:`634`).
+* New function ``xs.spatial.rotate_vectors`` to rotate vectors from/to their native grid axes to/from real west-east/south-north axes. (:pull:`635`).
+* New function ``xs.spatial.get_crs`` to get a cartopy crs from a grid mapping variable (only Rotated Pole and Oblique Mercator) (:pull:`635`).
 
 Bug fixes
 ^^^^^^^^^
 * Add standard_name to dtr definition in conversions. (:pull:`611`).
 * Better handling of attributes in ``xs.train``. (:pull:`608`, :issue:`607`)
 * Fix dimension renaming in ``xs.spatial_mean``. (:pull:`620`)
+
+Bug fixes
+^^^^^^^^^
+* Fixed `xs.utils.xclim_convert_units_to` context patching. (:pull:`604`).
 
 v0.12.3 (2025-05-26)
 --------------------

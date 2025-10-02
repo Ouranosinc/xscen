@@ -68,7 +68,7 @@ original-sims-ba:
   folders:
     - type
     - processing_level
-    - [ bias_adjust_project, version ]
+    - [ bias_adjust_project, version, (bias_adjust_reference) ]
     - mip_era
     - activity
     - domain
@@ -80,7 +80,7 @@ original-sims-ba:
     - member
     - frequency
     - variable
-  filename: [ variable, frequency, bias_adjust_project, version, mip_era, activity, domain, institution, source, driving_model, driving_member, experiment, member, DATES ]
+  filename: [ variable, frequency, bias_adjust_project, version, bias_adjust_reference, mip_era, activity, domain, institution, source, driving_model, driving_member, experiment, member, DATES ]
 original-hydro-reconstruction:
   with:
     - facet: type
@@ -164,7 +164,7 @@ derived-sims-ba:
   - facet: bias_adjust_project
   folders:
     - type
-    - [ bias_adjust_project, version ]
+    - [ bias_adjust_project, version, (bias_adjust_reference) ]
     - mip_era
     - activity
     - institution
@@ -177,7 +177,7 @@ derived-sims-ba:
     - processing_level
     - xrfreq
     - variable
-  filename: [ variable, xrfreq, bias_adjust_project, version, mip_era, activity, institution, source, driving_model, driving_member, experiment, member, domain, processing_level, DATES ]
+  filename: [ variable, xrfreq, bias_adjust_project, version, bias_adjust_reference, mip_era, activity, institution, source, driving_model, driving_member, experiment, member, domain, processing_level, DATES ]
 derived-sims-raw:
   with:
   - facet: type

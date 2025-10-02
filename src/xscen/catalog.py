@@ -55,6 +55,7 @@ COLUMNS = [
     "processing_level",
     "bias_adjust_institution",
     "bias_adjust_project",
+    "bias_adjust_reference",
     "mip_era",
     "activity",
     "driving_model",
@@ -77,6 +78,7 @@ COLUMNS = [
 
 ID_COLUMNS = [
     "bias_adjust_project",
+    "bias_adjust_reference",
     "mip_era",
     "activity",
     "driving_model",

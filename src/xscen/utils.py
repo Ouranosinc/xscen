@@ -16,6 +16,7 @@ from itertools import chain
 from pathlib import Path
 from types import ModuleType
 
+import cartopy.crs as ccrs
 import cftime
 import flox.xarray
 import numpy as np
@@ -869,13 +870,13 @@ def xclim_convert_units_to():
         In this context, ``xsdba.units.convert_units_to`` is replaced with
         ``xclim.core.units.convert_units_to`` with `context="infer"` activated.
     """
-    original_function = xsdba.units.convert_units_to
+    original_function = xsdba.units._convert_units_to
     new_function = _convert_units_to_infer
     try:
-        xsdba.units.convert_units_to = new_function
+        xsdba.units._convert_units_to = new_function
         yield
     finally:
-        xsdba.units.convert_units_to = original_function
+        xsdba.units._convert_units_to = original_function
 
 
 def clean_up(  # noqa: C901
@@ -886,6 +887,7 @@ def clean_up(  # noqa: C901
     missing_by_var: dict | None = None,
     maybe_unstack_dict: dict | None = None,
     round_var: dict | None = None,
+    clip_var: dict | None = None,
     common_attrs_only: None | (dict | list[xr.Dataset | str | os.PathLike]) = None,
     common_attrs_open_kwargs: dict | None = None,
     attrs_to_remove: dict | None = None,
@@ -901,6 +903,7 @@ def clean_up(  # noqa: C901
      - convert the calendar and interpolate over missing dates
      - call the xscen.utils.maybe_unstack function
      - round variables
+     - clip variables
      - remove a list of attributes
      - remove everything but a list of attributes
      - add attributes
@@ -929,6 +932,8 @@ def clean_up(  # noqa: C901
     round_var : dict, optional
         Dictionary where the keys are the variables of the dataset and the values are the number of
         decimal places to round to.
+    clip_var : dict, optional
+        Dictionary where the keys are the variables of the dataset and the values are the arguments to give ``.clip()``
     common_attrs_only : dict, list of datasets, or list of paths, optional
         Dictionary of datasets or list of datasets, or path to NetCDF or Zarr files.
         Keeps only the global attributes that are the same for all datasets and generates a new id.
@@ -961,7 +966,7 @@ def clean_up(  # noqa: C901
 
     See Also
     --------
-    xclim.core.calendar.convert_calendar
+    xarray.Dataset.convert_calendar, xarray.DataArray.round, xarray.DataArray.clip
     """
     ds = ds.copy()
 
@@ -1027,6 +1032,20 @@ def clean_up(  # noqa: C901
             new_history = (
                 f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
                 f"Rounded '{var}' to {n} decimals."
+            )
+            history = (
+                f"{new_history}\n{ds[var].attrs['history']}"
+                if "history" in ds[var].attrs
+                else new_history
+            )
+            ds[var].attrs["history"] = history
+
+    if clip_var:
+        for var, c in clip_var.items():
+            ds[var] = ds[var].clip(*c, keep_attrs=True)
+            new_history = (
+                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                f"Clipped '{var}' to {c}."
             )
             history = (
                 f"{new_history}\n{ds[var].attrs['history']}"

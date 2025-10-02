@@ -7,7 +7,23 @@ import warnings
 from collections.abc import Sequence
 from pathlib import Path
 
-import clisops.core.subset
+import cartopy.crs
+
+try:
+    import clisops  # For version info
+    import clisops.core as cl
+except KeyError as e:
+    if e.args[0] == "Author":
+        warnings.warn(
+            "The clisops package could not be imported due to a known KeyError bug that occurs with some "
+            "older versions of ESMF and specific execution setups (such as debugging on a Windows machine). "
+            "As a workaround, try installing 'importlib-metadata <8.0.0' and/or updating ESMF. If you do not "
+            "need 'clisops.core' functionalities (e.g. spatial subsetting), you can ignore this warning."
+        )
+    else:
+        raise e
+    cl = None
+    clisops = None
 import dask
 import geopandas as gpd
 import numpy as np
@@ -23,7 +39,9 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "creep_fill",
     "creep_weights",
+    "get_crs",
     "get_grid_mapping",
+    "rotate_vectors",
     "subset",
 ]
 
@@ -158,6 +176,73 @@ def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
     )
 
 
+def rotate_vectors(
+    uu: xr.DataArray,
+    vv: xr.DataArray,
+    crs: cartopy.crs.Projection | None = None,
+    reverse: bool = False,
+) -> tuple[xr.DataArray, xr.DataArray]:
+    """
+    Rotate a vector field defined in its grid space to the real south-north / west-east axes.
+
+    Parameters
+    ----------
+    uu : xr.DataArray
+      The u component of the vector (along the X grid axis).
+      Must be CF-compliant, so its coordinates are correctly found.
+    vv : xr.DataArray
+      The v component of the vector (along the Y grid axis)
+      Must be CF-compliant, so its coordinates are correctly found.
+    crs : pyproj.CRS, optional
+      The projection of the UU and VV grid. If not given, the grid mapping attribute from UU is read.
+    reverse: bool
+      If True, the opposite rotation is performed : inputs are understood as in the real S-N, W-E axes and are
+      rotated back to the grid axes.
+
+    Returns
+    -------
+    uuc : xr.DataArray
+      The west-east component of the vector. Attributes from uu are copied.
+    vvc : xr.DataArray
+      The south-north component of the vector. Attributes from vv are copied.
+    """
+    if crs is None:
+        crs = get_crs(uu.rename("uu").to_dataset())
+
+    lalo = cartopy.crs.PlateCarree(globe=crs.globe)
+    geod = lalo.get_geod()
+
+    X = uu.cf["X"]
+    Y = uu.cf["Y"]
+    # ensure everything has the same dim order
+    YY, XX = xr.broadcast(Y, X)
+    XXarr = XX.values
+    YYarr = YY.values
+    # a very small increment along the y axis
+    if X.dims == Y.dims:
+        # we got a list of points, can't infer the grid resolution
+        dy = 1e-5
+    else:
+        dy = (Y[1] - Y[0]).item() / 1000
+
+    # Get lat lon of center points
+    crds_c = lalo.transform_points(crs, XXarr, YYarr)
+    # Get lat lon of points just slightly above along the y axis
+    crds_y = lalo.transform_points(crs, XXarr, YYarr + dy)
+    # The azimuth of this short vector
+    az, _, _ = geod.inv(crds_c[..., 0], crds_c[..., 1], crds_y[..., 0], crds_y[..., 1])
+    if reverse:
+        az = -az
+    # The rotation angle : opposite of the azimuth, in rad
+    th = xr.DataArray(-np.deg2rad(az), dims=YY.dims, coords=YY.coords)
+    # Rotation matrix like in Algèbre linéaire et géométrie vectorielle
+    c = np.cos(th)
+    s = np.sin(th)
+    uuc = uu * c - vv * s
+    vvc = uu * s + vv * c
+    return uuc.assign_attrs(uu.attrs), vvc.assign_attrs(vv.attrs)
+
+
 def subset(
     ds: xr.Dataset,
     method: str,
@@ -199,6 +284,10 @@ def subset(
     --------
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
+    if cl is None and method in ["gridpoint", "bbox", "shape"]:
+        raise ImportError(
+            "The clisops package is required for the 'gridpoint', 'bbox' and 'shape' methods."
+        )
     if tile_buffer > 0 and method in ["gridpoint", "sel"]:
         warnings.warn(
             f"tile_buffer is not used for the '{method}' method. Ignoring the argument.",
@@ -264,7 +353,7 @@ def _subset_gridpoint(
     if not hasattr(lat, "__iter__"):
         lat = [lat]
 
-    ds_subset = clisops.core.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
+    ds_subset = cl.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"gridpoint spatial subsetting on {len(lon)} coordinates - clisops v{clisops.__version__}"
@@ -323,9 +412,7 @@ def _subset_bbox(
             lat_bnds[1] + lat_res * tile_buffer,
         )
 
-    ds_subset = clisops.core.subset_bbox(
-        ds, lon_bnds=lon_bnds, lat_bnds=lat_bnds, **kwargs
-    )
+    ds_subset = cl.subset_bbox(ds, lon_bnds=lon_bnds, lat_bnds=lat_bnds, **kwargs)
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"bbox spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
@@ -402,7 +489,7 @@ def _subset_shape(
 
         kwargs["buffer"] = np.max([lon_res, lat_res]) * tile_buffer
 
-    ds_subset = clisops.core.subset_shape(ds, shape=shape, **kwargs)
+    ds_subset = cl.subset_shape(ds, shape=shape, **kwargs)
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"shape spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
@@ -473,6 +560,57 @@ def get_grid_mapping(ds: xr.Dataset) -> str:
         )
 
     return gridmap[0] if gridmap else ""
+
+
+def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
+    """
+    Get the cartopy CRS.
+
+    Parameters
+    ----------
+    gridmap: xr.Dataset or xr.DataArray
+      Either a dataset that has a grid mapping variable or that grid mapping variable directly.
+
+    Returns
+    -------
+    cartopy.crs.Projection
+      The cartopy crs. Only RotatedPole and ObliqueMercator are supported.
+    """
+    if isinstance(gridmap, xr.Dataset):
+        gridmap = gridmap[get_grid_mapping(gridmap)]
+    cf_params = gridmap.attrs
+    globe = cartopy.crs.Globe(
+        datum=cf_params.get("horizontal_datum_name"),
+        ellipse=cf_params.get("reference_ellipsoid_name", "WGS84"),
+        semimajor_axis=(
+            cf_params.get("earth_radius") or cf_params.get("semi_major_axis")
+        ),
+        semiminor_axis=cf_params.get("semi_minor_axis"),
+        inverse_flattening=cf_params.get("inverse_flattening"),
+        towgs84=cf_params.get("towgs84"),
+    )
+    if cf_params["grid_mapping_name"] == "rotated_latitude_longitude":
+        crs = cartopy.crs.RotatedPole(
+            pole_longitude=cf_params["grid_north_pole_longitude"],
+            pole_latitude=cf_params["grid_north_pole_latitude"],
+            central_rotated_longitude=cf_params.get("north_pole_grid_longitude", 0),
+            globe=globe,
+        )
+    elif cf_params["grid_mapping_name"] == "oblique_mercator":
+        crs = cartopy.crs.ObliqueMercator(
+            central_longitude=cf_params["longitude_of_projection_origin"],
+            central_latitude=cf_params["latitude_of_projection_origin"],
+            scale_factor=cf_params["scale_factor_at_projection_origin"],
+            azimuth=cf_params["azimuth_of_central_line"],
+            false_easting=cf_params.get("false_easting", 0),
+            false_northing=cf_params.get("false_northing", 0),
+            globe=globe,
+        )
+    else:
+        raise NotImplementedError(
+            f"Grid mapping {cf_params['grid_mapping_name']} not implemented."
+        )
+    return crs
 
 
 def _estimate_grid_resolution(ds: xr.Dataset) -> tuple[float, float]:

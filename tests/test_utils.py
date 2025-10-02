@@ -463,6 +463,14 @@ class TestXclimConvertUnitsContext:
         with xs.utils.xclim_convert_units_to():
             xsdba.units.convert_units_to(pr, "kg m-2 s-1")
 
+    def test_functions_outside_units(self):
+        pr_mm = timeseries([0, 1, 2], variable="pr", start="2001-01-01", units="mm d-1")
+        pr_kg = timeseries(
+            [0, 1, 2], variable="pr", start="2001-01-01", units="kg m-2 s-1"
+        )
+        with xs.utils.xclim_convert_units_to():
+            xsdba.DetrendedQuantileMapping.train(pr_mm, pr_kg).ds.load()
+
 
 class TestVariablesUnits:
     def test_variables_same(self):
@@ -687,6 +695,20 @@ def test_round():
     np.testing.assert_array_equal(out.tas.isel(time=0), 0.000810)
     np.testing.assert_array_equal(out.pr.isel(time=0), 0.0)
     assert "Rounded 'pr' to 1 decimal" in out["pr"].attrs["history"]
+
+
+def test_clip():
+    ds = timeseries(
+        np.arange(1, 365),
+        variable="hurs",
+        start="2000-01-01",
+        freq="D",
+        as_dataset=True,
+    )
+
+    out = xs.clean_up(ds, clip_var={"hurs": [0, 100]})
+    np.testing.assert_array_equal(out.hurs.isel(time=-1), 100)
+    assert "Clipped 'hurs' to [0, 100]" in out["hurs"].attrs["history"]
 
 
 class TestAttrs:
