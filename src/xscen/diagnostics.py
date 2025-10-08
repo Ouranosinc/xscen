@@ -31,6 +31,7 @@ from .utils import (
     xclim_convert_units_to,
 )
 
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -173,18 +174,16 @@ def health_checks(  # noqa: C901
                         )
                     else:
                         _error(f"The coordinate '{coord}' is missing.", "structure")
-            extra_coords = [
-                coord for coord in ds.coords if coord not in structure["coords"]
-            ]
+            extra_coords = [coord for coord in ds.coords if coord not in structure["coords"]]
             if len(extra_coords) > 0:
                 _error(f"Extra coordinates found: {extra_coords}.", "structure")
 
     # Check the calendar
     if calendar is not None:
         cal = ds.time.dt.calendar
-        if xc.core.calendar.common_calendar([calendar]).replace(
+        if xc.core.calendar.common_calendar([calendar]).replace("default", "standard") != xc.core.calendar.common_calendar([cal]).replace(
             "default", "standard"
-        ) != xc.core.calendar.common_calendar([cal]).replace("default", "standard"):
+        ):
             _error(f"The calendar is not '{calendar}'. Received '{cal}'.", "calendar")
 
     # Check the start/end dates
@@ -220,9 +219,7 @@ def health_checks(  # noqa: C901
                     except ValidationError as e:
                         _error(f"'{v}' ValidationError: {e}", "variables_and_units")
                 # are they technically the same
-                close_enough = xc.units.str2pint(
-                    ds[v].attrs["units"]
-                ) == xc.units.str2pint(variables_and_units[v])
+                close_enough = xc.units.str2pint(ds[v].attrs["units"]) == xc.units.str2pint(variables_and_units[v])
 
                 if strict_units or not close_enough:
                     _error(
@@ -251,13 +248,9 @@ def health_checks(  # noqa: C901
     if freq is not None:
         inferred_freq = xr.infer_freq(ds.time)
         if inferred_freq is None:
-            _error(
-                "The timesteps are irregular or cannot be inferred by xarray.", "freq"
-            )
+            _error("The timesteps are irregular or cannot be inferred by xarray.", "freq")
         elif freq.replace("YS", "YS-JAN") != inferred_freq:
-            _error(
-                f"The frequency is not '{freq}'. Received '{inferred_freq}'.", "freq"
-            )
+            _error(f"The frequency is not '{freq}'. Received '{inferred_freq}'.", "freq")
 
     if missing is not None:
         inferred_freq = xr.infer_freq(ds.time)
@@ -283,9 +276,7 @@ def health_checks(  # noqa: C901
                                 "missing",
                             )
                     else:
-                        msg = (
-                            f"Variable '{v}' has no time dimension. The missing data check will be skipped.",
-                        )
+                        msg = (f"Variable '{v}' has no time dimension. The missing data check will be skipped.",)
                         logger.info(msg)
 
     if flags is not None:
@@ -317,13 +308,7 @@ def health_checks(  # noqa: C901
 @parse_config
 def properties_and_measures(  # noqa: C901
     ds: xr.Dataset,
-    properties: (
-        str
-        | os.PathLike
-        | Sequence[Indicator]
-        | Sequence[tuple[str, Indicator]]
-        | ModuleType
-    ),
+    properties: (str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType),
     period: list[str] | None = None,
     unstack: bool = False,
     rechunk: dict | None = None,
@@ -332,7 +317,8 @@ def properties_and_measures(  # noqa: C901
     to_level_prop: str = "diag-properties",
     to_level_meas: str = "diag-measures",
 ) -> tuple[xr.Dataset, xr.Dataset]:
-    """Calculate properties and measures of a dataset.
+    """
+    Calculate properties and measures of a dataset.
 
     Parameters
     ----------
@@ -396,11 +382,7 @@ def properties_and_measures(  # noqa: C901
         ds = ds.sel({"time": slice(period[0], period[1])})
 
     # select periods for ref_measure
-    if (
-        dref_for_measure is not None
-        and period is not None
-        and "time" in dref_for_measure
-    ):
+    if dref_for_measure is not None and period is not None and "time" in dref_for_measure:
         dref_for_measure = dref_for_measure.sel({"time": slice(period[0], period[1])})
 
     if unstack:
@@ -433,9 +415,7 @@ def properties_and_measures(  # noqa: C901
         # calculate the measure if a reference dataset is given for the measure
         if dref_for_measure and vname in dref_for_measure:
             with xclim_convert_units_to():
-                meas[vname] = ind.get_measure()(
-                    sim=prop[vname], ref=dref_for_measure[vname]
-                )
+                meas[vname] = ind.get_measure()(sim=prop[vname], ref=dref_for_measure[vname])
             # create a merged long_name
             update_attr(
                 meas[vname],
@@ -460,10 +440,9 @@ def properties_and_measures(  # noqa: C901
     return prop, meas
 
 
-def measures_heatmap(
-    meas_datasets: list[xr.Dataset] | dict, to_level: str = "diag-heatmap"
-) -> xr.Dataset:
-    """Create a heatmap to compare the performance of the different datasets.
+def measures_heatmap(meas_datasets: list[xr.Dataset] | dict, to_level: str = "diag-heatmap") -> xr.Dataset:
+    """
+    Create a heatmap to compare the performance of the different datasets.
 
     The columns are properties and the rows are datasets.
     Each point is the absolute value of the mean of the measure over the whole domain.
@@ -507,16 +486,7 @@ def measures_heatmap(
     # plot heatmap of biases (1 column per properties, 1 row per dataset)
     hmap = np.array(hmap)
     # normalize to 0-1 -> best-worst
-    hmap = np.array(
-        [
-            (
-                (c - np.min(c)) / (np.max(c) - np.min(c))
-                if np.max(c) != np.min(c)
-                else [0.5] * len(c)
-            )
-            for c in hmap.T
-        ]
-    ).T
+    hmap = np.array([((c - np.min(c)) / (np.max(c) - np.min(c)) if np.max(c) != np.min(c) else [0.5] * len(c)) for c in hmap.T]).T
 
     name_of_datasets = name_of_datasets or list(range(1, hmap.shape[0] + 1))
     ds_hmap = xr.DataArray(
@@ -573,19 +543,14 @@ def measures_improvement(
         meas_datasets = list(meas_datasets.values())
 
     if len(meas_datasets) != 2:
-        warnings.warn(
-            "meas_datasets has more than 2 datasets."
-            " Only the first 2 will be compared."
-        )
+        warnings.warn("meas_datasets has more than 2 datasets. Only the first 2 will be compared.", stacklevel=2)
     ds1 = meas_datasets[0]
     ds2 = meas_datasets[1]
     if dim is not None:
         dims = [dim] if isinstance(dim, str) else dim
         for v in ds1.data_vars:
             if set(dims).issubset(set(ds1[v].dims)) is False:
-                raise ValueError(
-                    f"Dimension provided `dim` ({dim}) must be in every variable of `meas_datasets`"
-                )
+                raise ValueError(f"Dimension provided `dim` ({dim}) must be in every variable of `meas_datasets`")
 
     percent_better = []
     for var in ds2.data_vars:
@@ -617,9 +582,7 @@ def measures_improvement(
     return ds_better
 
 
-def measures_improvement_2d(
-    dict_input: dict, to_level: str = "diag-improved-2d"
-) -> xr.Dataset:
+def measures_improvement_2d(dict_input: dict, to_level: str = "diag-improved-2d") -> xr.Dataset:
     """
     Create a 2D dataset with dimension `realization` showing the fraction of improved grid cell.
 

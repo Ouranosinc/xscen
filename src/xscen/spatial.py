@@ -9,6 +9,7 @@ from pathlib import Path
 
 import cartopy.crs
 
+
 try:
     import clisops  # For version info
     import clisops.core as cl
@@ -18,7 +19,8 @@ except KeyError as e:
             "The clisops package could not be imported due to a known KeyError bug that occurs with some "
             "older versions of ESMF and specific execution setups (such as debugging on a Windows machine). "
             "As a workaround, try installing 'importlib-metadata <8.0.0' and/or updating ESMF. If you do not "
-            "need 'clisops.core' functionalities (e.g. spatial subsetting), you can ignore this warning."
+            "need 'clisops.core' functionalities (e.g. spatial subsetting), you can ignore this warning.",
+            stacklevel=2,
         )
     else:
         raise e
@@ -34,6 +36,7 @@ from pyproj.crs import CRS
 
 from .config import parse_config
 
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -47,10 +50,9 @@ __all__ = [
 
 
 @parse_config
-def creep_weights(
-    mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "clip"
-) -> xr.DataArray:
-    """Compute weights for the creep fill.
+def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "clip") -> xr.DataArray:
+    """
+    Compute weights for the creep fill.
 
     The output is a sparse matrix with the same dimensions as `mask`, twice.
     If `steps` is larger than 1, the output has a "step" dimension of that length.
@@ -89,9 +91,7 @@ def creep_weights(
 
     da = mask
     mask = da.values
-    neighbors = np.array(
-        list(itertools.product(*[np.arange(-n, n + 1) for j in range(mask.ndim)]))
-    ).T
+    neighbors = np.array(list(itertools.product(*[np.arange(-n, n + 1) for j in range(mask.ndim)]))).T
     src = []
     dst = []
     w = []
@@ -99,13 +99,9 @@ def creep_weights(
     for i in it:
         if not i:
             neigh_idx_2d = np.atleast_2d(it.multi_index).T + neighbors
-            neigh_idx_1d = np.ravel_multi_index(
-                neigh_idx_2d, mask.shape, order="C", mode=mode
-            )
+            neigh_idx_1d = np.ravel_multi_index(neigh_idx_2d, mask.shape, order="C", mode=mode)
             if mode == "clip":
-                neigh_idx = np.unravel_index(
-                    np.unique(neigh_idx_1d), mask.shape, order="C"
-                )
+                neigh_idx = np.unravel_index(np.unique(neigh_idx_1d), mask.shape, order="C")
             elif mode == "wrap":
                 neigh_idx = np.unravel_index(neigh_idx_1d, mask.shape, order="C")
             neigh = mask[neigh_idx]
@@ -133,7 +129,8 @@ def creep_weights(
 
 @parse_config
 def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
-    """Creep fill using pre-computed weights.
+    """
+    Creep fill using pre-computed weights.
 
     Parameters
     ----------
@@ -285,13 +282,12 @@ def subset(
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
     if cl is None and method in ["gridpoint", "bbox", "shape"]:
-        raise ImportError(
-            "The clisops package is required for the 'gridpoint', 'bbox' and 'shape' methods."
-        )
+        raise ImportError("The clisops package is required for the 'gridpoint', 'bbox' and 'shape' methods.")
     if tile_buffer > 0 and method in ["gridpoint", "sel"]:
         warnings.warn(
             f"tile_buffer is not used for the '{method}' method. Ignoring the argument.",
             UserWarning,
+            stacklevel=2,
         )
 
     if "latitude" not in ds.cf or "longitude" not in ds.cf:
@@ -306,9 +302,7 @@ def subset(
     elif method == "sel":
         ds_subset = _subset_sel(ds, name=name, **kwargs)
     else:
-        raise ValueError(
-            "Subsetting type not recognized. Use 'gridpoint', 'bbox', 'shape' or 'sel'."
-        )
+        raise ValueError("Subsetting type not recognized. Use 'gridpoint', 'bbox', 'shape' or 'sel'.")
 
     return ds_subset
 
@@ -321,7 +315,8 @@ def _subset_gridpoint(
     name: str | None = None,
     **kwargs,
 ) -> xr.Dataset:
-    r"""Subset the data to a gridpoint.
+    r"""
+    Subset the data to a gridpoint.
 
     Parameters
     ----------
@@ -371,7 +366,8 @@ def _subset_bbox(
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
-    r"""Subset the data to a bounding box.
+    r"""
+    Subset the data to a bounding box.
 
     Parameters
     ----------
@@ -431,7 +427,8 @@ def _subset_shape(
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
-    r"""Subset the data to a shape.
+    r"""
+    Subset the data to a shape.
 
     Parameters
     ----------
@@ -462,9 +459,7 @@ def _subset_shape(
 
     if tile_buffer > 0:
         if kwargs.get("buffer") is not None:
-            raise ValueError(
-                "Both tile_buffer and clisops' buffer were requested. Use only one."
-            )
+            raise ValueError("Both tile_buffer and clisops' buffer were requested. Use only one.")
         lon_res, lat_res = _estimate_grid_resolution(ds)
 
         # The buffer argument needs to be in the same units as the shapefile, so it's simpler to always project the shapefile to WGS84.
@@ -478,12 +473,14 @@ def _subset_shape(
         if shape_crs is None:
             warnings.warn(
                 "Shapefile does not have a CRS. Compatibility with the dataset is not guaranteed.",
+                stacklevel=2,
                 category=UserWarning,
             )
         elif shape_crs != CRS(4326):  # WGS84
             warnings.warn(
                 "Shapefile is not in EPSG:4326. Reprojecting to this CRS.",
                 UserWarning,
+                stacklevel=2,
             )
             shape = shape.to_crs(4326)
 
@@ -501,7 +498,8 @@ def _subset_shape(
 
 
 def _subset_sel(ds: xr.Dataset, *, name: str | None = None, **kwargs) -> xr.Dataset:
-    r"""Subset the data using the .sel() method.
+    r"""
+    Subset the data using the .sel() method.
 
     Parameters
     ----------
@@ -524,10 +522,7 @@ def _subset_sel(ds: xr.Dataset, *, name: str | None = None, **kwargs) -> xr.Data
     ds_subset = ds.sel(**arg_sel)
 
     # Update the history attribute
-    new_history = (
-        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-        f"sel subsetting with arguments {arg_sel}"
-    )
+    new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] sel subsetting with arguments {arg_sel}"
 
     return update_history_and_name(ds_subset, new_history, name)
 
@@ -546,18 +541,12 @@ def _load_lon_lat(ds: xr.Dataset) -> xr.Dataset:
 
 def get_grid_mapping(ds: xr.Dataset) -> str:
     """Get the grid_mapping attribute from the dataset."""
-    gridmap = [
-        ds[v].attrs["grid_mapping"]
-        for v in ds.data_vars
-        if "grid_mapping" in ds[v].attrs
-    ]
+    gridmap = [ds[v].attrs["grid_mapping"] for v in ds.data_vars if "grid_mapping" in ds[v].attrs]
     gridmap += [c for c in ds.coords if ds[c].attrs.get("grid_mapping_name", None)]
     gridmap = list(np.unique(gridmap))
 
     if len(gridmap) > 1:
-        warnings.warn(
-            f"There are conflicting grid_mapping attributes in the dataset. Assuming {gridmap[0]}."
-        )
+        warnings.warn(f"There are conflicting grid_mapping attributes in the dataset. Assuming {gridmap[0]}.", stacklevel=2)
 
     return gridmap[0] if gridmap else ""
 
@@ -582,9 +571,7 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
     globe = cartopy.crs.Globe(
         datum=cf_params.get("horizontal_datum_name"),
         ellipse=cf_params.get("reference_ellipsoid_name", "WGS84"),
-        semimajor_axis=(
-            cf_params.get("earth_radius") or cf_params.get("semi_major_axis")
-        ),
+        semimajor_axis=(cf_params.get("earth_radius") or cf_params.get("semi_major_axis")),
         semiminor_axis=cf_params.get("semi_minor_axis"),
         inverse_flattening=cf_params.get("inverse_flattening"),
         towgs84=cf_params.get("towgs84"),
@@ -607,9 +594,7 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
             globe=globe,
         )
     else:
-        raise NotImplementedError(
-            f"Grid mapping {cf_params['grid_mapping_name']} not implemented."
-        )
+        raise NotImplementedError(f"Grid mapping {cf_params['grid_mapping_name']} not implemented.")
     return crs
 
 
@@ -627,11 +612,7 @@ def _estimate_grid_resolution(ds: xr.Dataset) -> tuple[float, float]:
 
 
 def update_history_and_name(ds_subset, new_history, name):
-    history = (
-        new_history + " \n " + ds_subset.attrs["history"]
-        if "history" in ds_subset.attrs
-        else new_history
-    )
+    history = new_history + " \n " + ds_subset.attrs["history"] if "history" in ds_subset.attrs else new_history
     ds_subset.attrs["history"] = history
     if name is not None:
         ds_subset.attrs["cat:domain"] = name

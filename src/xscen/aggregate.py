@@ -18,6 +18,7 @@ import xarray as xr
 import xclim as xc
 import xclim.core.calendar
 
+
 try:
     import xesmf as xe
 except (ImportError, KeyError) as e:
@@ -27,7 +28,8 @@ except (ImportError, KeyError) as e:
                 "The xesmf package could not be imported due to a known KeyError bug that occurs with some "
                 "older versions of ESMF and specific execution setups (such as debugging on a Windows machine). "
                 "As a workaround, try installing 'importlib-metadata <8.0.0' and/or updating ESMF. If you do not "
-                "need 'xesmf' functionalities (e.g. regridding), you can ignore this warning."
+                "need 'xesmf' functionalities (e.g. regridding), you can ignore this warning.",
+                stacklevel=2,
             )
         else:
             raise e
@@ -40,6 +42,7 @@ from .extract import subset_warming_level
 from .indicators import compute_indicators
 from .spatial import get_grid_mapping, subset
 from .utils import standardize_periods, unstack_dates, update_attr
+
 
 logger = logging.getLogger(__name__)
 
@@ -132,14 +135,10 @@ def climatological_op(  # noqa: C901
     """
     # Daily data is not supported
     if len(ds.time) > 3 and xr.infer_freq(ds.time) == "D":
-        raise NotImplementedError(
-            "xs.climatological_op does not currently support daily data."
-        )
+        raise NotImplementedError("xs.climatological_op does not currently support daily data.")
     # more than one operation per call is not supported (yet), case for dict
     if isinstance(op, dict) and len(op) > 1:
-        raise NotImplementedError(
-            "xs.climatological_op does not currently support more than one operation per call."
-        )
+        raise NotImplementedError("xs.climatological_op does not currently support more than one operation per call.")
 
     # unstack 1D time in coords (day, month, and year) to make climatological mean faster
     mindex_coords = xr.Coordinates.from_pandas_multiindex(
@@ -160,18 +159,11 @@ def climatological_op(  # noqa: C901
         raise ValueError("Data is not continuous. Use the 'periods' argument.")
 
     # define periods, windows, and min_periods
-    periods = standardize_periods(
-        periods or [[int(ds_unstack.year[0]), int(ds_unstack.year[-1])]]
-    )
+    periods = standardize_periods(periods or [[int(ds_unstack.year[0]), int(ds_unstack.year[-1])]])
     window = window or int(periods[0][1]) - int(periods[0][0]) + 1
 
     # there is one less occurrence when a period crosses years
-    freq_across_year = [
-        f"{f}-{mon}"
-        for mon in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values()
-        for f in ["AS", "QS"]
-        if mon != "JAN"
-    ]
+    freq_across_year = [f"{f}-{mon}" for mon in xr.coding.cftime_offsets._MONTH_ABBREVIATIONS.values() for f in ["AS", "QS"] if mon != "JAN"]
     if (
         any(
             x in freq_across_year
@@ -189,9 +181,7 @@ def climatological_op(  # noqa: C901
         if 0 < min_periods <= 1:
             min_periods = int(np.floor(min_periods * window))
         else:
-            raise ValueError(
-                f"When 'min_periods' is passed as a 'float', it must be between 0 and 1. Got {min_periods}."
-            )
+            raise ValueError(f"When 'min_periods' is passed as a 'float', it must be between 0 and 1. Got {min_periods}.")
 
     # set min_periods
     min_periods = min_periods or window
@@ -210,11 +200,7 @@ def climatological_op(  # noqa: C901
     std_v = []
     if op == "mean":
         for vv in ds_unstack.data_vars:
-            if (
-                "std" in vv
-                or "standard deviation"
-                in ds_unstack[vv].attrs.get("description", "").lower()
-            ):
+            if "std" in vv or "standard deviation" in ds_unstack[vv].attrs.get("description", "").lower():
                 ds_unstack[vv] = np.square(ds_unstack[vv])
                 ds_has_std = True
                 std_v.extend([vv])
@@ -223,23 +209,19 @@ def climatological_op(  # noqa: C901
     concats = []
     for period in periods:
         # Rolling average
-        ds_rolling = ds_unstack.sel(year=slice(period[0], period[1])).rolling(
-            year=window, min_periods=min_periods
-        )
+        ds_rolling = ds_unstack.sel(year=slice(period[0], period[1])).rolling(year=window, min_periods=min_periods)
 
         # apply operation on rolling object
         if hasattr(ds_rolling, op) and callable(getattr(ds_rolling, op)):
             if op not in ["max", "mean", "median", "min", "std", "sum", "var"]:
-                warnings.warn(
-                    f"The requested operation '{op}' has not been tested and may produce unexpected results."
-                )
+                warnings.warn(f"The requested operation '{op}' has not been tested and may produce unexpected results.", stacklevel=2)
             if len(set(op_kwargs.keys()).difference(["keep_attrs"])) > 0:
                 # Reduce allows for kwargs to be passed to the operation, but it is less efficient
                 try:
                     numpy_op = getattr(np, f"nan{op}")
                 except AttributeError:
                     warnings.warn(
-                        f"The requested operation '{op}' has no NaN handling in numpy. Results may ignore the 'min_periods' argument."
+                        f"The requested operation '{op}' has no NaN handling in numpy. Results may ignore the 'min_periods' argument.", stacklevel=2
                     )
                     numpy_op = getattr(np, op)
                 ds_rolling = ds_rolling.reduce(numpy_op, **op_kwargs)
@@ -264,9 +246,7 @@ def climatological_op(  # noqa: C901
                 if np.sum(mask) >= kwargs.get("min_periods", 1):
                     x = x[mask]
                     y = y[mask]
-                    reg = scipy.stats.linregress(
-                        x, y, alternative=kwargs.get("alternative", "two-sided")
-                    )
+                    reg = scipy.stats.linregress(x, y, alternative=kwargs.get("alternative", "two-sided"))
                     out = np.array(
                         [
                             reg.slope,
@@ -282,9 +262,7 @@ def climatological_op(  # noqa: C901
                 return out
 
             # prepare kwargs
-            linreg_kwargs = {
-                k: v for k, v in op_kwargs.items() if "keep_attrs" not in k
-            }
+            linreg_kwargs = {k: v for k, v in op_kwargs.items() if "keep_attrs" not in k}
             linreg_kwargs["min_periods"] = min_periods
 
             # unwrap DatasetRolling object and select years subset
@@ -293,9 +271,7 @@ def climatological_op(  # noqa: C901
 
             # construct array to use years as x values (==regressors) in xr.apply_ufunc
             years_as_x_values = xr.DataArray(
-                np.arange(dsr_construct.window.size)
-                .repeat(dsr_construct.year.size)
-                .reshape(dsr_construct.window.size, dsr_construct.year.size)
+                np.arange(dsr_construct.window.size).repeat(dsr_construct.year.size).reshape(dsr_construct.window.size, dsr_construct.year.size)
                 + dsr_construct.year.values
                 - window
                 + 1,
@@ -352,13 +328,12 @@ def climatological_op(  # noqa: C901
             ).to_list()
         elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
             time_coord = [
-                xclim.core.calendar.datetime_classes[ds.time.dt.calendar](
-                    y - window + 1, m, d
-                )
+                xclim.core.calendar.datetime_classes[ds.time.dt.calendar](y - window + 1, m, d)
                 for y, m, d in zip(
                     ds_rolling.year.values,
                     ds_rolling.month.values,
                     ds_rolling.day.values,
+                    strict=False,
                 )
             ]
         else:
@@ -375,19 +350,13 @@ def climatological_op(  # noqa: C901
 
     # update data_vars names, attrs, history
     if rename_variables:
-        ds_rolling = ds_rolling.rename_vars(
-            {vv: f"{vv}_clim_{op}" for vv in ds_rolling.data_vars}
-        )
+        ds_rolling = ds_rolling.rename_vars({vv: f"{vv}_clim_{op}" for vv in ds_rolling.data_vars})
 
     for vv in ds_rolling.data_vars:
         for a in ["description", "long_name"]:
             try:
-                op_format = dict.fromkeys(
-                    ("mean", "std", "var", "sum"), "adj"
-                ) | dict.fromkeys(("max", "min"), "noun")
-                operation = xc.core.formatting.default_formatter.format_field(
-                    op, op_format[op]
-                )
+                op_format = dict.fromkeys(("mean", "std", "var", "sum"), "adj") | dict.fromkeys(("max", "min"), "noun")
+                operation = xc.core.formatting.default_formatter.format_field(op, op_format[op])
             except (KeyError, ValueError):
                 operation = op
             update_attr(
@@ -402,11 +371,7 @@ def climatological_op(  # noqa: C901
             f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {window}-year climatological {operation} "
             f"over window (non-centered), with a minimum of {min_periods} years of data - xarray v{xr.__version__}"
         )
-        history = (
-            new_history + " \n " + ds_rolling[vv].attrs["history"]
-            if "history" in ds_rolling[vv].attrs
-            else new_history
-        )
+        history = new_history + " \n " + ds_rolling[vv].attrs["history"] if "history" in ds_rolling[vv].attrs else new_history
         ds_rolling[vv].attrs["history"] = history
 
     # update processing level
@@ -424,9 +389,7 @@ def climatological_op(  # noqa: C901
                 .swap_dims({"time": "horizon"})
                 .assign(
                     time_2D=xr.DataArray(
-                        ds_rolling.time.sel(
-                            time=ds_rolling.horizon == horizon
-                        ).values.copy(),
+                        ds_rolling.time.sel(time=ds_rolling.horizon == horizon).values.copy(),
                         dims=["time"],
                     )
                 )
@@ -441,9 +404,7 @@ def climatological_op(  # noqa: C901
                 unstack_dates(
                     ds_rolling.sel(time=ds_rolling.horizon == horizon).assign(
                         time_2D=xr.DataArray(
-                            ds_rolling.time.sel(
-                                time=ds_rolling.horizon == horizon
-                            ).values.copy(),
+                            ds_rolling.time.sel(time=ds_rolling.horizon == horizon).values.copy(),
                             dims=["time"],
                         )
                     ),
@@ -473,7 +434,8 @@ def compute_deltas(  # noqa: C901
     rename_variables: bool = True,
     to_level: str | None = "deltas",
 ) -> xr.Dataset:
-    """Compute deltas in comparison to a reference time period, respecting the temporal resolution of ds.
+    """
+    Compute deltas in comparison to a reference time period, respecting the temporal resolution of ds.
 
     Parameters
     ----------
@@ -498,9 +460,7 @@ def compute_deltas(  # noqa: C901
     """
     if isinstance(reference_horizon, str):
         if reference_horizon not in ds.horizon:
-            raise ValueError(
-                f"The reference horizon {reference_horizon} is not in the dataset."
-            )
+            raise ValueError(f"The reference horizon {reference_horizon} is not in the dataset.")
         # Separate the reference from the other horizons
         if xc.core.utils.uses_dask(ds["horizon"]):
             ds["horizon"].load()
@@ -510,22 +470,16 @@ def compute_deltas(  # noqa: C901
         if "horizon" in ref:
             reference_horizon = np.unique(ref["horizon"])
             if len(reference_horizon) != 1:
-                raise ValueError(
-                    "The reference dataset appears to contain multiple horizons."
-                )
+                raise ValueError("The reference dataset appears to contain multiple horizons.")
             reference_horizon = reference_horizon[0]
         else:
             reference_horizon = "unknown_horizon"
     else:
-        raise ValueError(
-            "reference_horizon should be either a string or an xarray.Dataset."
-        )
+        raise ValueError("reference_horizon should be either a string or an xarray.Dataset.")
 
     if "time" in ds:
         if (len(ds.time) >= 3) and (xr.infer_freq(ds.time) == "D"):
-            raise NotImplementedError(
-                "xs.compute_deltas does not currently support daily data."
-            )
+            raise NotImplementedError("xs.compute_deltas does not currently support daily data.")
 
         # Remove references to 'year' in REF
         mindex_coords_1 = xr.Coordinates.from_pandas_multiindex(
@@ -556,19 +510,13 @@ def compute_deltas(  # noqa: C901
     deltas = xr.Dataset(coords=other_hz.coords, attrs=other_hz.attrs)
     # Calculate deltas
     for vv in list(ds.data_vars):
-        v_name = (
-            vv
-            if rename_variables is False
-            else f"{vv}_delta_{reference_horizon.replace('-', '_')}"
-        )
+        v_name = vv if rename_variables is False else f"{vv}_delta_{reference_horizon.replace('-', '_')}"
 
         with xr.set_options(keep_attrs=True):
             if (isinstance(kind, dict) and kind[vv] == "+") or kind == "+":
                 _kind = "abs."
                 deltas[v_name] = other_hz[vv] - ref[vv]
-                unit = pint2cfattrs(
-                    units2pint(other_hz[vv].attrs["units"]), is_difference=True
-                )
+                unit = pint2cfattrs(units2pint(other_hz[vv].attrs["units"]), is_difference=True)
                 deltas[v_name].attrs.update(unit)
             elif (isinstance(kind, dict) and kind[vv] == "/") or kind == "/":
                 _kind = "rel."
@@ -579,9 +527,7 @@ def compute_deltas(  # noqa: C901
                 deltas[v_name] = 100 * (other_hz[vv] - ref[vv]) / ref[vv]
                 deltas[v_name].attrs["units"] = "%"
             else:
-                raise ValueError(
-                    f"Delta 'kind' not understood. Should be '+', '/' or '%', received {kind}."
-                )
+                raise ValueError(f"Delta 'kind' not understood. Should be '+', '/' or '%', received {kind}.")
 
         # modify attrs and history
         deltas[v_name].attrs["delta_kind"] = _kind
@@ -598,11 +544,7 @@ def compute_deltas(  # noqa: C901
             )
 
         new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {_kind} delta vs. {reference_horizon} - xarray v{xr.__version__}"
-        history = (
-            new_history + " \n " + deltas[v_name].attrs["history"]
-            if "history" in deltas[v_name].attrs
-            else new_history
-        )
+        history = new_history + " \n " + deltas[v_name].attrs["history"] if "history" in deltas[v_name].attrs else new_history
         deltas[v_name].attrs["history"] = history
 
     if "time" in ds:
@@ -622,18 +564,12 @@ def compute_deltas(  # noqa: C901
         elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
             time_coord = [
                 xclim.core.calendar.datetime_classes[ds.time.dt.calendar](y, m, d)
-                for y, m, d in zip(
-                    deltas.year.values, deltas.month.values, deltas.day.values
-                )
+                for y, m, d in zip(deltas.year.values, deltas.month.values, deltas.day.values, strict=False)
             ]
         else:
             raise ValueError("The type of 'time' could not be understood.")
 
-        deltas = (
-            deltas.drop_vars({"year", "day", "month", "time"})
-            .assign(time=time_coord)
-            .transpose("time", ...)
-        )
+        deltas = deltas.drop_vars({"year", "day", "month", "time"}).assign(time=time_coord).transpose("time", ...)
         deltas = deltas.reindex_like(ds)
 
     if to_level is not None:
@@ -654,7 +590,8 @@ def spatial_mean(  # noqa: C901
     to_domain: str | None = None,
     to_level: str | None = None,
 ) -> xr.Dataset:
-    r"""Compute the spatial mean using a variety of available methods.
+    r"""
+    Compute the spatial mean using a variety of available methods.
 
     Parameters
     ----------
@@ -711,18 +648,12 @@ def spatial_mean(  # noqa: C901
 
     # Determine the coordinates
     i = 0
-    while (
-        "latitude" not in ds.cf.coordinates or "longitude" not in ds.cf.coordinates
-    ) and i < 2:
+    while ("latitude" not in ds.cf.coordinates or "longitude" not in ds.cf.coordinates) and i < 2:
         if i == 0:
             # First, try to guess the latitude coordinate using CF conventions
             ds = ds.cf.guess_coord_axis()
         elif i == 1:
-            missing_coords = [
-                f"{coord}_name"
-                for coord in ["latitude", "longitude"]
-                if coord not in ds.cf.coordinates
-            ]
+            missing_coords = [f"{coord}_name" for coord in ["latitude", "longitude"] if coord not in ds.cf.coordinates]
             # If the coordinates are still not found, use the 'kwargs' argument
             if any(coord not in kwargs for coord in missing_coords):
                 raise ValueError(
@@ -758,8 +689,9 @@ def spatial_mean(  # noqa: C901
     if method == "cos-lat":
         if ds.cf["latitude"].attrs.get("units", "") != "degrees_north":
             warnings.warn(
-                f"Latitude units are '{ds.cf['latitude'].attrs.get('units', '')}', expected 'degrees_north'. "
-                f"Make sure that the computation is right."
+                f"Latitude units are '{ds.cf['latitude'].attrs.get('units', '')}', "
+                "expected 'degrees_north'. Make sure that the computation is right.",
+                stacklevel=2,
             )
 
         if ((ds.cf["longitude"].min() < -160) & (ds.cf["longitude"].max() > 160)) or (
@@ -767,7 +699,8 @@ def spatial_mean(  # noqa: C901
         ):
             warnings.warn(
                 "The region appears to be crossing the -180/180° meridian. Bounds computation is currently bugged in cf_xarray. "
-                "Make sure that the computation is right."
+                "Make sure that the computation is right.",
+                stacklevel=2,
             )
 
         weights = np.cos(np.deg2rad(ds.cf["latitude"]))
@@ -778,9 +711,7 @@ def spatial_mean(  # noqa: C901
                 ds = ds.cf.add_bounds(["longitude", "latitude"])
             # Weights the weights by the cell area (in °²)
             weights = weights * xr.DataArray(
-                shapely.area(
-                    shapely.polygons(shapely.linearrings(ds.lon_bounds, ds.lat_bounds))
-                ),
+                shapely.area(shapely.polygons(shapely.linearrings(ds.lon_bounds, ds.lat_bounds))),
                 dims=ds.cf["longitude"].dims,
                 coords=ds.cf["longitude"].coords,
             )
@@ -795,16 +726,12 @@ def spatial_mean(  # noqa: C901
 
     elif method == "interp_centroid":
         # FIXME: No backward compatibility for this method since it produced incorrect results, but we want a specific error message for now.
-        raise ValueError(
-            "Method 'interp_centroid' has been removed, since it produced incorrect results."
-        )
+        raise ValueError("Method 'interp_centroid' has been removed, since it produced incorrect results.")
 
     # Uses xesmf.SpatialAverager
     elif method == "xesmf":
         if xe is None:
-            raise ImportError(
-                "Method xesmf requires xESMF to work, please install that package."
-            )
+            raise ImportError("Method xesmf requires xESMF to work, please install that package.")
 
         # If the region is a bounding box, call shapely and geopandas to transform it into an input compatible with xesmf
         if region["method"] == "bbox":
@@ -835,15 +762,10 @@ def spatial_mean(  # noqa: C901
             # The simpler the polygons, the faster the averaging, but it will lose some precision.
             if simplify_tolerance is not None:
                 polygon = polygon.copy()
-                polygon["geometry"] = polygon.simplify(
-                    tolerance=simplify_tolerance, preserve_topology=True
-                )
+                polygon["geometry"] = polygon.simplify(tolerance=simplify_tolerance, preserve_topology=True)
 
             # Prepare the History field
-            new_history = (
-                f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-                f"xesmf.SpatialAverager over {name} - xESMF v{xe.__version__}"
-            )
+            new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] xesmf.SpatialAverager over {name} - xESMF v{xe.__version__}"
 
         else:
             raise ValueError("'method' should be one of [bbox, shape].")
@@ -856,11 +778,7 @@ def spatial_mean(  # noqa: C901
         # Preemptive segmentization. Same threshold as xESMF, but there isn't strong analysis behind this choice
         geoms = shapely.segmentize(polygon.geometry, 1)
 
-        if (
-            ds.cf["longitude"].ndim == 2
-            and "longitude" not in ds.cf.bounds
-            and "rotated_pole" in ds
-        ):
+        if ds.cf["longitude"].ndim == 2 and "longitude" not in ds.cf.bounds and "rotated_pole" in ds:
             from .regrid import create_bounds_gridmapping
 
             ds = ds.update(create_bounds_gridmapping(ds))
@@ -870,24 +788,16 @@ def spatial_mean(  # noqa: C901
 
         geom_dim_name = kwargs_copy.pop("geom_dim_name", "geom")
 
-        extra_coords = {
-            col: xr.DataArray(polygon[col], dims=(geom_dim_name,))
-            for col in polygon.columns
-            if col != "geometry"
-        }
+        extra_coords = {col: xr.DataArray(polygon[col], dims=(geom_dim_name,)) for col in polygon.columns if col != "geometry"}
         extra_coords[geom_dim_name] = xr.DataArray(polygon.index, dims=(geom_dim_name,))
         ds_agg = ds_agg.assign_coords(**extra_coords)
         if len(polygon) == 1:
             ds_agg = ds_agg.squeeze(geom_dim_name)
         if "lon_bounds" in ds_agg:
-            ds_agg = ds_agg.assign_coords(
-                {"lon_bounds": ds_agg.lon_bounds, "lat_bounds": ds_agg.lat_bounds}
-            )
+            ds_agg = ds_agg.assign_coords({"lon_bounds": ds_agg.lon_bounds, "lat_bounds": ds_agg.lat_bounds})
 
     else:
-        raise ValueError(
-            "Subsetting method should be ['cos-lat', 'interp_centroid', 'xesmf']"
-        )
+        raise ValueError("Subsetting method should be ['cos-lat', 'interp_centroid', 'xesmf']")
 
     # If the dataset had a projection, remove it
     grid_mapping = get_grid_mapping(ds)
@@ -897,11 +807,7 @@ def spatial_mean(  # noqa: C901
             ds_agg[v].attrs.pop("grid_mapping", None)
 
     # History
-    history = (
-        new_history + " \n " + ds_agg.attrs["history"]
-        if "history" in ds_agg.attrs
-        else new_history
-    )
+    history = new_history + " \n " + ds_agg.attrs["history"] if "history" in ds_agg.attrs else new_history
     ds_agg.attrs["history"] = history
 
     # Attrs
@@ -917,14 +823,7 @@ def spatial_mean(  # noqa: C901
 def produce_horizon(  # noqa: C901
     ds: xr.Dataset,
     *,
-    indicators: (
-        str
-        | os.PathLike
-        | Sequence[Indicator]
-        | Sequence[tuple[str, Indicator]]
-        | ModuleType
-        | None
-    ) = None,
+    indicators: (str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType | None) = None,
     periods: list[str] | list[list[str]] | None = None,
     warminglevels: dict | None = None,
     op: str | dict = "mean",
@@ -982,25 +881,18 @@ def produce_horizon(  # noqa: C901
             for wl in warminglevels["wl"]:
                 all_periods.append({**template, "wl": wl})
         else:
-            raise ValueError(
-                f"Could not understand the format of warminglevels['wl']: {warminglevels['wl']}"
-            )
+            raise ValueError(f"Could not understand the format of warminglevels['wl']: {warminglevels['wl']}")
     if len(all_periods) == 0:
-        all_periods = standardize_periods(
-            [[int(ds.time.dt.year[0]), int(ds.time.dt.year[-1])]]
-        )
+        all_periods = standardize_periods([[int(ds.time.dt.year[0]), int(ds.time.dt.year[-1])]])
 
     out = []
     for period in all_periods:
         if isinstance(period, list):
-            if ds.time.dt.year[0] <= int(period[0]) and ds.time.dt.year[-1] >= int(
-                period[1]
-            ):
+            if ds.time.dt.year[0] <= int(period[0]) and ds.time.dt.year[-1] >= int(period[1]):
                 ds_sub = ds.sel(time=slice(period[0], period[1]))
             else:
                 warnings.warn(
-                    f"The requested period {period} is not fully covered by the input dataset. "
-                    "The requested period will be skipped."
+                    f"The requested period {period} is not fully covered by the input dataset. The requested period will be skipped.", stacklevel=2
                 )
                 ds_sub = None
         else:
@@ -1010,11 +902,7 @@ def produce_horizon(  # noqa: C901
             if indicators is not None:
                 # compute indicators
                 ind_dict = compute_indicators(
-                    ds=(
-                        ds_sub.squeeze(dim="warminglevel")
-                        if "warminglevel" in ds_sub.dims
-                        else ds_sub
-                    ),
+                    ds=(ds_sub.squeeze(dim="warminglevel") if "warminglevel" in ds_sub.dims else ds_sub),
                     indicators=indicators,
                 )
             else:
@@ -1031,13 +919,7 @@ def produce_horizon(  # noqa: C901
                         horizons_as_dim=True,
                     ).drop_vars("time")
                 else:
-                    ds_mean = ds_ind.expand_dims(
-                        dim={
-                            "horizon": [
-                                f"{ds.time.dt.year[0].item()}-{ds.time.dt.year[-1].item()}"
-                            ]
-                        }
-                    )
+                    ds_mean = ds_ind.expand_dims(dim={"horizon": [f"{ds.time.dt.year[0].item()}-{ds.time.dt.year[-1].item()}"]})
                     ds_mean["horizon"] = ds_mean["horizon"].astype(str)
 
                 if "warminglevel" in ds_mean.coords:
@@ -1060,20 +942,13 @@ def produce_horizon(  # noqa: C901
     if len(out) > 0:
         for v in out[0].data_vars:
             if not all(
-                [
-                    all(
-                        [
-                            out[0][v].attrs.get(attr) == out[i][v].attrs.get(attr)
-                            for i in range(1, len(out))
-                        ]
-                    )
-                    for attr in ["long_name", "description"]
-                ]
+                [all([out[0][v].attrs.get(attr) == out[i][v].attrs.get(attr) for i in range(1, len(out))]) for attr in ["long_name", "description"]]
             ):
                 warnings.warn(
                     f"The attributes for variable {v} are not the same for all horizons, "
                     "probably because the periods were not of the same length. "
-                    "Attributes will be kept from the first horizon, but this might not be the most appropriate."
+                    "Attributes will be kept from the first horizon, but this might not be the most appropriate.",
+                    stacklevel=2,
                 )
 
         out = xr.concat(out, dim="horizon")
@@ -1082,20 +957,10 @@ def produce_horizon(  # noqa: C901
         out.attrs["cat:frequency"] = "fx"
         if to_level:
             if len(all_periods) == 1:
-                if (isinstance(all_periods[0], dict)) or (
-                    "warminglevel" in ds.dims and warminglevels is None
-                ):
-                    to_level = to_level.format(
-                        wl=(
-                            ds_sub.warminglevel.values[0]
-                            if isinstance(all_periods[0], dict)
-                            else ds.warminglevel.values[0]
-                        )
-                    )
+                if (isinstance(all_periods[0], dict)) or ("warminglevel" in ds.dims and warminglevels is None):
+                    to_level = to_level.format(wl=(ds_sub.warminglevel.values[0] if isinstance(all_periods[0], dict) else ds.warminglevel.values[0]))
                 else:
-                    to_level = to_level.format(
-                        period0=all_periods[0][0], period1=all_periods[0][1]
-                    )
+                    to_level = to_level.format(period0=all_periods[0][0], period1=all_periods[0][1])
             out.attrs["cat:processing_level"] = to_level
 
         return out

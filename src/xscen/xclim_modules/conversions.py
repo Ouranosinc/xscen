@@ -6,15 +6,17 @@ import xarray as xr
 from xclim.core.units import convert_units_to, declare_units
 from xsdba.processing import from_additive_space, to_additive_space
 
+
 try:
-    from xclim.indices.converters import tas_from_tasmin_tasmax as tas_midpoint
+    from xclim.indices.converters import tas_from_tasmin_tasmax as tas_midpoint  # noqa: F401
 except ImportError:  # FIXME: Remove when we pin xclim >= 0.58
-    from xclim.indices import tas as tas_midpoint
+    pass
 
 
 @declare_units(prsn="[precipitation]", prlp="[precipitation]")
 def precipitation(prsn: xr.DataArray, prlp: xr.DataArray) -> xr.DataArray:
-    """Precipitation of all phases.
+    """
+    Precipitation of all phases.
 
     Compute the precipitation flux from all phases by adding solid and liquid precipitation.
 
@@ -38,7 +40,8 @@ def precipitation(prsn: xr.DataArray, prlp: xr.DataArray) -> xr.DataArray:
 
 @declare_units(dtr="[temperature]", tasmax="[temperature]")
 def tasmin_from_dtr(dtr: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
-    """Tasmin computed from DTR and tasmax.
+    """
+    Tasmin computed from DTR and tasmax.
 
     Tasmin as dtr subtracted from tasmax.
 
@@ -65,7 +68,8 @@ def tasmin_from_dtr(dtr: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
 
 @declare_units(dtr="[temperature]", tasmin="[temperature]")
 def tasmax_from_dtr(dtr: xr.DataArray, tasmin: xr.DataArray) -> xr.DataArray:
-    """Tasmax computed from DTR and tasmin.
+    """
+    Tasmax computed from DTR and tasmin.
 
     Tasmax as dtr added to tasmin.
 
@@ -92,7 +96,8 @@ def tasmax_from_dtr(dtr: xr.DataArray, tasmin: xr.DataArray) -> xr.DataArray:
 
 @declare_units(tasmin="[temperature]", tasmax="[temperature]")
 def dtr_from_minmax(tasmin: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
-    """DTR computed from tasmin and tasmax.
+    """
+    DTR computed from tasmin and tasmax.
 
     Dtr as tasmin subtracted from tasmax.
 
@@ -117,7 +122,8 @@ def dtr_from_minmax(tasmin: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
 
 @declare_units(hurs="[]")
 def hurslogit_from_hurs(hurs: xr.DataArray) -> xr.DataArray:
-    """Hurslogit computed from hurs.
+    """
+    Hurslogit computed from hurs.
 
     Parameters
     ----------
@@ -133,14 +139,13 @@ def hurslogit_from_hurs(hurs: xr.DataArray) -> xr.DataArray:
     This converts the range of `hurs` from [0,100] to ]-np.inf, np.inf[.
     """
     hurs = convert_units_to(hurs, "%")
-    return to_additive_space(
-        hurs, lower_bound="0 %", upper_bound="100 %", trans="logit"
-    )
+    return to_additive_space(hurs, lower_bound="0 %", upper_bound="100 %", trans="logit")
 
 
 @declare_units(hurslogit="[]")
 def hurs_from_hurslogit(hurslogit: xr.DataArray) -> xr.DataArray:
-    """Hurslogit computed from hurs.
+    """
+    Hurslogit computed from hurs.
 
     Parameters
     ----------

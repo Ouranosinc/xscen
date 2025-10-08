@@ -11,9 +11,7 @@ from xscen.testing import datablock_3d
 
 class TestHealthChecks:
     def test_structure(self, datablock_3d):
-        ds = datablock_3d(
-            np.random.rand(5, 5, 5), "tas", "rlon", 0, "rlat", 0, as_dataset=True
-        )
+        ds = datablock_3d(np.random.rand(5, 5, 5), "tas", "rlon", 0, "rlat", 0, as_dataset=True)
 
         # Right structure
         xs.diagnostics.health_checks(
@@ -27,28 +25,16 @@ class TestHealthChecks:
 
         # Wrong structures
         with pytest.raises(ValueError, match="The dimension 'lat' is missing."):
-            xs.diagnostics.health_checks(
-                ds, structure={"dims": ["time", "lat", "rlon"]}, raise_on=["all"]
-            )
+            xs.diagnostics.health_checks(ds, structure={"dims": ["time", "lat", "rlon"]}, raise_on=["all"])
         with pytest.warns(UserWarning, match="The dimension 'lat' is missing."):
-            xs.diagnostics.health_checks(
-                ds, structure={"dims": ["time", "lat", "rlon"]}
-            )
+            xs.diagnostics.health_checks(ds, structure={"dims": ["time", "lat", "rlon"]})
         with pytest.raises(ValueError, match="The coordinate 'another' is missing."):
-            xs.diagnostics.health_checks(
-                ds, structure={"coords": ["another"]}, raise_on=["structure"]
-            )
+            xs.diagnostics.health_checks(ds, structure={"coords": ["another"]}, raise_on=["structure"])
         with pytest.warns(UserWarning, match="The coordinate 'another' is missing."):
             xs.diagnostics.health_checks(ds, structure={"coords": ["another"]})
-        with pytest.raises(
-            ValueError, match="'tas' is detected as a data variable, not a coordinate."
-        ):
-            xs.diagnostics.health_checks(
-                ds, structure={"coords": ["tas"]}, raise_on=["structure"]
-            )
-        with pytest.warns(
-            UserWarning, match="'tas' is detected as a data variable, not a coordinate."
-        ):
+        with pytest.raises(ValueError, match="'tas' is detected as a data variable, not a coordinate."):
+            xs.diagnostics.health_checks(ds, structure={"coords": ["tas"]}, raise_on=["structure"])
+        with pytest.warns(UserWarning, match="'tas' is detected as a data variable, not a coordinate."):
             xs.diagnostics.health_checks(ds, structure={"coords": ["tas"]})
 
     @pytest.mark.parametrize("cal", ["default", "standard", "365_day"])
@@ -75,52 +61,34 @@ class TestHealthChecks:
             ds = ds.convert_calendar(cal, align_on="date")
 
         # Right dates
-        xs.diagnostics.health_checks(
-            ds, start_date="2000-01-01", end_date="2000-12-30", raise_on=["all"]
-        )
+        xs.diagnostics.health_checks(ds, start_date="2000-01-01", end_date="2000-12-30", raise_on=["all"])
         xs.diagnostics.health_checks(ds, start_date="2000-01-02", raise_on=["all"])
         xs.diagnostics.health_checks(ds, end_date="2000-01-02", raise_on=["all"])
 
         # Wrong dates
-        with pytest.raises(
-            ValueError, match="The start date is not at least 1999-01-02."
-        ):
+        with pytest.raises(ValueError, match="The start date is not at least 1999-01-02."):
             xs.diagnostics.health_checks(ds, start_date="1999-01-02", raise_on=["all"])
-        with pytest.warns(
-            UserWarning, match="The start date is not at least 1999-01-02."
-        ):
+        with pytest.warns(UserWarning, match="The start date is not at least 1999-01-02."):
             xs.diagnostics.health_checks(ds, start_date="1999-01-02")
-        with pytest.raises(
-            ValueError, match="The end date is not at least 2001-01-01."
-        ):
-            xs.diagnostics.health_checks(
-                ds, end_date="2001-01-01", raise_on=["end_date"]
-            )
-        with pytest.warns(
-            UserWarning, match="The end date is not at least 2001-01-01."
-        ):
+        with pytest.raises(ValueError, match="The end date is not at least 2001-01-01."):
+            xs.diagnostics.health_checks(ds, end_date="2001-01-01", raise_on=["end_date"])
+        with pytest.warns(UserWarning, match="The end date is not at least 2001-01-01."):
             xs.diagnostics.health_checks(ds, end_date="2001-01-01")
 
     def test_variables(self):
         ds = timeseries(np.arange(0, 365), "tas", "1/1/2000", freq="D")
 
         # Right units
-        xs.diagnostics.health_checks(
-            ds, variables_and_units={"tas": "K"}, raise_on=["all"]
-        )
+        xs.diagnostics.health_checks(ds, variables_and_units={"tas": "K"}, raise_on=["all"])
 
         # Wrong variables or units
         with pytest.raises(ValueError, match="The variable 'tas2' is missing."):
-            xs.diagnostics.health_checks(
-                ds, variables_and_units={"tas2": "K"}, raise_on=["all"]
-            )
+            xs.diagnostics.health_checks(ds, variables_and_units={"tas2": "K"}, raise_on=["all"])
         with pytest.raises(
             ValueError,
             match="The variable 'tas' does not have the expected units 'degC'. Received 'K'.",
         ):
-            xs.diagnostics.health_checks(
-                ds, variables_and_units={"tas": "degC"}, raise_on=["all"]
-            )
+            xs.diagnostics.health_checks(ds, variables_and_units={"tas": "degC"}, raise_on=["all"])
         with pytest.warns(
             UserWarning,
             match="The variable 'tas' does not have the expected units 'degC'. Received 'K'.",
@@ -135,12 +103,8 @@ class TestHealthChecks:
         # this gives "°C" as units
         ds1 = xc.units.convert_units_to(ds, "degC")
         # It should be okay by default
-        xs.diagnostics.health_checks(
-            ds1, variables_and_units={"tas": "degC"}, raise_on=["all"]
-        )
-        xs.diagnostics.health_checks(
-            ds1, variables_and_units={"tas": "°C"}, raise_on=["all"]
-        )
+        xs.diagnostics.health_checks(ds1, variables_and_units={"tas": "degC"}, raise_on=["all"])
+        xs.diagnostics.health_checks(ds1, variables_and_units={"tas": "°C"}, raise_on=["all"])
         # but raise an error if we want something stritcly the same
         with pytest.raises(
             ValueError,
@@ -176,22 +140,14 @@ class TestHealthChecks:
                 "cfcheck_from_name": {"varname": "pr"},
             }
         }
-        with pytest.raises(
-            ValueError, match="['something_else']"
-        ):  # Will raise on the first check
+        with pytest.raises(ValueError, match="['something_else']"):  # Will raise on the first check
             xs.diagnostics.health_checks(ds, cfchecks=bad_cfcheck, raise_on=["all"])
-        with pytest.warns(
-            UserWarning, match="['precipitation_flux']"
-        ):  # Make sure the second check is still run
+        with pytest.warns(UserWarning, match="['precipitation_flux']"):  # Make sure the second check is still run
             xs.diagnostics.health_checks(ds, cfchecks=bad_cfcheck)
 
-    @pytest.mark.parametrize(
-        "freq, gap", [("D", False), ("MS", False), ("3h", False), ("D", True)]
-    )
+    @pytest.mark.parametrize("freq, gap", [("D", False), ("MS", False), ("3h", False), ("D", True)])
     def test_freq(self, freq, gap):
-        ds = timeseries(
-            np.arange(0, 365), "tas", "1/1/2000", freq=freq, as_dataset=True
-        )
+        ds = timeseries(np.arange(0, 365), "tas", "1/1/2000", freq=freq, as_dataset=True)
         if gap is False:
             # Right frequency
             xs.diagnostics.health_checks(ds, freq=freq, raise_on=["all"])
@@ -202,9 +158,7 @@ class TestHealthChecks:
             with pytest.warns(UserWarning, match="The frequency is not 'M'."):
                 xs.diagnostics.health_checks(ds, freq="M")
         else:
-            ds = xr.concat(
-                [ds.isel(time=slice(0, 100)), ds.isel(time=slice(200, 365))], dim="time"
-            )
+            ds = xr.concat([ds.isel(time=slice(0, 100)), ds.isel(time=slice(200, 365))], dim="time")
             with pytest.raises(
                 ValueError,
                 match="The timesteps are irregular or cannot be inferred by xarray.",
@@ -223,9 +177,7 @@ class TestHealthChecks:
 
     @pytest.mark.parametrize("missing", ["missing_any", "missing_wmo", "both"])
     def test_missing(self, missing):
-        ds = timeseries(
-            np.tile(np.arange(1, 366), 3), "tas", "1/1/2001", freq="D", as_dataset=True
-        )
+        ds = timeseries(np.tile(np.arange(1, 366), 3), "tas", "1/1/2001", freq="D", as_dataset=True)
         ds = ds.where((ds.time.dt.year > 2001) | (ds.time.dt.dayofyear > 2))
 
         if missing == "both":
@@ -276,9 +228,7 @@ class TestHealthChecks:
                 xs.diagnostics.health_checks(ds, flags=flags, raise_on=["all"])
             with pytest.warns(UserWarning, match="tasmax_below_tasmin"):
                 xs.diagnostics.health_checks(ds, flags=flags)
-                dsflags = xs.diagnostics.health_checks(
-                    ds, flags=flags, flags_kwargs={"freq": "D"}, return_flags=True
-                )
+                dsflags = xs.diagnostics.health_checks(ds, flags=flags, flags_kwargs={"freq": "D"}, return_flags=True)
 
                 assert len(dsflags.time) == len(ds.time)
                 assert len(dsflags.data_vars) == 4
@@ -297,9 +247,7 @@ class TestHealthChecks:
 
 class TestPropertiesMeasures:
     yaml_file = notebooks / "samples" / "properties.yml"
-    ds = timeseries(
-        np.ones(365 * 3), variable="tas", start="2001-01-01", freq="D", as_dataset=True
-    )
+    ds = timeseries(np.ones(365 * 3), variable="tas", start="2001-01-01", freq="D", as_dataset=True)
 
     @pytest.mark.parametrize("input", ["module", "iter"])
     def test_input_types(self, input):
@@ -333,9 +281,7 @@ class TestPropertiesMeasures:
     def test_output(self, period):
         values = np.ones(365 * 2)
         values[:365] = 2
-        ds = timeseries(
-            values, variable="tas", start="2001-01-01", freq="D", as_dataset=True
-        )
+        ds = timeseries(values, variable="tas", start="2001-01-01", freq="D", as_dataset=True)
         ds["da"] = ds.tas
 
         p, m = xs.properties_and_measures(
@@ -426,7 +372,6 @@ class TestPropertiesMeasures:
         np.testing.assert_allclose(m2["maximum_length_of_warm_spell"].values, 0)
 
     def test_measures_heatmap(self):
-
         p1, m1 = xs.properties_and_measures(
             self.ds,
             properties=self.yaml_file,
@@ -446,7 +391,6 @@ class TestPropertiesMeasures:
         np.testing.assert_allclose(out["heatmap"].values, 0.5)
 
     def test_measures_improvement(self):
-
         p1, m1 = xs.properties_and_measures(
             self.ds,
             properties=self.yaml_file,
@@ -461,8 +405,7 @@ class TestPropertiesMeasures:
         )
         with pytest.warns(
             UserWarning,
-            match="meas_datasets has more than 2 datasets."
-            + " Only the first 2 will be compared.",
+            match="meas_datasets has more than 2 datasets." + " Only the first 2 will be compared.",
         ):
             out = xs.diagnostics.measures_improvement([m2, m2, m2], to_level="test")
 
@@ -484,20 +427,14 @@ class TestPropertiesMeasures:
             period=["2001", "2001"],
         )
         m3 = xr.concat(
-            [
-                m2.quantile_98_tas.to_dataset().expand_dims({"dummy_dim": [i]})
-                for i in range(3)
-            ],
+            [m2.quantile_98_tas.to_dataset().expand_dims({"dummy_dim": [i]}) for i in range(3)],
             dim="dummy_dim",
         )
-        out = xs.diagnostics.measures_improvement(
-            [m3, m3], dim="dummy_dim", to_level="test"
-        )
+        out = xs.diagnostics.measures_improvement([m3, m3], dim="dummy_dim", to_level="test")
         assert set(out.dims) == {"properties", "season"}
         np.testing.assert_allclose(out["improved_grid_points"].values, 1)
 
     def test_measures_improvement_2d(self):
-
         p1, m1 = xs.properties_and_measures(
             self.ds,
             properties=self.yaml_file,
@@ -511,9 +448,7 @@ class TestPropertiesMeasures:
 
         imp = xs.diagnostics.measures_improvement([m2, m2], to_level="test")
 
-        out = xs.diagnostics.measures_improvement_2d(
-            {"i1": imp, "i2": imp}, to_level="test"
-        )
+        out = xs.diagnostics.measures_improvement_2d({"i1": imp, "i2": imp}, to_level="test")
 
         assert out.attrs["cat:processing_level"] == "test"
         assert "mean-tas" in out.properties.values

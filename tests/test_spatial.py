@@ -64,10 +64,7 @@ class TestCreepFill:
                 1: [22],
                 2: [22],
                 # Here all the values are included, except the False ones
-                3: [
-                    (self.ds["tas"].isel(time=0).sum().values - 22 - 1)
-                    / (self.ds["mask"].count().values - 2)
-                ],
+                3: [(self.ds["tas"].isel(time=0).sum().values - 22 - 1) / (self.ds["mask"].count().values - 2)],
             }
         else:
             neighbours_0 = {
@@ -98,40 +95,18 @@ class TestCreepFill:
                     14,
                     15,
                 ],
-                3: [
-                    (
-                        np.sum(np.arange(1, 37))
-                        - 22
-                        - 1
-                        + np.sum([19, 20, 21, 23, 24])
-                        + np.sum([4, 10, 16, 28, 34])
-                    )
-                    / (36 - 2 + 10)
-                ],
+                3: [(np.sum(np.arange(1, 37)) - 22 - 1 + np.sum([19, 20, 21, 23, 24]) + np.sum([4, 10, 16, 28, 34])) / (36 - 2 + 10)],
             }
             neighbours_3 = {
                 # For these n, the average is the same as the original value
                 1: [22],
                 2: [22],
                 # Here all the values are included, except the False ones
-                3: [
-                    (
-                        np.sum(np.arange(1, 37))
-                        - 22
-                        - 1
-                        + np.sum(np.arange(2, 7))
-                        + np.sum([7, 13, 19, 25, 31])
-                    )
-                    / (36 - 2 + 10)
-                ],
+                3: [(np.sum(np.arange(1, 37)) - 22 - 1 + np.sum(np.arange(2, 7)) + np.sum([7, 13, 19, 25, 31])) / (36 - 2 + 10)],
             }
 
-        np.testing.assert_allclose(
-            out.isel(lat=0, lon=0), np.tile(np.mean(neighbours_0[n]), 3)
-        )
-        np.testing.assert_allclose(
-            out.isel(lat=3, lon=3), np.tile(np.mean(neighbours_3[n]), 3)
-        )
+        np.testing.assert_allclose(out.isel(lat=0, lon=0), np.tile(np.mean(neighbours_0[n]), 3))
+        np.testing.assert_allclose(out.isel(lat=3, lon=3), np.tile(np.mean(neighbours_3[n]), 3))
 
     def test_wrong_mode(self):
         with pytest.raises(ValueError, match="mode must be either"):
@@ -146,7 +121,7 @@ class TestCreepFill:
     def test_steps(self):
         # TODO: More in-depth testing ?
         w = xs.spatial.creep_weights(self.ds["mask"], n=1, steps=2, mode="clip")
-        out = xs.spatial.creep_fill(self.ds["tas"], w)
+        xs.spatial.creep_fill(self.ds["tas"], w)
         assert "step" in w.dims
 
 
@@ -203,9 +178,7 @@ class TestGetGrid:
             as_dataset=True,
         )
         ds["tas"].attrs["grid_mapping"] = "lambert_conformal_conic"
-        with pytest.warns(
-            UserWarning, match="There are conflicting grid_mapping attributes"
-        ):
+        with pytest.warns(UserWarning, match="There are conflicting grid_mapping attributes"):
             assert xs.spatial.get_grid_mapping(ds) == "lambert_conformal_conic"
 
 
@@ -232,9 +205,7 @@ class TestSubset:
     )
     def test_subset_gridpoint(self, kwargs, name):
         with pytest.warns(UserWarning, match="tile_buffer is not used"):
-            out = xs.spatial.subset(
-                self.ds, "gridpoint", name=name, tile_buffer=5, **kwargs
-            )
+            out = xs.spatial.subset(self.ds, "gridpoint", name=name, tile_buffer=5, **kwargs)
 
         if isinstance(kwargs["lon"], list):
             expected = {
@@ -247,10 +218,7 @@ class TestSubset:
                 "lat": [np.round(kwargs["lat"])],
             }
 
-        assert (
-            f"gridpoint spatial subsetting on {len(expected['lon'])} coordinates"
-            in out.attrs["history"]
-        )
+        assert f"gridpoint spatial subsetting on {len(expected['lon'])} coordinates" in out.attrs["history"]
         np.testing.assert_array_equal(out["lon"], expected["lon"])
         np.testing.assert_array_equal(out["lat"], expected["lat"])
         if name:
@@ -270,15 +238,11 @@ class TestSubset:
     )
     def test_subset_bboxshape(self, kwargs, tile_buffer, method):
         if method == "shape":
-            gdf = gpd.GeoDataFrame(
-                {"geometry": [Polygon([(-63, 47), (-63, 50), (-60, 50), (-60, 47)])]}
-            )
+            gdf = gpd.GeoDataFrame({"geometry": [Polygon([(-63, 47), (-63, 50), (-60, 50), (-60, 47)])]})
             kwargs["shape"] = gdf
 
         if "buffer" in kwargs:
-            with pytest.raises(
-                ValueError, match="Both tile_buffer and clisops' buffer were requested."
-            ):
+            with pytest.raises(ValueError, match="Both tile_buffer and clisops' buffer were requested."):
                 xs.spatial.subset(self.ds, method, tile_buffer=tile_buffer, **kwargs)
         else:
             out = xs.spatial.subset(self.ds, method, tile_buffer=tile_buffer, **kwargs)
@@ -308,16 +272,12 @@ class TestSubset:
 
     @pytest.mark.parametrize("crs", ["bad", "EPSG:3857", "EPSG:4326"])
     def test_shape_crs(self, crs):
-        gdf = gpd.GeoDataFrame(
-            {"geometry": [Polygon([(-63, 47), (-63, 50), (-60, 50), (-60, 47)])]}
-        )
+        gdf = gpd.GeoDataFrame({"geometry": [Polygon([(-63, 47), (-63, 50), (-60, 50), (-60, 47)])]})
         if crs != "bad":
             gdf.crs = crs
             if crs != "EPSG:4326":
                 with pytest.warns(UserWarning, match="Reprojecting to this CRS"):
-                    with pytest.raises(
-                        ValueError, match="No grid cell centroids"
-                    ):  # This is from clisops, this is not our warning
+                    with pytest.raises(ValueError, match="No grid cell centroids"):  # This is from clisops, this is not our warning
                         xs.spatial.subset(self.ds, "shape", shape=gdf, tile_buffer=5)
             else:
                 # Make sure there is no warning about reprojection

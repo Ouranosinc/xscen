@@ -14,7 +14,7 @@ repos:
       - id: pretty-format-json
         args: [ '--autofix', '--no-ensure-ascii', '--no-sort-keys' ]
         exclude: .ipynb
-        id: check-merge-conflict
+      - id: check-merge-conflict
       - id: check-toml
       - id: check-yaml
         args: [ '--allow-multiple-documents' ]
@@ -51,7 +51,7 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.3
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [ '--fix', '--show-fixes' ]
       - id: ruff-format
   - repo: https://github.com/pycqa/flake8
@@ -79,17 +79,6 @@ repos:
 #    hooks:
 #      - id: numpydoc-validation
 #        exclude: ^docs/|^tests/
-  - repo: https://github.com/nbQA-dev/nbQA
-    rev: 1.9.1
-    hooks:
-      - id: nbqa-pyupgrade
-        args: [ '--py310-plus' ]
-        additional_dependencies: [ 'pyupgrade==3.19.1' ]
-      - id: nbqa-black
-        args: [ '--target-version=py310' ]
-        additional_dependencies: [ 'black==25.9.0' ]
-      - id: nbqa-isort
-        additional_dependencies: [ 'isort==6.0.0' ]
   - repo: https://github.com/kynan/nbstripout
     rev: 0.8.1
     hooks:
