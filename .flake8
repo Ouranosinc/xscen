@@ -10,7 +10,8 @@ ignore =
 	D,
 	E,
 	F,
-	W503
+	RST210,
+	W503,
 	W504
 per-file-ignores =
 	tests/*:E402

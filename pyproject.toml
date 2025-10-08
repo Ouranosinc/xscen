@@ -1,5 +1,5 @@
 [build-system]
-requires = ["flit_core >=3.10.1,<4"]
+requires = ["flit_core >=3.11.0,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
@@ -16,22 +16,23 @@ maintainers = [
 readme = "README.rst"
 requires-python = ">=3.10.0"
 keywords = ["xscen"]
-license = {file = "LICENSE"}
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: Apache Software License",
   "Natural Language :: English",
   "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: CPython",
-  "Topic :: Scientific/Engineering :: Atmospheric Science"
+  "Topic :: Scientific/Engineering :: Atmospheric Science",
+  "Typing :: Typed"
 ]
 dynamic = ["description", "version"]
 dependencies = [
@@ -71,26 +72,23 @@ dependencies = [
 dev = [
   # Dev tools and testing
   "babel >=2.17",
-  "black >=25.1.0",
-  "blackdoc >=0.3.9",
-  "bump-my-version >=0.30.1",
+  "bump-my-version >=1.2.3",
   "codespell >=2.4.1",
   "coverage >=7.5.0",
-  "deptry >=0.23.0",
-  "flake8 >=7.1.1",
-  "flake8-rst-docstrings >=0.3.0",
-  "flit >=3.10.1,<4.0",
-  "isort >=6.0.1",
-  "mypy >=1.14.1",
-  "numpydoc >=1.8.0",
-  "pip >=25.0",
+  "deptry >=0.23.1",
+  "flake8 >=7.3.0",
+  "flake8-rst-docstrings >=0.3.1",
+  "flit >=3.11.0,<4.0",
+  "mypy >=1.18.2",
+  "numpydoc >=1.9.0",
+  "pip >=25.2",
   "pooch >=1.8.0",
   "pre-commit >=3.5.0",
   "pytest-cov >=5.0.0",
   "pytest >=8.3.2",
   "pytest-xdist[psutil] >=3.2.0",
-  "ruff >=0.9.0",
-  "tox >=4.24.1",
+  "ruff >=0.13.3",
+  "tox >=4.30.3",
   "vulture >=2.14",
   "watchdog >=4.0.0",
   "xdoctest",
@@ -103,7 +101,7 @@ docs = [
   "jupyter_client",
   "nbsphinx >=0.9.5",
   "nbval",
-  "sphinx >=7.1.0,<8.2.0",
+  "sphinx >=7.1.0,<8.2",
   "sphinx-autodoc-typehints",
   "sphinx-codeautolink",
   "sphinx-copybutton",
@@ -128,14 +126,6 @@ all = ["xscen[dev]", "xscen[docs]", "xscen[extras]"]
 "Source" = "https://github.com/Ouranosinc/xscen"
 
 [tool]
-
-[tool.black]
-target-version = [
-  "py310",
-  "py311",
-  "py312",
-  "py313"
-]
 
 [tool.bumpversion]
 current_version = "0.13.1-dev.3"
@@ -249,15 +239,9 @@ exclude = [
   "tox.ini"
 ]
 
-[tool.isort]
-append_only = true
-known_first_party = "xscen"
-profile = "black"
-py_version = 310
-
 [tool.mypy]
 files = "."
-python_version = 3.10
+python_version = "3.10"
 show_error_codes = true
 strict = true
 warn_no_return = true
@@ -297,6 +281,7 @@ override_SS05 = [
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = [
+  "-ra",
   "--color=yes",
   "--ignore-glob='*.ipynb_checkpoints'",
   "--strict-config",
@@ -323,13 +308,16 @@ exclude = [
 ]
 
 [tool.ruff.format]
-quote-style = "double"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
 indent-style = "space"
+quote-style = "double"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.ruff.lint]
 extend-select = [
+  "D213", # multi-line-summary-second-line
   "RUF022" # unsorted-dunder-all
 ]
 ignore = [
@@ -346,12 +334,15 @@ ignore = [
 ]
 preview = true
 select = [
+  "B", # bugbear
   "BLE", # blind-except
   "C90", # mccabe-complexity
   "D", # docstrings
   "E", # pycodestyle errors
+  "F", # pyflakes
   "FLY002", # static-join-to-fstring
   "G", # logging-format
+  "I", # imports
   "N", # naming conventions
   "PERF", # iterator performance
   "PTH", # pathlib
