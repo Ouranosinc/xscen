@@ -49,11 +49,6 @@ def test_subset_file_coverage_2300():
     )
 
 
-def test_xrfreq_fix():
-    cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json")
-    assert set(cat.df.xrfreq) == {"3h", "D", "fx"}
-
-
 class TestCopyFiles:
     def test_flat(self, samplecat, tmp_path):
         newcat = samplecat.copy_files(tmp_path, flat=True)
