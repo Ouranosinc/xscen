@@ -4,12 +4,21 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New official column ``bias_adjust_reference``. When a bias_adjust_project has multiple references (e.g., CanLead, ESPO6 v2.0), the information is stored in this column. (:pull:`643`, :pull:`644`).
 * Add ``clip_var`` option in ``xs.clean_up`` to clip values outside a given range. (:pull:`645`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Updated the cookiecutter template to the latest version. (:pull:`651`):
+    * Updated the Contributor Covenant agreement to v3.0.
+    * Replaced `black`, `blackdoc`, and `isort` with `ruff`.
+    * Added a `CITATION.cff` file.
+    * `pyproject.toml` is now `PEP 639 <https://peps.python.org/pep-0639/>`_-compliant.
+* Pinned `pydantic` below v2.12.0 for compatibility issues with `intake-esm`
 
 .. _changes_0.13.0:
 
