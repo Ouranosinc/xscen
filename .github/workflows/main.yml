@@ -104,11 +104,7 @@ jobs:
           key: ${{ matrix.os }}-Python${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'tox.ini') }}
       - name: Test with tox
         run: |
-          if [ ${{ matrix.python-version }} == "3.13" ]; then
-            python -m tox -e py${{ matrix.python-version }}
-          else
-            python -m tox
-          fi
+          python -m tox -e py${{ matrix.python-version }}
         env:
           ESMF_VERSION: ${{ env.esmf-version }}
           XCLIM_VERSION: ${{ matrix.xclim-min-version }}

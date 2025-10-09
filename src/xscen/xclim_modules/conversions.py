@@ -1,16 +1,25 @@
 """Conversion functions for when datasets are missing particular variables and that xclim doesn't already implement."""
 
-from __future__ import annotations  # for xclim 0.37
-
 import xarray as xr
 from xclim.core.units import convert_units_to, declare_units
 from xsdba.processing import from_additive_space, to_additive_space
 
 
 try:
-    from xclim.indices.converters import tas_from_tasmin_tasmax as tas_midpoint  # noqa: F401
+    from xclim.indices.converters import tas_from_tasmin_tasmax as tas_midpoint
 except ImportError:  # FIXME: Remove when we pin xclim >= 0.58
-    pass
+    from xclim.indices import tas as tas_midpoint
+
+
+__all__ = [
+    "dtr_from_minmax",
+    "hurs_from_hurslogit",
+    "hurslogit_from_hurs",
+    "precipitation",
+    "tas_midpoint",
+    "tasmax_from_dtr",
+    "tasmin_from_dtr",
+]
 
 
 @declare_units(prsn="[precipitation]", prlp="[precipitation]")
