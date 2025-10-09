@@ -151,8 +151,7 @@ search = """\
 replace = """\
 ..
     `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-    -------------------------------------------------------------
-
+    ------------------------------------------------------------
     Contributors:
 
     Changes
@@ -172,7 +171,7 @@ replace = """\
 [[tool.bumpversion.files]]
 filename = "CITATION.cff"
 include_bumps = ["release"]
-search = "version: v[0-9]+\\.[0-9]+\\.[0-9]"
+search = "version: \"v[0-9]+\\.[0-9]+\\.[0-9]\""
 regex = true
 replace = "version: {new_version}"
 
