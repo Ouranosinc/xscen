@@ -1,5 +1,7 @@
 """Conversion functions for when datasets are missing particular variables and that xclim doesn't already implement."""
 
+from __future__ import annotations  # For xclim dimension annotations; do not remove
+
 import xarray as xr
 from xclim.core.units import convert_units_to, declare_units
 from xsdba.processing import from_additive_space, to_additive_space

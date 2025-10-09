@@ -61,7 +61,7 @@ def test_hurslogit_from_hurs(use_pct):
 
 
 def test_hurs_from_hurslogit():
-    hurs_truth = timeseries([20.0, 40.0, 60.0], variable="hurs", start="2001-01-01", freq="D", units="%")
+    hurs_truth = timeseries(np.array([20.0, 40.0, 60.0]), variable="hurs", start="2001-01-01", freq="D", units="%")
     # we already know that this transformation works from the test above
     hurslogit = conv.hurslogit_from_hurs(hurs_truth)
     # this tests the transformation back, and how argument xsdba_transform args are used
