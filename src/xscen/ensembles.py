@@ -15,10 +15,10 @@ from xclim import ensembles
 from .catalog import DataCatalog
 from .catutils import generate_id
 from .config import parse_config
-from .indicators import compute_indicators
 from .regrid import regrid_dataset
 from .spatial import get_grid_mapping, subset
 from .utils import clean_up, get_cat_attrs
+
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +32,7 @@ __all__ = [
 
 @parse_config
 def ensemble_stats(  # noqa: C901
-    datasets: (
-        dict
-        | list[str | os.PathLike]
-        | list[xr.Dataset]
-        | list[xr.DataArray]
-        | xr.Dataset
-    ),
+    datasets: (dict | list[str | os.PathLike] | list[xr.Dataset] | list[xr.DataArray] | xr.Dataset),
     statistics: dict,
     *,
     create_kwargs: dict | None = None,
@@ -46,7 +40,8 @@ def ensemble_stats(  # noqa: C901
     common_attrs_only: bool = True,
     to_level: str = "ensemble",
 ) -> xr.Dataset:
-    """Create an ensemble and computes statistics on it.
+    """
+    Create an ensemble and computes statistics on it.
 
     Parameters
     ----------
@@ -145,18 +140,13 @@ def ensemble_stats(  # noqa: C901
             stat = "robustness_fractions"
             categories_kwargs = deepcopy(stats_kwargs)
             categories_kwargs.pop("robustness_fractions", None)
-            stats_kwargs = deepcopy(
-                stats_kwargs.get("robustness_fractions", None)
-                or statistics.get("robustness_fractions", {})
-            )
+            stats_kwargs = deepcopy(stats_kwargs.get("robustness_fractions", None) or statistics.get("robustness_fractions", {}))
 
         if weights is not None:
             if "weights" in inspect.getfullargspec(getattr(ensembles, stat))[0]:
                 stats_kwargs["weights"] = weights.reindex_like(ens.realization)
             else:
-                warnings.warn(
-                    f"Weighting is not supported for '{stat}'. The results may be incorrect."
-                )
+                warnings.warn(f"Weighting is not supported for '{stat}'. The results may be incorrect.", stacklevel=2)
 
         if stat in [
             "robustness_fractions",
@@ -168,9 +158,7 @@ def ensemble_stats(  # noqa: C901
                     # Support for relative deltas [0, inf], where positive fraction is 'v > 1' instead of 'v > 0'.
                     delta_kind = ens[v].attrs.get("delta_kind")
                     if stats_kwargs.get("ref") is not None and delta_kind is not None:
-                        raise ValueError(
-                            f"{v} is a delta, but 'ref' was still specified."
-                        )
+                        raise ValueError(f"{v} is a delta, but 'ref' was still specified.")
                     if delta_kind in ["rel.", "relative", "*", "/"]:
                         msg = f"Relative delta detected for {v}. Applying 'v - 1' before change_significance."
                         logging.info(msg)
@@ -183,9 +171,7 @@ def ensemble_stats(  # noqa: C901
 
                     # Robustness categories
                     if real_stat == "robustness_categories":
-                        categories = ensembles.robustness_categories(
-                            tmp, **categories_kwargs
-                        )
+                        categories = ensembles.robustness_categories(tmp, **categories_kwargs)
                         ens_stats[f"{v}_robustness_categories"] = categories
 
                     # Only return the robustness fractions if they were requested.
@@ -230,7 +216,8 @@ def generate_weights(  # noqa: C901
     v_for_skipna: str | None = None,
     standardize: bool = False,
 ) -> xr.DataArray:
-    """Use realization attributes to automatically generate weights along the 'realization' dimension.
+    """
+    Use realization attributes to automatically generate weights along the 'realization' dimension.
 
     Parameters
     ----------
@@ -286,9 +273,7 @@ def generate_weights(  # noqa: C901
         datasets = {i: datasets[i] for i in range(len(datasets))}
 
     if independence_level not in ["model", "GCM", "institution"]:
-        raise ValueError(
-            f"'independence_level' should be between 'model', 'GCM', and 'institution', received {independence_level}."
-        )
+        raise ValueError(f"'independence_level' should be between 'model', 'GCM', and 'institution', received {independence_level}.")
     if skipna is False:
         if v_for_skipna is None:
             v_for_skipna = list(datasets[list(datasets.keys())[0]].data_vars)[0]
@@ -296,19 +281,13 @@ def generate_weights(  # noqa: C901
             logger.info(msg)
 
         # Check if any dataset has dimensions that are not 'time' or 'horizon'
-        other_dims = {
-            k: [
-                d
-                for d in datasets[k][v_for_skipna].dims
-                if d not in ["time", "horizon"]
-            ]
-            for k in datasets.keys()
-        }
+        other_dims = {k: [d for d in datasets[k][v_for_skipna].dims if d not in ["time", "horizon"]] for k in datasets.keys()}
         for k in other_dims:
             if len(other_dims[k]) > 0:
                 warnings.warn(
                     f"Dataset {k} has dimensions that are not 'time' or 'horizon': {other_dims[k]}. "
-                    "The first indexes of these dimensions will be used to compute the weights."
+                    "The first indexes of these dimensions will be used to compute the weights.",
+                    stacklevel=2,
                 )
                 datasets[k] = datasets[k].isel({d: 0 for d in other_dims[k]})
 
@@ -327,12 +306,10 @@ def generate_weights(  # noqa: C901
     # Check if there are both RCMs and GCMs in datasets, with attribute_weights set to weight them.
     if attribute_weights and (
         any(a in ["source", "driving_model"] for a in list(attribute_weights.keys()))
-        and len(list(groupby([info[k]["driving_model"] is None for k in info.keys()])))
-        > 1
+        and len(list(groupby([info[k]["driving_model"] is None for k in info.keys()]))) > 1
     ):
         raise NotImplementedError(
-            "Weighting `source` and/or `driving_model` through `attribute_weights` "
-            "is not yet implemented when given a mix of GCMs and RCMs."
+            "Weighting `source` and/or `driving_model` through `attribute_weights` is not yet implemented when given a mix of GCMs and RCMs."
         )
 
     # More easily manage GCMs and RCMs
@@ -341,42 +318,22 @@ def generate_weights(  # noqa: C901
             info[k]["driving_model"] = info[k]["source"]
 
     # Verifications
-    if any(
-        (info[k]["driving_model"] is None or len(info[k]["driving_model"]) == 0)
-        for k in info
-    ):
-        raise ValueError(
-            "The 'cat:source' or 'cat:driving_model' attribute is missing from some simulations."
-        )
-    if balance_experiments and any(
-        (info[k]["experiment"] is None or len(info[k]["experiment"]) == 0) for k in info
-    ):
-        raise ValueError(
-            "The 'cat:experiment' attribute is missing from some simulations. 'balance_experiments' cannot be True."
-        )
-    if independence_level == "institution" and any(
-        (info[k]["institution"] is None or len(info[k]["institution"]) == 0)
-        for k in info
-    ):
-        raise ValueError(
-            "The 'cat:institution' attribute is missing from some simulations. 'independence_level' cannot be 'institution'."
-        )
+    if any((info[k]["driving_model"] is None or len(info[k]["driving_model"]) == 0) for k in info):
+        raise ValueError("The 'cat:source' or 'cat:driving_model' attribute is missing from some simulations.")
+    if balance_experiments and any((info[k]["experiment"] is None or len(info[k]["experiment"]) == 0) for k in info):
+        raise ValueError("The 'cat:experiment' attribute is missing from some simulations. 'balance_experiments' cannot be True.")
+    if independence_level == "institution" and any((info[k]["institution"] is None or len(info[k]["institution"]) == 0) for k in info):
+        raise ValueError("The 'cat:institution' attribute is missing from some simulations. 'independence_level' cannot be 'institution'.")
     for attr in ["member", "experiment"]:
         if any(info[k][attr] is None for k in info):
             if all(info[k][attr] is None for k in info):
-                warnings.warn(
-                    f"The 'cat:{attr}' attribute is missing from all datasets. Make sure the results are correct."
-                )
+                warnings.warn(f"The 'cat:{attr}' attribute is missing from all datasets. Make sure the results are correct.", stacklevel=2)
             else:
-                warnings.warn(
-                    f"The 'cat:{attr}' attribute is inconsistent across datasets. Results are likely to be incorrect."
-                )
+                warnings.warn(f"The 'cat:{attr}' attribute is inconsistent across datasets. Results are likely to be incorrect.", stacklevel=2)
 
     # Combine the member and experiment attributes
     for k in info:
-        info[k]["member-exp"] = (
-            str(info[k]["member"]) + "-" + str(info[k]["experiment"])
-        )
+        info[k]["member-exp"] = str(info[k]["member"]) + "-" + str(info[k]["experiment"])
 
     # Build the weights according to the independence structure
     if skipna:
@@ -389,36 +346,21 @@ def generate_weights(  # noqa: C901
         # Get the name of the extra dimension
         extra_dim = list(
             chain.from_iterable(
-                [
-                    [
-                        datasets[list(keys)[d]][h]
-                        for h in ["time", "horizon"]
-                        if h in datasets[list(keys)[d]].dims
-                    ]
-                    for d in range(len(keys))
-                ]
+                [[datasets[list(keys)[d]][h] for h in ["time", "horizon"] if h in datasets[list(keys)[d]].dims] for d in range(len(keys))]
             )
         )
         if len({e.name for e in extra_dim}) != 1:
-            raise ValueError(
-                f"Expected either 'time' or 'horizon' as an extra dimension, found {extra_dim}."
-            )
+            raise ValueError(f"Expected either 'time' or 'horizon' as an extra dimension, found {extra_dim}.")
 
         # Combine the extra dimension and remove duplicates
-        extra_dimension = xr.concat(extra_dim, dim=extra_dim[0].name).drop_duplicates(
-            extra_dim[0].name
-        )
+        extra_dimension = xr.concat(extra_dim, dim=extra_dim[0].name).drop_duplicates(extra_dim[0].name)
 
         # Check that the extra dimension is the same for all datasets.
         # If not, modify the datasets to make them the same.
         if not all(extra_dimension.equals(extra_dim[d]) for d in range(len(extra_dim))):
-            warnings.warn(
-                f"Extra dimension {extra_dimension.name} is not the same for all datasets. Reindexing."
-            )
+            warnings.warn(f"Extra dimension {extra_dimension.name} is not the same for all datasets. Reindexing.", stacklevel=2)
             for d in datasets.keys():
-                datasets[d] = datasets[d].reindex(
-                    {extra_dimension.name: extra_dimension}
-                )
+                datasets[d] = datasets[d].reindex({extra_dimension.name: extra_dimension})
 
         weights = xr.DataArray(
             np.zeros((len(info.keys()), len(extra_dimension))),
@@ -433,40 +375,20 @@ def generate_weights(  # noqa: C901
         sim = info[list(keys)[i]]
 
         # Number of models running a given realization of a driving model
-        models_struct = (
-            ["source", "driving_model", "member-exp"]
-            if independence_level == "model"
-            else ["driving_model", "member-exp"]
-        )
-        models = [
-            k for k in info.keys() if all([info[k][s] == sim[s] for s in models_struct])
-        ]
+        models_struct = ["source", "driving_model", "member-exp"] if independence_level == "model" else ["driving_model", "member-exp"]
+        models = [k for k in info.keys() if all([info[k][s] == sim[s] for s in models_struct])]
 
         if skipna:
             n_models = len(models)
         else:
-            n_models = xr.concat(
-                [datasets[k][v_for_skipna].notnull() for k in models], dim="realization"
-            ).sum(dim="realization")
+            n_models = xr.concat([datasets[k][v_for_skipna].notnull() for k in models], dim="realization").sum(dim="realization")
 
         # Number of realizations of a given driving model
         if independence_level == "model":
-            realization_struct = (
-                ["source", "driving_model", "experiment"]
-                if balance_experiments
-                else ["source", "driving_model"]
-            )
+            realization_struct = ["source", "driving_model", "experiment"] if balance_experiments else ["source", "driving_model"]
         else:
-            realization_struct = (
-                ["driving_model", "experiment"]
-                if balance_experiments
-                else ["driving_model"]
-            )
-        realizations = {
-            info[k]["member-exp"]
-            for k in info.keys()
-            if all([info[k][s] == sim[s] for s in realization_struct])
-        }
+            realization_struct = ["driving_model", "experiment"] if balance_experiments else ["driving_model"]
+        realizations = {info[k]["member-exp"] for k in info.keys() if all([info[k][s] == sim[s] for s in realization_struct])}
 
         if skipna:
             n_realizations = len(realizations)
@@ -474,14 +396,7 @@ def generate_weights(  # noqa: C901
             n_realizations = xr.zeros_like(datasets[list(keys)[0]][v_for_skipna])
             r_models = dict()
             for r in realizations:
-                r_models[r] = [
-                    k
-                    for k in info.keys()
-                    if (
-                        all([info[k][s] == sim[s] for s in realization_struct])
-                        and (info[k]["member-exp"] == r)
-                    )
-                ]
+                r_models[r] = [k for k in info.keys() if (all([info[k][s] == sim[s] for s in realization_struct]) and (info[k]["member-exp"] == r))]
                 n_realizations = n_realizations + (
                     xr.concat(
                         [datasets[k][v_for_skipna].notnull() for k in r_models[r]],
@@ -492,16 +407,8 @@ def generate_weights(  # noqa: C901
 
         # Number of driving models run by a given institution
         if independence_level == "institution":
-            institution_struct = (
-                ["institution", "experiment"]
-                if balance_experiments
-                else ["institution"]
-            )
-            institution = {
-                info[k]["driving_model"]
-                for k in info.keys()
-                if all([info[k][s] == sim[s] for s in institution_struct])
-            }
+            institution_struct = ["institution", "experiment"] if balance_experiments else ["institution"]
+            institution = {info[k]["driving_model"] for k in info.keys() if all([info[k][s] == sim[s] for s in institution_struct])}
 
             if skipna:
                 n_institutions = len(institution)
@@ -510,12 +417,7 @@ def generate_weights(  # noqa: C901
                 i_models = dict()
                 for ii in institution:
                     i_models[ii] = [
-                        k
-                        for k in info.keys()
-                        if (
-                            all([info[k][s] == sim[s] for s in institution_struct])
-                            and (info[k]["driving_model"] == ii)
-                        )
+                        k for k in info.keys() if (all([info[k][s] == sim[s] for s in institution_struct]) and (info[k]["driving_model"] == ii))
                     ]
                     n_institutions = n_institutions + (
                         xr.concat(
@@ -540,9 +442,7 @@ def generate_weights(  # noqa: C901
         expsum = weights.groupby("experiment").sum(dim="realization")
 
         for e in expsum.experiment:
-            weights = weights.where(
-                weights.experiment != e, other=weights / expsum.sel(experiment=e)
-            )
+            weights = weights.where(weights.experiment != e, other=weights / expsum.sel(experiment=e))
 
         # Drop the experiment coordinate
         weights = weights.drop_vars("experiment")
@@ -554,26 +454,18 @@ def generate_weights(  # noqa: C901
         for att, v_att in attribute_weights.items():
             # Add warning when a mismatch between independance_level/experiment_weight and attribute_weights is detected
             if att == "experiment" and not balance_experiments:
-                warnings.warn(
-                    "Key experiment given in attribute_weights without argument balance_experiments=True"
-                )
+                warnings.warn("Key experiment given in attribute_weights without argument balance_experiments=True", stacklevel=2)
 
             if (
                 (att == "source" and independence_level != "model")
                 or (att == "driving_model" and independence_level != "GCM")
                 or (att == "institution" and independence_level != "institution")
             ):
-                warnings.warn(
-                    f"The {att} weights do not match the {independence_level} independence_level"
-                )
+                warnings.warn(f"The {att} weights do not match the {independence_level} independence_level", stacklevel=2)
 
             # Verification
-            if att not in info[k] or any(
-                (info[k][att] is None or len(info[k][att]) == 0) for k in info
-            ):
-                raise ValueError(
-                    f"The {att} attribute is missing from some simulations."
-                )
+            if att not in info[k] or any((info[k][att] is None or len(info[k][att]) == 0) for k in info):
+                raise ValueError(f"The {att} attribute is missing from some simulations.")
             # Split dict and xr.DataArray weights
             if isinstance(v_att, xr.DataArray):
                 non_stationary_weights[att] = v_att
@@ -586,9 +478,7 @@ def generate_weights(  # noqa: C901
             for att, w_dict in stationary_weights.items():
                 for k, v in info.items():
                     if v[att] not in w_dict and "others" not in w_dict:
-                        raise ValueError(
-                            f"The {att} {v[att]} or others are not in the attribute_weights dict."
-                        )
+                        raise ValueError(f"The {att} {v[att]} or others are not in the attribute_weights dict.")
                     elif v[att] not in w_dict and "others" in w_dict:
                         w = w_dict["others"]
                     elif v[att] in w_dict:
@@ -604,20 +494,16 @@ def generate_weights(  # noqa: C901
                 ls_coord = list(da.coords)
                 ls_coord.remove(att)
                 if len(ls_coord) > 1:
-                    raise ValueError(
-                        f"The {att} DataArray has more than one coord dimension to apply weights."
-                    )
+                    raise ValueError(f"The {att} DataArray has more than one coord dimension to apply weights.")
                 else:
                     coord = ls_coord[0]
                 # broadcast coord to the weights DataArray
                 if coord not in weights.coords:
                     weights = weights.expand_dims({coord: da[coord].values})
                 ls_da = []
-                for k, v in info.items():
+                for v in info.values():
                     if v[att] not in da[att] and "others" not in da[att]:
-                        raise ValueError(
-                            f"The {att} {v[att]} or others are not in the attribute_weights datarray coords."
-                        )
+                        raise ValueError(f"The {att} {v[att]} or others are not in the attribute_weights datarray coords.")
                     elif v[att] not in da[att] and "others" in da[att]:
                         ls_da.append(da.sel(**{att: "others"}).drop_vars(att))
                     else:
@@ -684,21 +570,12 @@ def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
     return ens
 
 
-def _partition_from_catalog(
-    datasets, partition_dim, subset_kw, regrid_kw, to_dataset_kw
-):
-
-    if ("adjustment" in partition_dim or "reference" in partition_dim) and (
-        "bias_adjust_project" in partition_dim
-    ):
-        raise ValueError(
-            "The partition_dim can have either adjustment and reference or bias_adjust_project, not both."
-        )
+def _partition_from_catalog(datasets, partition_dim, subset_kw, regrid_kw, to_dataset_kw):
+    if ("adjustment" in partition_dim or "reference" in partition_dim) and ("bias_adjust_project" in partition_dim):
+        raise ValueError("The partition_dim can have either adjustment and reference or bias_adjust_project, not both.")
 
     if ("realization" in partition_dim) and ("source" in partition_dim):
-        raise ValueError(
-            "The partition_dim can have either realization or source, not both."
-        )
+        raise ValueError("The partition_dim can have either realization or source, not both.")
 
     # special case to handle source (create one dimension with institution_source_member)
     ensemble_on_list = None
@@ -715,12 +592,8 @@ def _partition_from_catalog(
             common_attrs[f"cat:{col}"] = series[0]
 
     col_id = [
-        (
-            "adjustment" if "adjustment" in partition_dim else None
-        ),  # instead of bias_adjust_project, need to use adjustment, not method bc .sel
-        (
-            "reference" if "reference" in partition_dim else None
-        ),  # instead of bias_adjust_project
+        ("adjustment" if "adjustment" in partition_dim else None),  # instead of bias_adjust_project, need to use adjustment, not method bc .sel
+        ("reference" if "reference" in partition_dim else None),  # instead of bias_adjust_project
         "bias_adjust_project" if "bias_adjust_project" in partition_dim else None,
         "mip_era",
         "activity",
@@ -786,7 +659,7 @@ def _partition_from_catalog(
 
 def build_partition_data(
     datasets: dict | list[xr.Dataset],
-    partition_dim: list[str] = ["realization", "experiment", "bias_adjust_project"],
+    partition_dim: list[str] | None = None,
     subset_kw: dict | None = None,
     regrid_kw: dict | None = None,
     rename_dict: dict | None = None,
@@ -840,6 +713,8 @@ def build_partition_data(
     --------
     xclim.ensembles
     """
+    if partition_dim is None:
+        partition_dim = ["realization", "experiment", "bias_adjust_project"]
     if isinstance(datasets, dict):
         datasets = list(datasets.values())
     # initialize dict
@@ -851,14 +726,10 @@ def build_partition_data(
         ens = _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw)
 
     elif isinstance(datasets, DataCatalog):
-        ens = _partition_from_catalog(
-            datasets, partition_dim, subset_kw, regrid_kw, to_dataset_kw
-        )
+        ens = _partition_from_catalog(datasets, partition_dim, subset_kw, regrid_kw, to_dataset_kw)
 
     else:
-        raise ValueError(
-            "'datasets' should be a list/dictionary of xarray datasets or a xscen.DataCatalog"
-        )
+        raise ValueError("'datasets' should be a list/dictionary of xarray datasets or a xscen.DataCatalog")
 
     rename_dict = rename_dict or {}
     rename_dict.setdefault("realization", "model")
@@ -883,7 +754,8 @@ def reduce_ensemble(
     create_kwargs: dict | None = None,
     **kwargs,
 ):
-    r"""Reduce an ensemble of simulations using clustering algorithms from xclim.ensembles.
+    r"""
+    Reduce an ensemble of simulations using clustering algorithms from xclim.ensembles.
 
     Parameters
     ----------
@@ -938,10 +810,7 @@ def reduce_ensemble(
         selected = selected[0]
         realization = np.arange(len(clusters_tmp))
 
-        clusters = {
-            g: data.realization.isel(realization=realization[clusters_tmp == g])
-            for g in np.unique(clusters_tmp)
-        }
+        clusters = {g: data.realization.isel(realization=realization[clusters_tmp == g]) for g in np.unique(clusters_tmp)}
     selected = data.realization.isel(realization=selected)
 
     return selected, clusters, fig_data

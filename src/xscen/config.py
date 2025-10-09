@@ -1,4 +1,5 @@
-"""Configuration module.
+"""
+Configuration module.
 
 Configuration in this module is taken from yaml files.
 
@@ -58,6 +59,7 @@ import xarray as xr
 import xclim as xc
 import yaml
 
+
 logger = logging.getLogger(__name__)
 EXTERNAL_MODULES = ["logging", "xarray", "xclim", "warnings"]
 
@@ -85,9 +87,7 @@ class ConfigDict(dict):
         for part in parts[:-1]:
             d = d.setdefault(part, {})
             if not isinstance(d, collections.abc.Mapping):
-                raise ValueError(
-                    f"Key {key} points to an invalid config section ({part} if not a mapping)."
-                )
+                raise ValueError(f"Key {key} points to an invalid config section ({part} if not a mapping).")
         d[parts[-1]] = value
 
     def update_from_list(self, pairs):
@@ -103,7 +103,8 @@ CONFIG = ConfigDict()
 
 
 def recursive_update(d, other):
-    """Update a dictionary recursively with another dictionary.
+    """
+    Update a dictionary recursively with another dictionary.
 
     Values that are Mappings are updated recursively as well.
     """
@@ -122,7 +123,7 @@ def recursive_update(d, other):
 def args_as_str(*args: tuple[Any, ...]) -> tuple[str, ...]:
     """Return arguments as strings."""
     new_args = []
-    for i, arg in enumerate(*args):
+    for _i, arg in enumerate(*args):
         if isinstance(arg, Path):
             new_args.append(str(arg))
         else:
@@ -136,7 +137,8 @@ def load_config(
     encoding: str | None = None,
     verbose: bool = False,
 ):
-    """Load configuration from given files or key=value pairs.
+    """
+    Load configuration from given files or key=value pairs.
 
     Once all elements are loaded, special sections are dispatched to their module, but only if
     the section was changed by the loaded elements. These special sections are:
@@ -198,7 +200,7 @@ def load_config(
                         msg = f"Updated the config with {configfile}."
                         logger.info(msg)
 
-    for module, old in zip(EXTERNAL_MODULES, old_external):
+    for module, old in zip(EXTERNAL_MODULES, old_external, strict=False):
         if old != CONFIG.get(module, {}):
             _setup_external(module, CONFIG.get(module, {}))
 
@@ -263,8 +265,6 @@ def get_configurable():
         if isinstance(modobj, types.ModuleType):
             for func in dir(modobj):
                 funcobj = getattr(modobj, func)
-                if getattr(funcobj, "configurable", False) or getattr(
-                    getattr(funcobj, "__init__", None), "configurable", False
-                ):
+                if getattr(funcobj, "configurable", False) or getattr(getattr(funcobj, "__init__", None), "configurable", False):
                     configurable[f"xscen.{module}.{func}"] = funcobj
     return configurable

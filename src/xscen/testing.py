@@ -14,6 +14,7 @@ import xarray as xr
 from xclim.testing.helpers import test_timeseries as timeseries
 from xclim.testing.utils import show_versions as _show_versions
 
+
 __all__ = ["datablock_3d", "fake_data", "publish_release_notes", "show_versions"]
 
 
@@ -31,7 +32,8 @@ def datablock_3d(
     units: str | None = None,
     as_dataset: bool = False,
 ) -> xr.DataArray | xr.Dataset:
-    """Create a generic timeseries object based on pre-defined dictionaries of existing variables.
+    """
+    Create a generic timeseries object based on pre-defined dictionaries of existing variables.
 
     Parameters
     ----------
@@ -94,23 +96,17 @@ def datablock_3d(
     }
 
     dims = {
-        "time": xr.DataArray(
-            pd.date_range(start, periods=values.shape[0], freq=freq), dims="time"
-        ),
+        "time": xr.DataArray(pd.date_range(start, periods=values.shape[0], freq=freq), dims="time"),
         y: xr.DataArray(
             np.arange(y_start, y_start + values.shape[1] * y_step, y_step),
             dims=y,
             attrs=attrs[y],
-        )[
-            0 : values.shape[1]
-        ],  # np.arange sometimes creates an extra value
+        )[0 : values.shape[1]],  # np.arange sometimes creates an extra value
         x: xr.DataArray(
             np.arange(x_start, x_start + values.shape[2] * x_step, x_step),
             dims=x,
             attrs=attrs[x],
-        )[
-            0 : values.shape[2]
-        ],  # np.arange sometimes creates an extra value
+        )[0 : values.shape[2]],  # np.arange sometimes creates an extra value
     }
 
     # Get the attributes using xclim, then create the DataArray
@@ -126,9 +122,7 @@ def datablock_3d(
     if x != "lon" and y != "lat":
         PC = ccrs.PlateCarree()
         if x == "rlon":  # rotated pole
-            GM = ccrs.RotatedPole(
-                pole_longitude=83.0, pole_latitude=42.5, central_rotated_longitude=0.0
-            )
+            GM = ccrs.RotatedPole(pole_longitude=83.0, pole_latitude=42.5, central_rotated_longitude=0.0)
             da.attrs["grid_mapping"] = "rotated_pole"
         else:
             GM = ccrs.ObliqueMercator(
@@ -196,7 +190,8 @@ def fake_data(
     amplitude: float = 1.0,
     offset: float = 0.0,
 ) -> np.ndarray:
-    """Generate fake data for testing.
+    """
+    Generate fake data for testing.
 
     Parameters
     ----------
@@ -226,9 +221,7 @@ def fake_data(
         raise NotImplementedError(f"rand_type={rand_type} not implemented.")
 
     np.random.seed(seed)
-    data = np.reshape(
-        np.random.random(365 * nyears * (nx * ny)) * amplitude, (365 * nyears, ny, nx)
-    )
+    data = np.reshape(np.random.random(365 * nyears * (nx * ny)) * amplitude, (365 * nyears, ny, nx))
 
     if rand_type == "tas":
         # add an annual cycle (repeating half-sine)
@@ -241,9 +234,7 @@ def fake_data(
         # add trend (polynomial 3rd)
         np.random.seed(seed)
         base_warming_rate = 0.02 + np.random.random() * 0.01
-        data += np.tile(
-            np.linspace(0, base_warming_rate * nyears, 365 * nyears) ** 3, (nx, ny, 1)
-        ).T
+        data += np.tile(np.linspace(0, base_warming_rate * nyears, 365 * nyears) ** 3, (nx, ny, 1)).T
 
     # add a semi-random offset
     np.random.seed(seed)
@@ -258,7 +249,8 @@ def publish_release_notes(
     changes: str | os.PathLike | None = None,
     latest: bool = True,
 ) -> str | None:
-    """Format release history in Markdown or ReStructuredText.
+    """
+    Format release history in Markdown or ReStructuredText.
 
     Parameters
     ----------
@@ -320,9 +312,7 @@ def publish_release_notes(
         for title_expression, level in titles.items():
             found = re.findall(title_expression, changes)
             for grouping in found:
-                fixed_grouping = (
-                    str(grouping[0]).replace("(", r"\(").replace(")", r"\)")
-                )
+                fixed_grouping = str(grouping[0]).replace("(", r"\(").replace(")", r"\)")
                 search = rf"({fixed_grouping})\n([\{level}]{'{' + str(len(grouping[1])) + '}'})"
                 replacement = f"{'##' if level == '-' else '###'} {grouping[0]}"
                 changes = re.sub(search, replacement, changes)
@@ -345,7 +335,8 @@ def show_versions(
     file: os.PathLike | StringIO | TextIO | None = None,
     deps: list | None = None,
 ) -> str | None:
-    """Print the versions of xscen and its dependencies.
+    """
+    Print the versions of xscen and its dependencies.
 
     Parameters
     ----------
@@ -362,15 +353,7 @@ def show_versions(
     def _get_xscen_dependencies():
         xscen_metadata = importlib.metadata.metadata("xscen")
         requires = xscen_metadata.get_all("Requires-Dist")
-        requires = [
-            req.split("[")[0]
-            .split(";")[0]
-            .split(">")[0]
-            .split("<")[0]
-            .split("=")[0]
-            .split("!")[0]
-            for req in requires
-        ]
+        requires = [req.split("[")[0].split(";")[0].split(">")[0].split("<")[0].split("=")[0].split("!")[0] for req in requires]
 
         return ["xscen"] + requires
 

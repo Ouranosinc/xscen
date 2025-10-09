@@ -22,6 +22,7 @@ from .catalog import ProjectCatalog
 from .config import parse_config
 from .utils import get_cat_attrs
 
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -44,11 +45,10 @@ def send_mail(
     to: str | None = None,
     server: str = "127.0.0.1",
     port: int = 25,
-    attachments: None | (
-        list[tuple[str, Figure | os.PathLike] | Figure | os.PathLike]
-    ) = None,
+    attachments: None | (list[tuple[str, Figure | os.PathLike] | Figure | os.PathLike]) = None,
 ) -> None:
-    """Send email.
+    """
+    Send email.
 
     Email a single address through a login-less SMTP server.
     The default values of server and port should work out-of-the-box on Ouranos's systems.
@@ -133,7 +133,7 @@ class ExitWatcher:
             sys.excepthook = self.err_handler
             self.hooked = True
         else:
-            warnings.warn("Exit hooks have already been overridden.")
+            warnings.warn("Exit hooks have already been overridden.", stacklevel=2)
 
     def unhook(self):
         if self.hooked:
@@ -165,7 +165,8 @@ def send_mail_on_exit(
     skip_ctrlc: bool = True,
     **mail_kwargs,
 ) -> None:
-    """Send an email with content depending on how the system exited.
+    """
+    Send an email with content depending on how the system exited.
 
     This function is best used by registering it with `atexit`. Calls :py:func:`send_mail`.
 
@@ -197,11 +198,7 @@ def send_mail_on_exit(
     """
     subject = subject or "Workflow"
     msg_err = msg_err or "Workflow exited with some errors."
-    if (
-        not on_error_only
-        and exit_watcher.error is None
-        and exit_watcher.code in [None, 0]
-    ):
+    if not on_error_only and exit_watcher.error is None and exit_watcher.code in [None, 0]:
         send_mail(
             subject=subject + " - Success",
             msg=msg_ok or "Workflow exited successfully.",
@@ -213,9 +210,7 @@ def send_mail_on_exit(
             msg=f"{msg_err}\nSystem exited with code {exit_watcher.code}.",
             **mail_kwargs,
         )
-    elif exit_watcher.error is not None and (
-        exit_watcher.error[0] is not KeyboardInterrupt or not skip_ctrlc
-    ):
+    elif exit_watcher.error is not None and (exit_watcher.error[0] is not KeyboardInterrupt or not skip_ctrlc):
         tb = "".join(format_exception(*exit_watcher.error))
         msg_err = f"{msg_err}\n\n{tb}"
         send_mail(subject=subject + " - Failure", msg=msg_err, **mail_kwargs)
@@ -223,7 +218,8 @@ def send_mail_on_exit(
 
 @parse_config
 class measure_time:
-    """Context for timing a code block.
+    """
+    Context for timing a code block.
 
     Parameters
     ----------
@@ -275,7 +271,8 @@ class TimeoutException(Exception):  # noqa: N818
 
 @contextmanager
 def timeout(seconds: int, task: str = ""):
-    """Timeout context manager.
+    """
+    Timeout context manager.
 
     Only one can be used at a time, this is not multithread-safe : it cannot be used in
     another thread than the main one, but multithreading can be used in parallel.
@@ -291,7 +288,6 @@ def timeout(seconds: int, task: str = ""):
     if seconds is None or seconds <= 0:
         yield
     else:
-
         # FIXME: These variables are not used
         def _timeout_handler(signum, frame):  # noqa: F841
             raise TimeoutException(seconds, task)
@@ -307,7 +303,8 @@ def timeout(seconds: int, task: str = ""):
 
 @contextmanager
 def skippable(seconds: int = 2, task: str = "", logger: logging.Logger | None = None):
-    """Skippable context manager.
+    """
+    Skippable context manager.
 
     When CTRL-C (SIGINT, KeyboardInterrupt) is sent within the context,
     this catches it, prints to the log and gives a timeout during which a subsequent
@@ -395,9 +392,7 @@ def save_and_update(
 
     # get path
     if path is not None:
-        path = str(path).format(
-            **get_cat_attrs(ds, var_as_str=True)
-        )  # fill path with attrs
+        path = str(path).format(**get_cat_attrs(ds, var_as_str=True))  # fill path with attrs
     else:  # if path is not given build it
         build_path_kwargs.setdefault("format", file_format)
         from .catutils import build_path

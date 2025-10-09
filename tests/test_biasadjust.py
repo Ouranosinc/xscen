@@ -5,11 +5,11 @@ import warnings
 import numpy as np
 import pytest
 import xarray as xr
-import xclim as xc
 import xsdba
 from xclim.testing.helpers import test_timeseries as timeseries
 
 from xscen.utils import xclim_convert_units_to
+
 
 # Copied from xarray/core/nputils.py
 # Can be removed once numpy 2.0+ is the oldest supported version
@@ -22,9 +22,7 @@ import xscen as xs
 
 
 class TestTrain:
-    dref = timeseries(
-        np.ones(365 * 3), variable="tas", start="2001-01-01", freq="D", as_dataset=True
-    )
+    dref = timeseries(np.ones(365 * 3), variable="tas", start="2001-01-01", freq="D", as_dataset=True)
 
     dhist = timeseries(
         np.concatenate([np.ones(365 * 2) * 2, np.ones(365) * 3]),
@@ -151,12 +149,7 @@ class TestAdjust:
         )
 
         # For justification of warning filter, see: https://docs.xarray.dev/en/stable/generated/xarray.Dataset.polyfit.html
-        if (
-            to_level is None
-            and bias_adjust_institution is None
-            and bias_adjust_project is None
-            and bias_adjust_reference is None
-        ):
+        if to_level is None and bias_adjust_institution is None and bias_adjust_project is None and bias_adjust_reference is None:
             # No warning is expected
             context = contextlib.nullcontext()
         else:
@@ -176,8 +169,7 @@ class TestAdjust:
         assert out.attrs["cat:variable"] == ("tas",)
         assert out.attrs["cat:id"] == "fake_id"
         assert (
-            out["tas"].attrs["bias_adjustment"]
-            == "DetrendedQuantileMapping(group=Grouper("
+            out["tas"].attrs["bias_adjustment"] == "DetrendedQuantileMapping(group=Grouper("
             "name='time.dayofyear', window=31), kind='+'"
             ", adapt_freq_thresh=None).adjust(sim, ) with xsdba_train_args: {}"
         )
@@ -196,9 +188,7 @@ class TestAdjust:
         if periods == ["2001", "2006"]:
             np.testing.assert_array_equal(
                 out["tas"].values,
-                np.concatenate(
-                    [np.ones(365 * 3) * 1, np.ones(365 * 3) * 3]
-                ),  # -1 for leap year
+                np.concatenate([np.ones(365 * 3) * 1, np.ones(365 * 3) * 3]),  # -1 for leap year
             )
         else:  # periods==[['2001','2001'], ['2006','2006']]
             np.testing.assert_array_equal(
@@ -221,35 +211,24 @@ class TestAdjust:
         xs.save_to_zarr(dtrain, f"{root}/test.zarr", mode="o")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            dtrain2 = xr.open_dataset(
-                f"{root}/test.zarr", chunks={"dayofyear": 365, "quantiles": 15}
-            )
+            dtrain2 = xr.open_dataset(f"{root}/test.zarr", chunks={"dayofyear": 365, "quantiles": 15})
 
         out = xs.adjust(
             dtrain,
             self.dsim.copy(),
             periods=["2001", "2006"],
-            xsdba_adjust_args={
-                "detrend": {
-                    "LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}
-                }
-            },
+            xsdba_adjust_args={"detrend": {"LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}}},
         )
 
         out2 = xs.adjust(
             dtrain2,
             self.dsim.copy(),
             periods=["2001", "2006"],
-            xsdba_adjust_args={
-                "detrend": {
-                    "LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}
-                }
-            },
+            xsdba_adjust_args={"detrend": {"LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}}},
         )
 
         assert (
-            out.tas.attrs["bias_adjustment"]
-            == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
+            out.tas.attrs["bias_adjustment"] == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
             " window=31), kind='+', adapt_freq_thresh='2 K').adjust(sim, detrend=<LoessDetrend>)"
             " with xsdba_train_args: {'adapt_freq_thresh': '2 K'},"
             " ref and hist were prepared with jitter_under_thresh(ref, hist,"
@@ -258,8 +237,7 @@ class TestAdjust:
         )
 
         assert (
-            out2.tas.attrs["bias_adjustment"]
-            == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
+            out2.tas.attrs["bias_adjustment"] == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
             " window=31), kind='+', adapt_freq_thresh='2 K').adjust(sim, detrend=<LoessDetrend>)"
             " with xsdba_train_args: {'adapt_freq_thresh': '2 K'}, "
             "ref and hist were prepared with jitter_under_thresh(ref, hist, {'thresh':"
@@ -300,7 +278,7 @@ class TestAdjust:
         xs.save_to_zarr(dtrain, f"{root}/test.zarr", mode="o")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            dtrain2 = xr.open_dataset(f"{root}/test.zarr")
+            xr.open_dataset(f"{root}/test.zarr")
 
         params = {
             "var": ["tasmax", "tasmin"],
@@ -314,7 +292,7 @@ class TestAdjust:
 
         assert ast.literal_eval(dtrain.attrs["train_params"]) == params
 
-        out = xs.adjust(
+        xs.adjust(
             dtrain=dtrain,
             dsim=ds,
             periods=["2031", "2060"],
@@ -369,9 +347,7 @@ class TestAdjust:
             dsim,
             periods=["2001", "2006"],
             xsdba_adjust_args={
-                "detrend": {
-                    "LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}
-                },
+                "detrend": {"LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}},
                 "interp": "nearest",
                 "extrapolation": "constant",
             },
@@ -396,9 +372,7 @@ class TestAdjust:
                     # adapt_freq_thresh="1.157e-05 kg/m2/s",
                 )
 
-                detrend = xsdba.detrending.LoessDetrend(
-                    f=0.2, niter=1, d=0, weights="tricube", group=group, kind="*"
-                )
+                detrend = xsdba.detrending.LoessDetrend(f=0.2, niter=1, d=0, weights="tricube", group=group, kind="*")
                 out_xclim = QM.adjust(
                     dsimx["pr"],
                     detrend=detrend,
@@ -410,18 +384,12 @@ class TestAdjust:
 
     def test_additive_space(self):
         data = np.random.random(365 * 3) * 90
-        dhist = timeseries(
-            data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
-        )
+        dhist = timeseries(data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True)
         data = np.random.random(365 * 3) * 100
 
-        dref = timeseries(
-            data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
-        )
+        dref = timeseries(data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True)
         data2 = np.random.random(365 * 6) * 100
-        dsim = timeseries(
-            data2, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
-        )
+        dsim = timeseries(data2, variable="hurs", start="2001-01-01", freq="D", as_dataset=True)
 
         dtrain = xs.train(
             dref,
@@ -430,14 +398,10 @@ class TestAdjust:
             period=["2001", "2003"],
             group="time",
             xsdba_train_args={"kind": "+"},
-            additive_space={
-                "hurs": dict(lower_bound="0 %", upper_bound="100 %", trans="logit")
-            },
+            additive_space={"hurs": dict(lower_bound="0 %", upper_bound="100 %", trans="logit")},
         )
 
-        assert dtrain.attrs["train_params"]["additive_space"] == {
-            "hurs": {"lower_bound": "0 %", "upper_bound": "100 %", "trans": "logit"}
-        }
+        assert dtrain.attrs["train_params"]["additive_space"] == {"hurs": {"lower_bound": "0 %", "upper_bound": "100 %", "trans": "logit"}}
 
         dadjust = xs.adjust(dtrain, dsim, periods=["2001", "2007"])
 
@@ -529,6 +493,4 @@ class TestMultivariate:
             xsdba_adjust_args={"period_dim": "period"},
             dref=ds,
         )
-        np.testing.assert_array_equal(
-            dscen_looped.tasmax.values, dscen_stacked.tasmax.values
-        )
+        np.testing.assert_array_equal(dscen_looped.tasmax.values, dscen_stacked.tasmax.values)

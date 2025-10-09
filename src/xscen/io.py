@@ -27,6 +27,7 @@ from .config import parse_config
 from .scripting import TimeoutException
 from .utils import TRANSLATOR, season_sort_key, strip_cat_attrs, translate_time_chunk
 
+
 logger = logging.getLogger(__name__)
 KEEPBITS = defaultdict(lambda: 12)
 
@@ -52,7 +53,8 @@ __all__ = [
 
 
 def get_engine(file: str | os.PathLike) -> str:
-    """Determine which Xarray engine should be used to open the given file.
+    """
+    Determine which Xarray engine should be used to open the given file.
 
     The .zarr, .zarr.zip and .zip extensions are recognized as Zarr datasets,
     the rest is seen as a netCDF. If the file is HDF5, the h5netcdf engine is used.
@@ -84,7 +86,8 @@ def estimate_chunks(  # noqa: C901
     target_mb: float = 50,
     chunk_per_variable: bool = False,
 ) -> dict:
-    """Return an approximate chunking for a file or dataset.
+    """
+    Return an approximate chunking for a file or dataset.
 
     Parameters
     ----------
@@ -112,21 +115,10 @@ def estimate_chunks(  # noqa: C901
         approx_chunks = np.power(target_mb / size_of_slice, 1 / len(rechunk_dims))
 
         # Redistribute the chunks based on the ratio of the dimensions
-        x = (approx_chunks ** len(rechunk_dims) / np.prod(list(ratio.values()))) ** (
-            1 / len(rechunk_dims)
-        )
-        rounding_per_dim = {
-            d: 1 if da[d].shape[0] <= 15 else 5 if da[d].shape[0] <= 250 else 10
-            for d in rechunk_dims
-        }
-        chunks_per_dim = {
-            d: int(rounding_per_dim[d] * np.round(x * ratio[d] / rounding_per_dim[d]))
-            for d in rechunk_dims
-        }
-        chunks_per_dim = {
-            d: np.max([np.min([chunks_per_dim[d], da[d].shape[0]]), 1])
-            for d in rechunk_dims
-        }
+        x = (approx_chunks ** len(rechunk_dims) / np.prod(list(ratio.values()))) ** (1 / len(rechunk_dims))
+        rounding_per_dim = {d: 1 if da[d].shape[0] <= 15 else 5 if da[d].shape[0] <= 250 else 10 for d in rechunk_dims}
+        chunks_per_dim = {d: int(rounding_per_dim[d] * np.round(x * ratio[d] / rounding_per_dim[d])) for d in rechunk_dims}
+        chunks_per_dim = {d: np.max([np.min([chunks_per_dim[d], da[d].shape[0]]), 1]) for d in rechunk_dims}
 
         return chunks_per_dim
 
@@ -143,15 +135,11 @@ def estimate_chunks(  # noqa: C901
                 continue
 
             dtype_size = ds.variables[v].datatype.itemsize
-            num_elem_per_slice = np.prod(
-                [ds[d].shape[0] for d in ds[v].dimensions if d not in rechunk_dims]
-            )
+            num_elem_per_slice = np.prod([ds[d].shape[0] for d in ds[v].dimensions if d not in rechunk_dims])
 
             size_of_slice = (num_elem_per_slice * dtype_size) / 1024**2
 
-            estimated_chunks = _estimate_chunks(
-                ds, target_mb, size_of_slice, rechunk_dims
-            )
+            estimated_chunks = _estimate_chunks(ds, target_mb, size_of_slice, rechunk_dims)
             for other in set(ds[v].dimensions).difference(dims):
                 estimated_chunks[other] = -1
 
@@ -171,14 +159,10 @@ def estimate_chunks(  # noqa: C901
                 continue
 
             dtype_size = ds[v].dtype.itemsize
-            num_elem_per_slice = np.prod(
-                [ds[d].shape[0] for d in ds[v].dims if d not in rechunk_dims]
-            )
+            num_elem_per_slice = np.prod([ds[d].shape[0] for d in ds[v].dims if d not in rechunk_dims])
             size_of_slice = (num_elem_per_slice * dtype_size) / 1024**2
 
-            estimated_chunks = _estimate_chunks(
-                ds, target_mb, size_of_slice, rechunk_dims
-            )
+            estimated_chunks = _estimate_chunks(ds, target_mb, size_of_slice, rechunk_dims)
             for other in set(ds[v].dims).difference(dims):
                 estimated_chunks[other] = -1
 
@@ -196,7 +180,8 @@ def subset_maxsize(
     ds: xr.Dataset,
     maxsize_gb: float,
 ) -> list[xr.Dataset]:
-    """Estimate a dataset's size and, if higher than the given limit, subset it alongside the 'time' dimension.
+    """
+    Estimate a dataset's size and, if higher than the given limit, subset it alongside the 'time' dimension.
 
     Parameters
     ----------
@@ -232,9 +217,7 @@ def subset_maxsize(
         return ds_sub
 
     else:
-        raise NotImplementedError(
-            f"Size of the NetCDF file exceeds the {maxsize_gb} Gb target, but the dataset does not contain a 'time' variable."
-        )
+        raise NotImplementedError(f"Size of the NetCDF file exceeds the {maxsize_gb} Gb target, but the dataset does not contain a 'time' variable.")
 
 
 def clean_incomplete(
@@ -242,7 +225,8 @@ def clean_incomplete(
     complete: Sequence[str] | None = None,
     incomplete: Sequence[str] | None = None,
 ) -> None:
-    """Delete un-catalogued variables from a zarr folder.
+    """
+    Delete un-catalogued variables from a zarr folder.
 
     The goal of this function is to clean up an incomplete calculation.
     It will remove any variable in the zarr that is neither in the `complete` list
@@ -282,9 +266,7 @@ def clean_incomplete(
 
     elif incomplete is not None:
         with xr.open_zarr(path) as ds:
-            incomplete = [
-                v for v in incomplete if (v not in ds.coords) and (v not in ds.dims)
-            ]
+            incomplete = [v for v in incomplete if (v not in ds.coords) and (v not in ds.dims)]
 
         for fold in filter(lambda p: p.is_dir(), path.iterdir()):
             if fold.name in incomplete:
@@ -297,11 +279,7 @@ def clean_incomplete(
     with (path / ".zmetadata").open("r") as f:
         metadata = json.load(f)
     for v in v_to_rm:
-        [
-            metadata["metadata"].pop(k)
-            for k in list(metadata["metadata"].keys())
-            if k.startswith(f"{v}/.")
-        ]
+        [metadata["metadata"].pop(k) for k in list(metadata["metadata"].keys()) if k.startswith(f"{v}/.")]
     with (path / ".zmetadata").open("w") as f:
         json.dump(metadata, f, indent=2)
 
@@ -310,9 +288,7 @@ def _coerce_attrs(attrs):
     """Ensure no funky objects in attrs."""
     for k in list(attrs.keys()):
         if not (
-            isinstance(attrs[k], str | float | int | np.ndarray)
-            or isinstance(attrs[k], tuple | list)
-            and isinstance(attrs[k][0], str | float | int)
+            isinstance(attrs[k], str | float | int | np.ndarray) or isinstance(attrs[k], tuple | list) and isinstance(attrs[k][0], str | float | int)
         ):
             attrs[k] = str(attrs[k])
 
@@ -326,7 +302,8 @@ def _np_bitround(array: xr.DataArray, keepbits: int):
 
 
 def round_bits(da: xr.DataArray, keepbits: int):
-    """Round floating point variable by keeping a given number of bits in the mantissa, dropping the rest. This allows for a much better compression.
+    """
+    Round floating point variable by keeping a given number of bits in the mantissa, dropping the rest. This allows for a much better compression.
 
     Parameters
     ----------
@@ -336,17 +313,11 @@ def round_bits(da: xr.DataArray, keepbits: int):
         The number of bits of the mantissa to keep.
     """
     encoding = da.encoding
-    da = xr.apply_ufunc(
-        _np_bitround, da, keepbits, dask="parallelized", keep_attrs=True
-    )
+    da = xr.apply_ufunc(_np_bitround, da, keepbits, dask="parallelized", keep_attrs=True)
     da.encoding = encoding
     da.attrs["_QuantizeBitRoundNumberOfSignificantDigits"] = keepbits
     new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Data compressed with BitRound by keeping {keepbits} bits."
-    history = (
-        new_history + " \n " + da.attrs["history"]
-        if "history" in da.attrs
-        else new_history
-    )
+    history = new_history + " \n " + da.attrs["history"] if "history" in da.attrs else new_history
     da.attrs["history"] = history
     return da
 
@@ -355,9 +326,7 @@ def _get_keepbits(bitround: bool | int | dict, varname: str, vartype):
     # Guess the number of bits to keep depending on how bitround was passed, the var dtype and the var name.
     if not np.issubdtype(vartype, np.floating) or bitround is False:
         if isinstance(bitround, dict) and varname in bitround:
-            raise ValueError(
-                f"A keepbits value was given for variable {varname} even though it is not of a floating dtype."
-            )
+            raise ValueError(f"A keepbits value was given for variable {varname} even though it is not of a floating dtype.")
         return None
     if bitround is True:
         return KEEPBITS[varname]
@@ -379,7 +348,8 @@ def save_to_netcdf(
     netcdf_kwargs: dict | None = None,
     strip_cat_metadata: bool = False,
 ):
-    """Save a Dataset to NetCDF, rechunking or compressing if requested.
+    """
+    Save a Dataset to NetCDF, rechunking or compressing if requested.
 
     Parameters
     ----------
@@ -553,9 +523,7 @@ def save_to_zarr(  # noqa: C901
 
             # If we are appending, we need to raise an error if there are new variables.
             elif exists is False:
-                raise ValueError(
-                    f"When 'append_dim' is set in zarr_kwargs, all variables must already exist in the dataset."
-                )
+                raise ValueError("When 'append_dim' is set in zarr_kwargs, all variables must already exist in the dataset.")
 
             return False
 
@@ -589,7 +557,7 @@ def save_to_zarr(  # noqa: C901
         if mode == "o":
             dsbase = ds.drop_vars(allvars)
             dsbase.to_zarr(path, **zarr_kwargs, mode="w")
-        for i, (name, var) in enumerate(ds.data_vars.items()):
+        for i, name in enumerate(ds.data_vars.keys()):
             msg = f"Writing {name} ({i + 1} of {len(ds.data_vars)}) to {path}"
             logger.debug(msg)
             dsvar = ds.drop_vars(allvars - {name})
@@ -609,9 +577,7 @@ def save_to_zarr(  # noqa: C901
         msg = f"Writing {list(ds.data_vars.keys())} for {filename}."
         logger.debug(msg)
         try:
-            return ds.to_zarr(
-                filename, compute=compute, mode="a", encoding=encoding, **zarr_kwargs
-            )
+            return ds.to_zarr(filename, compute=compute, mode="a", encoding=encoding, **zarr_kwargs)
         except TimeoutException:
             if timeout_cleanup:
                 clean_incomplete(path, incomplete=list(ds.data_vars.keys()))
@@ -630,42 +596,24 @@ def _to_dataframe(
     if not column:
         # Fast track for the easy case where xarray's default is already what we want.
         return df
-    df_data = (
-        df[[data.name]]
-        .reset_index()
-        .pivot(index=row, columns=column)
-        .droplevel(None, axis=1)
-    )
+    df_data = df[[data.name]].reset_index().pivot(index=row, columns=column).droplevel(None, axis=1)
     dfs = []
     for v in coords:
         drop_cols = [c for c in column if c not in coords_dims[v]]
         cols = [c for c in column if c in coords_dims[v]]
-        dfc = (
-            df[[v]].reset_index().drop(columns=drop_cols).pivot(index=row, columns=cols)
-        )
+        dfc = df[[v]].reset_index().drop(columns=drop_cols).pivot(index=row, columns=cols)
         cols = dfc.columns
         # The "None" level has the aux coord name we want it either at the same level as variable, or at lowest missing level otherwise.
         varname_lvl = "variable" if "variable" in drop_cols else drop_cols[-1]
-        cols = cols.rename(
-            varname_lvl
-            if not isinstance(cols, pd.MultiIndex)
-            else [nm or varname_lvl for nm in cols.name]
-        )
-        if isinstance(df_data.columns, pd.MultiIndex) or isinstance(
-            cols, pd.MultiIndex
-        ):
+        cols = cols.rename(varname_lvl if not isinstance(cols, pd.MultiIndex) else [nm or varname_lvl for nm in cols.name])
+        if isinstance(df_data.columns, pd.MultiIndex) or isinstance(cols, pd.MultiIndex):
             # handle different depth of multicolumns, expand MultiCol of coord with None for missing levels.
             cols = pd.MultiIndex.from_arrays(
-                [
-                    cols.get_level_values(lvl) if lvl in cols.names else [None]
-                    for lvl in df_data.columns.names
-                ],
+                [cols.get_level_values(lvl) if lvl in cols.names else [None] for lvl in df_data.columns.names],
                 names=df_data.columns.names,
             )
         dfc.columns = cols
-        dfs.append(
-            dfc[~dfc.index.duplicated()]
-        )  # We dropped columns thus the index is not unique anymore
+        dfs.append(dfc[~dfc.index.duplicated()])  # We dropped columns thus the index is not unique anymore
     dfs.append(df_data)
     return pd.concat(dfs, axis=1).sort_index(level=row, key=season_sort_key)
 
@@ -722,20 +670,12 @@ def to_table(
             return [seq]
         return list(seq)
 
-    passed_dims = set().union(
-        _ensure_list(row or []), _ensure_list(column or []), _ensure_list(sheet or [])
-    )
+    passed_dims = set().union(_ensure_list(row or []), _ensure_list(column or []), _ensure_list(sheet or []))
     if row is None:
         row = [d for d in da.dims if d != "variable" and d not in passed_dims]
     row = _ensure_list(row)
     if column is None:
-        column = (
-            ["variable"]
-            if isinstance(ds, xr.Dataset)
-            and len(ds) > 1
-            and "variable" not in passed_dims
-            else []
-        )
+        column = ["variable"] if isinstance(ds, xr.Dataset) and len(ds) > 1 and "variable" not in passed_dims else []
     column = _ensure_list(column)
     if sheet is None:
         sheet = []
@@ -743,14 +683,9 @@ def to_table(
 
     needed_dims = row + column + sheet
     if len(set(needed_dims)) != len(needed_dims):
-        raise ValueError(
-            f"Repeated dimension names. Got row={row}, column={column} and sheet={sheet}."
-            "Each dimension should appear only once."
-        )
+        raise ValueError(f"Repeated dimension names. Got row={row}, column={column} and sheet={sheet}.Each dimension should appear only once.")
     if set(needed_dims) != set(da.dims):
-        raise ValueError(
-            f"Passed row, column and sheet do not match available dimensions. Got {needed_dims}, data has {da.dims}."
-        )
+        raise ValueError(f"Passed row, column and sheet do not match available dimensions. Got {needed_dims}, data has {da.dims}.")
 
     if coords is not True:
         coords = _ensure_list(coords or [])
@@ -774,15 +709,14 @@ def to_table(
         out = {}
         das = da.stack(sheet=sheet)
         for elem in das.sheet:
-            out[elem.item()] = _to_dataframe(
-                das.sel(sheet=elem, drop=True), **table_kwargs
-            )
+            out[elem.item()] = _to_dataframe(das.sel(sheet=elem, drop=True), **table_kwargs)
         return out
     return _to_dataframe(da, **table_kwargs)
 
 
 def make_toc(ds: xr.Dataset | xr.DataArray, loc: str | None = None) -> pd.DataFrame:
-    """Make a table of content describing a dataset's variables.
+    """
+    Make a table of content describing a dataset's variables.
 
     This return a simple DataFrame with variable names as index, the long_name as "description" and units.
     Column names and long names are taken from the activated locale if found, otherwise the english version is taken.
@@ -811,9 +745,7 @@ def make_toc(ds: xr.Dataset | xr.DataArray, loc: str | None = None) -> pd.DataFr
         [
             {
                 _("Variable"): vv,
-                _("Description"): da.attrs.get(
-                    f"long_name{locsuf}", da.attrs.get("long_name")
-                ),
+                _("Description"): da.attrs.get(f"long_name{locsuf}", da.attrs.get("long_name")),
                 _("Units"): da.attrs.get("units"),
             }
             for vv, da in ds.data_vars.items()
@@ -860,7 +792,8 @@ def save_to_table(  # noqa: C901
     add_toc: bool | pd.DataFrame = False,
     **kwargs,
 ):
-    r"""Save the dataset to a tabular file (csv, excel, ...).
+    r"""
+    Save the dataset to a tabular file (csv, excel, ...).
 
     This function will trigger a computation of the dataset.
 
@@ -907,21 +840,15 @@ def save_to_table(  # noqa: C901
     if output_format is None:
         output_format = TABLE_FORMATS.get(filename.suffix)
     if output_format is None:
-        raise ValueError(
-            f"Output format could not be inferred from filename {filename.name}. Please pass `output_format`."
-        )
+        raise ValueError(f"Output format could not be inferred from filename {filename.name}. Please pass `output_format`.")
 
     if column is None and isinstance(ds, xr.Dataset) and len(ds.data_vars) > 1:
         column = "variable"
 
     if sheet is not None and output_format != "excel":
-        raise ValueError(
-            f"Argument `sheet` is only valid with excel as the output format. Got {output_format}."
-        )
+        raise ValueError(f"Argument `sheet` is only valid with excel as the output format. Got {output_format}.")
     if add_toc is not False and output_format != "excel":
-        raise ValueError(
-            f"A TOC was requested, but the output format is not Excel. Got {output_format}."
-        )
+        raise ValueError(f"A TOC was requested, but the output format is not Excel. Got {output_format}.")
 
     out = to_table(ds, row=row, column=column, sheet=sheet, coords=coords)
 
@@ -951,11 +878,7 @@ def save_to_table(  # noqa: C901
     else:
         if output_format != "excel" and isinstance(out.columns, pd.MultiIndex):
             out.columns = out.columns.map(lambda lvls: col_sep.join(map(str, lvls)))
-        if (
-            output_format != "excel"
-            and row_sep is not None
-            and isinstance(out.index, pd.MultiIndex)
-        ):
+        if output_format != "excel" and row_sep is not None and isinstance(out.index, pd.MultiIndex):
             new_name = row_sep.join(out.index.names)
             out.index = out.index.map(lambda lvls: row_sep.join(map(str, lvls)))
             out.index.name = new_name
@@ -963,7 +886,8 @@ def save_to_table(  # noqa: C901
 
 
 def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
-    """Rechunk before saving to .zarr or .nc, generalized as Y/X for different axes lat/lon, rlat/rlon.
+    """
+    Rechunk before saving to .zarr or .nc, generalized as Y/X for different axes lat/lon, rlat/rlon.
 
     Parameters
     ----------
@@ -991,13 +915,8 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
         if "Y" in rechunk_dims and "Y" not in ds.dims:
             rechunk_dims[ds.cf.axes["Y"][0]] = rechunk_dims.pop("Y")
 
-        ds[rechunk_var] = ds[rechunk_var].chunk(
-            {d: chnks for d, chnks in rechunk_dims.items() if d in ds[rechunk_var].dims}
-        )
-        ds[rechunk_var].encoding["chunksizes"] = tuple(
-            rechunk_dims[d] if d in rechunk_dims else ds[d].shape[0]
-            for d in ds[rechunk_var].dims
-        )
+        ds[rechunk_var] = ds[rechunk_var].chunk({d: chnks for d, chnks in rechunk_dims.items() if d in ds[rechunk_var].dims})
+        ds[rechunk_var].encoding["chunksizes"] = tuple(rechunk_dims[d] if d in rechunk_dims else ds[d].shape[0] for d in ds[rechunk_var].dims)
         ds[rechunk_var].encoding.pop("chunks", None)
         ds[rechunk_var].encoding["preferred_chunks"] = rechunk_dims
 
@@ -1015,7 +934,8 @@ def rechunk(
     temp_store: os.PathLike | str | None = None,
     overwrite: bool = False,
 ) -> None:
-    """Rechunk a dataset into a new zarr.
+    """
+    Rechunk a dataset into a new zarr.
 
     Parameters
     ----------
@@ -1071,9 +991,7 @@ def rechunk(
         Nt = ds.time.size
         chunks = translate_time_chunk(chunks, cal, Nt)
     else:
-        raise ValueError(
-            "No chunks given. Need to give at `chunks_over_var` or `chunks_over_dim`."
-        )
+        raise ValueError("No chunks given. Need to give at `chunks_over_var` or `chunks_over_dim`.")
     plan = _rechunk(ds, chunks, worker_mem, str(path_out), temp_store=str(temp_store))
 
     plan.execute()
@@ -1089,7 +1007,8 @@ def zip_directory(
     delete: bool = False,
     **zip_args,
 ):
-    r"""Make a zip archive of the content of a directory.
+    r"""
+    Make a zip archive of the content of a directory.
 
     Parameters
     ----------
@@ -1120,7 +1039,8 @@ def zip_directory(
 
 
 def unzip_directory(zipfile: str | os.PathLike, root: str | os.PathLike):
-    r"""Unzip an archive to a directory.
+    r"""
+    Unzip an archive to a directory.
 
     This function is the exact opposite of :py:func:`xscen.io.zip_directory`.
 
@@ -1145,7 +1065,8 @@ def save_sparse(
     da: xr.DataArray,
     filename: str | os.PathLike,
 ):
-    """Utility to save a sparse array to disk.
+    """
+    Utility to save a sparse array to disk.
 
     This is useful for saving :py:func:`~xscen.spatial.creep_weights` to disk, for example.
     Code inspired by xESMF. The output dataset preserves all coordinates, dimensions and attributes
@@ -1177,7 +1098,8 @@ def save_sparse(
 
 
 def load_sparse(filename: str | os.PathLike):
-    """Load a sparse array that was saved with :py:func:`~xscen.io.save_sparse`.
+    """
+    Load a sparse array that was saved with :py:func:`~xscen.io.save_sparse`.
 
     Parameters
     ----------

@@ -15,23 +15,20 @@ from xscen.io import save_to_zarr
 from xscen.scripting import send_mail_on_exit
 from xscen.utils import get_cat_attrs
 
+
 logger = logging.getLogger("workflow")
 
 
 if __name__ == "__main__":
     # The config file is passed through the command line,
     # allowing to reuse this script for multiple datasets by having versions of the config, instead of copies of the script.
-    parser = ArgumentParser(
-        description="Compute a series of xclim indicators with xscen."
-    )
+    parser = ArgumentParser(description="Compute a series of xclim indicators with xscen.")
     parser.add_argument("-c", "--conf", action="append")
     args = parser.parse_args()
 
     load_config(*args.conf, verbose=True)
 
-    dask.config.set(
-        {k: v for k, v in CONFIG["dask"].items() if not k.startswith("client")}
-    )
+    dask.config.set({k: v for k, v in CONFIG["dask"].items() if not k.startswith("client")})
     client = Client(**CONFIG["dask"]["client"])
 
     atexit.register(send_mail_on_exit)
@@ -45,9 +42,7 @@ if __name__ == "__main__":
 
     for dsid, scat in cat.items():
         ds = extract_dataset(scat)["D"]
-        to_compute = (
-            []
-        )  # A list of (name, indicator) tuples of those not already computed
+        to_compute = []  # A list of (name, indicator) tuples of those not already computed
         for name, ind in mod.iter_indicators():
             # Get the frequency and variable names to check if they are already computed
             outfreq = ind.injected_parameters["freq"].replace("YS", "AS-JAN")
