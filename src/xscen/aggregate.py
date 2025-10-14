@@ -781,7 +781,7 @@ def spatial_mean(  # noqa: C901
         if ds.cf["longitude"].ndim == 2 and "longitude" not in ds.cf.bounds and "rotated_pole" in ds:
             from .regrid import create_bounds_gridmapping
 
-            ds = ds.update(create_bounds_gridmapping(ds))
+            ds = ds.assign_coords(**create_bounds_gridmapping(ds))
 
         savg = xe.SpatialAverager(ds, geoms, **kwargs_copy)
         ds_agg = savg(ds, keep_attrs=True, **call_kwargs)
@@ -793,8 +793,6 @@ def spatial_mean(  # noqa: C901
         ds_agg = ds_agg.assign_coords(**extra_coords)
         if len(polygon) == 1:
             ds_agg = ds_agg.squeeze(geom_dim_name)
-        if "lon_bounds" in ds_agg:
-            ds_agg = ds_agg.assign_coords({"lon_bounds": ds_agg.lon_bounds, "lat_bounds": ds_agg.lat_bounds})
 
     else:
         raise ValueError("Subsetting method should be ['cos-lat', 'interp_centroid', 'xesmf']")

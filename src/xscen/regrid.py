@@ -347,9 +347,9 @@ def _regridder(
         gridmap_grid = get_grid_mapping(ds_grid)
 
         if ds_in.cf["longitude"].ndim == 2 and "longitude" not in ds_in.cf.bounds and gridmap_in in ds_in:
-            ds_in = ds_in.update(create_bounds_gridmapping(ds_in, gridmap_in))
+            ds_in = ds_in.assign_coords(**create_bounds_gridmapping(ds_in, gridmap_in))
         if ds_grid.cf["longitude"].ndim == 2 and "longitude" not in ds_grid.cf.bounds and gridmap_grid in ds_grid:
-            ds_grid = ds_grid.update(create_bounds_gridmapping(ds_grid, gridmap_grid))
+            ds_grid = ds_grid.assign_coords(**create_bounds_gridmapping(ds_grid, gridmap_grid))
 
     regridder = xe.Regridder(
         ds_in=ds_in,

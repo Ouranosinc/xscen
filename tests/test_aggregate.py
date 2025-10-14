@@ -601,7 +601,6 @@ class TestSpatialMean:
             assert avg.attrs["regrid_method"] == "conservative"
             assert "rotated_pole" not in avg
             assert "grid_mapping" not in avg.tas.attrs
-            assert all(c in avg.coords for c in ["lon_bounds", "lat_bounds"])
             np.testing.assert_array_almost_equal(avg["lon"], 50.277302)
             np.testing.assert_array_almost_equal(avg["lat"], 48.95076028)
             assert avg.attrs["cat:processing_level"] == "for_testing"
