@@ -811,13 +811,22 @@ class ProjectCatalog(DataCatalog):
 
         # make sure year really has 4 digits
         if "date_start" in self.df:
+            if os.name == "nt":
+                y_format = "%Y"
+            else:
+                y_format = "%4Y"
+
             df_fix_date = self.df.copy()
             df_fix_date["date_start"] = pd.Series(
                 [
                     (
                         x
                         if isinstance(x, str)
-                        else "" if pd.isnull(x) else x.strftime("%4Y-%m-%d %H:00")
+                        else (
+                            ""
+                            if pd.isnull(x)
+                            else x.strftime(f"{y_format}-%m-%d %H:00")
+                        )
                     )
                     for x in self.df.date_start
                 ]
@@ -828,7 +837,11 @@ class ProjectCatalog(DataCatalog):
                     (
                         x
                         if isinstance(x, str)
-                        else "" if pd.isnull(x) else x.strftime("%4Y-%m-%d %H:00")
+                        else (
+                            ""
+                            if pd.isnull(x)
+                            else x.strftime(f"{y_format}-%m-%d %H:00")
+                        )
                     )
                     for x in self.df.date_end
                 ]
