@@ -2,17 +2,28 @@
 Changelog
 =========
 
-v0.13.1 (unreleased)
---------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`).
+`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
+------------------------------------------------------------
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New official column ``bias_adjust_reference``. When a bias_adjust_project has multiple references (e.g., CanLead, ESPO6 v2.0), the information is stored in this column. (:pull:`643`, :pull:`644`).
 * Add ``clip_var`` option in ``xs.clean_up`` to clip values outside a given range. (:pull:`645`).
 
-v0.13 (2025-09-03)
-------------------
+Internal changes
+^^^^^^^^^^^^^^^^
+* Updated the cookiecutter template to the latest version. (:pull:`651`):
+    * Updated the Contributor Covenant agreement to v3.0.
+    * Replaced `black`, `blackdoc`, and `isort` with `ruff`.
+    * Added a `CITATION.cff` file.
+    * `pyproject.toml` is now `PEP 639 <https://peps.python.org/pep-0639/>`_-compliant.
+* Pinned `pydantic` below v2.12.0 for compatibility issues with `intake-esm`
+
+.. _changes_0.13.0:
+
+v0.13.0 (2025-09-03)
+--------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Artem Buyalo (:user:`ArtemBuyalo`), Éric Dupuis (:user:`coxipi`).
 
 New features and enhancements
@@ -37,6 +48,8 @@ Bug fixes
 ^^^^^^^^^
 * Fixed `xs.utils.xclim_convert_units_to` context patching. (:pull:`604`).
 
+.. _changes_0.12.3:
+
 v0.12.3 (2025-05-26)
 --------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`).
@@ -48,6 +61,8 @@ Bug fixes
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Updated ``xclim`` to v0.57.0. (:pull:`596`).
+
+.. _changes_0.12.2:
 
 v0.12.2 (2025-05-16)
 --------------------
@@ -68,6 +83,8 @@ Bug fixes
 ^^^^^^^^^
 * ``xs.utils.change_units`` will now always check that the units returned are exactly the same as the requested units. (:pull:`578`).
 * Fixed a bug in ``xs.catalog.subset_file_coverage`` where the function could not process dates after 2262. (:issue:`587`, :pull:`591`).
+
+.. _changes_0.12.1:
 
 v0.12.1 (2025-04-07)
 --------------------
@@ -101,6 +118,8 @@ Internal changes
 * `sphinx` dependencies are more streamlined in the `docs` environment. (:pull:`557`).
 * Added `codespell`, `deptry`, `vulture`, and `yamllint` to the linting checks. (:pull:`557`).
 
+.. _changes_0.12.0:
+
 v0.12.0 (2025-03-10)
 --------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`), Éric Dupuis (:user:`coxipi`).
@@ -133,6 +152,8 @@ Internal changes
 * Dependency pins have been synchronized across the repository. (:pull:`533`).
 * GitHub Workflows for conda builds now use the `coverallsapp/github-action` action for coverage reporting. (:pull:`533`).
 * `xsdba` is now used instead of `xclim.sdba`. (:pull:`530`).
+
+.. _changes_0.11.0:
 
 v0.11.0 (2025-01-23)
 --------------------
@@ -173,6 +194,8 @@ Internal changes
 * Added Open Source Security Foundation Best Practices badge, Zenodo DOI badge, FOSSA license compliance badge to the README. (:pull:`514`).
 * Several deprecated usages within the code base have been addressed. The number of warnings emitted from the test suite have been significantly reduced. (:issue:`515`, :pull:`516`).
 
+.. _changes_0.10.1:
+
 v0.10.1 (2024-11-04)
 --------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Éric Dupuis (:user:`coxipi`).
@@ -206,6 +229,8 @@ Internal changes
 * More tests added. (:pull:`486`).
 * Fixed a bug in ``xs.testing.datablock_3d`` where some attributes of the rotated pole got reversed half-way through the creation of the dataset. (:pull:`486`).
 * The function ``xs.regrid._get_grid_mapping`` was moved to ``xs.spatial.get_grid_mapping`` and is now a public function. (:pull:`486`).
+
+.. _changes_0.10.0:
 
 v0.10.0 (2024-09-30)
 --------------------
@@ -288,6 +313,8 @@ CI changes
 ^^^^^^^^^^
 * The `bump-version.yml` workflow now uses the Ouranosinc GitHub Helper Bot to sign bump version commits. (:pull:`462`).
 
+.. _changes_0.9.1:
+
 v0.9.1 (2024-06-04)
 -------------------
 Contributors to this version: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
@@ -312,6 +339,8 @@ Internal changes
     * ``CHANGES.rst`` is now ``CHANGELOG.rst`` (see: ` KeepAChangelog <https://keepachangelog.com/en/1.0.0/>`_).
     * The ``CODE_OF_CONDUCT.rst`` file adapted to `Contributor Covenant v2.1 <https://www.contributor-covenant.org/version/2/1/code_of_conduct/>`_.
     * Maintainer-specific directions are now found under ``releasing.rst``
+
+.. _changes_0.9.0:
 
 v0.9.0 (2024-05-07)
 -------------------
@@ -356,6 +385,8 @@ Bug fixes
 * Fixed a bug where the requested chunking would be ignored when saving a dataset (:pull:`379`).
 * The missing value check in ``health_checks`` will no longer crasg if a variable has no time dimension. (:pull:`382`).
 
+.. _changes_0.8.3:
+
 v0.8.3 (2024-02-28)
 -------------------
 Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
@@ -379,6 +410,8 @@ Breaking changes
 * Functions that output a dict with keys as xrfreq (such as ``extract_dataset``, ``compute_indicators``) will now return the new nomenclature (e.g. ``"YS-JAN"`` instead of ``"AS-JAN"``). (:pull:`351`).
 * Going from `xrfreq` to frequencies or timedeltas will still work, but the opposite (frequency --> xrfreq/timedelta) will now only result in the new `pandas` nomenclature. (:pull:`351`).
 
+.. _changes_0.8.2:
+
 v0.8.2 (2024-02-12)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`)
@@ -399,6 +432,8 @@ Internal changes
     * Code formatting tools (`black`, `blackdoc`, `isort`) are now hard-pinned. These need to be kept in sync with changes from `pre-commit`. (Dependabot should perform this task automatically.)
     * The versioning system has been updated to follow the Semantic Versioning 2.0.0 standard.
 * Fixed an issue with `pytest -m "not requires_netcdf"` not working as expected. (:pull:`345`).
+
+.. _changes_0.8.0:
 
 v0.8.0 (2024-01-16)
 -------------------
@@ -479,6 +514,8 @@ Internal changes
 * ``bump2version`` version-bumping utility was replaced by ``bump-my-version``. (:pull:`292`).
 * Documentation build checks no longer fail due to broken external links; Notebooks are now nested and numbered. (:pull:`304`).
 
+.. _changes_0.7.1:
+
 v0.7.1 (2023-08-23)
 -------------------
 * Update dependencies by removing ``pygeos``, pinning ``shapely>=2`` and ``intake-esm>=2023.07.07`` as well as other small fixes to the environment files. (:pull:`243`).
@@ -488,6 +525,8 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * Added a workflow that removes obsolete GitHub Workflow caches from merged pull requests. (:pull:`250`).
 * Added a workflow to perform automated labeling of pull requests, dependent on the files changed. (:pull:`250`).
+
+.. _changes_0.7.0:
 
 v0.7.0 (2023-08-22)
 -------------------
@@ -550,6 +589,8 @@ Internal changes
 * Added more tests. (:pull:`228`).
 * In ``compute_indicators``, the logic to manage indicators returning multiple outputs was simplified. (:pull:`228`).
 
+.. _changes_0.6.0:
+
 v0.6.0 (2023-05-04)
 -------------------
 Contributors to this version: Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`), Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
@@ -611,6 +652,8 @@ Internal changes
 * Changed the `ProjectCatalog` docstrings to make it more obvious that it needs to be created empty. (:issue:`99`, :pull:`184`).
 * Added parse_config to `creep_fill`, `creep_weights`, and `reduce_ensemble` (:pull:`191`).
 
+.. _changes_0.5.0:
+
 v0.5.0 (2023-02-28)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Sarah Gammon (:user:`SarahG-579462`) and Pascal Bourgault (:user:`aulemahal`).
@@ -660,6 +703,8 @@ Internal changes
 * The ``search_data_catalogs`` function now accepts `str` or `pathlib.Path` variables (in addition to lists of either data type) for performing catalog lookups. (:pull:`121`).
 * `produce_horizons` now supports fixed fields (:pull:`139`).
 * Rewrite of ``unstack_dates`` for better performance with dask arrays. (:pull:`144`).
+
+.. _changes_0.4.0:
 
 v0.4.0 (2022-09-28)
 -------------------
@@ -717,6 +762,8 @@ Internal changes
 * Added missing CMIP variable names in conversions.yml and added the ability to provide a custom file instead (:issue:`86`, :pull:`88`)
 * Changed 'allow_conversion' and 'allow_resample' default to False in search_data_catalogs (:issue:`86`, :pull:`88`)
 
+.. _changes_0.3.0:
+
 v0.3.0 (2022-08-23)
 -------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`) and Pascal Bourgault (:user:`aulemahal`).
@@ -753,8 +800,10 @@ Internal changes
 * `import xscen` smoke test is now run on all pull requests. (:pull:`44`).
 * Fix for `create_mask` removing attributes (:pull:`35`).
 
-v0.2.0 (first official release)
--------------------------------
+.. _changes_0.2.0:
+
+v0.2.0 (2021-01-26)
+-------------------
 Contributors to this version: Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Juliette Lavoie (:user:`juliettelavoie`).
 
 Announcements

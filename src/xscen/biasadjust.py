@@ -14,6 +14,7 @@ from .catutils import parse_from_ds
 from .config import parse_config
 from .utils import minimum_calendar, standardize_periods, xclim_convert_units_to
 
+
 logger = logging.getLogger(__name__)
 xsdba.set_options(extra_output=False)
 
@@ -28,29 +29,17 @@ def _add_preprocessing_attr(scen, train_kwargs):
     fake_ref = xr.DataArray(name="ref")
     fake_hist = xr.DataArray(name="hist")
 
-    scen.attrs[
-        "bias_adjustment"
-    ] += f" with xsdba_train_args: {train_kwargs['xsdba_train_args']}"
+    scen.attrs["bias_adjustment"] += f" with xsdba_train_args: {train_kwargs['xsdba_train_args']}"
 
     preproc = []
 
     if train_kwargs["jitter_under"] is not None:
-        preproc.append(
-            xc.core.formatting.gen_call_string(
-                "jitter_under_thresh", fake_ref, fake_hist, train_kwargs["jitter_under"]
-            )
-        )
+        preproc.append(xc.core.formatting.gen_call_string("jitter_under_thresh", fake_ref, fake_hist, train_kwargs["jitter_under"]))
     if train_kwargs["jitter_over"] is not None:
-        preproc.append(
-            xc.core.formatting.gen_call_string(
-                "jitter_over_thresh", fake_ref, fake_hist, train_kwargs["jitter_over"]
-            )
-        )
+        preproc.append(xc.core.formatting.gen_call_string("jitter_over_thresh", fake_ref, fake_hist, train_kwargs["jitter_over"]))
 
     if preproc:
-        scen.attrs[
-            "bias_adjustment"
-        ] += ", ref and hist were prepared with " + " and ".join(preproc)
+        scen.attrs["bias_adjustment"] += ", ref and hist were prepared with " + " and ".join(preproc)
     return scen
 
 
@@ -126,10 +115,12 @@ def train(
         warnings.warn(
             "`xclim_train_args` will be deprecated and replaced by `xsdba_train_args`.",
             FutureWarning,
+            stacklevel=2,
         )
         if xsdba_train_args is not None:
             warnings.warn(
-                "`xclim_train_args` and `xsdba_train_args` were both given, but correspond to the same option. `xsdba_train_args` will be kept"
+                "`xclim_train_args` and `xsdba_train_args` were both given, but correspond to the same option. `xsdba_train_args` will be kept",
+                stacklevel=2,
             )
         else:
             xsdba_train_args = deepcopy(xclim_train_args)
@@ -144,9 +135,7 @@ def train(
             dref[add_var] = to_additive_space(dref[add_var], **add_args)
             dhist[add_var] = to_additive_space(dhist[add_var], **add_args)
         if "kind" in xsdba_train_args and xsdba_train_args["kind"] != "+":
-            warnings.warn(
-                "`additive_space` was given, but `kind` in `xsdba_train_args` is not '+'."
-            )
+            warnings.warn("`additive_space` was given, but `kind` in `xsdba_train_args` is not '+'.", stacklevel=2)
 
     if len(var) == 1:
         ref = dref[var[0]]
@@ -154,10 +143,7 @@ def train(
     else:
         # Eventually, we can change ["MBCn"] and add more supported multivariate methods
         if method not in ["MBCn"]:
-            raise ValueError(
-                f"Multiple variables were given: {var}, but this treatment only works with a multivariate method,"
-                f"got {method}."
-            )
+            raise ValueError(f"Multiple variables were given: {var}, but this treatment only works with a multivariate method,got {method}.")
         ref = xsdba.stack_variables(dref[var])
         hist = xsdba.stack_variables(dhist[var])
 
@@ -288,10 +274,12 @@ def adjust(
         warnings.warn(
             "`xclim_adjust_args` will be deprecated and replaced by `xsdba_adjust_args`.",
             FutureWarning,
+            stacklevel=2,
         )
         if xsdba_adjust_args is not None:
             warnings.warn(
-                "`xclim_adjust_args` and `xsdba_adjust_args` were both given, but correspond to the same option. `xsdba_adjust_args` will be kept"
+                "`xclim_adjust_args` and `xsdba_adjust_args` were both given, but correspond to the same option. `xsdba_adjust_args` will be kept",
+                stacklevel=2,
             )
         else:
             xsdba_adjust_args = deepcopy(xclim_adjust_args)
@@ -301,9 +289,7 @@ def adjust(
     # evaluate the dict that was stored as a string
     if not isinstance(dtrain.attrs["train_params"], dict):
         # FIXME: eval is bad. There has to be a better way!™
-        dtrain.attrs["train_params"] = ast.literal_eval(
-            dtrain.attrs["train_params"]
-        )  # noqa: S307
+        dtrain.attrs["train_params"] = ast.literal_eval(dtrain.attrs["train_params"])  # noqa: S307
 
     # transforms
     additive_space = dtrain.attrs["train_params"]["additive_space"]
@@ -329,9 +315,7 @@ def adjust(
     if dref is not None:
         ref = xsdba.stack_variables(dref[var])
         refcal = dref.time.dt.calendar
-        mincal = minimum_calendar(
-            refcal, dtrain.attrs["train_params"]["maximal_calendar"]
-        )
+        mincal = minimum_calendar(refcal, dtrain.attrs["train_params"]["maximal_calendar"])
         if refcal != mincal:
             ref = ref.convert_calendar(mincal, align_on=align_on)
 
@@ -350,9 +334,7 @@ def adjust(
     # adjust
     ADJ = xsdba.adjustment.TrainAdjust.from_dataset(dtrain)
 
-    if ("detrend" in xsdba_adjust_args) and (
-        isinstance(xsdba_adjust_args["detrend"], dict)
-    ):
+    if ("detrend" in xsdba_adjust_args) and (isinstance(xsdba_adjust_args["detrend"], dict)):
         name, kwargs = list(xsdba_adjust_args["detrend"].items())[0]
         kwargs = kwargs or {}
         kwargs.setdefault("group", ADJ.group)
@@ -367,12 +349,9 @@ def adjust(
         if period_dim := xsdba_adjust_args.get("period_dim", None):
             if len(periods) > 1:
                 raise ValueError(
-                    "Period stacking (`period_dim` specified in `xsdba_adjust_args`) "
-                    "is not allowed with multiple time slices in `periods`."
+                    "Period stacking (`period_dim` specified in `xsdba_adjust_args`) is not allowed with multiple time slices in `periods`."
                 )
-            sim_stacked = xsdba.stack_periods(
-                sim.sel(time=slice(*periods[0])), dim=period_dim
-            )
+            sim_stacked = xsdba.stack_periods(sim.sel(time=slice(*periods[0])), dim=period_dim)
             sim_stacked = sim_stacked.chunk({period_dim: -1})
             out = ADJ.adjust(sim_stacked, **xsdba_adjust_args)
             dscen = xsdba.unstack_periods(out)
@@ -395,7 +374,7 @@ def adjust(
         dscen = xsdba.unstack_variables(dscen)
 
     if additive_space:
-        for add_var, add_args in additive_space.items():
+        for add_var in additive_space.keys():
             dscen[add_var] = from_additive_space(dscen[add_var])
 
     dscen.attrs["cat:processing_level"] = to_level

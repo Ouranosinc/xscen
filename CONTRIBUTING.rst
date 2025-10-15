@@ -99,7 +99,7 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
 
     This installs ``xscen`` in an "editable" state, meaning that changes to the code are immediately seen by the environment. To ensure a consistent coding style, `make dev` also installs the ``pre-commit`` hooks to your local clone.
 
-    On commit, ``pre-commit`` will check that ``black``, ``blackdoc``, ``isort``, ``flake8``, and ``ruff`` checks are passing, perform automatic fixes if possible, and warn of violations that require intervention. If your commit fails the checks initially, simply fix the errors, re-add the files, and re-commit.
+    On commit, ``pre-commit`` will check that ``flake8``, and ``ruff`` checks are passing, perform automatic fixes if possible, and warn of violations that require intervention. If your commit fails the checks initially, simply fix the errors, re-add the files, and re-commit.
 
     You can also run the hooks manually with:
 
@@ -280,14 +280,11 @@ To run specific code style checks:
 
 .. code-block:: console
 
-    python -m black --check src/xscen tests
-    python -m isort --check src/xscen tests
-    python -m blackdoc --check src/xscen docs
     python -m ruff check src/xscen tests
     python -m flake8 src/xscen tests
-    validate-docstrings src/xscen/**.py
+    python -m numpydoc lint src/xscen/**.py
 
-To get ``black``, ``isort``, ``blackdoc``, ``ruff``, ``flake8`` (with the ``flake8-rst-docstrings`` plugin), and ``numpydoc`` (for ``validate-docstrings``), simply install them with ``pip`` (or ``conda``) into your environment.
+To get ``ruff``, ``flake8`` (with the ``flake8-rst-docstrings`` plugin), and ``numpydoc``, simply install them with ``pip`` (or ``conda``) into your environment.
 
 Versioning/Tagging
 ------------------
