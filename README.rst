@@ -3,13 +3,13 @@ xscen |logo|
 ============
 
 +----------------------------+-------------------------------------------------------+
-| Versions                   | |pypi| |conda| |versions|                             |
+| Versions                   | |pypi| |conda|                                        |
 +----------------------------+-------------------------------------------------------+
-| Documentation and Support  | |docs|                                                |
+| Documentation and Support  | |docs| |versions|                                     |
 +----------------------------+-------------------------------------------------------+
 | Open Source                | |license| |ossf-score| |zenodo|                       |
 +----------------------------+-------------------------------------------------------+
-| Coding Standards           | |black| |isort| |ruff| |pre-commit| |ossf-bp| |fossa| |
+| Coding Standards           | |ruff| |pre-commit| |ossf-bp| |fossa|                 |
 +----------------------------+-------------------------------------------------------+
 | Development Status         | |status| |build| |coveralls|                          |
 +----------------------------+-------------------------------------------------------+
@@ -45,10 +45,6 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
 .. _xclim: https://xclim.readthedocs.io/
 .. _xsdba: https://xsdba.readthedocs.io/
 
-.. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
-        :target: https://github.com/psf/black
-        :alt: Python Black
-
 .. |build| image:: https://github.com/Ouranosinc/xscen/actions/workflows/main.yml/badge.svg
         :target: https://github.com/Ouranosinc/xscen/actions/workflows/main.yml
         :alt: Build Status
@@ -68,10 +64,6 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
 .. |fossa| image:: https://app.fossa.com/api/projects/git%2Bgithub.com%2FOuranosinc%2Fxscen.svg?type=shield
         :target: https://app.fossa.com/projects/git%2Bgithub.com%2FOuranosinc%2Fxscen?ref=badge_shield
         :alt: FOSSA
-
-.. |isort| image:: https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336
-        :target: https://pycqa.github.io/isort/
-        :alt: Isort
 
 .. |license| image:: https://img.shields.io/pypi/l/figanos
         :target: https://github.com/Ouranosinc/figanos/blob/main/LICENSE
