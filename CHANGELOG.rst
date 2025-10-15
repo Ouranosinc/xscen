@@ -4,12 +4,16 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`).
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New official column ``bias_adjust_reference``. When a bias_adjust_project has multiple references (e.g., CanLead, ESPO6 v2.0), the information is stored in this column. (:pull:`643`, :pull:`644`).
 * Add ``clip_var`` option in ``xs.clean_up`` to clip values outside a given range. (:pull:`645`).
+
+Bug fixes
+^^^^^^^^^
+* Fixed a bug in ``ProjectCatalog.update`` where the function would crash on Windows systems. (:pull:`656`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
