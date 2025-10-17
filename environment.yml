@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python >=3.10,<3.14
-  - pip >=25.0
+  - pip >=25.2
   # Don't forget to sync changes between environment.yml, environment-dev.yml, and pyproject.toml!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
@@ -15,8 +15,8 @@ dependencies:
   - flox
   - fsspec
   - geopandas >=1.0
-  - h5netcdf
-  - h5py
+  - h5netcdf >=1.5.0
+  - h5py >=3.12.1
   - intake-esm >2025.7.9
   - matplotlib >=3.6
   - netcdf4
@@ -26,6 +26,7 @@ dependencies:
   - pandas >=2.2
   - parse
   - pyarrow >=15.0.0
+  - pydantic <2.12.0
   - pyproj
   - pyyaml
   - rechunker >=0.5.3
@@ -41,4 +42,4 @@ dependencies:
   - nc-time-axis >=1.3.1
   - xesmf >=0.7, !=0.8.8
   # To install from source
-  - flit >=3.10.1,<4.0
+  - flit >=3.11.0,<4.0

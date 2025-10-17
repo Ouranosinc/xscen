@@ -66,17 +66,11 @@ class TestScripting:
             overwrite=True,
         )
 
-        sc.save_and_update(
-            TestScripting.ds, cat, path=root + "/dir1/test_r1i1p1f1.zarr"
-        )
-        sc.save_and_update(
-            TestScripting.ds, cat, path=root + "/dir1/test_r1i1p1f2.zarr"
-        )
+        sc.save_and_update(TestScripting.ds, cat, path=root + "/dir1/test_r1i1p1f1.zarr")
+        sc.save_and_update(TestScripting.ds, cat, path=root + "/dir1/test_r1i1p1f2.zarr")
 
         sc.move_and_delete(
-            moving=[
-                [root + "/dir1/test_r1i1p1f2.zarr", root + "/dir2/test_r1i1p1f2.zarr"]
-            ],
+            moving=[[root + "/dir1/test_r1i1p1f2.zarr", root + "/dir2/test_r1i1p1f2.zarr"]],
             pcat=cat,
             deleting=[root + "/dir1"],
         )
@@ -87,9 +81,7 @@ class TestScripting:
         assert len(cat.df) == 1  # only one file left
 
         sc.move_and_delete(
-            moving=[
-                [root + "/dir2/test_r1i1p1f2.zarr", root + "/dir1/test_r1i1p1f2.zarr"]
-            ],
+            moving=[[root + "/dir2/test_r1i1p1f2.zarr", root + "/dir1/test_r1i1p1f2.zarr"]],
             pcat=cat,
             copy=True,
         )

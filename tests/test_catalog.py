@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pandas as pd
 import xarray as xr
-from conftest import SAMPLES_DIR
 
 from xscen import catalog, extract
 
@@ -18,9 +17,7 @@ def test_subset_file_coverage():
     df["date_end"] = pd.to_datetime(df.date_end)
 
     # Ok
-    pd.testing.assert_frame_equal(
-        catalog.subset_file_coverage(df, [1951, 1970], coverage=0.8), df
-    )
+    pd.testing.assert_frame_equal(catalog.subset_file_coverage(df, [1951, 1970], coverage=0.8), df)
 
     # Insufficient coverage (no files)
     pd.testing.assert_frame_equal(
@@ -44,9 +41,7 @@ def test_subset_file_coverage_2300():
         ]
     )
 
-    pd.testing.assert_frame_equal(
-        catalog.subset_file_coverage(df, [2250, 2305], coverage=0.8), df[1:3]
-    )
+    pd.testing.assert_frame_equal(catalog.subset_file_coverage(df, [2250, 2305], coverage=0.8), df[1:3])
 
 
 class TestCopyFiles:
