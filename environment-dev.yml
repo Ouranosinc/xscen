@@ -25,6 +25,7 @@ dependencies:
   - openpyxl
   - pandas >=2.2
   - parse
+  - polars
   - pyarrow >=15.0.0
   - pydantic <2.12.0
   - pyproj
