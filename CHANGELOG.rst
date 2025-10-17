@@ -11,6 +11,10 @@ New features and enhancements
 * New official column ``bias_adjust_reference``. When a bias_adjust_project has multiple references (e.g., CanLead, ESPO6 v2.0), the information is stored in this column. (:pull:`643`, :pull:`644`).
 * Add ``clip_var`` option in ``xs.clean_up`` to clip values outside a given range. (:pull:`645`).
 
+Breaking changes
+^^^^^^^^^^^^^^^^
+* Pins have been added for `h5py` (``>=3.12.1``) and `h5netcdf` (``>=1.5.0``) to ensure that modern versions are preferably installed. (:pull:`658`).
+
 Internal changes
 ^^^^^^^^^^^^^^^^
 * Updated the cookiecutter template to the latest version. (:pull:`651`):
@@ -19,6 +23,7 @@ Internal changes
     * Added a `CITATION.cff` file.
     * `pyproject.toml` is now `PEP 639 <https://peps.python.org/pep-0639/>`_-compliant.
 * Pinned `pydantic` below v2.12.0 for compatibility issues with `intake-esm`
+* When running tests with `tox`, the `h5py` library is now compiled from source. This requires the `hdf5` (conda) or `libhdf5-dev` (system) packages to be installed. (:pull:`658`).
 
 .. _changes_0.13.0:
 
