@@ -13,7 +13,7 @@ New features and enhancements
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* Pins have been added for `h5py` (``>=3.12.1``) and `h5netcdf` (``>=1.5.0``) to ensure that modern versions. (:pull:`658`).
+* Pins have been added for `h5py` (``>=3.12.1``) and `h5netcdf` (``>=1.5.0``) to ensure that modern versions are preferably installed. (:pull:`658`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -23,7 +23,7 @@ Internal changes
     * Added a `CITATION.cff` file.
     * `pyproject.toml` is now `PEP 639 <https://peps.python.org/pep-0639/>`_-compliant.
 * Pinned `pydantic` below v2.12.0 for compatibility issues with `intake-esm`
-* When running tests with `tox`, the `h5py` library is now compiled from source. (:pull:`657`).
+* When running tests with `tox`, the `h5py` library is now compiled from source. This requires the `hdf5` (conda) or `libhdf5-dev` (system) packages to be installed. (:pull:`658`).
 
 .. _changes_0.13.0:
 
