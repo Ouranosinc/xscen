@@ -17,6 +17,7 @@ from typing import Any
 import fsspec as fs
 import intake_esm
 import pandas as pd
+import polars as pl
 import tlz
 import xarray as xr
 from intake_esm.cat import ESMCatalogModel
@@ -110,6 +111,16 @@ esm_col_data = {
 """Default ESM column data for the official catalogs."""
 
 
+csv_kwargs = {
+    "schema_overrides": {
+        "date_start": pl.Datetime(time_unit="ms"),
+        "date_end": pl.Datetime(time_unit="ms"),
+    },
+    "try_parse_dates": True,
+}
+"""Kwargs to pass to `pl.scan_csv` when opening an official Ouranos catalog."""
+
+
 class DataCatalog(intake_esm.esm_datastore):
     r"""
     A read-only intake_esm catalog adapted to xscen's syntax.
@@ -141,20 +152,9 @@ class DataCatalog(intake_esm.esm_datastore):
     def __init__(
         self, *args, check_valid: bool = False, drop_duplicates: bool = False, **kwargs
     ):
-        kwargs.setdefault("columns_with_iterables", []).append("variable")
-        # args = args_as_str(args)
+        kwargs["read_kwargs"] = csv_kwargs | kwargs.get("read_kwargs", {})
 
         super().__init__(*args, **kwargs)
-
-        # Cast date columns into datetime (with ms reso, that's why we do it here and not in the `read_csv_kwargs`)
-        # Pandas >=2 supports [ms] resolution, but can't parse strings with this resolution, so we need to go through numpy
-        for datecol in ["date_start", "date_end"]:
-            if datecol in self.df.columns and self.df[datecol].dtype in (
-                "O",
-                "large_string[pyarrow]",
-            ):
-                # Missing values in object columns are np.nan, which numpy can't convert to datetime64 (what's up with that numpy???)
-                self.df[datecol] = self.df[datecol].dropna().astype("datetime64[ms]")
 
         if check_valid:
             self.check_valid()
@@ -267,7 +267,9 @@ class DataCatalog(intake_esm.esm_datastore):
         if len(columns) > 0:
             cat = super().search(**columns)
         else:
-            cat = self.__class__({"esmcat": self.esmcat.dict(), "df": self.esmcat._df})
+            cat = self.__class__(
+                {"esmcat": self.esmcat.model_dump(), "df": self.esmcat._df}
+            )
         if periods is not False:
             cat.esmcat._df = subset_file_coverage(
                 cat.esmcat._df, periods=periods, coverage=0, duplicates_ok=True
