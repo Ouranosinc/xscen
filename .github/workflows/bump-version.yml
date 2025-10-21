@@ -17,6 +17,7 @@ on:
       - .yamllint.yaml
       - AUTHORS.rst
       - CHANGELOG.rst
+      - CITATION.cff
       - CI/**/*.in
       - CI/**/*.py
       - CI/**/*.txt
