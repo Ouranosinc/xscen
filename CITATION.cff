@@ -101,4 +101,4 @@ contact:
 repository-code: "https://github.com/Ouranosinc/xscen"
 abstract: "A climate change scenario-building analysis framework, built with xclim/xarray."
 license: "Apache-2.0"
-version: 0.13.1
+version: "0.13.1"
