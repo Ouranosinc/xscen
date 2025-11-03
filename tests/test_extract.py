@@ -661,3 +661,30 @@ class TestResample:
 
         out = xs.extract.resample(da, "D", initial_frequency="h", missing="mask")
         np.testing.assert_array_equal(out.isnull(), [False, False, True])
+
+
+class TestExtractDataset:
+    cat = xs.DataCatalog(notebooks / "samples" / "pangeo-cmip6.json")
+
+    def test_input_with_different_times(self):
+        out = xs.search_data_catalogs(
+            data_catalogs=self.cat,
+            variables_and_freqs={"tasmin": "D", "tasmax": "D"},
+            other_search_criteria={"source": ["GFDL-CM4"]},
+        ).popitem()[1]
+        # fake issue of having different time coordinates for different variables
+
+        def preprocess(ds):
+            if "tasmin" in ds:
+                ds["time"] = ds.time.dt.ceil("D")
+            return ds
+
+        # should return without error because time has been floored
+        ds_sim = xs.extract_dataset(catalog=out, preprocess=preprocess)
+
+        assert len(ds_sim["D"].time.values) == 31391
+
+        # twice as much time because we have time at 00:00 and 12:00 without correction
+        ds_sim = xs.extract_dataset(catalog=out, preprocess=preprocess, ensure_correct_time=False)
+
+        assert len(ds_sim["D"].time.values) == 62780
