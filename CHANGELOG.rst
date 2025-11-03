@@ -5,7 +5,7 @@ Changelog
 ..
     `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
     ------------------------------------------------------------
-    Contributors:
+    Contributors: Juliette Lavoie (:user:`juliettelavoie`),
 
     Changes
     ^^^^^^^
@@ -13,7 +13,7 @@ Changelog
 
     Fixes
     ^^^^^
-    * No change.
+    * Floor time in the preprocess of ``extract_dataset``. (:pull:`660`, :pull:`660`)
 
 .. _changes_0.13.1:
 
