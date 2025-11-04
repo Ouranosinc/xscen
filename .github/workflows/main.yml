@@ -26,8 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version:
-          - "3.13" # FIXME: put back 3.x when pydantic build exists for 3.14. https://github.com/Ouranosinc/xscen/pull/661#issuecomment-3482167331
+        python-version: [ "3.13" ]
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
