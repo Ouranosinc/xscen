@@ -664,27 +664,20 @@ class TestResample:
 
 
 class TestExtractDataset:
-    cat = xs.DataCatalog(notebooks / "samples" / "pangeo-cmip6.json")
-
-    def test_input_with_different_times(self):
+    def test_input_with_different_times(self, samplecat):
+        # get data with fake issue in time (tasmin has been is at noon instead of 00:00)
         out = xs.search_data_catalogs(
-            data_catalogs=self.cat,
-            variables_and_freqs={"tasmin": "D", "tasmax": "D"},
-            other_search_criteria={"source": ["GFDL-CM4"]},
+            data_catalogs=samplecat,
+            variables_and_freqs={"tasmax": "D", "tasmin": "D"},
+            other_search_criteria={"experiment": ["ssp126"]},
         ).popitem()[1]
-        # fake issue of having different time coordinates for different variables
-
-        def preprocess(ds):
-            if "tasmin" in ds:
-                ds["time"] = ds.time.dt.ceil("D")
-            return ds
 
         # should return without error because time has been floored
-        ds_sim = xs.extract_dataset(catalog=out, preprocess=preprocess)
+        ds_sim = xs.extract_dataset(catalog=out)
 
-        assert len(ds_sim["D"].time.values) == 31391
+        assert len(ds_sim["D"].time.values) == 730
 
         # twice as much time because we have time at 00:00 and 12:00 without correction
-        ds_sim = xs.extract_dataset(catalog=out, preprocess=preprocess, ensure_correct_time=False)
+        ds_sim = xs.extract_dataset(catalog=out, ensure_correct_time=False)
 
-        assert len(ds_sim["D"].time.values) == 62780
+        assert len(ds_sim["D"].time.values) == 1460
