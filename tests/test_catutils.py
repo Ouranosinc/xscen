@@ -125,7 +125,7 @@ def test_parse_directory_readgroups():
             ["experiment", "frequency"],
             ["variable", "date_start", "date_end"],
         ],
-        cvs={"variable": {"sftlf": None, "tas": "t2m"}},
+        cvs={"variable": {"sftlf": None, "tas": "t2m", "tasmin": None, "tasmax": None}},
     )
     assert len(df) == 12
     t2m = df.variable.apply(lambda v: "t2m" in v)
