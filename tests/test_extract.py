@@ -664,10 +664,10 @@ class TestResample:
 
 
 class TestExtractDataset:
-    def test_input_with_different_times(self, samplecat):
+    def test_input_with_different_times(self, samplecatzarr):
         # get data with fake issue in time (tasmin has been is at noon instead of 00:00)
         out = xs.search_data_catalogs(
-            data_catalogs=samplecat,
+            data_catalogs=samplecatzarr,
             variables_and_freqs={"tasmax": "D", "tasmin": "D"},
             other_search_criteria={"experiment": ["ssp126"]},
         ).popitem()[1]

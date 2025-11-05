@@ -14,10 +14,10 @@ from xscen import catutils as cu
 @pytest.mark.parametrize(
     "exts,lens,dirglob,N",
     (
-        [{".nc"}, {7}, None, 12],
+        [{".nc"}, {7}, None, 10],
         [{".zarr"}, {7}, None, 0],
         [{".nc"}, {6}, None, 0],
-        [{".nc", ".zarr"}, {6, 7, 8}, "*ssp126*", 4],
+        [{".nc", ".zarr"}, {6, 7, 8}, "*ssp126*", 2],
     ),
 )
 def test_find_assets(exts, lens, dirglob, N):  # noqa: N803
@@ -101,7 +101,7 @@ def test_parse_directory():
         file_checks=["readable", "ncvalid"],
     )
 
-    assert len(df) == 12
+    assert len(df) == 10
     assert (df["activity"] == "ScenarioMIP").all()
     assert (df["mip_era"] == "CMIP6").all()
     assert (df["domain"] == "exreg").all()  # CVS simple
@@ -111,7 +111,7 @@ def test_parse_directory():
     assert df[df["experiment"] != "ssp126"]["driving_model"].isnull().all()  # CVS complex
     assert df.date_start.dtype == "<M8[ms]"
     assert df.date_end.dtype == "<M8[ms]"
-    assert (df[(df["frequency"] == "day") & (df["variable"] == "tas")]["date_end"] == pd.Timestamp("2002-12-31")).all()  # Read from file
+    assert (df[df["frequency"] == "day"]["date_end"] == pd.Timestamp("2002-12-31")).all()  # Read from file
     # Read from file + attrs cvs
     assert set(df[df["id"] == "CMIP6_ScenarioMIP_driver_NCC_NorESM2-MM_ssp126_1f1p1i1r_exreg"]["version"]) == {"v20191108", "v20200702"}
 
@@ -125,9 +125,9 @@ def test_parse_directory_readgroups():
             ["experiment", "frequency"],
             ["variable", "date_start", "date_end"],
         ],
-        cvs={"variable": {"sftlf": None, "tas": "t2m", "tasmin": None, "tasmax": None}},
+        cvs={"variable": {"sftlf": None, "tas": "t2m"}},
     )
-    assert len(df) == 12
+    assert len(df) == 10
     t2m = df.variable.apply(lambda v: "t2m" in v)
     assert (df[t2m]["date_end"] == pd.Timestamp("2002-12-31")).all()
     assert (df[~t2m].variable.apply(len) == 0).all()
