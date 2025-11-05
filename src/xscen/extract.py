@@ -161,9 +161,20 @@ def extract_dataset(  # noqa: C901
     # Default arguments to send xarray
     xr_kwargs = _xarray_defaults(xr_open_kwargs=xr_open_kwargs or {}, xr_combine_kwargs=xr_combine_kwargs or {})
 
+    def new_preprocess(ds):
+        # existing preprocess first
+        if preprocess:
+            ds = preprocess(ds)
+        # if ensure_correct_time, we fix "anchor" for daily and finer, by flooring
+        if "time" in ds and ensure_correct_time:
+            xrfreq = xr.infer_freq(ds.time) if ds.time.size > 2 else None
+            if xrfreq in "DHTMUL":
+                ds["time"] = ds.time.dt.floor(xrfreq)
+        return ds
+
     # Open the catalog
     ds_dict = catalog.to_dataset_dict(
-        preprocess=preprocess,
+        preprocess=new_preprocess,
         # Only print a progress bar when it is minimally useful
         progressbar=(len(catalog.keys()) > 1),
         **xr_kwargs,

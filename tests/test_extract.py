@@ -661,3 +661,23 @@ class TestResample:
 
         out = xs.extract.resample(da, "D", initial_frequency="h", missing="mask")
         np.testing.assert_array_equal(out.isnull(), [False, False, True])
+
+
+class TestExtractDataset:
+    def test_input_with_different_times(self, samplecatzarr):
+        # get data with fake issue in time (tasmin has been is at noon instead of 00:00)
+        out = xs.search_data_catalogs(
+            data_catalogs=samplecatzarr,
+            variables_and_freqs={"tasmax": "D", "tasmin": "D"},
+            other_search_criteria={"experiment": ["ssp126"]},
+        ).popitem()[1]
+
+        # should return without error because time has been floored
+        ds_sim = xs.extract_dataset(catalog=out)
+
+        assert len(ds_sim["D"].time.values) == 730
+
+        # twice as much time because we have time at 00:00 and 12:00 without correction
+        ds_sim = xs.extract_dataset(catalog=out, ensure_correct_time=False)
+
+        assert len(ds_sim["D"].time.values) == 1460

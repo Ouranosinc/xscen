@@ -1224,6 +1224,7 @@ def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
     inffreq = xr.infer_freq(ds.time) if ds.time.size > 2 else None
     if inffreq == xrfreq:
         # Even when the freq is correct, we ensure the correct "anchor" for daily and finer
+        # also done in preprocess
         if xrfreq in "DHTMUL":
             ds["time"] = ds.time.dt.floor(xrfreq)
     else:
