@@ -671,10 +671,10 @@ class TestExtractDataset:
             variables_and_freqs={"tasmax": "D", "tasmin": "D"},
             other_search_criteria={"experiment": ["ssp126"]},
         ).popitem()[1]
-        print(out)
 
-        # # should return without error because time has been floored
-        # ds_sim = xs.extract_dataset(catalog=out)
+        # should return without error because time has been floored
+        ds_sim = xs.extract_dataset(catalog=out)
+        print(ds_sim)
 
         # assert len(ds_sim["D"].time.values) == 730
 
