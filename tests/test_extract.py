@@ -674,11 +674,10 @@ class TestExtractDataset:
 
         # should return without error because time has been floored
         ds_sim = xs.extract_dataset(catalog=out)
-        print(ds_sim)
 
-        # assert len(ds_sim["D"].time.values) == 730
+        assert len(ds_sim["D"].time.values) == 730
 
-        # # twice as much time because we have time at 00:00 and 12:00 without correction
-        # ds_sim = xs.extract_dataset(catalog=out, ensure_correct_time=False)
+        # twice as much time because we have time at 00:00 and 12:00 without correction
+        ds_sim = xs.extract_dataset(catalog=out, ensure_correct_time=False)
 
-        # assert len(ds_sim["D"].time.values) == 1460
+        assert len(ds_sim["D"].time.values) == 1460
