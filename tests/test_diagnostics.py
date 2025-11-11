@@ -366,8 +366,7 @@ class TestPropertiesMeasures:
             properties=self.yaml_file,
             dref_for_measure=p1,
         )
-        print(m2)
-        print(m2["maximum_length_of_warm_spell"].values)
+
         assert m1.sizes == {}
         np.testing.assert_allclose(m2["maximum_length_of_warm_spell"].values, 0)
 

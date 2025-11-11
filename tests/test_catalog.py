@@ -145,7 +145,7 @@ def test_search_nothing():
 
     scat = cat.search()
 
-    assert scat == cat
+    assert (scat.df == cat.df).all().all()
 
 
 def test_exist_in_cat(samplecat):
@@ -166,14 +166,14 @@ def test_to_dataset_ensemble(samplecat):
     assert "ssp126" in ds.realization.values
 
 
-def test_project_catalog_create(tmpdir):
+def test_project_catalog_create_and_update(tmpdir):
     root = str(tmpdir / "_data")
-    xs.catalog.ProjectCatalog(f"{root}/test.json", create=True, project={"title": "Test Project"})
+    pcat = xs.catalog.ProjectCatalog(f"{root}/test.json", create=True, project={"title": "Test Project"})
 
     assert Path(f"{root}/test.json").exists()
 
+    lpcat = len(pcat.df)
 
-def test_project_catalog_update(samplecat):
     df = xs.parse_directory(
         directories=[SAMPLES_DIR],
         patterns=["{activity}/{domain}/{institution}/{source}/{experiment}/{member}/{frequency}/{?:_}.zarr.zip"],
@@ -185,9 +185,13 @@ def test_project_catalog_update(samplecat):
         read_from_file=["variable", "date_start", "date_end"],
     )
 
-    new_cat = samplecat.update(df)
+    pcat.update(df)
 
-    assert len(new_cat.df) == len(samplecat.df) + len(df)
+    assert len(pcat.df) == lpcat + len(df)
 
+    path = SAMPLES_DIR / "ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_gn_raw.nc"
+    ds = xr.open_dataset(path)
+    pcat.update_from_ds(ds, path, info_dict={"experiment": "ssp999"}, variable="tas")
 
-# def test_update_from_ds(samplecat):
+    assert pcat.df.iloc[-1].experiment == "ssp999"
+    assert "tas" in pcat.df.iloc[-1].variable
