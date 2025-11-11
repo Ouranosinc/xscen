@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 import xarray as xr
-from conftest import SAMPLES_DIR
+from conftest import SAMPLES_DIR, notebooks
 
 import xscen as xs
 from xscen import catalog, extract
@@ -109,7 +109,7 @@ class TestCopyFiles:
 def test_from_df():
     df = xs.parse_directory(
         directories=[SAMPLES_DIR],
-        patterns=["{activity}/{domain}/{institution}/{source}/{experiment}/{member}/{frequency}/{?:_}.zarr.zip"],
+        patterns=["{activity}/{domain}/{institution}/{source}/{experiment}/{member}/{frequency}/{?:_}.nc"],
         homogenous_info={
             "mip_era": "CMIP6",
             "type": "simulation",
@@ -121,3 +121,73 @@ def test_from_df():
     cat = xs.catalog.DataCatalog.from_df(df)
 
     assert (len(cat.df) == len(df)) and all(cat.df.columns == df.columns)
+
+
+def test_from_df_with_files():
+    cat = xs.catalog.DataCatalog.from_df(notebooks / "samples" / "pangeo-cmip6.csv", esmdata=notebooks / "samples" / "pangeo-cmip6.json")
+
+    assert len(cat.df) == 47
+
+
+def test_search_period():
+    cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json")
+
+    scat = cat.search(periods=["2015", "2016"])
+
+    assert len(scat.df) == 17
+
+    assert scat.df.date_end.min() >= pd.Timestamp("2016-12-31 00:00:00")
+    assert scat.df.date_start.max() <= pd.Timestamp("2015-01-01 00:00:00")
+
+
+def test_search_nothing():
+    cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json")
+
+    scat = cat.search()
+
+    assert scat == cat
+
+
+def test_exist_in_cat(samplecat):
+    assert samplecat.exists_in_cat(variable="tas")
+    assert not samplecat.exists_in_cat(variable="nonexistent_variable")
+
+
+def test_to_dataset(samplecat):
+    ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(concat_on="experiment")
+
+    assert "experiment" in ds.dims
+
+
+def test_to_dataset_ensemble(samplecat):
+    ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(create_ensemble_on="experiment")
+
+    assert "realization" in ds.dims
+    assert "ssp126" in ds.realization.values
+
+
+def test_project_catalog_create(tmpdir):
+    root = str(tmpdir / "_data")
+    xs.catalog.ProjectCatalog(f"{root}/test.json", create=True, project={"title": "Test Project"})
+
+    assert Path(f"{root}/test.json").exists()
+
+
+def test_project_catalog_update(samplecat):
+    df = xs.parse_directory(
+        directories=[SAMPLES_DIR],
+        patterns=["{activity}/{domain}/{institution}/{source}/{experiment}/{member}/{frequency}/{?:_}.zarr.zip"],
+        homogenous_info={
+            "mip_era": "CMIP6",
+            "type": "simulation",
+            "processing_level": "raw",
+        },
+        read_from_file=["variable", "date_start", "date_end"],
+    )
+
+    new_cat = samplecat.update(df)
+
+    assert len(new_cat.df) == len(samplecat.df) + len(df)
+
+
+# def test_update_from_ds(samplecat):

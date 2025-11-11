@@ -651,14 +651,13 @@ class ProjectCatalog(DataCatalog):
             raise ValueError('At least one of "id" or "title" must be given in the metadata.')
 
         project["catalog_file"] = str(data_path)
-        if "id" not in project:
-            project["id"] = project.get("title", "").replace(" ", "")
 
         esmdata = recursive_update(esm_col_data.copy(), project)
 
         df = pd.DataFrame(columns=COLUMNS)
 
         cat = cls({"esmcat": esmdata, "df": df})  # TODO: Currently, this drops "version" because it is not a recognized attribute
+        print(cat.esmcat)
         cat.serialize(
             path.stem,
             directory=path.parent,
@@ -667,12 +666,12 @@ class ProjectCatalog(DataCatalog):
         )
 
         # Change catalog_file to a relative path
-        with Path(meta_path).open(encoding="utf-8") as f:
-            meta = json.load(f)
-            meta["catalog_file"] = data_path.name
-        with Path(meta_path).open("w", encoding="utf-8") as f:
-            json.dump(meta, f, indent=2)
-
+        # with Path(meta_path).open(encoding="utf-8") as f:
+        #     meta = json.load(f)
+        #     meta["catalog_file"] = data_path.name
+        # with Path(meta_path).open("w", encoding="utf-8") as f:
+        #     json.dump(meta, f, indent=2)
+        print(cat.esmcat)
         return cls(str(meta_path))
 
     def __init__(
