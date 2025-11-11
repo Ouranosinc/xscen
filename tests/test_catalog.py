@@ -4,6 +4,7 @@ import pandas as pd
 import xarray as xr
 from conftest import SAMPLES_DIR
 
+import xscen as xs
 from xscen import catalog, extract
 
 
@@ -103,3 +104,20 @@ class TestCopyFiles:
         assert f.suffix == ".zarr"
         assert f.parent.name == ru.name
         assert f.is_dir()
+
+
+def test_from_df():
+    df = xs.parse_directory(
+        directories=[SAMPLES_DIR],
+        patterns=["{activity}/{domain}/{institution}/{source}/{experiment}/{member}/{frequency}/{?:_}.zarr.zip"],
+        homogenous_info={
+            "mip_era": "CMIP6",
+            "type": "simulation",
+            "processing_level": "raw",
+        },
+        read_from_file=["variable", "date_start", "date_end"],
+    )
+
+    cat = xs.catalog.DataCatalog.from_df(df)
+
+    assert (len(cat.df) == len(df)) and all(cat.df.columns == df.columns)
