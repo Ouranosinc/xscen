@@ -148,7 +148,7 @@ def test_search_nothing():
     assert (scat.df == cat.df).all().all()
 
 
-def test_exist_in_cat(samplecat):
+def test_exist_in_cat(self, samplecat):
     assert samplecat.exists_in_cat(variable="tas")
     assert not samplecat.exists_in_cat(variable="nonexistent_variable")
 
