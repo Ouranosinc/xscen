@@ -195,3 +195,44 @@ def test_project_catalog_create_and_update(tmpdir):
 
     assert pcat.df.iloc[-1].experiment == "ssp999"
     assert "tas" in pcat.df.iloc[-1].variable
+
+
+def test_refresh(tmpdir):
+    pcat = xs.catalog.ProjectCatalog(str(tmpdir / "tmp.json"), create=True, project={"title": "Test Project"})
+    df = pd.read_csv(tmpdir / "tmp.csv")
+
+    new_row = [
+        "CMIP6_ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_example-region",
+        "simulation",
+        "raw",
+        None,
+        None,
+        None,
+        "CMIP6",
+        "ScenarioMIP",
+        None,
+        None,
+        "NCC",
+        "NorESM2-MM",
+        "ssp126",
+        "r1i1p1f1",
+        "D",
+        "day",
+        ("tasmin",),
+        "example-region",
+        "2001-01-01 12:00:00",
+        "2002-12-31 12:00:00",
+        None,
+        "zarr",
+        "/home/jlavoie/xscen/docs/notebooks/samples/tutorial/ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/tasmin-noon-test.zarr.zip",
+    ]
+    # Add the list as a new row to the end of the DataFrame
+    df.loc[len(df)] = new_row
+    df.to_csv(tmpdir / "tmp.csv", index=False)
+
+    assert len(pcat.df) == 0
+
+    pcat.refresh()
+
+    assert len(pcat.df) == 1
+    assert pcat.df.iloc[-1].source == "NorESM2-MM"
