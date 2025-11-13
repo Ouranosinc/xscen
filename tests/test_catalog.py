@@ -148,7 +148,7 @@ def test_search_nothing():
     assert (scat.df == cat.df).all().all()
 
 
-def test_exist_in_cat(self, samplecat):
+def test_exist_in_cat(samplecat):
     assert samplecat.exists_in_cat(variable="tas")
     assert not samplecat.exists_in_cat(variable="nonexistent_variable")
 
@@ -199,6 +199,10 @@ def test_project_catalog_create_and_update(tmpdir):
 
 def test_refresh(tmpdir):
     pcat = xs.catalog.ProjectCatalog(str(tmpdir / "tmp.json"), create=True, project={"title": "Test Project"})
+    path = SAMPLES_DIR / "ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_gn_raw.nc"
+    ds = xr.open_dataset(path)
+    pcat.update_from_ds(ds, path, info_dict={"experiment": "ssp999"}, variable="tas")
+
     df = pd.read_csv(tmpdir / "tmp.csv")
 
     new_row = [
@@ -213,7 +217,7 @@ def test_refresh(tmpdir):
         None,
         None,
         "NCC",
-        "NorESM2-MM",
+        "test",
         "ssp126",
         "r1i1p1f1",
         "D",
@@ -230,9 +234,9 @@ def test_refresh(tmpdir):
     df.loc[len(df)] = new_row
     df.to_csv(tmpdir / "tmp.csv", index=False)
 
-    assert len(pcat.df) == 0
+    assert len(pcat.df) == 1
 
     pcat.refresh()
 
-    assert len(pcat.df) == 1
-    assert pcat.df.iloc[-1].source == "NorESM2-MM"
+    assert len(pcat.df) == 2
+    assert pcat.df.iloc[-1].source == "test"
