@@ -197,13 +197,13 @@ def test_project_catalog_create_and_update(tmpdir):
     assert "tas" in pcat.df.iloc[-1].variable
 
 
-def test_refresh(tmpdir):
-    pcat = xs.catalog.ProjectCatalog(str(tmpdir / "tmp.json"), create=True, project={"title": "Test Project"})
+def test_refresh():
+    pcat = xs.catalog.ProjectCatalog("tmp.json", create=True, project={"title": "Test Project"})
     path = SAMPLES_DIR / "ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_gn_raw.nc"
     ds = xr.open_dataset(path)
     pcat.update_from_ds(ds, path, info_dict={"experiment": "ssp999"}, variable="tas")
 
-    df = pd.read_csv(tmpdir / "tmp.csv")
+    df = pd.read_csv("tmp.csv")
 
     new_row = [
         "CMIP6_ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_example-region",
@@ -232,7 +232,7 @@ def test_refresh(tmpdir):
     ]
     # Add the list as a new row to the end of the DataFrame
     df.loc[len(df)] = new_row
-    df.to_csv(tmpdir / "tmp.csv", index=False)
+    df.to_csv("tmp.csv", index=False)
 
     assert len(pcat.df) == 1
 
