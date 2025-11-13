@@ -666,12 +666,11 @@ class ProjectCatalog(DataCatalog):
         )
 
         # Change catalog_file to a relative path
-        # with Path(meta_path).open(encoding="utf-8") as f:
-        #     meta = json.load(f)
-        #     meta["catalog_file"] = data_path.name
-        # with Path(meta_path).open("w", encoding="utf-8") as f:
-        #     json.dump(meta, f, indent=2)
-        print(cat.esmcat)
+        with Path(meta_path).open(encoding="utf-8") as f:
+            meta = json.load(f)
+            meta["catalog_file"] = data_path.name
+        with Path(meta_path).open("w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=2)
         return cls(str(meta_path))
 
     def __init__(

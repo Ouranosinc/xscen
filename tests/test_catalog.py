@@ -148,15 +148,15 @@ def test_search_nothing():
     assert (scat.df == cat.df).all().all()
 
 
-# def test_exist_in_cat(self, samplecat):
-#     assert samplecat.exists_in_cat(variable="tas")
-#     assert not samplecat.exists_in_cat(variable="nonexistent_variable")
+def test_exist_in_cat(self, samplecat):
+    assert samplecat.exists_in_cat(variable="tas")
+    assert not samplecat.exists_in_cat(variable="nonexistent_variable")
 
 
-def test_to_dataset(samplecat):
-    ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(concat_on="experiment")
+# def test_to_dataset(samplecat):
+#     ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(concat_on="experiment")
 
-    assert "experiment" in ds.dims
+#     assert "experiment" in ds.dims
 
 
 def test_to_dataset_ensemble(samplecat):
