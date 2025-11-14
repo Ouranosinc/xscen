@@ -88,7 +88,7 @@ io:
       time: 40
 
 scripting:
-  send_main_on_exit:
+  send_mail_on_exit:
     subject: "Indicator computing terminated."
     msg_ok: "🥳 Everything went well."
     msg_err: "🔥 Something went wrong while computing the indicators. 🔥"

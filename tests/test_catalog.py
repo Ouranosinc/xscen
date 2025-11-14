@@ -1,6 +1,8 @@
+import logging
 from pathlib import Path
 
 import pandas as pd
+import pytest
 import xarray as xr
 from conftest import SAMPLES_DIR, notebooks
 
@@ -52,8 +54,10 @@ def test_xrfreq_fix():
 
 
 class TestCopyFiles:
-    def test_flat(self, samplecat, tmp_path):
-        newcat = samplecat.copy_files(tmp_path, flat=True)
+    def test_flat(self, samplecat, tmp_path, caplog):
+        with caplog.at_level(logging.DEBUG):
+            newcat = samplecat.copy_files(tmp_path, flat=True)
+        assert f"Will copy {len(newcat.df)} files." in caplog.text
         assert len(list(tmp_path.glob("*.nc"))) == len(newcat.df)
 
     def test_inplace(self, samplecat, tmp_path):
@@ -105,6 +109,10 @@ class TestCopyFiles:
         assert f.parent.name == ru.name
         assert f.is_dir()
 
+    def test_unzipzarr(self, samplecatzarr, tmp_path):
+        newcat = samplecatzarr.copy_files(tmp_path, unzip=True)
+        assert len(list(tmp_path.glob("*.zarr"))) == len(newcat.df)
+
 
 def test_from_df():
     df = xs.parse_directory(
@@ -148,22 +156,31 @@ def test_search_nothing():
     assert (scat.df == cat.df).all().all()
 
 
-def test_exist_in_cat(samplecat):
-    assert samplecat.exists_in_cat(variable="tas")
+def test_exist_in_cat(samplecat, caplog):
+    with caplog.at_level(logging.INFO):
+        assert samplecat.exists_in_cat(variable="tas")
+    assert "An entry exists for: {'variable': 'tas'}" in caplog.text
     assert not samplecat.exists_in_cat(variable="nonexistent_variable")
 
 
-# def test_to_dataset(samplecat):
-#     ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(concat_on="experiment")
+def test_to_dataset(samplecat):
+    ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(concat_on="experiment")
 
-#     assert "experiment" in ds.dims
+    assert "experiment" in ds.dims
 
 
-# def test_to_dataset_ensemble(samplecat):
-#     ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(create_ensemble_on="experiment")
+def test_to_dataset_ensemble(samplecat):
+    ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(create_ensemble_on="experiment")
 
-#     assert "realization" in ds.dims
-#     assert "ssp126" in ds.realization.values
+    assert "realization" in ds.dims
+    assert "ssp126" in ds.realization.values
+
+
+def test_unique_empty(tmpdir):
+    root = str(tmpdir / "_data")
+    pcat = xs.catalog.ProjectCatalog(f"{root}/test.json", create=True, project={"title": "Test Project"})
+    with pytest.raises(ValueError):
+        pcat.unique("variable")
 
 
 def test_project_catalog_create_and_update(tmpdir):
@@ -171,6 +188,10 @@ def test_project_catalog_create_and_update(tmpdir):
     pcat = xs.catalog.ProjectCatalog(f"{root}/test.json", create=True, project={"title": "Test Project"})
 
     assert Path(f"{root}/test.json").exists()
+
+    # fail to create if file exists
+    with pytest.raises(FileExistsError):
+        pcat = xs.catalog.ProjectCatalog(f"{root}/test.json", create=True, project={"title": "Test Project"})
 
     lpcat = len(pcat.df)
 
@@ -197,47 +218,56 @@ def test_project_catalog_create_and_update(tmpdir):
     assert "tas" in pcat.df.iloc[-1].variable
 
 
-# def test_refresh():
-#     pcat = xs.catalog.ProjectCatalog("tmp.json", create=True, project={"title": "Test Project"})
-#     path = SAMPLES_DIR / "ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_gn_raw.nc"
-#     ds = xr.open_dataset(path)
-#     pcat.update_from_ds(ds, path, info_dict={"experiment": "ssp999"}, variable="tas")
+def test_project_catalog_create_fails(tmpdir):
+    root = str(tmpdir / "_data")
 
-#     df = pd.read_csv("tmp.csv")
+    with pytest.raises(ValueError):
+        xs.catalog.ProjectCatalog(
+            f"{root}/test.json",
+            create=True,
+        )
 
-#     new_row = [
-#         "CMIP6_ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_example-region",
-#         "simulation",
-#         "raw",
-#         None,
-#         None,
-#         None,
-#         "CMIP6",
-#         "ScenarioMIP",
-#         None,
-#         None,
-#         "NCC",
-#         "test",
-#         "ssp126",
-#         "r1i1p1f1",
-#         "D",
-#         "day",
-#         ("tasmin",),
-#         "example-region",
-#         "2001-01-01 12:00:00",
-#         "2002-12-31 12:00:00",
-#         None,
-#         "zarr",
-#         "/home/jlavoie/xscen/docs/notebooks/samples/tutorial/ScenarioMIP/
-# example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/tasmin-noon-test.zarr.zip",
-#     ]
-#     # Add the list as a new row to the end of the DataFrame
-#     df.loc[len(df)] = new_row
-#     df.to_csv("tmp.csv", index=False)
 
-#     assert len(pcat.df) == 1
+def test_refresh():
+    pcat = xs.catalog.ProjectCatalog("tmp.json", create=True, project={"title": "Test Project"})
+    path = SAMPLES_DIR / "ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_gn_raw.nc"
+    ds = xr.open_dataset(path)
+    pcat.update_from_ds(ds, path, info_dict={"experiment": "ssp999"}, variable="tas")
 
-#     pcat.refresh()
+    df = pd.read_csv("tmp.csv")
 
-#     assert len(pcat.df) == 2
-#     assert pcat.df.iloc[-1].source == "test"
+    new_row = [
+        "CMIP6_ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_example-region",
+        "simulation",
+        "raw",
+        None,
+        None,
+        None,
+        "CMIP6",
+        "ScenarioMIP",
+        None,
+        None,
+        "NCC",
+        "test",
+        "ssp126",
+        "r1i1p1f1",
+        "D",
+        "day",
+        ("tasmin",),
+        "example-region",
+        "2001-01-01 12:00:00",
+        "2002-12-31 12:00:00",
+        None,
+        "zarr",
+        "/home/jlavoie/xscen/docs/notebooks/samples/tutorial/ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/tasmin-noon-test.zarr.zip",
+    ]
+    # Add the list as a new row to the end of the DataFrame
+    df.loc[len(df)] = new_row
+    df.to_csv("tmp.csv", index=False)
+
+    assert len(pcat.df) == 1
+
+    pcat.refresh()
+
+    assert len(pcat.df) == 2
+    assert pcat.df.iloc[-1].source == "test"
