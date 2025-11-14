@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     # Set email config
     if "scripting" in CONFIG:
-        atexit.register(xs.send_mail_on_exit, subject=CONFIG["scripting"]["subject"])
+        atexit.register(xs.send_mail_on_exit)
 
     # Initialize (create=True) or load (overwrite=False) the Project Catalog
     pcat = xs.ProjectCatalog(

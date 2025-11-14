@@ -520,8 +520,8 @@ project: # argument to create the project
   id: t1
 
 scripting: # send an email when code fails or succeed
-  subject: Template 1 - basic_workflow_with_config
   send_mail_on_exit:
+    subject: Template 1 - basic_workflow_with_config
     msg_err: Something went wrong!
     on_error_only: True
 
@@ -559,3 +559,12 @@ xclim:  # Options for xclim
 to_dataset_dict: # parameters to open datasets
   xarray_open_kwargs:
     decode_timedelta: False
+
+warnings:  # suppress some warnings
+  all: 'always' # change to 'ignore' to suppress all warnings
+
+
+
+# ignore this, it is only for testing purposes.
+xarray:
+  display_style: text
