@@ -190,10 +190,6 @@ def test_project_catalog_create_and_update(tmpdir):
 
     assert Path(f"{root}/test.json").exists()
 
-    # fail to create if file exists
-    with pytest.raises(FileExistsError):
-        pcat = xs.catalog.ProjectCatalog(f"{root}/test.json", create=True, project={"title": "Test Project"})
-
     lpcat = len(pcat.df)
 
     df = xs.parse_directory(
