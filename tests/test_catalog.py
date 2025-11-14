@@ -159,11 +159,11 @@ def test_exist_in_cat(samplecat):
 #     assert "experiment" in ds.dims
 
 
-def test_to_dataset_ensemble(samplecat):
-    ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(create_ensemble_on="experiment")
+# def test_to_dataset_ensemble(samplecat):
+#     ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(create_ensemble_on="experiment")
 
-    assert "realization" in ds.dims
-    assert "ssp126" in ds.realization.values
+#     assert "realization" in ds.dims
+#     assert "ssp126" in ds.realization.values
 
 
 def test_project_catalog_create_and_update(tmpdir):

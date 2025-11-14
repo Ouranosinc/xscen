@@ -57,6 +57,27 @@ class TestScripting:
         )
         assert cat.df.source[1] == "CanESM5"
 
+        sc.save_and_update(
+            TestScripting.ds,
+            cat,
+            # To fix hdf5 issues with h5py 3.11 on pip
+            save_kwargs=dict(netcdf_kwargs={"engine": "netcdf4"}),
+            build_path_kwargs={"root": root, "format": "nc"},
+        )
+
+        assert (
+            cat.df.path[1]
+            == root
+            + "/simulation/raw/CMIP6/ScenarioMIP/global/CCCma/CanESM5/ssp585/r1i1p1f1/yr/tas/tas_yr_CMIP6_ScenarioMIP_global_CCCma_CanESM5_ssp585_r1i1p1f1_2000-2049.nc"  # noqa: E501
+        )
+        assert cat.df.source[1] == "CanESM5"
+
+        last_path = root + "/test_{member}"
+        sc.save_and_update(TestScripting.ds, cat, path=last_path)
+
+        assert cat.df.path[0] == root + "/test_r1i1p1f1.zarr"
+        assert cat.df.experiment[0] == "ssp585"
+
     def test_move_and_delete(self):
         root = str(notebooks / "_data")
 
