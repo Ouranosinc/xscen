@@ -164,17 +164,17 @@ def test_exist_in_cat(samplecat, caplog):
 
 
 # segfault on github
-# def test_to_dataset(samplecat):
-#     ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(concat_on="experiment")
+def test_to_dataset(samplecat):
+    ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(concat_on="experiment", xarray_open_kwargs={"engine": "h5netcdf"})
 
-#     assert "experiment" in ds.dims
+    assert "experiment" in ds.dims
 
 
-# def test_to_dataset_ensemble(samplecat):
-#     ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(create_ensemble_on="experiment")
+def test_to_dataset_ensemble(samplecat):
+    ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(create_ensemble_on="experiment", xarray_open_kwargs={"engine": "h5netcdf"})
 
-#     assert "realization" in ds.dims
-#     assert "ssp126" in ds.realization.values
+    assert "realization" in ds.dims
+    assert "ssp126" in ds.realization.values
 
 
 def test_unique_empty(tmpdir):
@@ -257,8 +257,8 @@ def test_project_catalog_create_fails(tmpdir):
 #         "2002-12-31 12:00:00",
 #         None,
 #         "zarr",
-#         "/home/jlavoie/xscen/docs/notebooks/samples/tutorial/ScenarioMIP/
-# example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/tasmin-noon-test.zarr.zip",
+#         "/home/jlavoie/xscen/docs/notebooks/samples/tutorial/ScenarioMIP/"
+#         "example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/tasmin-noon-test.zarr.zip",
 #     ]
 #     # Add the list as a new row to the end of the DataFrame
 #     df.loc[len(df)] = new_row
