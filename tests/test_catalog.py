@@ -176,6 +176,17 @@ def test_to_dataset_ensemble(samplecat):
     assert "realization" in ds.dims
     assert "ssp126" in ds.realization.values
 
+    with pytest.raises(ValueError):
+        ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(
+            create_ensemble_on=["experiment"], ensemble_name=["source"], xarray_open_kwargs={"engine": "h5netcdf"}
+        )
+
+
+def test_to_dataset_many(samplecat):
+    # too many experiment
+    with pytest.raises(ValueError):
+        samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(xarray_open_kwargs={"engine": "h5netcdf"})
+
 
 def test_unique_empty(tmpdir):
     root = str(tmpdir / "_data")
@@ -226,47 +237,47 @@ def test_project_catalog_create_fails(tmpdir):
 
 
 # fails on github, but works locally
-# def test_refresh():
-#     pcat = xs.catalog.ProjectCatalog("tmp.json", create=True, project={"title": "Test Project"})
-#     path = SAMPLES_DIR / "ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_gn_raw.nc"
-#     ds = xr.open_dataset(path)
-#     pcat.update_from_ds(ds, path, info_dict={"experiment": "ssp999"}, variable="tas")
+def test_refresh(tmpdir):
+    root = str(tmpdir / "_data")
+    pcat = xs.catalog.ProjectCatalog(f"{root}/test.json", create=True, project={"title": "Test Project"})
+    path = SAMPLES_DIR / "ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_gn_raw.nc"
+    ds = xr.open_dataset(path)
+    pcat.update_from_ds(ds, path, info_dict={"experiment": "ssp999"}, variable="tas")
 
-#     df = pd.read_csv("tmp.csv")
+    df = pd.read_csv(f"{root}/test.csv")
 
-#     new_row = [
-#         "CMIP6_ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_example-region",
-#         "simulation",
-#         "raw",
-#         None,
-#         None,
-#         None,
-#         "CMIP6",
-#         "ScenarioMIP",
-#         None,
-#         None,
-#         "NCC",
-#         "test",
-#         "ssp126",
-#         "r1i1p1f1",
-#         "D",
-#         "day",
-#         ("tasmin",),
-#         "example-region",
-#         "2001-01-01 12:00:00",
-#         "2002-12-31 12:00:00",
-#         None,
-#         "zarr",
-#         "/home/jlavoie/xscen/docs/notebooks/samples/tutorial/ScenarioMIP/"
-#         "example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/tasmin-noon-test.zarr.zip",
-#     ]
-#     # Add the list as a new row to the end of the DataFrame
-#     df.loc[len(df)] = new_row
-#     df.to_csv("tmp.csv", index=False)
+    new_row = [
+        "CMIP6_ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_example-region",
+        "simulation",
+        "raw",
+        None,
+        None,
+        None,
+        "CMIP6",
+        "ScenarioMIP",
+        None,
+        None,
+        "NCC",
+        "test",
+        "ssp126",
+        "r1i1p1f1",
+        "D",
+        "day",
+        ("tasmin",),
+        "example-region",
+        "2001-01-01 12:00:00",
+        "2002-12-31 12:00:00",
+        None,
+        "zarr",
+        "/home/jlavoie/xscen/docs/notebooks/samples/tutorial/ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/tasmin-noon-test.zarr.zip",
+    ]
+    # Add the list as a new row to the end of the DataFrame
+    df.loc[len(df)] = new_row
+    df.to_csv(f"{root}/test.csv", index=False)
 
-#     assert len(pcat.df) == 1
+    assert len(pcat.df) == 1
 
-#     pcat.refresh()
+    pcat.refresh()
 
-#     assert len(pcat.df) == 2
-#     assert pcat.df.iloc[-1].source == "test"
+    assert len(pcat.df) == 2
+    assert pcat.df.iloc[-1].source == "test"

@@ -1,6 +1,8 @@
 import logging
+import warnings
 from pathlib import Path
 
+import pytest
 import xarray as xr
 
 import xscen as xs
@@ -27,6 +29,8 @@ def test_load_config():
     assert CONFIG["scripting"]["send_mail_on_exit"]["subject"] == "Template 1 - basic_workflow_with_config"
     # test external
     assert xr.get_options()["display_style"] == "text"
+    assert warnings.filters[0][0] == "always"
+    assert warnings.filters[0][2] is Warning
 
     # adding new config file
     xs.load_config(CONFIG_FILE2)
@@ -34,6 +38,9 @@ def test_load_config():
     assert CONFIG["scripting"]["send_mail_on_exit"]["subject"] == "Indicator computing terminated."
     # old keys that are not in the new config remain
     assert CONFIG["project"]["name"] == "Template 1 - basic_workflow_with_config"
+    # test external
+    assert warnings.filters[0][0] == "ignore"
+    assert warnings.filters[0][2] is FutureWarning
 
     # reset config
     xs.load_config(CONFIG_FILE2, reset=True)
@@ -53,6 +60,14 @@ def test_set_config():
     CONFIG.set("test", "test2")
 
     assert CONFIG["test"] == "test2"
+
+    CONFIG.set("regrid.regrid_datasets.to_level", "reg")
+
+    assert CONFIG["regrid"]["regrid_datasets"]["to_level"] == "reg"
+
+    # not an existing module, can't use "."
+    with pytest.raises(ValueError):
+        CONFIG.set("test.subtest", "test2")
 
 
 def test_update_config():

@@ -92,3 +92,7 @@ scripting:
     subject: "Indicator computing terminated."
     msg_ok: "🥳 Everything went well."
     msg_err: "🔥 Something went wrong while computing the indicators. 🔥"
+
+# ignore future warnings
+warnings:
+  FutureWarning: ignore

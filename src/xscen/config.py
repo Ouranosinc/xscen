@@ -247,7 +247,7 @@ def _setup_external(module, config):
         xc.set_options(**config)
     elif module == "xarray":
         xr.set_options(**config)
-    elif module == "warning":
+    elif module == "warnings":
         for category, action in config.items():
             if category == "all":
                 warnings.simplefilter(action)
