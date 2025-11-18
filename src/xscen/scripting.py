@@ -436,13 +436,14 @@ def move_and_delete(
         list of lists of path of files to move, following the format: [[source 1, destination1], [source 2, destination2],...]
     pcat : ProjectCatalog
         Catalog to update with new destinations
-    deleting : list of str or os.PathLike, optional
+    deleting : list of str or os.PathLike or int, optional
         List of directories to be deleted, including all contents, and recreated empty. e.g. The working directory of a workflow.
     copy : bool, optional
         If True, copy directories instead of moving them.
     """
-    if not isinstance(deleting, list) or deleting is not None:
-        raise ValueError("`deleting` should be a list or None.")
+    if deleting is not None:
+        if not isinstance(deleting, list):
+            raise ValueError("`deleting` should be a list or None.")
 
     if isinstance(moving, list) and isinstance(moving[0], list):
         for files in moving:
