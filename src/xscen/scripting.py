@@ -362,7 +362,7 @@ def save_and_update(
         Dataset to save.
     pcat: ProjectCatalog
         Catalog to update after saving the dataset.
-    path: str or os.pathlike, optional
+    path: str or os.PathLike, optional
         Path where to save the dataset.
         If the string contains variables in curly bracket. They will be filled by catalog attributes.
         If None, the `catutils.build_path` function will be used to create a path.
@@ -393,29 +393,29 @@ def save_and_update(
 
     # get path
     if path is not None:
-        path = str(path).format(**get_cat_attrs(ds, var_as_str=True))  # fill path with attrs
+        output_path = str(path).format(**get_cat_attrs(ds, var_as_str=True))  # fill path with attrs
     else:  # if path is not given build it
         build_path_kwargs.setdefault("format", file_format)
         from .catutils import build_path
 
-        path = build_path(ds, **build_path_kwargs)
+        output_path = build_path(ds, **build_path_kwargs)
 
     # save
     if file_format == "zarr":
         from .io import save_to_zarr
 
-        save_to_zarr(ds, path, **save_kwargs)
+        save_to_zarr(ds, output_path, **save_kwargs)
     elif file_format == "nc":
         from .io import save_to_netcdf
 
-        save_to_netcdf(ds, path, **save_kwargs)
+        save_to_netcdf(ds, output_path, **save_kwargs)
     else:
         raise ValueError(f"file_format {file_format} is not valid. Use zarr or nc.")
 
     # update catalog
-    pcat.update_from_ds(ds=ds, path=path, **update_kwargs)
+    pcat.update_from_ds(ds=ds, path=output_path, **update_kwargs)
 
-    msg = f"File {path} has been saved successfully and the catalog was updated."
+    msg = f"File {output_path} has been saved successfully and the catalog was updated."
     logger.info(msg)
 
 
@@ -449,17 +449,19 @@ def move_and_delete(
                     msg = f"Copying {source} to {dest}."
                     logger.info(msg)
                     copied_files = sh.copytree(source, dest, dirs_exist_ok=True)
+                    if isinstance(copied_files, (str, os.PathLike)):
+                        copied_files = [copied_files]
                     for f in copied_files:
-                        # copied files don't include zarr files
-                        if f[-16:] == ".zarr/.zmetadata":
+                        p = Path(f)
+                        # Detect zarr metadata file OS-independently
+                        if p.name == ".zmetadata" and p.parent.suffix == ".zarr":
                             with warnings.catch_warnings():
-                                # Silence RuntimeWarning about failed guess of backend engines
                                 warnings.simplefilter("ignore", category=RuntimeWarning)
-                                ds = xr.open_dataset(f[:-11])
-                            pcat.update_from_ds(ds=ds, path=f[:-11])
-                        if f[-3:] == ".nc":
-                            ds = xr.open_dataset(f)
-                            pcat.update_from_ds(ds=ds, path=f)
+                                ds = xr.open_dataset(p.parent)
+                            pcat.update_from_ds(ds=ds, path=str(p.parent))
+                        elif p.suffix == ".nc":
+                            ds = xr.open_dataset(p)
+                            pcat.update_from_ds(ds=ds, path=str(p))
                 else:
                     msg = f"Moving {source} to {dest}."
                     logger.info(msg)
@@ -486,5 +488,4 @@ def move_and_delete(
                 Path(dir_to_delete).mkdir()
     elif deleting is None:
         pass
-    else:
-        raise ValueError("`deleting` should be a list.")
+    raise ValueError("`deleting` should be a list.")
