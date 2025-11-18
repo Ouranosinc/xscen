@@ -441,6 +441,9 @@ def move_and_delete(
     copy : bool, optional
         If True, copy directories instead of moving them.
     """
+    if not isinstance(deleting, list) or deleting is not None:
+        raise ValueError("`deleting` should be a list or None.")
+
     if isinstance(moving, list) and isinstance(moving[0], list):
         for files in moving:
             source, dest = files[0], files[1]
@@ -478,7 +481,7 @@ def move_and_delete(
     else:
         raise ValueError("`moving` should be a list of lists.")
 
-    # erase workdir content if this is the last step
+    # Erase workdir content if this is the last step
     if isinstance(deleting, list):
         for dir_to_delete in deleting:
             if Path(dir_to_delete).exists() and Path(dir_to_delete).is_dir():
@@ -488,4 +491,3 @@ def move_and_delete(
                 Path(dir_to_delete).mkdir()
     elif deleting is None:
         pass
-    raise ValueError("`deleting` should be a list.")
