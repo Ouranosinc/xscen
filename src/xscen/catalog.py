@@ -122,19 +122,6 @@ def _parse_list_of_strings(elem):
     return (elem,)
 
 
-# remove to see if something breaks, not called anywhere
-# def _parse_dates(elem):
-#     """Parse an array of dates (strings) into a PeriodIndex of hourly frequency."""
-#     # Cast to normal datetime as this is much faster than to period for in-bounds dates
-#     # errors are coerced to NaT, we convert to a PeriodIndex and then to a (mutable) series
-#     time = pd.to_datetime(elem, errors="coerce").astype(pd.PeriodDtype("H")).to_series()
-#     nat = time.isnull()
-#     # Only where we have NaT (parser errors and empty fields), parse into a Period
-#     # This will raise DateParseError as expected if the string is not parsable.
-#     time[nat] = pd.PeriodIndex(elem[nat], freq="H")
-#     return pd.PeriodIndex(time)
-
-
 csv_kwargs = {
     "dtype": {
         key: "category" if not key == "path" else "string[pyarrow]" for key in COLUMNS if key not in ["xrfreq", "variable", "date_start", "date_end"]
