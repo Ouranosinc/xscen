@@ -435,7 +435,7 @@ def save_to_zarr(  # noqa: C901
     ----------
     ds : xr.Dataset
         The Dataset to be saved.
-    filename : str
+    filename : str or os.PathLike
         Name of the Zarr file to be saved.
     rechunk : dict, optional
         This is a mapping from dimension name to new chunks (in any format understood by dask).
