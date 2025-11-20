@@ -55,7 +55,7 @@ dependencies = [
   "pandas >=2.2",
   "parse",
   "pyarrow >=15.0.0",
-  "pydantic <2.13.0",
+  "pydantic >=2.8.2",
   "pyproj",
   "pyyaml",
   "rechunker >=0.5.3",
