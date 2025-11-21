@@ -7,13 +7,13 @@ Changelog
     ------------------------------------------------------------
     Contributors: Juliette Lavoie (:user:`juliettelavoie`),
 
-    Changes
-    ^^^^^^^
-    * No change.
-
-    Fixes
-    ^^^^^
+    Bug fixes
+    ^^^^^^^^^
     * Floor time in the preprocess of ``extract_dataset``. (:pull:`660`, :pull:`660`)
+
+    Internal changes
+    ^^^^^^^^^^^^^^^^
+    * Added test for catalog and config (:pull:`664`)
 
 .. _changes_0.13.1:
 
