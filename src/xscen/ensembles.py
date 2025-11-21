@@ -180,7 +180,7 @@ def ensemble_stats(  # noqa: C901
                         ens_stats = ens_stats.merge(tmp)
 
         else:
-            ens_stats = ens_stats.merge(getattr(ensembles, stat)(ens, **stats_kwargs))
+            ens_stats = ens_stats.merge(getattr(ensembles, stat)(ens, **stats_kwargs), compat="no_conflicts")
 
     # delete the realization coordinate if there
     if "realization" in ens_stats:
@@ -565,7 +565,7 @@ def _partition_from_list(datasets, partition_dim, subset_kw, regrid_kw):
         a.pop("intake_esm_vars", None)  # remove list for intersection to work
         common_attrs = dict(common_attrs.items() & a.items()) if common_attrs else a
         list_ds.append(ds)
-    ens = xr.merge(list_ds)
+    ens = xr.merge(list_ds, join="outer", compat="no_conflicts")
     ens.attrs = common_attrs
     return ens
 
