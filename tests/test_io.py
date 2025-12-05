@@ -299,6 +299,7 @@ class TestToTable:
             assert tab.shape == (15, 24)
             assert saved.shape == (17, 26)  # Because of the headers
             assert tab.columns.names == ["season", "site"]
+            # NOTE: The PerformanceWarning is expected here. Our columns are deemed "unsorted", but we want them that way.
             np.testing.assert_array_equal(tab.loc[("1993", "pr"), ("JFM",)], ds.pr.sel(time="1993", season="JFM"))
             # Ensure that the coords are not present
             assert len(set(tab.index.get_level_values("variable").unique()).difference(["tas", "pr", "snw"])) == 0
@@ -595,7 +596,7 @@ def test_savefuncs_normal(tmpdir, engine):
     )
     ds["pr"] = ds["tas"].copy()
     ds["other"] = ds["tas"].copy()
-    ds["other"].encoding = {"dtype": "float32"}
+    ds["other"].encoding = {"dtype": "float32"}  # This should get ignored
     ds.attrs["foo"] = {"bar": 1}
     ds["pr"].attrs["foo"] = {"bar": 2}
 
@@ -606,28 +607,18 @@ def test_savefuncs_normal(tmpdir, engine):
     rechunk = {"time": 5, "lon": 2, "lat": 2}
     bitround = {"tas": 2, "pr": 3}
     if engine == "netcdf":
-        xs.save_to_netcdf(
-            ds,
-            Path(tmpdir) / "test.nc",
-            rechunk=rechunk,
-            bitround=bitround,
-        )
+        xs.save_to_netcdf(ds, Path(tmpdir) / "test.nc", rechunk=rechunk, bitround=bitround, netcdf_kwargs={"encoding": {"tas": {"dtype": "float32"}}})
         ds2 = xr.open_dataset(Path(tmpdir) / "test.nc", chunks={})
     else:
-        xs.save_to_zarr(
-            ds,
-            Path(tmpdir) / "test.zarr",
-            rechunk=rechunk,
-            bitround=bitround,
-        )
+        xs.save_to_zarr(ds, Path(tmpdir) / "test.zarr", rechunk=rechunk, bitround=bitround, encoding={"tas": {"dtype": "float32"}})
         ds2 = xr.open_zarr(Path(tmpdir) / "test.zarr")
 
     # Chunks
     assert ds2.tas.chunks == ((5, 5, 5), (2, 2, 1), (2,))
 
     # Dtype
-    assert ds2.tas.dtype == np.float64
-    assert ds2.other.dtype == np.float32
+    assert ds2.tas.dtype == np.float32
+    assert ds2.other.dtype == np.float64
 
     # Bitround
     np.testing.assert_array_almost_equal(ds2.tas.isel(time=0, lat=0, lon=0), [0.00010681], decimal=8)
