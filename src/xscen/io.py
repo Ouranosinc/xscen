@@ -398,8 +398,9 @@ def save_to_netcdf(
     for var in list(ds.data_vars.keys()):
         if keepbits := _get_keepbits(bitround, var, ds[var].dtype):
             ds = ds.assign({var: round_bits(ds[var], keepbits)})
-        # Remove original_shape from encoding, since it can cause issues with some engines.
+        # Remove a few problematic entries from encoding, since it can cause issues with some engines.
         ds[var].encoding.pop("original_shape", None)
+        ds[var].encoding.pop("dtype", None)
 
     if strip_cat_metadata:
         ds = strip_cat_attrs(ds)
@@ -407,6 +408,12 @@ def save_to_netcdf(
     _coerce_attrs(ds.attrs)
     for var in ds.variables.values():
         _coerce_attrs(var.attrs)
+
+    if "encoding" in netcdf_kwargs:
+        netcdf_kwargs = netcdf_kwargs.copy()
+        encoding = netcdf_kwargs.pop("encoding")
+        for var in encoding:
+            ds[var].encoding.update(encoding[var])
 
     return ds.to_netcdf(filename, compute=compute, **netcdf_kwargs)
 
@@ -535,8 +542,9 @@ def save_to_zarr(  # noqa: C901
             continue
         if keepbits := _get_keepbits(bitround, var, ds[var].dtype):
             ds = ds.assign({var: round_bits(ds[var], keepbits)})
-        # Remove original_shape from encoding, since it can cause issues with some engines.
+        # Remove a few problematic entries from encoding, since it can cause issues with some engines.
         ds[var].encoding.pop("original_shape", None)
+        ds[var].encoding.pop("dtype", None)
 
     if len(ds.data_vars) == 0:
         return None

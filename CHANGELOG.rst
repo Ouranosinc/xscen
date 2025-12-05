@@ -2,18 +2,20 @@
 Changelog
 =========
 
-..
-    `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-    ------------------------------------------------------------
-    Contributors: Juliette Lavoie (:user:`juliettelavoie`),
 
-    Bug fixes
-    ^^^^^^^^^
-    * Floor time in the preprocess of ``extract_dataset``. (:pull:`660`, :pull:`660`)
+`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
+------------------------------------------------------------
+Contributors: Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
-    Internal changes
-    ^^^^^^^^^^^^^^^^
-    * Added test for catalog and config (:pull:`664`)
+Bug fixes
+^^^^^^^^^
+* Floor time in the preprocess of ``extract_dataset``. (:pull:`660`, :pull:`660`).
+* dtype encodings are now removed before saving in ``save_to_netcdf`` and ``save_to_zarr``, since it could create inconsistencies. Dtypes should instead be handled through kwargs. (:pull:`665`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Added test for catalog and config (:pull:`664`).
+* More explicit calls to `coords`, `compat`, and `join` in calls to ``xr.concat`` and ``xr.merge`` to avoid FutureWarnings from `xarray`. (:pull:`665`).
 
 .. _changes_0.13.1:
 
