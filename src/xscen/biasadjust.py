@@ -51,7 +51,7 @@ def train(
     period: list[str],
     *,
     method: str = "DetrendedQuantileMapping",
-    group: xsdba.Grouper | str | dict | None = None,
+    group: xsdba.Grouper | str | dict | bool | None = None,
     xsdba_train_args: dict | None = None,
     xclim_train_args: dict | None = None,
     maximal_calendar: str = "noleap",
@@ -75,9 +75,10 @@ def train(
       [start, end] of the reference period
     method : str
       Name of the `xsdba.TrainAdjust` method of xclim.
-    group : str or xsdba.Grouper or dict, optional
+    group : str or xsdba.Grouper or dict or bool, optional
       Grouping information. If a string, it is interpreted as a grouper on the time dimension. If a dict, it is passed to `xsdba.Grouper.from_kwargs`.
       Defaults to {"group": "time.dayofyear", "window": 31}.
+      If False, this argument will be skipped and never passed to the adjustment.
     xsdba_train_args : dict, optional
       Dict of arguments to pass to the `.train` of the adjustment object.
     xclim_train_args : dict, optional
@@ -173,11 +174,12 @@ def train(
     elif isinstance(group, str):
         group = xsdba.Grouper(group)
 
-    if method != "MBCn":
-        xsdba_train_args["group"] = group
-    else:
-        xsdba_train_args.setdefault("base_kws", {})
-        xsdba_train_args["base_kws"]["group"] = group
+    if group is not False:
+        if method != "MBCn":
+            xsdba_train_args["group"] = group
+        else:
+            xsdba_train_args.setdefault("base_kws", {})
+            xsdba_train_args["base_kws"]["group"] = group
 
     with xclim_convert_units_to():
         if jitter_over is not None:
