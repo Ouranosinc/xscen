@@ -494,3 +494,54 @@ class TestMultivariate:
             dref=ds,
         )
         np.testing.assert_array_equal(dscen_looped.tasmax.values, dscen_stacked.tasmax.values)
+
+
+class TestExtremes:
+    def test_extremes(self):
+        pr_ref = timeseries(
+            np.arange(365 * 30.0 + 7),
+            variable="pr",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="proleptic_gregorian",
+            units="mm/day",
+        )
+        pr_sim = timeseries(
+            np.arange(365 * 60.0) + 5,
+            variable="pr",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+            units="mm/day",
+        )
+        pr_scen = timeseries(
+            np.arange(365 * 60.0) + 1,
+            variable="pr",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+            units="mm/day",
+        )
+        dtrain = xs.train(
+            pr_ref,
+            pr_sim,
+            var=["pr"],
+            method="ExtremeValues",
+            period=["2001", "2030"],
+            jitter_under={"thresh": "0.5 mm d-1"},
+            group=False,
+            xsdba_train_args={"cluster_thresh": "1 mm d-1", "q_thresh": 0.95},
+        )
+        xs.adjust(
+            dtrain=dtrain,
+            dsim=pr_sim,
+            periods=[
+                ["2001", "2060"],
+            ],
+            stack_periods={"window": 30, "stride": 10, "start": "2001-01-01"},
+            xsdba_adjust_args={"scen": pr_scen["pr"], "frac": 0.25},
+        )
+        # Just test that it works without an error
