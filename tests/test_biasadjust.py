@@ -535,7 +535,7 @@ class TestExtremes:
             group=False,
             xsdba_train_args={"cluster_thresh": "1 mm d-1", "q_thresh": 0.95},
         )
-        xs.adjust(
+        ds_out = xs.adjust(
             dtrain=dtrain,
             dsim=pr_sim,
             periods=[
@@ -544,4 +544,4 @@ class TestExtremes:
             stack_periods={"window": 30, "stride": 10, "start": "2001-01-01"},
             xsdba_adjust_args={"scen": pr_scen["pr"], "frac": 0.25},
         )
-        # Just test that it works without an error
+        np.testing.assert_array_equal(ds_out.pr.time, pr_sim.time)

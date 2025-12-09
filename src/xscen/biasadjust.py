@@ -242,8 +242,8 @@ def adjust(  # noqa: C901
     periods : list of str or list of lists of str
       Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
     stack_periods : dict | None, optional
-      Dictionary of arguments to pass to `xsdba.stack_periods` before adjustment.
-      If given, the 'periods' argument must contain a single period, which will be stacked.
+      Dictionary of arguments to pass to `xsdba.stack_periods` before adjustment. `xsdba.unstack_periods` will be called after.
+      If given, the 'periods' argument must contain a single period, which will be subsetted before calling `xsdba.stack_periods`.
     dref : xr.Dataset, optional
       Reference timeseries, needed only for certain methods.
     xsdba_adjust_args : dict, optional
