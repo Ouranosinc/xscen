@@ -7,6 +7,11 @@ Changelog
 ------------------------------------------------------------
 Contributors: Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* The `group=False` option was added to ``xs.train`` to completely skip this argument when calling ``xsdba``. (:pull:`668`).
+* The `stack_periods` argument was added to ``xs.adjust`` to pass arguments to ``xsdba.stack_periods`` before adjustment. (:pull:`668`).
+
 Bug fixes
 ^^^^^^^^^
 * Floor time in the preprocess of ``extract_dataset``. (:pull:`660`, :pull:`660`).
