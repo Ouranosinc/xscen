@@ -6,6 +6,7 @@ import pytest
 import xarray as xr
 from conftest import SAMPLES_DIR
 
+import xscen
 from xscen import catutils as cu
 
 
@@ -202,7 +203,7 @@ def test_parse_from_ds():
 def test_parse_from_zarr(tmp_path):
     # Real ds
     ds = xr.tutorial.open_dataset("air_temperature")
-    ds.to_zarr(tmp_path / "air.zarr")
+    xscen.save_to_zarr(ds, tmp_path / "air.zarr")
     info = cu.parse_from_ds(
         tmp_path / "air.zarr",
         names=["frequency", "source", "variable"],

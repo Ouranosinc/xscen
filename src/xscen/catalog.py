@@ -287,7 +287,7 @@ class DataCatalog(intake_esm.esm_datastore):
         if len(columns) > 0:
             cat = super().search(**columns)
         else:
-            cat = self.__class__({"esmcat": self.esmcat.dict(), "df": self.esmcat._df})
+            cat = self.__class__({"esmcat": self.esmcat.model_dump(), "df": self.esmcat._df})
         if periods is not False:
             cat.esmcat._df = subset_file_coverage(cat.esmcat._df, periods=periods, coverage=0, duplicates_ok=True)
         return cat

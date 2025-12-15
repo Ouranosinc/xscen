@@ -419,7 +419,7 @@ def climatological_op(  # noqa: C901
                 for horizon in np.unique(ds_rolling.horizon.values)
             ]
 
-        return xr.concat(all_horizons, dim="horizon")
+        return xr.concat(all_horizons, dim="horizon", coords="different", compat="equals")
 
     else:
         return ds_rolling

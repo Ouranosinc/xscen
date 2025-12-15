@@ -605,10 +605,14 @@ def search_data_catalogs(  # noqa: C901
         cat_kwargs = {"registry": registry_from_module(load_xclim_module(conversion_yaml))}
 
     # Prepare a unique catalog to search from, with the DerivedCat added if required
+    dfs = [
+        dc.df.astype({col: dc.df[col].dtype.categories.dtype for col in dc.df.columns if isinstance(dc.df.dtypes[col], pd.CategoricalDtype)})
+        for dc in data_catalogs
+    ]
     catalog = DataCatalog(
         {
             "esmcat": data_catalogs[0].esmcat.model_dump(),
-            "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
+            "df": pd.concat(dfs, ignore_index=True),
         },
         **cat_kwargs,
     )

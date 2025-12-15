@@ -51,7 +51,7 @@ def train(
     period: list[str],
     *,
     method: str = "DetrendedQuantileMapping",
-    group: xsdba.Grouper | str | dict | None = None,
+    group: xsdba.Grouper | str | dict | bool | None = None,
     xsdba_train_args: dict | None = None,
     xclim_train_args: dict | None = None,
     maximal_calendar: str = "noleap",
@@ -75,9 +75,10 @@ def train(
       [start, end] of the reference period
     method : str
       Name of the `xsdba.TrainAdjust` method of xclim.
-    group : str or xsdba.Grouper or dict, optional
+    group : str or xsdba.Grouper or dict or bool, optional
       Grouping information. If a string, it is interpreted as a grouper on the time dimension. If a dict, it is passed to `xsdba.Grouper.from_kwargs`.
       Defaults to {"group": "time.dayofyear", "window": 31}.
+      If False, this argument will be skipped and never passed to the adjustment.
     xsdba_train_args : dict, optional
       Dict of arguments to pass to the `.train` of the adjustment object.
     xclim_train_args : dict, optional
@@ -173,11 +174,12 @@ def train(
     elif isinstance(group, str):
         group = xsdba.Grouper(group)
 
-    if method != "MBCn":
-        xsdba_train_args["group"] = group
-    else:
-        xsdba_train_args.setdefault("base_kws", {})
-        xsdba_train_args["base_kws"]["group"] = group
+    if group is not False:
+        if method != "MBCn":
+            xsdba_train_args["group"] = group
+        else:
+            xsdba_train_args.setdefault("base_kws", {})
+            xsdba_train_args["base_kws"]["group"] = group
 
     with xclim_convert_units_to():
         if jitter_over is not None:
@@ -213,11 +215,12 @@ def train(
 
 
 @parse_config
-def adjust(
+def adjust(  # noqa: C901
     dtrain: xr.Dataset,
     dsim: xr.Dataset,
     periods: list[str] | list[list[str]],
     *,
+    stack_periods: dict | None = None,
     dref: xr.Dataset | None = None,
     xsdba_adjust_args: dict | None = None,
     xclim_adjust_args: dict | None = None,
@@ -238,6 +241,9 @@ def adjust(
       Simulated timeseries, projected period.
     periods : list of str or list of lists of str
       Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
+    stack_periods : dict | None, optional
+      Dictionary of arguments to pass to `xsdba.stack_periods` before adjustment. `xsdba.unstack_periods` will be called after.
+      If given, the 'periods' argument must contain a single period, which will be subsetted before calling `xsdba.stack_periods`.
     dref : xr.Dataset, optional
       Reference timeseries, needed only for certain methods.
     xsdba_adjust_args : dict, optional
@@ -344,17 +350,31 @@ def adjust(
     with xclim_convert_units_to():
         # do the adjustment for all the simulation_period lists
         periods = standardize_periods(periods)
-        # if period_dim is specified in adjust args, use stacking
-        # instead of a loop
-        if period_dim := xsdba_adjust_args.get("period_dim", None):
+        # if 'period_dim' is specified in 'xsdba_adjust_args', or if 'stack_periods' is given, use stacking
+        if xsdba_adjust_args.get("period_dim", None) is not None or stack_periods is not None:
             if len(periods) > 1:
                 raise ValueError(
                     "Period stacking (`period_dim` specified in `xsdba_adjust_args`) is not allowed with multiple time slices in `periods`."
                 )
-            sim_stacked = xsdba.stack_periods(sim.sel(time=slice(*periods[0])), dim=period_dim)
-            sim_stacked = sim_stacked.chunk({period_dim: -1})
+            stack_periods = deepcopy(stack_periods) or {}
+            period_dim = xsdba_adjust_args.get("period_dim", "period")
+            if "dim" in stack_periods and stack_periods["dim"] != period_dim:
+                warnings.warn(
+                    f"`dim` in `stack_periods` ({stack_periods['dim']}) is different from `period_dim` "
+                    f"in `xsdba_adjust_args` ({period_dim}). Using `period_dim` value.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                stack_periods.pop("dim")
+            sim_stacked = xsdba.stack_periods(sim.sel(time=slice(*periods[0])), dim=period_dim, **stack_periods).chunk({period_dim: -1})
+            # Also stack `scen` if needed
+            if "scen" in xsdba_adjust_args:
+                scen = xsdba_adjust_args["scen"]
+                scen_stacked = xsdba.stack_periods(scen.sel(time=slice(*periods[0])), dim=period_dim, **stack_periods).chunk({period_dim: -1})
+                xsdba_adjust_args["scen"] = scen_stacked
+
             out = ADJ.adjust(sim_stacked, **xsdba_adjust_args)
-            dscen = xsdba.unstack_periods(out)
+            dscen = xsdba.unstack_periods(out, dim=period_dim)
 
         # do the adjustment for all the simulation_period lists
         else:
