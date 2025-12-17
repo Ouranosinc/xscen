@@ -22,6 +22,7 @@ from numcodecs.bitround import BitRound
 from rechunker import rechunk as _rechunk
 from xclim.core.options import METADATA_LOCALES
 from xclim.core.options import OPTIONS as XC_OPTIONS
+from xclim.core.utils import uses_dask
 
 from .config import parse_config
 from .scripting import TimeoutException
@@ -141,7 +142,7 @@ def estimate_chunks(  # noqa: C901
 
             estimated_chunks = _estimate_chunks(ds, target_mb, size_of_slice, rechunk_dims)
             for other in set(ds[v].dimensions).difference(dims):
-                estimated_chunks[other] = -1
+                estimated_chunks[other] = len(ds[other])
 
             if chunk_per_variable:
                 out[v] = estimated_chunks
@@ -164,7 +165,7 @@ def estimate_chunks(  # noqa: C901
 
             estimated_chunks = _estimate_chunks(ds, target_mb, size_of_slice, rechunk_dims)
             for other in set(ds[v].dims).difference(dims):
-                estimated_chunks[other] = -1
+                estimated_chunks[other] = len(ds[other])
 
             if chunk_per_variable:
                 out[v] = estimated_chunks
@@ -910,9 +911,10 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
     xr.Dataset
         The dataset with new chunking.
     """
-    for rechunk_var in ds.data_vars:
+    variables = list(ds.data_vars) + list(c for c in ds.coords if uses_dask(ds[c]))
+    for rechunk_var in variables:
         # Support for chunks varying per variable
-        if rechunk_var in rechunk:
+        if rechunk_var in rechunk and isinstance(rechunk[rechunk_var], dict):
             rechunk_dims = rechunk[rechunk_var].copy()
         else:
             rechunk_dims = rechunk.copy()
@@ -923,7 +925,9 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
         if "Y" in rechunk_dims and "Y" not in ds.dims:
             rechunk_dims[ds.cf.axes["Y"][0]] = rechunk_dims.pop("Y")
 
-        ds[rechunk_var] = ds[rechunk_var].chunk({d: chnks for d, chnks in rechunk_dims.items() if d in ds[rechunk_var].dims})
+        # keep only the dimensions actually in the variable
+        rechunk_dims = {d: chnks for d, chnks in rechunk_dims.items() if d in ds[rechunk_var].dims}
+        ds[rechunk_var] = ds[rechunk_var].chunk(rechunk_dims)
         ds[rechunk_var].encoding["chunksizes"] = tuple(rechunk_dims[d] if d in rechunk_dims else ds[d].shape[0] for d in ds[rechunk_var].dims)
         ds[rechunk_var].encoding.pop("chunks", None)
         ds[rechunk_var].encoding["preferred_chunks"] = rechunk_dims

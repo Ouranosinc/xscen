@@ -55,9 +55,9 @@ class TestEstimateChunks:
         out2 = xs.io.estimate_chunks(self.ds2, dims=["time", "lat", "lon"], target_mb=1)
         assert out2 == {"time": 35, "lat": 70, "lon": 105}
         out3 = xs.io.estimate_chunks(self.ds, dims=["lat", "lon"], target_mb=1)
-        assert out3 == {"lon": 65, "lat": 40, "time": -1}
+        assert out3 == {"lon": 65, "lat": 40, "time": 50}
         out4 = xs.io.estimate_chunks(self.ds2, dims=["time"], target_mb=1)
-        assert out4 == {"time": 15, "lat": -1, "lon": -1}
+        assert out4 == {"time": 15, "lat": 100, "lon": 150}
 
     @pytest.mark.parametrize("chunk_per_variable", [True, False])
     @pytest.mark.parametrize("as_file", [True, False])
@@ -71,10 +71,10 @@ class TestEstimateChunks:
 
         out = xs.io.estimate_chunks(ds, dims=["lat", "lon"], target_mb=1, chunk_per_variable=chunk_per_variable)
         if chunk_per_variable is False:
-            assert out == {"lon": 65, "lat": 40, "time": -1}
+            assert out == {"lon": 65, "lat": 40, "time": 50}
         else:
             assert out == {
-                "tas": {"lon": 65, "lat": 40, "time": -1},
+                "tas": {"lon": 65, "lat": 40, "time": 50},
                 "pr": {"lon": 150, "lat": 100},
             }
 

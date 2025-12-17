@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import xarray as xr
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen.xclim_modules.conversions as conv
@@ -68,3 +69,15 @@ def test_hurs_from_hurslogit():
     hurs = conv.hurs_from_hurslogit(hurslogit)
     assert hurs.attrs["units"] == "%"
     np.testing.assert_array_almost_equal(hurs, hurs_truth)
+
+
+def test_orog_from_z():
+    z = xr.DataArray(
+        [0, 9.81, 19.62],
+        dims=["x"],
+        coords={"x": [0, 1, 2]},
+        attrs={"units": "m2 s-2"},
+    )
+    orog = conv.orog_from_z(z)
+    assert orog.attrs["units"] == "m"
+    np.testing.assert_array_almost_equal(orog, np.array([0, 9.81, 19.62]) / 9.80665)
