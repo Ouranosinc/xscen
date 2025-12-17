@@ -17,6 +17,7 @@ __all__ = [
     "dtr_from_minmax",
     "hurs_from_hurslogit",
     "hurslogit_from_hurs",
+    "orog_from_z",
     "precipitation",
     "tas_midpoint",
     "tasmax_from_dtr",
@@ -189,6 +190,11 @@ def orog_from_z(z: xr.DataArray) -> xr.DataArray:
     -------
     xr.DataArray
       Orography.
+
+    Notes
+    -----
+    This converts geopotential in m2 s-2 to orography in m by dividing by standard gravity (9.80665 m s-2).
+    Reference: https://codes.ecmwf.int/grib/param-db/156
     """
     z = convert_units_to(z, "m2 s-2")
     orog = (z / 9.80665).clip(min=0)
