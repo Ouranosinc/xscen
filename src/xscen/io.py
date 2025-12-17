@@ -142,7 +142,7 @@ def estimate_chunks(  # noqa: C901
 
             estimated_chunks = _estimate_chunks(ds, target_mb, size_of_slice, rechunk_dims)
             for other in set(ds[v].dimensions).difference(dims):
-                estimated_chunks[other] = -1
+                estimated_chunks[other] = len(ds[other])
 
             if chunk_per_variable:
                 out[v] = estimated_chunks
@@ -165,7 +165,7 @@ def estimate_chunks(  # noqa: C901
 
             estimated_chunks = _estimate_chunks(ds, target_mb, size_of_slice, rechunk_dims)
             for other in set(ds[v].dims).difference(dims):
-                estimated_chunks[other] = -1
+                estimated_chunks[other] = len(ds[other])
 
             if chunk_per_variable:
                 out[v] = estimated_chunks
