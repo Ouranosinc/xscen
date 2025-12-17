@@ -17,7 +17,7 @@ Bug fixes
 ^^^^^^^^^
 * Floor time in the preprocess of ``extract_dataset``. (:pull:`660`, :pull:`660`).
 * dtype encodings are now removed before saving in ``save_to_netcdf`` and ``save_to_zarr``, since it could create inconsistencies. Dtypes should instead be handled through kwargs. (:pull:`665`).
-* If using the `rechunk`option, coordinates with dask chunks will now be loaded into memory before saving to avoid issues. (:pull:`673`).
+* If using the `rechunk` option, coordinates with dask chunks will now be loaded into memory before saving to avoid issues. (:pull:`673`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
