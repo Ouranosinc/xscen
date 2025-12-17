@@ -22,6 +22,7 @@ from numcodecs.bitround import BitRound
 from rechunker import rechunk as _rechunk
 from xclim.core.options import METADATA_LOCALES
 from xclim.core.options import OPTIONS as XC_OPTIONS
+from xclim.core.utils import uses_dask
 
 from .config import parse_config
 from .scripting import TimeoutException
@@ -910,7 +911,8 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
     xr.Dataset
         The dataset with new chunking.
     """
-    for rechunk_var in ds.data_vars:
+    variables = list(ds.data_vars)
+    for rechunk_var in variables:
         # Support for chunks varying per variable
         if rechunk_var in rechunk:
             rechunk_dims = rechunk[rechunk_var].copy()
@@ -927,6 +929,14 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
         ds[rechunk_var].encoding["chunksizes"] = tuple(rechunk_dims[d] if d in rechunk_dims else ds[d].shape[0] for d in ds[rechunk_var].dims)
         ds[rechunk_var].encoding.pop("chunks", None)
         ds[rechunk_var].encoding["preferred_chunks"] = rechunk_dims
+
+    # Load coords that use dask
+    for c in ds.coords:
+        if uses_dask(ds[c]):
+            ds[c].load()
+            ds[c].encoding.pop("chunksizes", None)
+            ds[c].encoding.pop("chunks", None)
+            ds[c].encoding.pop("preferred_chunks", None)
 
     return ds
 

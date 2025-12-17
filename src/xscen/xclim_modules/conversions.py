@@ -173,3 +173,24 @@ def hurs_from_hurslogit(hurslogit: xr.DataArray) -> xr.DataArray:
     This converts the range of `hurslogit` from ]-np.inf, np.inf[ to [0,100].
     """
     return from_additive_space(hurslogit)
+
+
+@declare_units(z="[length] ** 2 / [time] ** 2")
+def orog_from_z(z: xr.DataArray) -> xr.DataArray:
+    """
+    Orography computed from geopotential 'z'.
+
+    Parameters
+    ----------
+    z: xr.DataArray
+      Geopotential 'z'.
+
+    Returns
+    -------
+    xr.DataArray
+      Orography.
+    """
+    z = convert_units_to(z, "m2 s-2")
+    orog = (z / 9.80665).clip(min=0)
+    orog.attrs["units"] = "m"
+    return orog
