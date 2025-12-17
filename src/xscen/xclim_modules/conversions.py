@@ -194,7 +194,7 @@ def orog_from_z(z: xr.DataArray) -> xr.DataArray:
     Notes
     -----
     This converts geopotential in m2 s-2 to orography in m by dividing by standard gravity (9.80665 m s-2).
-    Reference: https://codes.ecmwf.int/grib/param-db/156
+    Reference: https://codes.ecmwf.int/grib/param-db/129
     """
     z = convert_units_to(z, "m2 s-2")
     orog = (z / 9.80665).clip(min=0)
