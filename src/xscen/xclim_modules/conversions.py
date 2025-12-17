@@ -197,6 +197,6 @@ def orog_from_z(z: xr.DataArray) -> xr.DataArray:
     Reference: https://codes.ecmwf.int/grib/param-db/129
     """
     z = convert_units_to(z, "m2 s-2")
-    orog = (z / 9.80665).clip(min=0)
+    orog = z / 9.80665
     orog.attrs["units"] = "m"
     return orog

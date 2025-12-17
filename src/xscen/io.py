@@ -22,7 +22,6 @@ from numcodecs.bitround import BitRound
 from rechunker import rechunk as _rechunk
 from xclim.core.options import METADATA_LOCALES
 from xclim.core.options import OPTIONS as XC_OPTIONS
-from xclim.core.utils import uses_dask
 
 from .config import parse_config
 from .scripting import TimeoutException
@@ -911,7 +910,7 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
     xr.Dataset
         The dataset with new chunking.
     """
-    variables = list(ds.data_vars)
+    variables = list(ds.data_vars) + list(ds.coords)
     for rechunk_var in variables:
         # Support for chunks varying per variable
         if rechunk_var in rechunk:
@@ -925,18 +924,12 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
         if "Y" in rechunk_dims and "Y" not in ds.dims:
             rechunk_dims[ds.cf.axes["Y"][0]] = rechunk_dims.pop("Y")
 
-        ds[rechunk_var] = ds[rechunk_var].chunk({d: chnks for d, chnks in rechunk_dims.items() if d in ds[rechunk_var].dims})
+        # keep only the dimensions actually in the variable
+        rechunk_dims = {d: chnks for d, chnks in rechunk_dims.items() if d in ds[rechunk_var].dims}
+        ds[rechunk_var] = ds[rechunk_var].chunk(rechunk_dims)
         ds[rechunk_var].encoding["chunksizes"] = tuple(rechunk_dims[d] if d in rechunk_dims else ds[d].shape[0] for d in ds[rechunk_var].dims)
         ds[rechunk_var].encoding.pop("chunks", None)
         ds[rechunk_var].encoding["preferred_chunks"] = rechunk_dims
-
-    # Load coords that use dask
-    for c in ds.coords:
-        if uses_dask(ds[c]):
-            ds[c].load()
-            ds[c].encoding.pop("chunksizes", None)
-            ds[c].encoding.pop("chunks", None)
-            ds[c].encoding.pop("preferred_chunks", None)
 
     return ds
 
