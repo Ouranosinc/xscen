@@ -534,6 +534,60 @@ class TestVariablesUnits:
             xs.clean_up(ds, variables_and_units={"pr": "mm"})
 
 
+class TestFillNanDs:
+    def testfillnands(self):
+        data = [1] * (365 * 4 + 2)
+        data[4] = np.nan
+        ds = timeseries(
+            data,
+            variable="tas",
+            start="2000-01-01",
+            freq="D",
+            as_dataset=True,
+        )
+        data = [2] * (365 * 4 + 2)
+        ds_ref = timeseries(
+            data,
+            variable="tas",
+            start="2000-01-01",
+            freq="D",
+            as_dataset=True,
+        )
+
+        out = xs.clean_up(ds, fill_nan_ds=ds_ref)
+        assert out.tas.isel(time=4).values == 2
+        assert out.tas.isel(time=5).values == 1
+        assert "Filled missing values using" in out.tas.attrs["history"]
+
+    def testerror(self):
+        ds = datablock_3d(
+            np.zeros((20, 10, 10)),
+            "tas",
+            "lon",
+            -5,
+            "lat",
+            80.5,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        ds_ref = datablock_3d(
+            np.zeros((20, 9, 9)),
+            "tas",
+            "lon",
+            -5,
+            "lat",
+            80.5,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        with pytest.raises(ValueError, match="The non-time dimensions"):
+            xs.clean_up(ds, fill_nan_ds=ds_ref)
+
+
 class TestCalendar:
     def test_normal(self):
         ds = timeseries(
