@@ -63,6 +63,7 @@ def health_checks(  # noqa: C901
     flags: dict | None = None,
     flags_kwargs: dict | None = None,
     return_flags: bool = False,
+    check_nan: bool = False,
     raise_on: list | None = None,
 ) -> None | xr.Dataset:
     """
@@ -108,6 +109,8 @@ def health_checks(  # noqa: C901
         Additional keyword arguments to pass to the data_flags ("dims" and "freq").
     return_flags: bool
         Whether to return the Dataset created by data_flags.
+    check_nan: bool
+        Raises if there is a nan value in a variable along time dimension but not all values are nan
     raise_on: list of str, optional
         Whether to raise an error if a check fails, else there will only be a warning.
         The possible values are the names of the checks.
@@ -122,17 +125,7 @@ def health_checks(  # noqa: C901
         ds = ds.to_dataset()
     raise_on = raise_on or []
     if "all" in raise_on:
-        raise_on = [
-            "structure",
-            "calendar",
-            "start_date",
-            "end_date",
-            "variables_and_units",
-            "cfchecks",
-            "freq",
-            "missing",
-            "flags",
-        ]
+        raise_on = ["structure", "calendar", "start_date", "end_date", "variables_and_units", "cfchecks", "freq", "missing", "flags", "check_nan"]
 
     warns = []
     errs = []
@@ -299,6 +292,14 @@ def health_checks(  # noqa: C901
             if return_flags:
                 dsflags = dsflags.rename({dv: f"{v}_{dv}" for dv in dsflags.data_vars})
                 out = xr.merge([out, dsflags])
+
+    if check_nan:
+        for var in ds.data_vars:
+            da = ds[var]
+            ntime = da.sizes["time"]
+            n_nan = da.isnull().sum(dim="time")
+            if ((n_nan != 0) & (n_nan != ntime)).any():
+                _error(f"Variable {var} has at least one gridpoint with some (but not all) missing values along time dimension.", "check_nan")
 
     _message()
     if return_flags and flags is not None:
