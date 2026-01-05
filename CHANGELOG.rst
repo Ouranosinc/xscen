@@ -11,11 +11,14 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * The `group=False` option was added to ``xs.train`` to completely skip this argument when calling ``xsdba``. (:pull:`668`).
 * The `stack_periods` argument was added to ``xs.adjust`` to pass arguments to ``xsdba.stack_periods`` before adjustment. (:pull:`668`).
+* A conversion from geopotential to orography has been added to the xclim modules. (:pull:`673`).
 
 Bug fixes
 ^^^^^^^^^
 * Floor time in the preprocess of ``extract_dataset``. (:pull:`660`, :pull:`660`).
 * dtype encodings are now removed before saving in ``save_to_netcdf`` and ``save_to_zarr``, since it could create inconsistencies. Dtypes should instead be handled through kwargs. (:pull:`665`).
+* Coordinates with dask chunks will now correctly be chunked if using the `rechunk` option in ``xs.io.save_to_netcdf`` and ``xs.io.save_to_zarr``. (:pull:`673`).
+* ``xs.io.estimate_chunks`` now returns the length of the dimension instead of -1 to avoid potential 'OverflowError: can't convert negative value to hsize_t'. (:pull:`673`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
