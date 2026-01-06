@@ -12,6 +12,8 @@ New features and enhancements
 * The `group=False` option was added to ``xs.train`` to completely skip this argument when calling ``xsdba``. (:pull:`668`).
 * The `stack_periods` argument was added to ``xs.adjust`` to pass arguments to ``xsdba.stack_periods`` before adjustment. (:pull:`668`).
 * A conversion from geopotential to orography has been added to the xclim modules. (:pull:`673`).
+* Add ``fill_nan_ds`` option to clean_up to fill NaNs in one dataset from value of another dataset. (:pull:`675`).
+* Warnings of ``xs.health_checks`` are now added as an attribute to the returned dataset. (:pull:`675`).
 
 Bug fixes
 ^^^^^^^^^
@@ -24,6 +26,7 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * Added test for catalog and config (:pull:`664`).
 * More explicit calls to `coords`, `compat`, and `join` in calls to ``xr.concat`` and ``xr.merge`` to avoid FutureWarnings from `xarray`. (:pull:`665`).
+* Add test for ``xs.health_checks`` for new xclim missing option `some_but_not_all`. (:pull:`675`).
 
 .. _changes_0.13.1:
 

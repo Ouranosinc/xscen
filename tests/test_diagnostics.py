@@ -197,6 +197,44 @@ class TestHealthChecks:
         else:
             xs.diagnostics.health_checks(ds, missing=missing, raise_on=["all"])
 
+    def test_missing_any_but_not_all(self):
+        data = np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 4, "float")
+        data[:, 0, 0] = [np.nan] * 4  # zeros all along the time axis
+
+        ds = datablock_3d(
+            data,
+            "tas",
+            "lon",
+            -70,
+            "lat",
+            15,
+            30,
+            30,
+            as_dataset=True,
+        )
+
+        # should pass
+        xs.diagnostics.health_checks(ds, missing={"some_but_not_all": {"freq": "D"}}, raise_on=["all"])
+
+        data[0, 1, 1] = np.nan  # a single nan
+        ds = datablock_3d(
+            data,
+            "tas",
+            "lon",
+            -70,
+            "lat",
+            15,
+            30,
+            30,
+            as_dataset=True,
+        )
+        # should raise
+        with pytest.raises(
+            ValueError,
+            match="The variable 'tas' has missing values according to the 'missing_some_but_not_all' method.",
+        ):
+            xs.diagnostics.health_checks(ds, missing={"some_but_not_all": {"freq": "D"}}, raise_on=["all"])
+
     @pytest.mark.parametrize("flag", ["good", "bad"])
     def test_flags(self, flag):
         tasmin = np.array([-15] * 365 * 3)
@@ -243,44 +281,6 @@ class TestHealthChecks:
                         ]
                     ]
                 )
-
-    def test_check_nan(self):
-        data = np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 4, "float")
-        data[:, 0, 0] = [np.nan] * 4  # zeros all along the time axis
-
-        ds = datablock_3d(
-            data,
-            "tas",
-            "lon",
-            -70,
-            "lat",
-            15,
-            30,
-            30,
-            as_dataset=True,
-        )
-
-        # should pass
-        xs.diagnostics.health_checks(ds, check_nan=True, raise_on=["all"])
-
-        data[0, 1, 1] = np.nan  # a single nan
-        ds = datablock_3d(
-            data,
-            "tas",
-            "lon",
-            -70,
-            "lat",
-            15,
-            30,
-            30,
-            as_dataset=True,
-        )
-        # should raise
-        with pytest.raises(
-            ValueError,
-            match="Variable tas has at least one",
-        ):
-            xs.diagnostics.health_checks(ds, check_nan=True, raise_on=["all"])
 
 
 class TestPropertiesMeasures:
