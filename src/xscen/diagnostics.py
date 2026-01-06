@@ -133,7 +133,7 @@ def health_checks(  # noqa: C901
         else:
             warns.append(msg)
 
-    def _message(ds):
+    def _message():
         base = "The following health checks failed:"
         if len(warns) > 0:
             msg = "\n  - ".join([base] + warns)
