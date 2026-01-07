@@ -821,7 +821,7 @@ def clean_up(  # noqa: C901
     ds: xr.Dataset,
     *,
     variables_and_units: dict | None = None,
-    fill_nan_ds: xr.DataArray | None = None,
+    fill_nan_ds: xr.Dataset | None = None,
     convert_calendar_kwargs: dict | None = None,
     missing_by_var: dict | None = None,
     maybe_unstack_dict: dict | None = None,
