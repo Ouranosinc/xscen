@@ -920,7 +920,7 @@ def clean_up(  # noqa: C901
 
     if fill_nan_ds is not None:
         # check if any non-time dimension are different
-        if (np.array([ds.sizes[d] != fill_nan_ds.sizes[d] for d in ds.dims if d != "time"]).any()) or (
+        if any([ds.sizes[d] != fill_nan_ds.sizes[d] for d in ds.dims if d != "time"]) or (
             ds.attrs.get("cat:domain", "foo") != fill_nan_ds.attrs.get("cat:domain", "foo")
         ):
             raise ValueError(
