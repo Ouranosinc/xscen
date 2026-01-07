@@ -857,9 +857,9 @@ def clean_up(  # noqa: C901
         Input dataset to clean up
     variables_and_units : dict, optional
         Dictionary of variable to convert. e.g. {'tasmax': 'degC', 'pr': 'mm d-1'}
-    fill_nan_ds: xarray.DataArray, optional
-        DataArray with the same spatial dimensions as ds and the same cat:domain attrs.
-        Will fill NaNs in ds with the values from this DataArray.
+    fill_nan_ds: xarray.Dataset, optional
+        Dataset with the same spatial dimensions as ds and the same cat:domain attrs.
+        Will fill NaNs in ds with the values from the variables of the same name in this Dataset.
     convert_calendar_kwargs : dict, optional
         Dictionary of arguments to feed to xarray.Dataset.convert_calendar. This will be the same for all variables.
         If missing_by_vars is given, it will override the 'missing' argument given here.
