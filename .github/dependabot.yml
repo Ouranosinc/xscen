@@ -1,6 +1,5 @@
 # Please see the documentation for all configuration options:
 # https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -11,15 +10,20 @@ updates:
       actions:
         patterns:
           - "*"
+        update-types:
+          - patch
+          - minor
+          - major
 
   - package-ecosystem: pip
-    directory: /
+    directory: /CI
     schedule:
       interval: "quarterly"
     groups:
-      ci:
-        patterns:
-          - "CI/*"
       python:
         patterns:
-          - "pyproject.toml"
+          - "requirements_ci.*"
+        update-types:
+          - patch
+          - minor
+          - major
