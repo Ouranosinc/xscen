@@ -480,7 +480,11 @@ def save_to_zarr(  # noqa: C901
     strip_cat_metadata : bool
         If True (default), strips all catalog-added attributes before saving the dataset.
     zip_kwargs : dict, optional
-        If given, the saved zarr directory is zipped using these arguments.
+        If given, the saved zarr directory is zipped using these arguments inside ``xs.io.zip_directory``.
+        You can either pass a filename argument to the save_to_zarr function ending with .zip,
+        the initial zarr will have the same name without the .zip suffix.
+        Or, you can pass a filename ending in zarr  to the save_to_zarr function and
+        add a `zipfile` argument in the zip_kwargs dictionary to specify a different zip filename.
 
     Returns
     -------
