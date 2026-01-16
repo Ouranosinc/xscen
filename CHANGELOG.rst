@@ -14,6 +14,7 @@ New features and enhancements
 * A conversion from geopotential to orography has been added to the xclim modules. (:pull:`673`).
 * Add ``fill_nan_ds`` option to clean_up to fill NaNs in one dataset from value of another dataset. (:pull:`679`).
 * Warnings of ``xs.health_checks`` are now added as an attribute to the returned dataset. (:pull:`679`).
+* Make it possible to zip automatically after saving to zarr in ``xs.save_to_zarr``.
 
 Bug fixes
 ^^^^^^^^^

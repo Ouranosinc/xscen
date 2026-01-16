@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import shutil as sh
+import warnings
 from collections import defaultdict
 from collections.abc import Sequence
 from inspect import signature
@@ -433,6 +434,7 @@ def save_to_zarr(  # noqa: C901
     itervar: bool = False,
     timeout_cleanup: bool = True,
     strip_cat_metadata: bool = False,
+    zip_kwargs: dict | None = None,
 ):
     """
     Save a Dataset to Zarr format, rechunking and compressing if requested.
@@ -444,7 +446,7 @@ def save_to_zarr(  # noqa: C901
     ds : xr.Dataset
         The Dataset to be saved.
     filename : str or os.PathLike
-        Name of the Zarr file to be saved.
+        Name of the Zarr file to be saved. If this ends with .zip, the zarr directory will be zipped after saving.
     rechunk : dict, optional
         This is a mapping from dimension name to new chunks (in any format understood by dask).
         Spatial dimensions can be generalized as 'X' and 'Y' which will be mapped to the actual grid type's
@@ -477,6 +479,8 @@ def save_to_zarr(  # noqa: C901
         This does nothing if `compute` is False.
     strip_cat_metadata : bool
         If True (default), strips all catalog-added attributes before saving the dataset.
+    zip_kwargs : dict, optional
+        If given, the saved zarr directory is zipped using these arguments.
 
     Returns
     -------
@@ -495,6 +499,18 @@ def save_to_zarr(  # noqa: C901
         ds = rechunk_for_saving(ds, rechunk)
 
     path = Path(filename)
+
+    # if path is zip, make sure it is zipped later
+    if path.suffix == ".zip":
+        zip_kwargs = zip_kwargs or {}
+        if "zipfile" in zip_kwargs:
+            warnings.warn("The 'zipfile' argument in zip_kwargs will be ignored since the filename ends with .zip", stacklevel=2)
+        zip_kwargs["zipfile"] = path
+
+        # make path for zarr
+        path = Path(path.with_suffix(""))
+        print(path)
+
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_dir():
         tgtds = zarr.open(str(path), mode="r")
@@ -503,7 +519,6 @@ def save_to_zarr(  # noqa: C901
 
     if encoding:
         encoding = encoding.copy()
-
     # Prepare to_zarr kwargs
     if zarr_kwargs is None:
         zarr_kwargs = {}
@@ -546,7 +561,6 @@ def save_to_zarr(  # noqa: C901
         # Remove a few problematic entries from encoding, since it can cause issues with some engines.
         ds[var].encoding.pop("original_shape", None)
         ds[var].encoding.pop("dtype", None)
-
     if len(ds.data_vars) == 0:
         return None
 
@@ -556,7 +570,6 @@ def save_to_zarr(  # noqa: C901
     _coerce_attrs(ds.attrs)
     for var in ds.variables.values():
         _coerce_attrs(var.attrs)
-
     if itervar:
         zarr_kwargs["compute"] = True
         allvars = set(ds.data_vars.keys())
@@ -586,11 +599,21 @@ def save_to_zarr(  # noqa: C901
         msg = f"Writing {list(ds.data_vars.keys())} for {filename}."
         logger.debug(msg)
         try:
-            return ds.to_zarr(filename, compute=compute, mode="a", encoding=encoding, **zarr_kwargs)
+            z = ds.to_zarr(path, compute=compute, mode="a", encoding=encoding, **zarr_kwargs)
+            print(z)
         except TimeoutException:
             if timeout_cleanup:
                 clean_incomplete(path, incomplete=list(ds.data_vars.keys()))
             raise
+
+    if zip_kwargs is not None:
+        if "zipfile" in zip_kwargs:
+            print(path, zip_kwargs)
+            zip_directory(path, **zip_kwargs)
+        else:
+            zip_directory(path, zipfile=Path(str(path) + ".zip"), **zip_kwargs)
+        z = None
+    return z
 
 
 def _to_dataframe(

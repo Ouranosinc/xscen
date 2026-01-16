@@ -80,7 +80,6 @@ dev = [
   "flake8 >=7.3.0",
   "flake8-rst-docstrings >=0.3.1",
   "flit >=3.11.0,<4.0",
-  "ipython >=8.5.0",
   "mypy >=1.18.2",
   "numpydoc >=1.9.0",
   "pip >=25.2",

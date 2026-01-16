@@ -409,7 +409,7 @@ def stack_drop_nans(
         domain = ds.attrs.get("cat:domain", "unknown")
         to_file = to_file.format(domain=domain, shape=original_shape)
         if not Path(to_file).parent.exists():
-            Path(to_file).parent.mkdir(exist_ok=True)
+            Path(to_file).parent.mkdir(exist_ok=True, parents=True)
         # Add all coordinates that might have been affected by the stack
         mask = mask.assign_coords({c: ds[c] for c in ds.coords if any(d in mask.dims for d in ds[c].dims)})
         mask.coords.to_dataset().to_netcdf(to_file)
