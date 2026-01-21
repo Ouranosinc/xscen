@@ -41,6 +41,7 @@ dependencies = [
   "cf_xarray >=0.7.6",
   "clisops >=0.16.1",
   "dask >=2024.8.1",
+  "fastprogress <1.1", # FIXME: Temporary fix following https://github.com/intake/intake-esm/pull/773. Remove when intake-esm is updated.
   "flox",
   "fsspec",
   "geopandas >=1.0",

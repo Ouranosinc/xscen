@@ -76,3 +76,6 @@ dependencies:
   # Testing
   - tox >=4.30.3
   - tox-gh >=1.5.0
+  # Workarounds
+  - fastprogress <1.1  # FIXME: Temporary fix following https://github.com/intake/intake-esm/pull/773. Remove when intake-esm is updated.
+  

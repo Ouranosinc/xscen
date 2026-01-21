@@ -4,6 +4,8 @@ channels:
 dependencies:
   - python >=3.10,<3.14
   - pip >=25.2
+  # To install xscen via Makefile commands
+  - flit >=3.11.0,<4.0
   # Don't forget to sync changes between environment.yml, environment-dev.yml, and pyproject.toml!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
@@ -41,5 +43,5 @@ dependencies:
   # Opt
   - nc-time-axis >=1.3.1
   - xesmf >=0.7, !=0.8.8
-  # To install from source
-  - flit >=3.11.0,<4.0
+  # Workarounds
+  - fastprogress <1.1  # FIXME: Temporary fix following https://github.com/intake/intake-esm/pull/773. Remove when intake-esm is updated.
