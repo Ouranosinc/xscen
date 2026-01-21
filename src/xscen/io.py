@@ -588,7 +588,7 @@ def save_to_zarr(  # noqa: C901
             logger.debug(msg)
             dsvar = ds.drop_vars(allvars - {name})
             try:
-                dsvar.to_zarr(
+                z = dsvar.to_zarr(
                     path,
                     mode="a",
                     encoding={k: v for k, v in (encoding or {}).items() if k in dsvar},
