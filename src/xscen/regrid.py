@@ -181,7 +181,7 @@ def regrid_dataset(  # noqa: C901
                         out = out.assign_coords({d: ds_grid[d]})
                 # Add the grid_mapping attribute
                 for v in out.data_vars:
-                    if any(d in out[v].dims for d in [out.cf.axes["X"][0], out.cf.axes["Y"][0]]):
+                    if any(d in out[v].dims for d in [out.cf.axes["X"][0], out.cf.axes["Y"][0], "loc"]):
                         out[v].attrs["grid_mapping"] = gridmap_out
                 # Add the grid_mapping coordinate
                 if gridmap_out not in out:
