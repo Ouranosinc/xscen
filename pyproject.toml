@@ -214,12 +214,13 @@ ignore_notebooks = true
 pep621_dev_dependency_groups = ["all", "dev", "docs"]
 
 [tool.deptry.package_module_name_map]
+"netcdf4" = "netCDF4"
 "pyyaml" = "yaml"
 "toolz" = "tlz"
-"netcdf4" = "netCDF4"
+"sphinx-intl" = "sphinx_intl"
 
 [tool.deptry.per_rule_ignores]
-DEP002 = ["h5netcdf", "nc-time-axis", "openpyxl", "pyarrow", "pydantic"]
+DEP002 = ["fastprogress", "h5netcdf", "nc-time-axis", "openpyxl", "pyarrow", "pydantic"]
 DEP004 = ["xscen"]
 
 [tool.flit.sdist]
