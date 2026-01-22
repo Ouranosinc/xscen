@@ -600,8 +600,18 @@ class TestSaveToZarr:
 
         xs.save_to_zarr(ds1, Path(tmpdir) / "test3.zarr", zip_kwargs={"zipfile": Path(tmpdir) / "test4.zarr.zip"})
 
-        assert (Path(tmpdir) / "test4.zarr.zip").exists()
+        assert not (Path(tmpdir) / "test4.zarr.zip").exists()  # filename is not zip, so ignore zip_kwargs
         assert (Path(tmpdir) / "test3.zarr").exists()
+
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test5.zarr.zip", zip_zarrdir=Path(tmpdir) / "test/")
+
+        assert (Path(tmpdir) / "test5.zarr.zip").exists()
+        assert (Path(tmpdir) / "test/test5.zarr").exists()
+
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test6.zarr.zip", zip_zarrdir=Path(tmpdir) / "test7.zarr")
+
+        assert (Path(tmpdir) / Path(tmpdir) / "test6.zarr.zip").exists()
+        assert (Path(tmpdir) / "test7.zarr").exists()
 
     def test_zarr_zip_warn(self, tmpdir):
         ds1 = timeseries(

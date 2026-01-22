@@ -434,6 +434,7 @@ def save_to_zarr(  # noqa: C901
     itervar: bool = False,
     timeout_cleanup: bool = True,
     strip_cat_metadata: bool = False,
+    zip_zarrdir: str | None = None,
     zip_kwargs: dict | None = None,
 ):
     """
@@ -446,7 +447,8 @@ def save_to_zarr(  # noqa: C901
     ds : xr.Dataset
         The Dataset to be saved.
     filename : str or os.PathLike
-        Name of the Zarr file to be saved. If this ends with .zip, the zarr directory will be zipped after saving.
+        Name of the Zarr file to be saved.
+        If this ends with .zip, the zarr directory will be zipped after saving.
     rechunk : dict, optional
         This is a mapping from dimension name to new chunks (in any format understood by dask).
         Spatial dimensions can be generalized as 'X' and 'Y' which will be mapped to the actual grid type's
@@ -479,12 +481,16 @@ def save_to_zarr(  # noqa: C901
         This does nothing if `compute` is False.
     strip_cat_metadata : bool
         If True (default), strips all catalog-added attributes before saving the dataset.
+    zip_zarrdir: string, optional
+        If given and filename ends in zip, the saved zarr directory is first saved in this directory,
+        then zipped to `filename`. If the directory ends in .zarr, it is used as is. If it
+        does not end in .zarr, the name of `filename` is used with inside this dir.
+        If not given, the zarr is saved directly to `filename` without .zip suffix.
+        If given, but `filename` does not end with .zip, this is ignored.
     zip_kwargs : dict, optional
-        If given, the saved zarr directory is zipped using these arguments inside ``xs.io.zip_directory``.
-        You can either pass a filename argument to the save_to_zarr function ending with .zip,
-        the initial zarr will have the same name without the .zip suffix.
-        Or, you can pass a filename ending in zarr  to the save_to_zarr function and
-        add a `zipfile` argument in the zip_kwargs dictionary to specify a different zip filename.
+        If given and `filename` ends in zip, the saved zarr directory is zipped using these arguments inside ``xs.io.zip_directory``.
+        If `zipfile` arg is given, it is ignored. The `zipfile` is always set to `filename`.
+        If given but `filename` does not end with .zip, this is ignored.
 
     Returns
     -------
@@ -512,8 +518,12 @@ def save_to_zarr(  # noqa: C901
         zip_kwargs["zipfile"] = path
 
         # make path for zarr
-        path = Path(path.with_suffix(""))
-        print(path)
+        if zip_zarrdir and Path(zip_zarrdir).suffix == ".zarr":
+            path = Path(zip_zarrdir)
+        elif zip_zarrdir:
+            path = Path(zip_zarrdir) / path.with_suffix("").name
+        else:
+            path = Path(path.with_suffix(""))
 
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_dir():
@@ -610,12 +620,8 @@ def save_to_zarr(  # noqa: C901
                 clean_incomplete(path, incomplete=list(ds.data_vars.keys()))
             raise
 
-    if zip_kwargs is not None:
-        if "zipfile" in zip_kwargs:
-            print(path, zip_kwargs)
-            zip_directory(path, **zip_kwargs)
-        else:
-            zip_directory(path, zipfile=Path(str(path) + ".zip"), **zip_kwargs)
+    if Path(filename).suffix == ".zip":
+        zip_directory(path, **zip_kwargs)
         z = None
     return z
 
