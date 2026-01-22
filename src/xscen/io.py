@@ -487,6 +487,7 @@ def save_to_zarr(  # noqa: C901
         does not end in .zarr, the name of `filename` is used with inside this dir.
         If not given, the zarr is saved directly to `filename` without .zip suffix.
         If given, but `filename` does not end with .zip, this is ignored.
+        It is possible to pass a path with environment variables like ${SLURM_TMPDIR}.
     zip_kwargs : dict, optional
         If given and `filename` ends in zip, the saved zarr directory is zipped using these arguments inside ``xs.io.zip_directory``.
         If `zipfile` arg is given, it is ignored. The `zipfile` is always set to `filename`.
@@ -521,7 +522,8 @@ def save_to_zarr(  # noqa: C901
         if zip_zarrdir and Path(zip_zarrdir).suffix == ".zarr":
             path = Path(zip_zarrdir)
         elif zip_zarrdir:
-            path = Path(zip_zarrdir) / path.with_suffix("").name
+            # expand var allows to pass ${SLURM_TMPDIR} or similar
+            path = Path(os.path.expandvars(zip_zarrdir)) / path.with_suffix("").name
         else:
             path = Path(path.with_suffix(""))
 
