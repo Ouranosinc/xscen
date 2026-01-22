@@ -28,7 +28,7 @@ dependencies:
   - pandas >=2.2,<3.0
   - parse
   - pyarrow >=15.0.0
-  - pydantic <2.12.0
+  - pydantic >=2.8.2
   - pyproj
   - pyyaml
   - rechunker >=0.5.3
