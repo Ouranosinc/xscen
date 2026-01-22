@@ -23,7 +23,7 @@ dependencies:
   - numcodecs <0.16.0
   - numpy >=1.24
   - openpyxl
-  - pandas >=2.2
+  - pandas >=2.2,<3.0
   - parse
   - pyarrow >=15.0.0
   - pydantic <2.12.0
@@ -76,3 +76,5 @@ dependencies:
   # Testing
   - tox >=4.30.3
   - tox-gh >=1.5.0
+  # Workarounds
+  - fastprogress <1.1  # FIXME: Temporary fix following https://github.com/intake/intake-esm/pull/773. Remove when intake-esm is updated.
