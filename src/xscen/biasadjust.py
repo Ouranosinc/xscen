@@ -210,6 +210,7 @@ def train(
     for a in ["cat:xrfreq", "cat:domain", "cat:id"]:
         ds.attrs[a] = dhist.attrs[a] if a in dhist.attrs else None
     ds.attrs["cat:processing_level"] = f"training_{'_'.join(var)}"
+    ds.attrs["cat:bias_adjust_reference"] = dref.attrs.get("cat:source", "unknown")
 
     return ds
 
@@ -401,6 +402,6 @@ def adjust(  # noqa: C901
     dscen.attrs["cat:variable"] = parse_from_ds(dscen, ["variable"])["variable"]
     dscen.attrs["cat:bias_adjust_institution"] = bias_adjust_institution or "unknown"
     dscen.attrs["cat:bias_adjust_project"] = bias_adjust_project or "unknown"
-    dscen.attrs["cat:bias_adjust_reference"] = bias_adjust_reference or "unknown"
+    dscen.attrs["cat:bias_adjust_reference"] = bias_adjust_reference or dtrain.attrs.get("cat:bias_adjust_reference", None) or "unknown"
 
     return dscen
