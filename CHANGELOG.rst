@@ -28,7 +28,7 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * Added test for catalog and config (:pull:`664`).
 * More explicit calls to `coords`, `compat`, and `join` in calls to ``xr.concat`` and ``xr.merge`` to avoid FutureWarnings from `xarray`. (:pull:`665`).
-* Add test for ``xs.health_checks`` for new xclim missing option `some_but_not_all`. (:pull:`679`).
+* Add test for ``xs.health_checks`` for new xclim missing option `missing_some_but_not_all`. (:pull:`679`).
 * Added a workflow for automatically approving and merging non-major Dependabot updates. (:pull:`682`).
 * Temporarily pinned `pandas` (``<3.0``) until changes can be made to adapt to the new API. (:pull:`682`).
 
