@@ -9,13 +9,11 @@ from pathlib import Path
 from types import ModuleType
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 import xclim as xc
 import xclim.core.dataflags
 from xclim.core import ValidationError
-from xclim.core.formatting import (  # noqa: F401
-    _merge_attrs_drop_conflicts as merge_attrs,
-)
 from xclim.core.indicator import Indicator
 
 from .config import parse_config
@@ -612,3 +610,28 @@ def measures_improvement_2d(dict_input: dict, to_level: str = "diag-improved-2d"
     ds_merge.attrs["cat:processing_level"] = to_level
 
     return ds_merge
+
+
+# Adapted from xarray.structure.merge_attrs and copied from xclim who got rid of it
+def merge_attrs(*objs):
+    """Merge attributes from different xarray objects, dropping any attributes that conflict."""
+    out = {}
+    dropped = set()
+    for obj in objs:
+        attrs = obj.attrs
+        out.update({key: value for key, value in attrs.items() if key not in out and key not in dropped})
+        out = {key: value for key, value in out.items() if key not in attrs or _equivalent_attrs(attrs[key], value)}
+        dropped |= {key for key in attrs if key not in out}
+    return out
+
+
+# Adapted from xarray.core.utils.equivalent and copied from xclim who got rid of it
+def _equivalent_attrs(first, second) -> bool:
+    """Return whether two attributes are identical or not."""
+    if first is second:
+        return True
+    if isinstance(first, list) or isinstance(second, list):
+        if len(first) != len(second):
+            return False
+        return all(_equivalent_attrs(f, s) for f, s in zip(first, second, strict=False))
+    return (first == second) or (pd.isnull(first) and pd.isnull(second))
