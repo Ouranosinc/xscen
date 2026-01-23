@@ -41,6 +41,7 @@ dependencies = [
   "cf_xarray >=0.7.6",
   "clisops >=0.16.1",
   "dask >=2024.8.1",
+  "fastprogress <1.1", # FIXME: Temporary fix following https://github.com/intake/intake-esm/pull/773. Remove when intake-esm is updated.
   "flox",
   "fsspec",
   "geopandas >=1.0",
@@ -52,10 +53,10 @@ dependencies = [
   "numcodecs <0.16.0",
   "numpy >=1.24",
   "openpyxl",
-  "pandas >=2.2",
+  "pandas >=2.2,<3.0",
   "parse",
   "pyarrow >=15.0.0",
-  "pydantic <2.12.0",
+  "pydantic >=2.8.2",
   "pyproj",
   "pyyaml",
   "rechunker >=0.5.3",
@@ -213,12 +214,13 @@ ignore_notebooks = true
 pep621_dev_dependency_groups = ["all", "dev", "docs"]
 
 [tool.deptry.package_module_name_map]
+"netcdf4" = "netCDF4"
 "pyyaml" = "yaml"
 "toolz" = "tlz"
-"netcdf4" = "netCDF4"
+"sphinx-intl" = "sphinx_intl"
 
 [tool.deptry.per_rule_ignores]
-DEP002 = ["h5netcdf", "nc-time-axis", "openpyxl", "pyarrow", "pydantic"]
+DEP002 = ["fastprogress", "h5netcdf", "nc-time-axis", "openpyxl", "pyarrow", "pydantic"]
 DEP004 = ["xscen"]
 
 [tool.flit.sdist]
