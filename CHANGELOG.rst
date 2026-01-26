@@ -16,6 +16,7 @@ New features and enhancements
 * Warnings of ``xs.health_checks`` are now added as an attribute to the returned dataset. (:pull:`679`).
 * Make it possible to zip automatically after saving to zarr in ``xs.save_to_zarr``.
 * A conversion from geopotential to orography has been added to the `xclim` modules. (:pull:`673`).
+* Add ``zip_zarrdir`` and ``zip_kwargs`` options to ``xs.io.save_to_zarr`` to automatically zip the zarr directory after saving. (:pull:`679`).
 
 Bug fixes
 ^^^^^^^^^
@@ -31,6 +32,9 @@ Internal changes
 * Add test for ``xs.health_checks`` for new xclim missing option `missing_some_but_not_all`. (:pull:`679`).
 * Added a workflow for automatically approving and merging non-major Dependabot updates. (:pull:`682`).
 * Temporarily pinned `pandas` (``<3.0``) until changes can be made to adapt to the new API. (:pull:`682`).
+* Add "cat:bias_adjust_reference" guess in ``xs.train`` and ``xs.adjust``. (:pull:`679`).
+* Add ``xs.diagnostics.merge_attrs`` as it was removed from xclim. (:pull:`679`).
+* Add grid mapping attrs to loc coords in ``xs.regrid``. (:pull:`679`).
 
 .. _changes_0.13.1:
 

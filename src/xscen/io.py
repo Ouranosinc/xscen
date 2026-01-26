@@ -483,13 +483,13 @@ def save_to_zarr(  # noqa: C901
         If True (default), strips all catalog-added attributes before saving the dataset.
     zip_zarrdir: string, optional
         If given and filename ends in zip, the saved zarr directory is first saved in this directory,
-        then zipped to `filename`. If the directory ends in .zarr, it is used as is. If it
-        does not end in .zarr, the name of `filename` is used with inside this dir.
-        If not given, the zarr is saved directly to `filename` without .zip suffix.
+        then zipped to `filename`. For the initial zarr, if the zip_zarrdir ends in .zarr, it is used as is. If it
+        does not end in .zarr, the name of `filename` is used inside this dir.
         If given, but `filename` does not end with .zip, this is ignored.
-        It is possible to pass a path with environment variables like ${SLURM_TMPDIR}.
+        If not given and filename ends in zip, the initial zarr is saved directly to `filename` without .zip suffix, then zip to `filename`.
+        It is possible to pass a path with environment variables like ${SLURM_TMPDIR} to ``zip_zarrdir``.
     zip_kwargs : dict, optional
-        If given and `filename` ends in zip, the saved zarr directory is zipped using these arguments inside ``xs.io.zip_directory``.
+        If given and `filename` ends in zip, the saved zarr directory is zipped using ``xs.io.zip_directory(**zip_kwargs)``.
         If `zipfile` arg is given, it is ignored. The `zipfile` is always set to `filename`.
         If given but `filename` does not end with .zip, this is ignored.
 
