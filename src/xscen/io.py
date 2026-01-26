@@ -492,6 +492,7 @@ def save_to_zarr(  # noqa: C901
         If given and `filename` ends in zip, the saved zarr directory is zipped using ``xs.io.zip_directory(**zip_kwargs)``.
         If `zipfile` arg is given, it is ignored. The `zipfile` is always set to `filename`.
         If given but `filename` does not end with .zip, this is ignored.
+        Tip: Pass `delete=True` here to erase the temporary zarr file.
 
     Returns
     -------
@@ -616,7 +617,6 @@ def save_to_zarr(  # noqa: C901
         logger.debug(msg)
         try:
             z = ds.to_zarr(path, compute=compute, mode="a", encoding=encoding, **zarr_kwargs)
-            print(z)
         except TimeoutException:
             if timeout_cleanup:
                 clean_incomplete(path, incomplete=list(ds.data_vars.keys()))
