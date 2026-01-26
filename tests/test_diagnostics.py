@@ -197,9 +197,9 @@ class TestHealthChecks:
         else:
             xs.diagnostics.health_checks(ds, missing=missing, raise_on=["all"])
 
-    def test_missing_any_but_not_all(self):
-        data = np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 4, "float")
-        data[:, 0, 0] = [np.nan] * 4  # zeros all along the time axis
+    def test_missing_some_but_not_all(self):
+        data = np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 31, "float")
+        data[:, 0, 0] = [np.nan] * 31  # zeros all along the time axis
 
         ds = datablock_3d(
             data,
@@ -233,7 +233,7 @@ class TestHealthChecks:
             ValueError,
             match="The variable 'tas' has missing values according to the 'missing_some_but_not_all' method.",
         ):
-            xs.diagnostics.health_checks(ds, missing={"missing_some_but_not_all": {"freq": "D"}}, raise_on=["all"])
+            xs.diagnostics.health_checks(ds, missing={"missing_some_but_not_all": {"freq": "MS"}}, raise_on=["all"])
 
     @pytest.mark.parametrize("flag", ["good", "bad"])
     def test_flags(self, flag):
