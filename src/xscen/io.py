@@ -19,13 +19,14 @@ import sparse as sp
 import xarray as xr
 import zarr
 from numcodecs.bitround import BitRound
-from rechunker import rechunk as _rechunk
+
+# from rechunker import rechunk as _rechunk
 from xclim.core.options import METADATA_LOCALES
 from xclim.core.options import OPTIONS as XC_OPTIONS
 
 from .config import parse_config
 from .scripting import TimeoutException
-from .utils import TRANSLATOR, season_sort_key, strip_cat_attrs, translate_time_chunk
+from .utils import TRANSLATOR, season_sort_key, strip_cat_attrs
 
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,6 @@ __all__ = [
     "get_engine",
     "load_sparse",
     "make_toc",
-    "rechunk",
     "rechunk_for_saving",
     "round_bits",
     "save_sparse",
@@ -923,82 +923,82 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
     return ds
 
 
-@parse_config
-def rechunk(
-    path_in: os.PathLike | str | xr.Dataset,
-    path_out: os.PathLike | str,
-    *,
-    chunks_over_var: dict | None = None,
-    chunks_over_dim: dict | None = None,
-    worker_mem: str,
-    temp_store: os.PathLike | str | None = None,
-    overwrite: bool = False,
-) -> None:
-    """
-    Rechunk a dataset into a new zarr.
+# @parse_config
+# def rechunk(
+#     path_in: os.PathLike | str | xr.Dataset,
+#     path_out: os.PathLike | str,
+#     *,
+#     chunks_over_var: dict | None = None,
+#     chunks_over_dim: dict | None = None,
+#     worker_mem: str,
+#     temp_store: os.PathLike | str | None = None,
+#     overwrite: bool = False,
+# ) -> None:
+#     """
+#     Rechunk a dataset into a new zarr.
 
-    Parameters
-    ----------
-    path_in : path, str or xr.Dataset
-        Input to rechunk.
-    path_out : path or str
-        Path to the target zarr.
-    chunks_over_var : dict
-        Mapping from variables to mappings from dimension name to size. Give this argument or `chunks_over_dim`.
-    chunks_over_dim : dict
-        Mapping from dimension name to size that will be used for all variables in ds.
-        Give this argument or `chunks_over_var`.
-    worker_mem : str
-        The maximal memory usage of each task.
-        When using a distributed Client, this an approximate memory per thread.
-        Each worker of the client should have access to 10-20% more memory than this times the number of threads.
-    temp_store : path or str, optional
-        A path to a zarr where to store intermediate results.
-    overwrite : bool
-        If True, it will delete whatever is in path_out before doing the rechunking.
+#     Parameters
+#     ----------
+#     path_in : path, str or xr.Dataset
+#         Input to rechunk.
+#     path_out : path or str
+#         Path to the target zarr.
+#     chunks_over_var : dict
+#         Mapping from variables to mappings from dimension name to size. Give this argument or `chunks_over_dim`.
+#     chunks_over_dim : dict
+#         Mapping from dimension name to size that will be used for all variables in ds.
+#         Give this argument or `chunks_over_var`.
+#     worker_mem : str
+#         The maximal memory usage of each task.
+#         When using a distributed Client, this an approximate memory per thread.
+#         Each worker of the client should have access to 10-20% more memory than this times the number of threads.
+#     temp_store : path or str, optional
+#         A path to a zarr where to store intermediate results.
+#     overwrite : bool
+#         If True, it will delete whatever is in path_out before doing the rechunking.
 
-    Returns
-    -------
-    None
+#     Returns
+#     -------
+#     None
 
-    See Also
-    --------
-    rechunker.rechunk
-    """
-    if Path(path_out).is_dir() and overwrite:
-        sh.rmtree(path_out)
+#     See Also
+#     --------
+#     rechunker.rechunk
+#     """
+#     if Path(path_out).is_dir() and overwrite:
+#         sh.rmtree(path_out)
 
-    if isinstance(path_in, os.PathLike) or isinstance(path_in, str):
-        path_in = Path(path_in)
-        if path_in.suffix == ".zarr":
-            ds = xr.open_zarr(path_in)
-        else:
-            ds = xr.open_dataset(path_in)
-    else:
-        ds = path_in
-    # Remove all input chunks information, avoids an error with rechunker and xarray >= 2024.10
-    # TODO: Remove this and pin rechunker when https://github.com/pangeo-data/rechunker/pull/156 is merged and released
-    for var in ds.variables.values():
-        var.encoding.pop("chunks", None)
+#     if isinstance(path_in, os.PathLike) or isinstance(path_in, str):
+#         path_in = Path(path_in)
+#         if path_in.suffix == ".zarr":
+#             ds = xr.open_zarr(path_in)
+#         else:
+#             ds = xr.open_dataset(path_in)
+#     else:
+#         ds = path_in
+#     # Remove all input chunks information, avoids an error with rechunker and xarray >= 2024.10
+#     # TODO: Remove this and pin rechunker when https://github.com/pangeo-data/rechunker/pull/156 is merged and released
+#     for var in ds.variables.values():
+#         var.encoding.pop("chunks", None)
 
-    variables = list(ds.data_vars)
-    if chunks_over_var:
-        chunks = chunks_over_var
-    elif chunks_over_dim:
-        chunks = {v: {d: chunks_over_dim[d] for d in ds[v].dims} for v in variables}
-        chunks.update(time=None, lat=None, lon=None)
-        cal = ds.time.dt.calendar
-        Nt = ds.time.size
-        chunks = translate_time_chunk(chunks, cal, Nt)
-    else:
-        raise ValueError("No chunks given. Need to give at `chunks_over_var` or `chunks_over_dim`.")
-    plan = _rechunk(ds, chunks, worker_mem, str(path_out), temp_store=str(temp_store))
+#     variables = list(ds.data_vars)
+#     if chunks_over_var:
+#         chunks = chunks_over_var
+#     elif chunks_over_dim:
+#         chunks = {v: {d: chunks_over_dim[d] for d in ds[v].dims} for v in variables}
+#         chunks.update(time=None, lat=None, lon=None)
+#         cal = ds.time.dt.calendar
+#         Nt = ds.time.size
+#         chunks = translate_time_chunk(chunks, cal, Nt)
+#     else:
+#         raise ValueError("No chunks given. Need to give at `chunks_over_var` or `chunks_over_dim`.")
+#     plan = _rechunk(ds, chunks, worker_mem, str(path_out), temp_store=str(temp_store))
 
-    plan.execute()
-    zarr.consolidate_metadata(path_out)
+#     plan.execute()
+#     zarr.consolidate_metadata(path_out)
 
-    if temp_store is not None:
-        sh.rmtree(temp_store)
+#     if temp_store is not None:
+#         sh.rmtree(temp_store)
 
 
 def zip_directory(

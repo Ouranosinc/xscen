@@ -59,7 +59,7 @@ dependencies = [
   "pydantic <2.12.0",
   "pyproj",
   "pyyaml",
-  "rechunker >=0.5.3",
+  # "rechunker >=0.5.3",
   "scipy >=1.11.0",
   "shapely >=2.0",
   "sparse",
@@ -67,7 +67,7 @@ dependencies = [
   "xarray >=2023.11.0, !=2024.6.0",
   "xclim >=0.56, <0.59",
   "xsdba >=0.4.0",
-  "zarr >=2.13,<3.0"
+  "zarr >=3.1"
 ]
 
 [project.optional-dependencies]
