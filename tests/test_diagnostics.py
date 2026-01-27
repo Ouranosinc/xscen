@@ -3,6 +3,8 @@ import pytest
 import xarray as xr
 import xclim as xc
 from conftest import notebooks
+from packaging.version import Version
+from xclim import __version__ as __xclim_version__
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
@@ -198,6 +200,8 @@ class TestHealthChecks:
             xs.diagnostics.health_checks(ds, missing=missing, raise_on=["all"])
 
     def test_missing_some_but_not_all(self):
+        if Version(__xclim_version__) < Version("0.60.0"):
+            pytest.skip("Skipping missing_some_but_not_all on o.lder xclim")
         data = np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 31, "float")
         data[:, 0, 0] = [np.nan] * 31  # zeros all along the time axis
 
