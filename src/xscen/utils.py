@@ -409,7 +409,7 @@ def stack_drop_nans(
         domain = ds.attrs.get("cat:domain", "unknown")
         to_file = to_file.format(domain=domain, shape=original_shape)
         if not Path(to_file).parent.exists():
-            Path(to_file).parent.mkdir(exist_ok=True)
+            Path(to_file).parent.mkdir(exist_ok=True, parents=True)
         # Add all coordinates that might have been affected by the stack
         mask = mask.assign_coords({c: ds[c] for c in ds.coords if any(d in mask.dims for d in ds[c].dims)})
         mask.coords.to_dataset().to_netcdf(to_file)
@@ -821,6 +821,7 @@ def clean_up(  # noqa: C901
     ds: xr.Dataset,
     *,
     variables_and_units: dict | None = None,
+    fill_nan_ds: xr.Dataset | None = None,
     convert_calendar_kwargs: dict | None = None,
     missing_by_var: dict | None = None,
     maybe_unstack_dict: dict | None = None,
@@ -856,6 +857,9 @@ def clean_up(  # noqa: C901
         Input dataset to clean up
     variables_and_units : dict, optional
         Dictionary of variable to convert. e.g. {'tasmax': 'degC', 'pr': 'mm d-1'}
+    fill_nan_ds: xarray.Dataset, optional
+        Dataset with the same spatial dimensions as ds and the same cat:domain attrs.
+        Will fill NaNs in ds with the values from the variables of the same name in this Dataset.
     convert_calendar_kwargs : dict, optional
         Dictionary of arguments to feed to xarray.Dataset.convert_calendar. This will be the same for all variables.
         If missing_by_vars is given, it will override the 'missing' argument given here.
@@ -913,6 +917,25 @@ def clean_up(  # noqa: C901
         msg = f"Converting units: {variables_and_units}"
         logger.info(msg)
         ds = change_units(ds=ds, variables_and_units=variables_and_units)
+
+    if fill_nan_ds is not None:
+        # check if any non-time dimension are different
+        if any([ds.sizes[d] != fill_nan_ds.sizes[d] for d in ds.dims if d != "time"]) or (
+            ds.attrs.get("cat:domain", "foo") != fill_nan_ds.attrs.get("cat:domain", "foo")
+        ):
+            raise ValueError(
+                "The non-time dimensions or the cat:domain attribute of the simulation"
+                " and reference datasets do not match. "
+                "Cannot fill missing values."
+            )
+        for var in ds.data_vars:
+            if var in fill_nan_ds:
+                ds[var] = ds[var].combine_first(fill_nan_ds[var])
+
+                new_history = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Filled missing values using {fill_nan_ds.get('cat:id', '')} dataset."
+                history = f"{new_history}\n{ds[var].attrs['history']}" if "history" in ds[var].attrs else new_history
+                ds[var].attrs["history"] = history
+
     # convert calendar
     if convert_calendar_kwargs:
         vars_with_no_time = [v for v in ds.data_vars if "time" not in ds[v].dims]

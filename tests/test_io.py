@@ -582,6 +582,50 @@ class TestSaveToZarr:
         ds3 = xr.open_zarr(Path(tmpdir) / "test.zarr")
         np.testing.assert_array_almost_equal(ds3.tas.isel(time=0), [1])
 
+    def test_zarr_zip(self, tmpdir):
+        ds1 = timeseries(
+            np.arange(1, 5),
+            variable="tas",
+            as_dataset=True,
+        )
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test.zarr.zip")
+
+        assert (Path(tmpdir) / "test.zarr.zip").exists()
+        assert (Path(tmpdir) / "test.zarr").exists()
+
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test2.zarr.zip", zip_kwargs={"delete": True})
+
+        assert (Path(tmpdir) / "test2.zarr.zip").exists()
+        assert not (Path(tmpdir) / "test2.zarr").exists()
+
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test3.zarr", zip_kwargs={"zipfile": Path(tmpdir) / "test4.zarr.zip"})
+
+        assert not (Path(tmpdir) / "test4.zarr.zip").exists()  # filename is not zip, so ignore zip_kwargs
+        assert (Path(tmpdir) / "test3.zarr").exists()
+
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test5.zarr.zip", zip_zarrdir=Path(tmpdir) / "test/")
+
+        assert (Path(tmpdir) / "test5.zarr.zip").exists()
+        assert (Path(tmpdir) / "test/test5.zarr").exists()
+
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test6.zarr.zip", zip_zarrdir=Path(tmpdir) / "test7.zarr")
+
+        assert (Path(tmpdir) / Path(tmpdir) / "test6.zarr.zip").exists()
+        assert (Path(tmpdir) / "test7.zarr").exists()
+
+    def test_zarr_zip_warn(self, tmpdir):
+        ds1 = timeseries(
+            np.arange(1, 5),
+            variable="tas",
+            as_dataset=True,
+        )
+
+        with pytest.warns(UserWarning, match="The 'zipfile' argument in zip_kwargs will be ignored since the filename ends with .zip"):
+            xs.save_to_zarr(ds1, Path(tmpdir) / "test.zarr.zip", zip_kwargs={"zipfile": Path(tmpdir) / "test1.zarr.zip"})
+
+        assert (Path(tmpdir) / "test.zarr.zip").exists()
+        assert not (Path(tmpdir) / "test1.zarr").exists()
+
 
 @pytest.mark.parametrize("engine", ["netcdf", "zarr"])
 def test_savefuncs_normal(tmpdir, engine):

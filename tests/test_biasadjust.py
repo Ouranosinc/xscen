@@ -196,6 +196,27 @@ class TestAdjust:
                 np.concatenate([np.ones(365 * 1) * 1, np.ones(365 * 1) * 3]),
             )
 
+    def test_ref_automatic(
+        self,
+    ):
+        dref = self.dref.copy()
+        dref.attrs["cat:source"] = "casr"
+
+        dtrain = xs.train(
+            dref.copy(),
+            self.dsim.sel(time=slice("2001", "2003")),
+            var="tas",
+            period=["2001", "2003"],
+        )
+
+        out = xs.adjust(
+            dtrain,
+            self.dsim.copy(),
+            periods=["2001", "2003"],
+        )
+
+        assert out.attrs["cat:bias_adjust_reference"] == "casr"
+
     def test_write_train(self, tmpdir):
         dtrain = xs.train(
             self.dref.copy(),

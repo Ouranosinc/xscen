@@ -11,7 +11,12 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * The `group=False` option was added to ``xs.train`` to completely skip this argument when calling `xsdba`. (:pull:`668`).
 * The `stack_periods` argument was added to ``xs.adjust`` to pass arguments to ``xsdba.stack_periods`` before adjustment. (:pull:`668`).
+* A conversion from geopotential to orography has been added to the xclim modules. (:pull:`673`).
+* Add ``fill_nan_ds`` option to clean_up to fill NaNs in one dataset from value of another dataset. (:pull:`679`).
+* Warnings of ``xs.health_checks`` are now added as an attribute to the returned dataset. (:pull:`679`).
+* Make it possible to zip automatically after saving to zarr in ``xs.save_to_zarr``.
 * A conversion from geopotential to orography has been added to the `xclim` modules. (:pull:`673`).
+* Add ``zip_zarrdir`` and ``zip_kwargs`` options to ``xs.io.save_to_zarr`` to automatically zip the zarr directory after saving. (:pull:`679`).
 
 Bug fixes
 ^^^^^^^^^
@@ -24,8 +29,12 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * Added test for catalog and config (:pull:`664`).
 * More explicit calls to `coords`, `compat`, and `join` in calls to ``xr.concat`` and ``xr.merge`` to avoid FutureWarnings from `xarray`. (:pull:`665`).
+* Add test for ``xs.health_checks`` for new xclim missing option `missing_some_but_not_all`. (:pull:`679`).
 * Added a workflow for automatically approving and merging non-major Dependabot updates. (:pull:`682`).
 * Temporarily pinned `pandas` (``<3.0``) until changes can be made to adapt to the new API. (:pull:`682`).
+* Add "cat:bias_adjust_reference" guess in ``xs.train`` and ``xs.adjust``. (:pull:`679`).
+* Add ``xs.diagnostics.merge_attrs`` as it was removed from xclim. (:pull:`679`).
+* Add grid mapping attrs to loc coords in ``xs.regrid``. (:pull:`679`).
 
 .. _changes_0.13.1:
 
