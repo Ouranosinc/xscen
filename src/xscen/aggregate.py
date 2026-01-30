@@ -240,7 +240,6 @@ def climatological_op(  # noqa: C901
 
             def _ulinregress(x, y, **kwargs):
                 # Wrapper for scipy.stats.linregress to unpack multiple return values in xr.apply_ufunc
-                # TODO: Remove this and use `nan_policy='omit'` instead with scipy 1.16 ?
                 valid_x = ~np.isnan(x)
                 valid_y = ~np.isnan(y)
                 mask = valid_x & valid_y
@@ -252,10 +251,10 @@ def climatological_op(  # noqa: C901
                         [
                             reg.slope,
                             reg.intercept,
-                            reg.rvalue if reg.slope != 0 else 0,
-                            reg.pvalue if reg.slope != 0 else 1,
-                            reg.stderr if reg.slope != 0 else 0,
-                            reg.intercept_stderr if reg.slope != 0 else 0,
+                            reg.rvalue,
+                            reg.pvalue,
+                            reg.stderr,
+                            reg.intercept_stderr,
                         ]
                     )
                 else:
