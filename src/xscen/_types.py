@@ -1,5 +1,6 @@
 from typing import TypeVar
 
+
 Region = TypeVar("Region", bound=dict)
 """A region specification, a dictionary with the following valid entries:
 
