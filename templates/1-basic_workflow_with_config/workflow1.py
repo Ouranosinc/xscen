@@ -11,15 +11,14 @@ from dask.distributed import Client
 import xscen as xs
 from xscen.config import CONFIG
 
+
 # Load configuration
 # paths1.yml is used to add private information to your workflow, such as file paths,
 # without running the risk of them being pushed to a public GitHub repo.
 # For this to work as intended, 'paths1.yml' should be included in your .gitignore.
 # config1.yml (or any number of those) can then contain the rest of the configuration.
 # All configuration files are merged together into a single CONFIG instance when you call xs.load_config
-xs.load_config(
-    "paths1.yml", "config1.yml", verbose=(__name__ == "__main__"), reset=True
-)
+xs.load_config("paths1.yml", "config1.yml", verbose=(__name__ == "__main__"), reset=True)
 
 # get logger
 if "logging" in CONFIG:
@@ -38,9 +37,7 @@ if __name__ == "__main__":
 
     # Copy config to the top of the log file
     if "logging" in CONFIG and "file" in CONFIG["logging"]["handlers"]:
-        f1 = Path(CONFIG["logging"]["handlers"]["file"]["filename"], "a+").open(
-            encoding="utf-8"
-        )
+        f1 = Path(CONFIG["logging"]["handlers"]["file"]["filename"], "a+").open(encoding="utf-8")
         f2 = Path("config1.yml").open(encoding="utf-8")
         f1.write(f2.read())
         f1.close()
@@ -48,7 +45,7 @@ if __name__ == "__main__":
 
     # Set email config
     if "scripting" in CONFIG:
-        atexit.register(xs.send_mail_on_exit, subject=CONFIG["scripting"]["subject"])
+        atexit.register(xs.send_mail_on_exit)
 
     # Initialize (create=True) or load (overwrite=False) the Project Catalog
     pcat = xs.ProjectCatalog(
@@ -99,17 +96,14 @@ if __name__ == "__main__":
                         )
 
                         # Iterate over the different frequencies
-                        for key_freq, ds in ds_dict.items():
+                        for ds in ds_dict.values():
                             # For future steps in the workflow, we can save a lot of time
                             # by stacking the spatial coordinates into a single dimension
                             # and dropping the NaNs. This is especially useful for big datasets.
                             if type_dict.get("stack_drop_nans", False):
                                 ds = xs.utils.stack_drop_nans(
                                     ds,
-                                    ds[list(ds.data_vars)[0]]
-                                    .isel(time=0, drop=True)
-                                    .notnull()
-                                    .compute(),
+                                    ds[list(ds.data_vars)[0]].isel(time=0, drop=True).notnull().compute(),
                                 )
                             # Prepare the filename for the zarr file, using the format specified in paths1.yml
                             path = CONFIG["paths"]["task"].format(**cur)
@@ -138,7 +132,7 @@ if __name__ == "__main__":
         # because the content of the ProjectCatalog is smaller and more manageable.
         # In most cases, we can just use the search function with the 'type' and 'processing_level' attributes.
         input_dict = pcat.search(**CONFIG["regrid"]["inputs"]).to_dataset_dict(**tdd)
-        for key_input, ds_input in input_dict.items():
+        for ds_input in input_dict.values():
             cur = {
                 "id": ds_input.attrs["cat:id"],
                 "xrfreq": ds_input.attrs["cat:xrfreq"],
@@ -150,9 +144,7 @@ if __name__ == "__main__":
                     xs.measure_time(name=f"{cur}", logger=logger),
                 ):
                     # Get the output grid
-                    ds_grid = pcat.search(**CONFIG["regrid"]["output"]).to_dataset(
-                        **tdd
-                    )
+                    ds_grid = pcat.search(**CONFIG["regrid"]["output"]).to_dataset(**tdd)
 
                     # Perform the regridding
                     # Most arguments are passed automatically from the config,
@@ -239,7 +231,7 @@ if __name__ == "__main__":
                     freq_dict = xs.extract_dataset(catalog=cu_cat)
 
                     # Iterate over the frequencies (usually just 'D')
-                    for key_freq, ds in freq_dict.items():
+                    for ds in freq_dict.values():
                         # Clean up the dataset
                         ds_clean = xs.clean_up(
                             ds=ds,
@@ -255,7 +247,7 @@ if __name__ == "__main__":
     if "rechunk" in CONFIG["tasks"]:
         # Search the ProjectCatalog for the results of the previous step, then iterate over each dataset.
         dict_input = pcat.search(**CONFIG["rechunk"]["inputs"]).to_dataset_dict(**tdd)
-        for key_input, ds_input in dict_input.items():
+        for ds_input in dict_input.values():
             cur = {
                 "id": ds_input.attrs["cat:id"],
                 "xrfreq": ds_input.attrs["cat:xrfreq"],
@@ -292,12 +284,10 @@ if __name__ == "__main__":
         for kind_dict in CONFIG["diagnostics"]["kind"].values():
             # Search for the right datasets and iterate over them
             dict_input = pcat.search(**kind_dict["inputs"]).to_dataset_dict(**tdd)
-            for key_input, ds_input in dict_input.items():
+            for ds_input in dict_input.values():
                 cur = {
                     "id": ds_input.attrs["cat:id"],
-                    "processing_level": kind_dict["properties_and_measures"].get(
-                        "to_level_prop", "diag-properties"
-                    ),
+                    "processing_level": kind_dict["properties_and_measures"].get("to_level_prop", "diag-properties"),
                     "xrfreq": "fx",
                 }
 
@@ -307,9 +297,7 @@ if __name__ == "__main__":
                         xs.measure_time(name=f"{cur}", logger=logger),
                     ):
                         # Perform some health checks on the data
-                        xs.diagnostics.health_checks(
-                            ds_input, **CONFIG["diagnostics"]["health_checks"]
-                        )
+                        xs.diagnostics.health_checks(ds_input, **CONFIG["diagnostics"]["health_checks"])
 
                         # Find the reference required for the measures
                         dref_for_measure = None
@@ -336,9 +324,7 @@ if __name__ == "__main__":
 
         # Create a summary of diagnostics
         # Search for the measures and iterate over them
-        meas_dict = pcat.search(processing_level="diag-measures-sim").to_dataset_dict(
-            **tdd
-        )
+        meas_dict = pcat.search(processing_level="diag-measures-sim").to_dataset_dict(**tdd)
         for ds_meas_sim in meas_dict.values():
             cur = {
                 "id": ds_meas_sim.attrs["cat:id"],
@@ -374,9 +360,7 @@ if __name__ == "__main__":
     # --- INDICATORS ---
     if "indicators" in CONFIG["tasks"]:
         # Search for the right datasets and iterate over them
-        dict_input = pcat.search(**CONFIG["indicators"]["inputs"]).to_dataset_dict(
-            **tdd
-        )
+        dict_input = pcat.search(**CONFIG["indicators"]["inputs"]).to_dataset_dict(**tdd)
         for key_input, ds_input in dict_input.items():
             with (
                 Client(**CONFIG["indicators"]["dask"], **daskkws),
@@ -398,18 +382,14 @@ if __name__ == "__main__":
                     if not pcat.exists_in_cat(**cur):
                         # Save to zarr
                         path_ind = f"{CONFIG['paths']['task']}".format(**cur)
-                        xs.save_to_zarr(
-                            ds_ind, path_ind, **CONFIG["indicators"]["save"]
-                        )
+                        xs.save_to_zarr(ds_ind, path_ind, **CONFIG["indicators"]["save"])
                         pcat.update_from_ds(ds=ds_ind, path=path_ind)
 
     # --- CLIMATOLOGICAL MEAN ---
     if "climatology" in CONFIG["tasks"]:
         # Search for the right datasets and iterate over them
-        ind_dict = pcat.search(**CONFIG["aggregate"]["input"]["clim"]).to_dataset_dict(
-            **tdd
-        )
-        for key_input, ds_input in ind_dict.items():
+        ind_dict = pcat.search(**CONFIG["aggregate"]["input"]["clim"]).to_dataset_dict(**tdd)
+        for ds_input in ind_dict.values():
             cur = {
                 "id": ds_input.attrs["cat:id"],
                 "xrfreq": ds_input.attrs["cat:xrfreq"],
@@ -431,10 +411,8 @@ if __name__ == "__main__":
     # --- DELTAS ---
     if "delta" in CONFIG["tasks"]:
         # Search for the right datasets and iterate over them
-        ind_dict = pcat.search(**CONFIG["aggregate"]["input"]["delta"]).to_dataset_dict(
-            **tdd
-        )
-        for key_input, ds_input in ind_dict.items():
+        ind_dict = pcat.search(**CONFIG["aggregate"]["input"]["delta"]).to_dataset_dict(**tdd)
+        for ds_input in ind_dict.values():
             cur = {
                 "id": ds_input.attrs["cat:id"],
                 "xrfreq": ds_input.attrs["cat:xrfreq"],
@@ -488,9 +466,7 @@ if __name__ == "__main__":
 
                             # Save to zarr
                             path = f"{CONFIG['paths']['task']}".format(**cur)
-                            xs.save_to_zarr(
-                                ens_stats, path, **CONFIG["ensembles"]["save"]
-                            )
+                            xs.save_to_zarr(ens_stats, path, **CONFIG["ensembles"]["save"])
                             pcat.update_from_ds(ds=ens_stats, path=path)
 
     xs.send_mail(

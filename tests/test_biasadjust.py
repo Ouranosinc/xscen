@@ -5,11 +5,11 @@ import warnings
 import numpy as np
 import pytest
 import xarray as xr
-import xclim as xc
 import xsdba
 from xclim.testing.helpers import test_timeseries as timeseries
 
 from xscen.utils import xclim_convert_units_to
+
 
 # Copied from xarray/core/nputils.py
 # Can be removed once numpy 2.0+ is the oldest supported version
@@ -22,9 +22,7 @@ import xscen as xs
 
 
 class TestTrain:
-    dref = timeseries(
-        np.ones(365 * 3), variable="tas", start="2001-01-01", freq="D", as_dataset=True
-    )
+    dref = timeseries(np.ones(365 * 3), variable="tas", start="2001-01-01", freq="D", as_dataset=True)
 
     dhist = timeseries(
         np.concatenate([np.ones(365 * 2) * 2, np.ones(365) * 3]),
@@ -129,14 +127,19 @@ class TestAdjust:
     dsim.attrs["cat:id"] = "fake_id"
 
     @pytest.mark.parametrize(
-        "periods, to_level, bias_adjust_institution, bias_adjust_project",
+        "periods, to_level, bias_adjust_institution, bias_adjust_project, bias_adjust_reference",
         [
-            (["2001", "2006"], None, None, None),
-            ([["2001", "2001"], ["2006", "2006"]], "test", "i", "p"),
+            (["2001", "2006"], None, None, None, None),
+            ([["2001", "2001"], ["2006", "2006"]], "test", "i", "p", "r"),
         ],
     )
     def test_basic(
-        self, periods, to_level, bias_adjust_institution, bias_adjust_project
+        self,
+        periods,
+        to_level,
+        bias_adjust_institution,
+        bias_adjust_project,
+        bias_adjust_reference,
     ):
         dtrain = xs.train(
             self.dref.copy(),
@@ -146,11 +149,7 @@ class TestAdjust:
         )
 
         # For justification of warning filter, see: https://docs.xarray.dev/en/stable/generated/xarray.Dataset.polyfit.html
-        if (
-            to_level is None
-            and bias_adjust_institution is None
-            and bias_adjust_project is None
-        ):
+        if to_level is None and bias_adjust_institution is None and bias_adjust_project is None and bias_adjust_reference is None:
             # No warning is expected
             context = contextlib.nullcontext()
         else:
@@ -163,14 +162,14 @@ class TestAdjust:
                 to_level=to_level,
                 bias_adjust_institution=bias_adjust_institution,
                 bias_adjust_project=bias_adjust_project,
+                bias_adjust_reference=bias_adjust_reference,
             )
 
         assert out.attrs["cat:processing_level"] == to_level or "biasadjusted"
         assert out.attrs["cat:variable"] == ("tas",)
         assert out.attrs["cat:id"] == "fake_id"
         assert (
-            out["tas"].attrs["bias_adjustment"]
-            == "DetrendedQuantileMapping(group=Grouper("
+            out["tas"].attrs["bias_adjustment"] == "DetrendedQuantileMapping(group=Grouper("
             "name='time.dayofyear', window=31), kind='+'"
             ", adapt_freq_thresh=None).adjust(sim, ) with xsdba_train_args: {}"
         )
@@ -180,6 +179,8 @@ class TestAdjust:
             assert out.attrs["cat:bias_adjust_institution"] == "i"
         if bias_adjust_project is not None:
             assert out.attrs["cat:bias_adjust_project"] == "p"
+        if bias_adjust_reference is not None:
+            assert out.attrs["cat:bias_adjust_reference"] == "r"
 
         assert out.time.dt.year.values[0] == 2001
         assert out.time.dt.year.values[-1] == 2006
@@ -187,15 +188,34 @@ class TestAdjust:
         if periods == ["2001", "2006"]:
             np.testing.assert_array_equal(
                 out["tas"].values,
-                np.concatenate(
-                    [np.ones(365 * 3) * 1, np.ones(365 * 3) * 3]
-                ),  # -1 for leap year
+                np.concatenate([np.ones(365 * 3) * 1, np.ones(365 * 3) * 3]),  # -1 for leap year
             )
         else:  # periods==[['2001','2001'], ['2006','2006']]
             np.testing.assert_array_equal(
                 out["tas"].values,
                 np.concatenate([np.ones(365 * 1) * 1, np.ones(365 * 1) * 3]),
             )
+
+    def test_ref_automatic(
+        self,
+    ):
+        dref = self.dref.copy()
+        dref.attrs["cat:source"] = "casr"
+
+        dtrain = xs.train(
+            dref.copy(),
+            self.dsim.sel(time=slice("2001", "2003")),
+            var="tas",
+            period=["2001", "2003"],
+        )
+
+        out = xs.adjust(
+            dtrain,
+            self.dsim.copy(),
+            periods=["2001", "2003"],
+        )
+
+        assert out.attrs["cat:bias_adjust_reference"] == "casr"
 
     def test_write_train(self, tmpdir):
         dtrain = xs.train(
@@ -212,35 +232,24 @@ class TestAdjust:
         xs.save_to_zarr(dtrain, f"{root}/test.zarr", mode="o")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            dtrain2 = xr.open_dataset(
-                f"{root}/test.zarr", chunks={"dayofyear": 365, "quantiles": 15}
-            )
+            dtrain2 = xr.open_dataset(f"{root}/test.zarr", chunks={"dayofyear": 365, "quantiles": 15})
 
         out = xs.adjust(
             dtrain,
             self.dsim.copy(),
             periods=["2001", "2006"],
-            xsdba_adjust_args={
-                "detrend": {
-                    "LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}
-                }
-            },
+            xsdba_adjust_args={"detrend": {"LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}}},
         )
 
         out2 = xs.adjust(
             dtrain2,
             self.dsim.copy(),
             periods=["2001", "2006"],
-            xsdba_adjust_args={
-                "detrend": {
-                    "LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}
-                }
-            },
+            xsdba_adjust_args={"detrend": {"LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}}},
         )
 
         assert (
-            out.tas.attrs["bias_adjustment"]
-            == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
+            out.tas.attrs["bias_adjustment"] == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
             " window=31), kind='+', adapt_freq_thresh='2 K').adjust(sim, detrend=<LoessDetrend>)"
             " with xsdba_train_args: {'adapt_freq_thresh': '2 K'},"
             " ref and hist were prepared with jitter_under_thresh(ref, hist,"
@@ -249,8 +258,7 @@ class TestAdjust:
         )
 
         assert (
-            out2.tas.attrs["bias_adjustment"]
-            == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
+            out2.tas.attrs["bias_adjustment"] == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
             " window=31), kind='+', adapt_freq_thresh='2 K').adjust(sim, detrend=<LoessDetrend>)"
             " with xsdba_train_args: {'adapt_freq_thresh': '2 K'}, "
             "ref and hist were prepared with jitter_under_thresh(ref, hist, {'thresh':"
@@ -291,7 +299,7 @@ class TestAdjust:
         xs.save_to_zarr(dtrain, f"{root}/test.zarr", mode="o")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=RuntimeWarning)
-            dtrain2 = xr.open_dataset(f"{root}/test.zarr")
+            xr.open_dataset(f"{root}/test.zarr")
 
         params = {
             "var": ["tasmax", "tasmin"],
@@ -305,7 +313,7 @@ class TestAdjust:
 
         assert ast.literal_eval(dtrain.attrs["train_params"]) == params
 
-        out = xs.adjust(
+        xs.adjust(
             dtrain=dtrain,
             dsim=ds,
             periods=["2031", "2060"],
@@ -360,9 +368,7 @@ class TestAdjust:
             dsim,
             periods=["2001", "2006"],
             xsdba_adjust_args={
-                "detrend": {
-                    "LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}
-                },
+                "detrend": {"LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}},
                 "interp": "nearest",
                 "extrapolation": "constant",
             },
@@ -387,9 +393,7 @@ class TestAdjust:
                     # adapt_freq_thresh="1.157e-05 kg/m2/s",
                 )
 
-                detrend = xsdba.detrending.LoessDetrend(
-                    f=0.2, niter=1, d=0, weights="tricube", group=group, kind="*"
-                )
+                detrend = xsdba.detrending.LoessDetrend(f=0.2, niter=1, d=0, weights="tricube", group=group, kind="*")
                 out_xclim = QM.adjust(
                     dsimx["pr"],
                     detrend=detrend,
@@ -401,18 +405,12 @@ class TestAdjust:
 
     def test_additive_space(self):
         data = np.random.random(365 * 3) * 90
-        dhist = timeseries(
-            data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
-        )
+        dhist = timeseries(data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True)
         data = np.random.random(365 * 3) * 100
 
-        dref = timeseries(
-            data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
-        )
+        dref = timeseries(data, variable="hurs", start="2001-01-01", freq="D", as_dataset=True)
         data2 = np.random.random(365 * 6) * 100
-        dsim = timeseries(
-            data2, variable="hurs", start="2001-01-01", freq="D", as_dataset=True
-        )
+        dsim = timeseries(data2, variable="hurs", start="2001-01-01", freq="D", as_dataset=True)
 
         dtrain = xs.train(
             dref,
@@ -421,14 +419,10 @@ class TestAdjust:
             period=["2001", "2003"],
             group="time",
             xsdba_train_args={"kind": "+"},
-            additive_space={
-                "hurs": dict(lower_bound="0 %", upper_bound="100 %", trans="logit")
-            },
+            additive_space={"hurs": dict(lower_bound="0 %", upper_bound="100 %", trans="logit")},
         )
 
-        assert dtrain.attrs["train_params"]["additive_space"] == {
-            "hurs": {"lower_bound": "0 %", "upper_bound": "100 %", "trans": "logit"}
-        }
+        assert dtrain.attrs["train_params"]["additive_space"] == {"hurs": {"lower_bound": "0 %", "upper_bound": "100 %", "trans": "logit"}}
 
         dadjust = xs.adjust(dtrain, dsim, periods=["2001", "2007"])
 
@@ -520,6 +514,55 @@ class TestMultivariate:
             xsdba_adjust_args={"period_dim": "period"},
             dref=ds,
         )
-        np.testing.assert_array_equal(
-            dscen_looped.tasmax.values, dscen_stacked.tasmax.values
+        np.testing.assert_array_equal(dscen_looped.tasmax.values, dscen_stacked.tasmax.values)
+
+
+class TestExtremes:
+    def test_extremes(self):
+        pr_ref = timeseries(
+            np.arange(365 * 30.0 + 7),
+            variable="pr",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="proleptic_gregorian",
+            units="mm/day",
         )
+        pr_sim = timeseries(
+            np.arange(365 * 60.0) + 5,
+            variable="pr",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+            units="mm/day",
+        )
+        pr_scen = timeseries(
+            np.arange(365 * 60.0) + 1,
+            variable="pr",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+            units="mm/day",
+        )
+        dtrain = xs.train(
+            pr_ref,
+            pr_sim,
+            var=["pr"],
+            method="ExtremeValues",
+            period=["2001", "2030"],
+            jitter_under={"thresh": "0.5 mm d-1"},
+            group=False,
+            xsdba_train_args={"cluster_thresh": "1 mm d-1", "q_thresh": 0.95},
+        )
+        ds_out = xs.adjust(
+            dtrain=dtrain,
+            dsim=pr_sim,
+            periods=[
+                ["2001", "2060"],
+            ],
+            stack_periods={"window": 30, "stride": 10, "start": "2001-01-01"},
+            xsdba_adjust_args={"scen": pr_scen["pr"], "frac": 0.25},
+        )
+        np.testing.assert_array_equal(ds_out.pr.time, pr_sim.time)

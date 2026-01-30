@@ -22,6 +22,7 @@ from .catalog import ProjectCatalog
 from .config import parse_config
 from .utils import get_cat_attrs
 
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
@@ -44,11 +45,10 @@ def send_mail(
     to: str | None = None,
     server: str = "127.0.0.1",
     port: int = 25,
-    attachments: None | (
-        list[tuple[str, Figure | os.PathLike] | Figure | os.PathLike]
-    ) = None,
+    attachments: None | (list[tuple[str, Figure | os.PathLike] | Figure | os.PathLike]) = None,
 ) -> None:
-    """Send email.
+    """
+    Send email.
 
     Email a single address through a login-less SMTP server.
     The default values of server and port should work out-of-the-box on Ouranos's systems.
@@ -133,7 +133,7 @@ class ExitWatcher:
             sys.excepthook = self.err_handler
             self.hooked = True
         else:
-            warnings.warn("Exit hooks have already been overridden.")
+            warnings.warn("Exit hooks have already been overridden.", stacklevel=2)
 
     def unhook(self):
         if self.hooked:
@@ -165,7 +165,8 @@ def send_mail_on_exit(
     skip_ctrlc: bool = True,
     **mail_kwargs,
 ) -> None:
-    """Send an email with content depending on how the system exited.
+    """
+    Send an email with content depending on how the system exited.
 
     This function is best used by registering it with `atexit`. Calls :py:func:`send_mail`.
 
@@ -197,11 +198,7 @@ def send_mail_on_exit(
     """
     subject = subject or "Workflow"
     msg_err = msg_err or "Workflow exited with some errors."
-    if (
-        not on_error_only
-        and exit_watcher.error is None
-        and exit_watcher.code in [None, 0]
-    ):
+    if not on_error_only and exit_watcher.error is None and exit_watcher.code in [None, 0]:
         send_mail(
             subject=subject + " - Success",
             msg=msg_ok or "Workflow exited successfully.",
@@ -213,9 +210,7 @@ def send_mail_on_exit(
             msg=f"{msg_err}\nSystem exited with code {exit_watcher.code}.",
             **mail_kwargs,
         )
-    elif exit_watcher.error is not None and (
-        exit_watcher.error[0] is not KeyboardInterrupt or not skip_ctrlc
-    ):
+    elif exit_watcher.error is not None and (exit_watcher.error[0] is not KeyboardInterrupt or not skip_ctrlc):
         tb = "".join(format_exception(*exit_watcher.error))
         msg_err = f"{msg_err}\n\n{tb}"
         send_mail(subject=subject + " - Failure", msg=msg_err, **mail_kwargs)
@@ -223,7 +218,8 @@ def send_mail_on_exit(
 
 @parse_config
 class measure_time:
-    """Context for timing a code block.
+    """
+    Context for timing a code block.
 
     Parameters
     ----------
@@ -275,7 +271,8 @@ class TimeoutException(Exception):  # noqa: N818
 
 @contextmanager
 def timeout(seconds: int, task: str = ""):
-    """Timeout context manager.
+    """
+    Timeout context manager.
 
     Only one can be used at a time, this is not multithread-safe : it cannot be used in
     another thread than the main one, but multithreading can be used in parallel.
@@ -291,7 +288,6 @@ def timeout(seconds: int, task: str = ""):
     if seconds is None or seconds <= 0:
         yield
     else:
-
         # FIXME: These variables are not used
         def _timeout_handler(signum, frame):  # noqa: F841
             raise TimeoutException(seconds, task)
@@ -307,7 +303,8 @@ def timeout(seconds: int, task: str = ""):
 
 @contextmanager
 def skippable(seconds: int = 2, task: str = "", logger: logging.Logger | None = None):
-    """Skippable context manager.
+    """
+    Skippable context manager.
 
     When CTRL-C (SIGINT, KeyboardInterrupt) is sent within the context,
     this catches it, prints to the log and gives a timeout during which a subsequent
@@ -365,7 +362,7 @@ def save_and_update(
         Dataset to save.
     pcat: ProjectCatalog
         Catalog to update after saving the dataset.
-    path: str or os.pathlike, optional
+    path: str or os.PathLike, optional
         Path where to save the dataset.
         If the string contains variables in curly bracket. They will be filled by catalog attributes.
         If None, the `catutils.build_path` function will be used to create a path.
@@ -390,36 +387,35 @@ def save_and_update(
             file_format = build_path_kwargs.get("format")
         elif path is not None and Path(path).suffix:
             file_format = Path(path).suffix.split(".")[-1]
+            ds.attrs["cat:format"] = file_format
         else:
             file_format = ds.attrs.get("cat:format", "zarr")
 
     # get path
     if path is not None:
-        path = str(path).format(
-            **get_cat_attrs(ds, var_as_str=True)
-        )  # fill path with attrs
+        output_path = str(path).format(**get_cat_attrs(ds, var_as_str=True))  # fill path with attrs
     else:  # if path is not given build it
         build_path_kwargs.setdefault("format", file_format)
         from .catutils import build_path
 
-        path = build_path(ds, **build_path_kwargs)
+        output_path = build_path(ds, **build_path_kwargs)
 
     # save
     if file_format == "zarr":
         from .io import save_to_zarr
 
-        save_to_zarr(ds, path, **save_kwargs)
+        save_to_zarr(ds, output_path, **save_kwargs)
     elif file_format == "nc":
         from .io import save_to_netcdf
 
-        save_to_netcdf(ds, path, **save_kwargs)
+        save_to_netcdf(ds, output_path, **save_kwargs)
     else:
         raise ValueError(f"file_format {file_format} is not valid. Use zarr or nc.")
 
     # update catalog
-    pcat.update_from_ds(ds=ds, path=path, **update_kwargs)
+    pcat.update_from_ds(ds=ds, path=output_path, **update_kwargs)
 
-    msg = f"File {path} has been saved successfully and the catalog was updated."
+    msg = f"File {output_path} has been saved successfully and the catalog was updated."
     logger.info(msg)
 
 
@@ -440,11 +436,15 @@ def move_and_delete(
         list of lists of path of files to move, following the format: [[source 1, destination1], [source 2, destination2],...]
     pcat : ProjectCatalog
         Catalog to update with new destinations
-    deleting : list of str or os.PathLike, optional
+    deleting : list of str or os.PathLike or int, optional
         List of directories to be deleted, including all contents, and recreated empty. e.g. The working directory of a workflow.
     copy : bool, optional
         If True, copy directories instead of moving them.
     """
+    if deleting is not None:
+        if not isinstance(deleting, list):
+            raise ValueError("`deleting` should be a list or None.")
+
     if isinstance(moving, list) and isinstance(moving[0], list):
         for files in moving:
             source, dest = files[0], files[1]
@@ -453,17 +453,19 @@ def move_and_delete(
                     msg = f"Copying {source} to {dest}."
                     logger.info(msg)
                     copied_files = sh.copytree(source, dest, dirs_exist_ok=True)
+                    if isinstance(copied_files, (str, os.PathLike)):
+                        copied_files = [copied_files]
                     for f in copied_files:
-                        # copied files don't include zarr files
-                        if f[-16:] == ".zarr/.zmetadata":
+                        p = Path(f)
+                        # Detect zarr metadata file OS-independently
+                        if p.name == ".zmetadata" and p.parent.suffix == ".zarr":
                             with warnings.catch_warnings():
-                                # Silence RuntimeWarning about failed guess of backend engines
                                 warnings.simplefilter("ignore", category=RuntimeWarning)
-                                ds = xr.open_dataset(f[:-11])
-                            pcat.update_from_ds(ds=ds, path=f[:-11])
-                        if f[-3:] == ".nc":
-                            ds = xr.open_dataset(f)
-                            pcat.update_from_ds(ds=ds, path=f)
+                                ds = xr.open_dataset(p.parent)
+                            pcat.update_from_ds(ds=ds, path=str(p.parent))
+                        elif p.suffix == ".nc":
+                            ds = xr.open_dataset(p)
+                            pcat.update_from_ds(ds=ds, path=str(p))
                 else:
                     msg = f"Moving {source} to {dest}."
                     logger.info(msg)
@@ -480,7 +482,7 @@ def move_and_delete(
     else:
         raise ValueError("`moving` should be a list of lists.")
 
-    # erase workdir content if this is the last step
+    # Erase workdir content if this is the last step
     if isinstance(deleting, list):
         for dir_to_delete in deleting:
             if Path(dir_to_delete).exists() and Path(dir_to_delete).is_dir():
@@ -490,5 +492,3 @@ def move_and_delete(
                 Path(dir_to_delete).mkdir()
     elif deleting is None:
         pass
-    else:
-        raise ValueError("`deleting` should be a list.")

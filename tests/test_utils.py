@@ -33,14 +33,8 @@ class TestLocale:
             out = xs.compute_indicators(ds, [("tg_mean", indicator)])["YS-JAN"]
         out = xs.climatological_op(out, op="mean")
 
-        assert (
-            out["tg_mean_clim_mean"].attrs["long_name"]
-            == "30-year climatological average of Mean daily mean temperature."
-        )
-        assert (
-            out["tg_mean_clim_mean"].attrs["long_name_fr"]
-            == "Moyenne 30 ans de Moyenne de la température moyenne quotidienne."
-        )
+        assert out["tg_mean_clim_mean"].attrs["long_name"] == "30-year climatological average of Mean daily mean temperature."
+        assert out["tg_mean_clim_mean"].attrs["long_name_fr"] == "Moyenne 30 ans de Moyenne de la température moyenne quotidienne."
 
     @pytest.mark.parametrize("locale", ["fr", "jp"])
     def test_add(self, locale):
@@ -148,16 +142,12 @@ class TestTranslateTimeChunk:
     @pytest.mark.parametrize("calendar", ["360_day", "standard", "365_day", "366_day"])
     def test_ny(self, calendar):
         ndays = int(calendar.split("_")[0]) if "day" in calendar else 365.25
-        out = xs.utils.translate_time_chunk(
-            {"time": "4year", "lon": 50}, calendar, 3450
-        )
+        out = xs.utils.translate_time_chunk({"time": "4year", "lon": 50}, calendar, 3450)
         assert out == {"time": ndays * 4, "lon": 50}
 
     def test_warning(self):
         with pytest.warns(UserWarning, match="The number of days"):
-            xs.utils.translate_time_chunk(
-                {"time": "3year", "lon": 50}, "standard", 3450
-            )
+            xs.utils.translate_time_chunk({"time": "3year", "lon": 50}, "standard", 3450)
 
     def test_dict_of_dict(self):
         out = xs.utils.translate_time_chunk(
@@ -336,9 +326,7 @@ class TestStack:
         elif coords == "file.nc":
             coords = str(tmpdir / "coords_{domain}_{shape}.nc")
 
-        ds_stack = xs.utils.stack_drop_nans(
-            ds, mask=mask, to_file=coords if isinstance(coords, str) else None
-        )
+        ds_stack = xs.utils.stack_drop_nans(ds, mask=mask, to_file=coords if isinstance(coords, str) else None)
         ds_unstack = xs.utils.unstack_fill_nan(
             ds_stack,
             coords=coords,
@@ -351,11 +339,7 @@ class TestStack:
         elif coords is None:
             # 'z' gets completely assigned as a dimension.
             assert "z" in ds_unstack.dims
-            assert (
-                ds_unstack.isel(z=0)
-                .drop_vars("z")
-                .equals(ds.isel(lat=slice(1, None)).drop_vars("z"))
-            )
+            assert ds_unstack.isel(z=0).drop_vars("z").equals(ds.isel(lat=slice(1, None)).drop_vars("z"))
         else:
             assert ds_unstack.equals(ds)
 
@@ -390,9 +374,7 @@ class TestStack:
             to_file=str(tmp_path / "coords_{domain}_{shape}.nc"),
         )
 
-        maybe_unstacked = xs.utils.maybe_unstack(
-            out, dim="loc1", coords=str(tmp_path / "coords_{domain}_{shape}.nc")
-        )
+        maybe_unstacked = xs.utils.maybe_unstack(out, dim="loc1", coords=str(tmp_path / "coords_{domain}_{shape}.nc"))
         assert maybe_unstacked.equals(out)
         # Call through clean_up to test the whole pipeline
         maybe_unstack_dict = {
@@ -450,9 +432,7 @@ class TestStack:
             coords=str(tmp_path / "coords_{domain}_{shape}.nc"),
             stack_drop_nans=True,
         )
-        unstacked = xs.utils.unstack_fill_nan(
-            out, coords=str(tmp_path / "coords_{domain}_{shape}.nc")
-        )
+        unstacked = xs.utils.unstack_fill_nan(out, coords=str(tmp_path / "coords_{domain}_{shape}.nc"))
 
         assert maybe_unstacked.equals(unstacked)
 
@@ -465,9 +445,7 @@ class TestXclimConvertUnitsContext:
 
     def test_functions_outside_units(self):
         pr_mm = timeseries([0, 1, 2], variable="pr", start="2001-01-01", units="mm d-1")
-        pr_kg = timeseries(
-            [0, 1, 2], variable="pr", start="2001-01-01", units="kg m-2 s-1"
-        )
+        pr_kg = timeseries([0, 1, 2], variable="pr", start="2001-01-01", units="kg m-2 s-1")
         with xs.utils.xclim_convert_units_to():
             xsdba.DetrendedQuantileMapping.train(pr_mm, pr_kg).ds.load()
 
@@ -554,6 +532,60 @@ class TestVariablesUnits:
         )
         with pytest.raises(ValueError, match="No known transformation"):
             xs.clean_up(ds, variables_and_units={"pr": "mm"})
+
+
+class TestFillNanDs:
+    def testfillnands(self):
+        data = [1] * (365 * 4 + 2)
+        data[4] = np.nan
+        ds = timeseries(
+            data,
+            variable="tas",
+            start="2000-01-01",
+            freq="D",
+            as_dataset=True,
+        )
+        data = [2] * (365 * 4 + 2)
+        ds_ref = timeseries(
+            data,
+            variable="tas",
+            start="2000-01-01",
+            freq="D",
+            as_dataset=True,
+        )
+
+        out = xs.clean_up(ds, fill_nan_ds=ds_ref)
+        assert out.tas.isel(time=4).values == 2
+        assert out.tas.isel(time=5).values == 1
+        assert "Filled missing values using" in out.tas.attrs["history"]
+
+    def testerror(self):
+        ds = datablock_3d(
+            np.zeros((20, 10, 10)),
+            "tas",
+            "lon",
+            -5,
+            "lat",
+            80.5,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        ds_ref = datablock_3d(
+            np.zeros((20, 9, 9)),
+            "tas",
+            "lon",
+            -5,
+            "lat",
+            80.5,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        with pytest.raises(ValueError, match="The non-time dimensions"):
+            xs.clean_up(ds, fill_nan_ds=ds_ref)
 
 
 class TestCalendar:
@@ -697,6 +729,20 @@ def test_round():
     assert "Rounded 'pr' to 1 decimal" in out["pr"].attrs["history"]
 
 
+def test_clip():
+    ds = timeseries(
+        np.arange(1, 365),
+        variable="hurs",
+        start="2000-01-01",
+        freq="D",
+        as_dataset=True,
+    )
+
+    out = xs.clean_up(ds, clip_var={"hurs": [0, 100]})
+    np.testing.assert_array_equal(out.hurs.isel(time=-1), 100)
+    assert "Clipped 'hurs' to [0, 100]" in out["hurs"].attrs["history"]
+
+
 class TestAttrs:
     def test_common(self):
         ds1 = timeseries(
@@ -743,17 +789,12 @@ class TestAttrs:
 
         ds1.attrs = ds2.attrs
         out = xs.clean_up(ds1, common_attrs_only=[ds2, ds3])
-        assert all(
-            k in out.attrs
-            for k in ["foo", "cat:type", "cat:variable", "cat:mip_era", "cat:id"]
-        )
+        assert all(k in out.attrs for k in ["foo", "cat:type", "cat:variable", "cat:mip_era", "cat:id"])
         assert out.attrs["cat:id"] == "CMIP6"
 
         del ds1.attrs["cat:mip_era"]
         out = xs.clean_up(ds1, common_attrs_only={"a": ds2, "b": ds3})
-        assert all(
-            k in out.attrs for k in ["foo", "cat:type", "cat:variable", "cat:id"]
-        )
+        assert all(k in out.attrs for k in ["foo", "cat:type", "cat:variable", "cat:id"])
         assert out.attrs["cat:id"] == ""
 
     @pytest.mark.requires_netcdf
@@ -806,10 +847,7 @@ class TestAttrs:
         )
 
         out = xs.clean_up(ds1, common_attrs_only=[ds2, ds3])
-        assert (
-            out.attrs["comment"]
-            == "This is a test file created for the xscen tutorial. This file is not a real CMIP6 file."
-        )
+        assert out.attrs["comment"] == "This is a test file created for the xscen tutorial. This file is not a real CMIP6 file."
         assert out.attrs.get("cat:id") is None
 
     def test_to_level(self):
@@ -838,9 +876,7 @@ class TestAttrs:
             "cat:source": "CNRM-CM6",
             "bacat:mip_era": "CMIP6",
         }
-        out = xs.clean_up(
-            ds, attrs_to_remove={"tas": ["units"], "global": [".*cat.*", "foo"]}
-        )
+        out = xs.clean_up(ds, attrs_to_remove={"tas": ["units"], "global": [".*cat.*", "foo"]})
         assert "units" in ds.tas.attrs
         assert "units" not in out.tas.attrs
         assert out.attrs == {}
@@ -862,9 +898,7 @@ class TestAttrs:
             "cat:source": "CNRM-CM6",
             "bacat:mip_era": "CMIP6",
         }
-        out = xs.clean_up(
-            ds, remove_all_attrs_except={"tas": ["units"], "global": [".*cat.*"]}
-        )
+        out = xs.clean_up(ds, remove_all_attrs_except={"tas": ["units"], "global": [".*cat.*"]})
         assert out.tas.attrs == {"units": "K"}
         assert out.attrs == {
             "cat:type": "simulation",
@@ -895,9 +929,7 @@ class TestAttrs:
         assert out.tas.attrs["foo"] == "bar"
         assert out.attrs["foo2"] == "electric boogaloo"
 
-    @pytest.mark.parametrize(
-        "change_prefix", ["dog", {"cat": "dog:"}, {"cat:": "dog:", "bacat": "badog"}]
-    )
+    @pytest.mark.parametrize("change_prefix", ["dog", {"cat": "dog:"}, {"cat:": "dog:", "bacat": "badog"}])
     def test_change_prefix(self, change_prefix):
         ds = timeseries(
             np.arange(1, 365 * 4 + 2),
@@ -933,9 +965,7 @@ class TestAttrs:
 
 
 class TestUnstackDates:
-    @pytest.mark.parametrize(
-        "freq", ["MS", "2MS", "3MS", "QS-DEC", "QS", "2QS", "YS", "YS-DEC", "4YS"]
-    )
+    @pytest.mark.parametrize("freq", ["MS", "2MS", "3MS", "QS-DEC", "QS", "2QS", "YS", "YS-DEC", "4YS"])
     def test_normal(self, freq):
         ds = timeseries(
             np.arange(1, 35),
@@ -973,24 +1003,16 @@ class TestUnstackDates:
             )
         elif "M" in freq:
             assert len(out.season) == 12 / int(freq[0])
-            np.testing.assert_array_equal(
-                out.season[0], ["JF"] if freq == "2MS" else ["JFM"]
-            )
+            np.testing.assert_array_equal(out.season[0], ["JF"] if freq == "2MS" else ["JFM"])
         elif "QS" in freq:
             assert len(out.season) == 4 if freq != "2QS" else 2
             np.testing.assert_array_equal(
                 out.season[0],
-                (
-                    ["MAM"]
-                    if freq == "QS-DEC"
-                    else ["JFM"] if freq == "QS" else ["JFMAMJ"]
-                ),
+                (["MAM"] if freq == "QS-DEC" else ["JFM"] if freq == "QS" else ["JFMAMJ"]),
             )
         else:
             assert len(out.season) == 1
-            np.testing.assert_array_equal(
-                out.season[0], [f"{freq.replace('YS', 'annual')}"]
-            )
+            np.testing.assert_array_equal(out.season[0], [f"{freq.replace('YS', 'annual')}"])
 
     @pytest.mark.parametrize("freq", ["MS", "QS", "YS"])
     def test_seasons(self, freq):
@@ -1035,9 +1057,7 @@ class TestUnstackDates:
                 ],
             )
         elif freq == "QS":
-            np.testing.assert_array_equal(
-                out.season, ["january", "april", "july", "october"]
-            )
+            np.testing.assert_array_equal(out.season, ["january", "april", "july", "october"])
         elif freq == "YS":
             np.testing.assert_array_equal(out.season, ["january"])
 
@@ -1051,13 +1071,9 @@ class TestUnstackDates:
             as_dataset=True,
         )
         out = xs.utils.unstack_dates(ds)
-        assert pd.Timestamp(str(out.time[0].values).split("T")[0]) == pd.Timestamp(
-            "2000-01-01"
-        )
+        assert pd.Timestamp(str(out.time[0].values).split("T")[0]) == pd.Timestamp("2000-01-01")
         out = xs.utils.unstack_dates(ds, year_start_month=12)
-        assert pd.Timestamp(str(out.time[0].values).split("T")[0]) == pd.Timestamp(
-            "2001-01-01"
-        )
+        assert pd.Timestamp(str(out.time[0].values).split("T")[0]) == pd.Timestamp("2001-01-01")
 
     def test_coords(self):
         freq = "MS"
@@ -1099,9 +1115,7 @@ class TestUnstackDates:
         with pytest.raises(ValueError, match="Only daily frequencies"):
             xs.utils.unstack_dates(ds)
         ds = ds.where(ds.time.dt.day != 1, drop=True)
-        with pytest.raises(
-            ValueError, match="The data must have a clean time coordinate."
-        ):
+        with pytest.raises(ValueError, match="The data must have a clean time coordinate."):
             xs.utils.unstack_dates(ds)
 
         ds = timeseries(
@@ -1111,9 +1125,7 @@ class TestUnstackDates:
             freq="7MS",
             as_dataset=True,
         )
-        with pytest.raises(
-            ValueError, match="Only periods that divide the year evenly are supported."
-        ):
+        with pytest.raises(ValueError, match="Only periods that divide the year evenly are supported."):
             xs.utils.unstack_dates(ds)
 
     def test_daily(self):
@@ -1126,9 +1138,7 @@ class TestUnstackDates:
         )
         out = xs.utils.unstack_dates(ds)
         assert tuple(out.dims) == ("dayofyear", "time")
-        np.testing.assert_array_equal(
-            out.tas.isel(time=0), ds.tas.isel(time=slice(None, 366))
-        )
+        np.testing.assert_array_equal(out.tas.isel(time=0), ds.tas.isel(time=slice(None, 366)))
 
 
 class TestEnsureTime:
@@ -1152,9 +1162,7 @@ class TestEnsureTime:
             as_dataset=True,
         )
         # Add random small number of seconds to the time
-        ds["time"] = ds.time + (np.random.rand(len(ds.time)) * 10).astype(
-            "timedelta64[s]"
-        )
+        ds["time"] = ds.time + (np.random.rand(len(ds.time)) * 10).astype("timedelta64[s]")
         out = xs.utils.ensure_correct_time(ds, "D")
         assert np.all(out.time.dt.hour == 0)
         assert np.all(out.time.dt.second == 0)
@@ -1217,9 +1225,7 @@ class TestStandardPeriod:
         out = xs.utils.standardize_periods(period, multiple=False, out_dtype="datetime")
         assert out == [pd.Timestamp("1981-01-01"), pd.Timestamp(timestamp_eop_match)]
 
-        out = xs.utils.standardize_periods(
-            period, multiple=False, out_dtype="datetime", end_of_periods=False
-        )
+        out = xs.utils.standardize_periods(period, multiple=False, out_dtype="datetime", end_of_periods=False)
         assert out == [pd.Timestamp("1981-01-01"), pd.Timestamp(timestamp_neop_match)]
 
     def test_error(self):
@@ -1229,9 +1235,7 @@ class TestStandardPeriod:
         with pytest.raises(ValueError, match="should be in chronological order,"):
             xs.utils.standardize_periods(["2010", "1981"])
         with pytest.raises(ValueError, match="should be a single instance"):
-            xs.utils.standardize_periods(
-                [["1981", "2010"], ["1981", "2010"]], multiple=False
-            )
+            xs.utils.standardize_periods([["1981", "2010"], ["1981", "2010"]], multiple=False)
 
 
 def test_sort_seasons():

@@ -8,7 +8,24 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import cartopy.crs
-import clisops.core.subset
+
+
+try:
+    import clisops  # For version info
+    import clisops.core as cl
+except KeyError as e:
+    if e.args[0] == "Author":
+        warnings.warn(
+            "The clisops package could not be imported due to a known KeyError bug that occurs with some "
+            "older versions of ESMF and specific execution setups (such as debugging on a Windows machine). "
+            "As a workaround, try installing 'importlib-metadata <8.0.0' and/or updating ESMF. If you do not "
+            "need 'clisops.core' functionalities (e.g. spatial subsetting), you can ignore this warning.",
+            stacklevel=2,
+        )
+    else:
+        raise e
+    cl = None
+    clisops = None
 import dask
 import geopandas as gpd
 import numpy as np
@@ -20,6 +37,7 @@ from pyproj.crs import CRS
 
 from ._types import Region
 from .config import parse_config
+
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +55,9 @@ __all__ = [
 
 
 @parse_config
-def creep_weights(
-    mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "clip"
-) -> xr.DataArray:
-    """Compute weights for the creep fill.
+def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "clip") -> xr.DataArray:
+    """
+    Compute weights for the creep fill.
 
     The output is a sparse matrix with the same dimensions as `mask`, twice.
     If `steps` is larger than 1, the output has a "step" dimension of that length.
@@ -79,9 +96,7 @@ def creep_weights(
 
     da = mask
     mask = da.values
-    neighbors = np.array(
-        list(itertools.product(*[np.arange(-n, n + 1) for j in range(mask.ndim)]))
-    ).T
+    neighbors = np.array(list(itertools.product(*[np.arange(-n, n + 1) for j in range(mask.ndim)]))).T
     src = []
     dst = []
     w = []
@@ -89,13 +104,9 @@ def creep_weights(
     for i in it:
         if not i:
             neigh_idx_2d = np.atleast_2d(it.multi_index).T + neighbors
-            neigh_idx_1d = np.ravel_multi_index(
-                neigh_idx_2d, mask.shape, order="C", mode=mode
-            )
+            neigh_idx_1d = np.ravel_multi_index(neigh_idx_2d, mask.shape, order="C", mode=mode)
             if mode == "clip":
-                neigh_idx = np.unravel_index(
-                    np.unique(neigh_idx_1d), mask.shape, order="C"
-                )
+                neigh_idx = np.unravel_index(np.unique(neigh_idx_1d), mask.shape, order="C")
             elif mode == "wrap":
                 neigh_idx = np.unravel_index(neigh_idx_1d, mask.shape, order="C")
             neigh = mask[neigh_idx]
@@ -123,7 +134,8 @@ def creep_weights(
 
 @parse_config
 def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
-    """Creep fill using pre-computed weights.
+    """
+    Creep fill using pre-computed weights.
 
     Parameters
     ----------
@@ -274,10 +286,13 @@ def subset(
     --------
     clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
     """
+    if cl is None and method in ["gridpoint", "bbox", "shape"]:
+        raise ImportError("The clisops package is required for the 'gridpoint', 'bbox' and 'shape' methods.")
     if tile_buffer > 0 and method in ["gridpoint", "sel"]:
         warnings.warn(
             f"tile_buffer is not used for the '{method}' method. Ignoring the argument.",
             UserWarning,
+            stacklevel=2,
         )
 
     if "latitude" not in ds.cf or "longitude" not in ds.cf:
@@ -292,9 +307,7 @@ def subset(
     elif method == "sel":
         ds_subset = _subset_sel(ds, name=name, **kwargs)
     else:
-        raise ValueError(
-            "Subsetting type not recognized. Use 'gridpoint', 'bbox', 'shape' or 'sel'."
-        )
+        raise ValueError("Subsetting type not recognized. Use 'gridpoint', 'bbox', 'shape' or 'sel'.")
 
     return ds_subset
 
@@ -307,7 +320,8 @@ def _subset_gridpoint(
     name: str | None = None,
     **kwargs,
 ) -> xr.Dataset:
-    r"""Subset the data to a gridpoint.
+    r"""
+    Subset the data to a gridpoint.
 
     Parameters
     ----------
@@ -345,7 +359,7 @@ def _subset_gridpoint(
         lon = lon.rename({dim: "site"})
         lat = lat.rename({dim: "site"})
 
-    ds_subset = clisops.core.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
+    ds_subset = cl.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
 
     if dim is not None:
         ds_subset = ds_subset.rename(site=dim)
@@ -367,7 +381,8 @@ def _subset_bbox(
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
-    r"""Subset the data to a bounding box.
+    r"""
+    Subset the data to a bounding box.
 
     Parameters
     ----------
@@ -408,9 +423,7 @@ def _subset_bbox(
             lat_bnds[1] + lat_res * tile_buffer,
         )
 
-    ds_subset = clisops.core.subset_bbox(
-        ds, lon_bnds=lon_bnds, lat_bnds=lat_bnds, **kwargs
-    )
+    ds_subset = cl.subset_bbox(ds, lon_bnds=lon_bnds, lat_bnds=lat_bnds, **kwargs)
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"bbox spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
@@ -429,7 +442,8 @@ def _subset_shape(
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
-    r"""Subset the data to a shape.
+    r"""
+    Subset the data to a shape.
 
     Parameters
     ----------
@@ -465,9 +479,7 @@ def _subset_shape(
 
     if tile_buffer > 0:
         if kwargs.get("buffer") is not None:
-            raise ValueError(
-                "Both tile_buffer and clisops' buffer were requested. Use only one."
-            )
+            raise ValueError("Both tile_buffer and clisops' buffer were requested. Use only one.")
         lon_res, lat_res = _estimate_grid_resolution(ds)
 
         # The buffer argument needs to be in the same units as the shapefile, so it's simpler to always project the shapefile to WGS84.
@@ -478,18 +490,20 @@ def _subset_shape(
         if shape_crs is None:
             warnings.warn(
                 "Shapefile does not have a CRS. Compatibility with the dataset is not guaranteed.",
+                stacklevel=2,
                 category=UserWarning,
             )
         elif shape_crs != CRS(4326):  # WGS84
             warnings.warn(
                 "Shapefile is not in EPSG:4326. Reprojecting to this CRS.",
                 UserWarning,
+                stacklevel=2,
             )
             shape = shape.to_crs(4326)
 
         kwargs["buffer"] = np.max([lon_res, lat_res]) * tile_buffer
 
-    ds_subset = clisops.core.subset_shape(ds, shape=shape, **kwargs)
+    ds_subset = cl.subset_shape(ds, shape=shape, **kwargs)
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"shape spatial subsetting with {'buffer=' + str(tile_buffer) if tile_buffer > 0 else 'no buffer'}"
@@ -501,7 +515,8 @@ def _subset_shape(
 
 
 def _subset_sel(ds: xr.Dataset, *, name: str | None = None, **kwargs) -> xr.Dataset:
-    r"""Subset the data using the .sel() method.
+    r"""
+    Subset the data using the .sel() method.
 
     Parameters
     ----------
@@ -524,10 +539,7 @@ def _subset_sel(ds: xr.Dataset, *, name: str | None = None, **kwargs) -> xr.Data
     ds_subset = ds.sel(**arg_sel)
 
     # Update the history attribute
-    new_history = (
-        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-        f"sel subsetting with arguments {arg_sel}"
-    )
+    new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] sel subsetting with arguments {arg_sel}"
 
     return update_history_and_name(ds_subset, new_history, name)
 
@@ -546,18 +558,12 @@ def _load_lon_lat(ds: xr.Dataset) -> xr.Dataset:
 
 def get_grid_mapping(ds: xr.Dataset) -> str:
     """Get the grid_mapping attribute from the dataset."""
-    gridmap = [
-        ds[v].attrs["grid_mapping"]
-        for v in ds.data_vars
-        if "grid_mapping" in ds[v].attrs
-    ]
+    gridmap = [ds[v].attrs["grid_mapping"] for v in ds.data_vars if "grid_mapping" in ds[v].attrs]
     gridmap += [c for c in ds.variables if ds[c].attrs.get("grid_mapping_name", None)]
     gridmap = list(np.unique(gridmap))
 
     if len(gridmap) > 1:
-        warnings.warn(
-            f"There are conflicting grid_mapping attributes in the dataset. Assuming {gridmap[0]}."
-        )
+        warnings.warn(f"There are conflicting grid_mapping attributes in the dataset. Assuming {gridmap[0]}.", stacklevel=2)
 
     return gridmap[0] if gridmap else ""
 
@@ -582,9 +588,7 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
     globe = cartopy.crs.Globe(
         datum=cf_params.get("horizontal_datum_name"),
         ellipse=cf_params.get("reference_ellipsoid_name", "WGS84"),
-        semimajor_axis=(
-            cf_params.get("earth_radius") or cf_params.get("semi_major_axis")
-        ),
+        semimajor_axis=(cf_params.get("earth_radius") or cf_params.get("semi_major_axis")),
         semiminor_axis=cf_params.get("semi_minor_axis"),
         inverse_flattening=cf_params.get("inverse_flattening"),
         towgs84=cf_params.get("towgs84"),
@@ -607,9 +611,7 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
             globe=globe,
         )
     else:
-        raise NotImplementedError(
-            f"Grid mapping {cf_params['grid_mapping_name']} not implemented."
-        )
+        raise NotImplementedError(f"Grid mapping {cf_params['grid_mapping_name']} not implemented.")
     return crs
 
 
@@ -627,21 +629,16 @@ def _estimate_grid_resolution(ds: xr.Dataset) -> tuple[float, float]:
 
 
 def update_history_and_name(ds_subset, new_history, name):
-    history = (
-        new_history + " \n " + ds_subset.attrs["history"]
-        if "history" in ds_subset.attrs
-        else new_history
-    )
+    history = new_history + " \n " + ds_subset.attrs["history"] if "history" in ds_subset.attrs else new_history
     ds_subset.attrs["history"] = history
     if name is not None:
         ds_subset.attrs["cat:domain"] = name
     return ds_subset
 
 
-def dataset_extent(
-    ds: xr.Dataset, method: str = "shape", name: str | None = None
-) -> Region:
-    r"""The dataset's spatial extent expressed as a xscen Region spec.
+def dataset_extent(ds: xr.Dataset, method: str = "shape", name: str | None = None) -> Region:
+    r"""
+    The dataset's spatial extent expressed as a xscen Region spec.
 
     Parameters
     ----------
@@ -679,13 +676,7 @@ def dataset_extent(
 
     # Tolerance 0 is to merge colinear segments, without degrading anything else
     p = shp.simplify(
-        shp.unary_union(
-            shp.polygons(
-                shp.linearrings(
-                    lonb.transpose(..., "bounds"), latb.transpose(..., "bounds")
-                )
-            )
-        ),
+        shp.unary_union(shp.polygons(shp.linearrings(lonb.transpose(..., "bounds"), latb.transpose(..., "bounds")))),
         tolerance=0,
     )
 
@@ -703,7 +694,8 @@ def dataset_extent(
 
 
 def merge_duplicated_stations(ds: xr.Dataset) -> xr.Dataset:
-    """Merge identical locations of a dataset.
+    """
+    Merge identical locations of a dataset.
 
     Identical locations are merged by combination of float values (priority from order of the location dimension).
     Non-float values are taken from the first element.
@@ -715,9 +707,7 @@ def merge_duplicated_stations(ds: xr.Dataset) -> xr.Dataset:
     """
     dim = ds.lat.dims[0]
     # Geopandas et des Points, c'est plus rapide que Pandas et des tuples
-    df = gpd.GeoDataFrame(
-        index=ds[dim], geometry=[shp.Point(lo, la) for lo, la in zip(ds.lon, ds.lat)]
-    )
+    df = gpd.GeoDataFrame(index=ds[dim], geometry=[shp.Point(lo, la) for lo, la in zip(ds.lon, ds.lat, strict=True)])
     dups = df.duplicated("geometry")
     if dups.sum() == 0:
         # aucun dup
@@ -725,7 +715,7 @@ def merge_duplicated_stations(ds: xr.Dataset) -> xr.Dataset:
 
     dss = []
     N = 0
-    for geom, grp in df.groupby("geometry"):
+    for _, grp in df.groupby("geometry"):
         if len(grp) == 1:
             dss.append(ds.sel({dim: [grp.index[0]]}))
         else:
@@ -749,7 +739,8 @@ def voronoi_weights(
     minlocs: int = 0,
     _pts=None,
 ) -> xr.DataArray:
-    """Compute a weight for each location in the dataset inversely proportionnate to the location density.
+    """
+    Compute a weight for each location in the dataset inversely proportionnate to the location density.
 
     The total extent of the dataset is divided in regions using the Voronoi partition and weights are
     computed from the area of these regions. This is meant for station data for example.
@@ -779,7 +770,7 @@ def voronoi_weights(
     if _pts is None:
         pts = gpd.GeoDataFrame(
             index=ds[dim],
-            geometry=[shp.Point(lo, la) for lo, la in zip(ds.lon, ds.lat)],
+            geometry=[shp.Point(lo, la) for lo, la in zip(ds.lon, ds.lat, strict=True)],
         )
     else:  # Shortcut for when iterating over regions
         pts = _pts
@@ -788,36 +779,22 @@ def voronoi_weights(
         region = pts.union_all().convex_hull.buffer(1)
     elif isinstance(region, gpd.GeoDataFrame):
         weights = []
-        for i, row in region.iterrows():
-            weights.append(
-                voronoi_weights(
-                    ds, row.geometry, maxfrac=maxfrac, _pts=pts
-                ).expand_dims(geom=[row.name])
-            )
+        for _, row in region.iterrows():
+            weights.append(voronoi_weights(ds, row.geometry, maxfrac=maxfrac, _pts=pts).expand_dims(geom=[row.name]))
         weight = xr.concat(weights, "geom")
-        weight = weight.assign_coords(
-            region.drop(columns=["geometry"])
-            .to_xarray()
-            .rename({region.index.name or "index": "geom"})
-        )
+        weight = weight.assign_coords(region.drop(columns=["geometry"]).to_xarray().rename({region.index.name or "index": "geom"}))
         if minlocs > 0:
             weight = weight.where((weight > 0).sum(ds.lon.dims) >= minlocs, drop=True)
             weight = weight.where((weight > 0).any("geom"), drop=True)
         return weight
 
-    zones = gpd.GeoDataFrame(geometry=pts.voronoi_polygons(extend_to=region)).clip(
-        region
-    )
+    zones = gpd.GeoDataFrame(geometry=pts.voronoi_polygons(extend_to=region)).clip(region)
     zones["geometry"] = zones.buffer(0)
     zones["zone_area"] = zones.geometry.area
 
     # overlay aligns points with their intersecting polygon
     # reset_index, set_index, reindex dance to preserve indexing info and sort final DF as input
-    area = (
-        gpd.overlay(pts.reset_index(names="station"), zones)
-        .set_index("station")
-        .reindex(pts.index)["zone_area"]
-    ).fillna(0)
+    area = (gpd.overlay(pts.reset_index(names="station"), zones).set_index("station").reindex(pts.index)["zone_area"]).fillna(0)
 
     if maxfrac is not None:
         maxarea = area.sum() * maxfrac

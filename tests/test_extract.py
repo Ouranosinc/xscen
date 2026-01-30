@@ -25,14 +25,8 @@ class TestSearchDataCatalogs:
         out = xs.search_data_catalogs(
             data_catalogs=self.cat,
             variables_and_freqs=variables_and_freqs,
-            other_search_criteria=(
-                {"experiment": ["ssp585"]} if other_arg == "other" else None
-            ),
-            exclusions=(
-                {"member": "r2.*", "domain": ["gr2"]}
-                if other_arg == "exclusion"
-                else None
-            ),
+            other_search_criteria=({"experiment": ["ssp585"]} if other_arg == "other" else None),
+            exclusions=({"member": "r2.*", "domain": ["gr2"]} if other_arg == "exclusion" else None),
         )
         assert len(out) == 13 if other_arg is None else 2 if other_arg == "other" else 4
 
@@ -122,9 +116,7 @@ class TestSearchDataCatalogs:
             new_line["variable"] = ("tasmin",)
             new_line["id"] = xs.catalog.generate_id(new_line.to_frame().T).iloc[0]
 
-            cat.esmcat._df = pd.concat(
-                [cat.df, new_line.to_frame().T], ignore_index=True
-            )
+            cat.esmcat._df = pd.concat([cat.df, new_line.to_frame().T], ignore_index=True)
 
         out = xs.search_data_catalogs(
             data_catalogs=cat,
@@ -197,10 +189,7 @@ class TestSearchDataCatalogs:
         )
         assert len(out) == (2 if allow_conversion else 0)
         if allow_conversion:
-            assert all(
-                v in out[list(out.keys())[0]].unique("variable")
-                for v in ["tasmin", "tasmax"]
-            )
+            assert all(v in out[list(out.keys())[0]].unique("variable") for v in ["tasmin", "tasmax"])
             assert "tas" not in out[list(out.keys())[0]].unique("variable")
 
     def test_no_match(self):
@@ -257,9 +246,7 @@ class TestSearchDataCatalogs:
     def test_fx(self):
         cat = deepcopy(self.cat)
         new_line = deepcopy(cat.df.iloc[0])
-        new_line["id"] = new_line["id"].replace(
-            new_line["experiment"], "another_experiment"
-        )
+        new_line["id"] = new_line["id"].replace(new_line["experiment"], "another_experiment")
         new_line["experiment"] = "another_experiment"
         cat.esmcat._df = pd.concat([cat.df, new_line.to_frame().T], ignore_index=True)
 
@@ -282,9 +269,7 @@ class TestSearchDataCatalogs:
 
 class TestGetWarmingLevel:
     def test_list(self):
-        with pytest.warns(
-            FutureWarning, match="get_warming_level has been deprecated."
-        ):
+        with pytest.warns(FutureWarning, match="get_warming_level has been deprecated."):
             out = xs.get_warming_level(
                 ["CMIP6_CanESM5_ssp126_r1i1p1f1", "CMIP6_CanESM5_ssp245_r1i1p1f1"],
                 wl=2,
@@ -301,17 +286,10 @@ class TestGetWarmingLevel:
         )
         assert isinstance(out2, list)
         np.testing.assert_array_almost_equal(out2, [2.0418553921, 2.1353053921])
-        assert (
-            xs.get_warming_level_from_period(
-                "CMIP6_CanESM5_ssp126_r1i1p1f1", list(np.array(period) - 1)
-            )
-            < 2
-        )
+        assert xs.get_warming_level_from_period("CMIP6_CanESM5_ssp126_r1i1p1f1", list(np.array(period) - 1)) < 2
 
     def test_string_with_horizon(self):
-        out = xs.get_period_from_warming_level(
-            "CMIP6_CanESM5_ssp585_r1i1p1f1", wl=2, window=20, return_central_year=False
-        )
+        out = xs.get_period_from_warming_level("CMIP6_CanESM5_ssp585_r1i1p1f1", wl=2, window=20, return_central_year=False)
         assert isinstance(out, list)
         assert out == ["2013", "2032"]
 
@@ -347,16 +325,9 @@ class TestGetWarmingLevel:
         }
 
         ds.attrs = attributes[deepcopy(attrs)]
-        assert (
-            xs.get_period_from_warming_level(
-                ds, wl=2, window=20, ignore_member=True, return_central_year=True
-            )
-            == "2026"
-        )
+        assert xs.get_period_from_warming_level(ds, wl=2, window=20, ignore_member=True, return_central_year=True) == "2026"
         np.testing.assert_array_almost_equal(
-            xs.get_warming_level_from_period(
-                ds, [2026 - 9, 2026 + 10], ignore_member=True
-            ),
+            xs.get_warming_level_from_period(ds, [2026 - 9, 2026 + 10], ignore_member=True),
             2.0418553,
         )
 
@@ -378,27 +349,16 @@ class TestGetWarmingLevel:
 
     def test_multiple_matches(self):
         # 55 instances of CanESM2-rcp85 in the CSV, but it should still return a single value
-        assert (
-            xs.get_period_from_warming_level(
-                "CMIP5_CanESM2_rcp85_.*", wl=3.5, window=30, return_central_year=True
-            )
-            == "2059"
-        )
+        assert xs.get_period_from_warming_level("CMIP5_CanESM2_rcp85_.*", wl=3.5, window=30, return_central_year=True) == "2059"
         np.testing.assert_array_almost_equal(
-            xs.get_warming_level_from_period(
-                "CMIP5_CanESM2_rcp85_.*", [2059 - 14, 2059 + 15]
-            ),
+            xs.get_warming_level_from_period("CMIP5_CanESM2_rcp85_.*", [2059 - 14, 2059 + 15]),
             3.545244,
         )
 
     def test_odd_window(self):
-        assert xs.get_period_from_warming_level(
-            "CMIP6_CanESM5_ssp126_r1i1p1f1", wl=2, window=21, return_central_year=False
-        ) == ["2016", "2036"]
+        assert xs.get_period_from_warming_level("CMIP6_CanESM5_ssp126_r1i1p1f1", wl=2, window=21, return_central_year=False) == ["2016", "2036"]
         np.testing.assert_array_almost_equal(
-            xs.get_warming_level_from_period(
-                "CMIP6_CanESM5_ssp126_r1i1p1f1", [2016, 2036]
-            ),
+            xs.get_warming_level_from_period("CMIP6_CanESM5_ssp126_r1i1p1f1", [2016, 2036]),
             2.019456,
         )
 
@@ -422,21 +382,12 @@ class TestGetWarmingLevel:
             is None
         )
         with pytest.raises(ValueError, match="s not fully covered by the provided"):
-            xs.get_warming_level_from_period(
-                "CMIP6_CanESM5_ssp585_r1i1p1f1", ["2100", "2120"]
-            )
-        assert (
-            xs.get_warming_level_from_period(
-                "CMIP6_notreal_ssp585_r1i1p1f1", ["2010", "2020"]
-            )
-            is None
-        )
+            xs.get_warming_level_from_period("CMIP6_CanESM5_ssp585_r1i1p1f1", ["2100", "2120"])
+        assert xs.get_warming_level_from_period("CMIP6_notreal_ssp585_r1i1p1f1", ["2010", "2020"]) is None
 
     def test_wrong_types(self):
         with pytest.raises(ValueError):
-            xs.get_period_from_warming_level(
-                {"this": "is not valid."}, wl=2, window=20, return_central_year=False
-            )
+            xs.get_period_from_warming_level({"this": "is not valid."}, wl=2, window=20, return_central_year=False)
         with pytest.raises(ValueError):
             xs.get_period_from_warming_level(
                 "CMIP6_CanESM5_ssp585_r1i1p1f1_toomany_underscores",
@@ -453,9 +404,7 @@ class TestGetWarmingLevel:
             )
 
     def test_DataArray(self):  # noqa: N802
-        reals = xr.DataArray(
-            ["CMIP6_CanESM5_ssp126_r1i1p1f1"], dims=("x",), coords={"x": [1]}
-        )
+        reals = xr.DataArray(["CMIP6_CanESM5_ssp126_r1i1p1f1"], dims=("x",), coords={"x": [1]})
         out = xs.get_period_from_warming_level(reals, wl=2, return_central_year=True)
         xr.testing.assert_identical(out, reals.copy(data=["2026"]))
 
@@ -467,9 +416,7 @@ class TestGetWarmingLevel:
             dims=("x",),
             coords={"x": [1, 2]},
         )
-        out = xs.get_period_from_warming_level(
-            reals, wl=[1, 1.5, 2, 2.5], return_central_year=True
-        )
+        out = xs.get_period_from_warming_level(reals, wl=[1, 1.5, 2, 2.5], return_central_year=True)
         assert_out = xr.DataArray(
             [["1999", "2013", "2026", "2040"], ["1999", "2013", "2023", "2033"]],
             dims=("x", "wl"),
@@ -501,9 +448,7 @@ class TestGetWarmingLevel:
             window=20,
             return_central_year=True,
         )
-        pd.testing.assert_series_equal(
-            out, pd.Series(["2026", "2024"], index=["a", "b"])
-        )
+        pd.testing.assert_series_equal(out, pd.Series(["2026", "2024"], index=["a", "b"]))
 
         out = xs.get_period_from_warming_level(
             reals,
@@ -574,9 +519,7 @@ class TestSubsetWarmingLevel:
             if len(wl) == 3:
                 np.testing.assert_array_equal(ds.tas.isnull().all(), [True])
             else:
-                np.testing.assert_array_equal(
-                    ds.tas.isnull().all(dim="time"), [False, True, True, True]
-                )
+                np.testing.assert_array_equal(ds.tas.isnull().all(dim="time"), [False, True, True, True])
 
     @pytest.mark.parametrize("asaux", [True, False])
     def test_multireals(self, asaux):
@@ -605,12 +548,8 @@ class TestSubsetWarmingLevel:
             to_level="tests",
         )
         np.testing.assert_array_equal(ds_sub.time.dt.year, np.arange(1000, 1020))
-        np.testing.assert_array_equal(
-            ds_sub.warminglevel_bounds[:2].dt.year, [[[2004, 2023]], [[2004, 2023]]]
-        )
+        np.testing.assert_array_equal(ds_sub.warminglevel_bounds[:2].dt.year, [[[2004, 2023]], [[2004, 2023]]])
         assert ds_sub.warminglevel_bounds[2].isnull().all()
-
-        ds
 
     def test_multilevels(self):
         ds_sub = xs.subset_warming_level(
@@ -698,9 +637,7 @@ class TestResample:
         out = xs.extract.resample(da, "YS", method="mean", missing={"method": "any"})
         assert out.isel(time=0).isnull().all()
 
-        out = xs.extract.resample(
-            da, "YS", method="mean", missing={"method": "pct", "tolerance": 0.6}
-        )
+        out = xs.extract.resample(da, "YS", method="mean", missing={"method": "pct", "tolerance": 0.6})
         assert out.isel(time=0).notnull().all()
         assert out.isel(time=-1).isnull().all()
 
@@ -724,3 +661,23 @@ class TestResample:
 
         out = xs.extract.resample(da, "D", initial_frequency="h", missing="mask")
         np.testing.assert_array_equal(out.isnull(), [False, False, True])
+
+
+class TestExtractDataset:
+    def test_input_with_different_times(self, samplecatzarr):
+        # get data with fake issue in time (tasmin has been is at noon instead of 00:00)
+        out = xs.search_data_catalogs(
+            data_catalogs=samplecatzarr,
+            variables_and_freqs={"tasmax": "D", "tasmin": "D"},
+            other_search_criteria={"experiment": ["ssp126"]},
+        ).popitem()[1]
+
+        # should return without error because time has been floored
+        ds_sim = xs.extract_dataset(catalog=out)
+
+        assert len(ds_sim["D"].time.values) == 730
+
+        # twice as much time because we have time at 00:00 and 12:00 without correction
+        ds_sim = xs.extract_dataset(catalog=out, ensure_correct_time=False)
+
+        assert len(ds_sim["D"].time.values) == 1460

@@ -1,9 +1,12 @@
+import logging
 from pathlib import Path
 
 import pandas as pd
+import pytest
 import xarray as xr
-from conftest import SAMPLES_DIR
+from conftest import SAMPLES_DIR, notebooks
 
+import xscen as xs
 from xscen import catalog, extract
 
 
@@ -18,9 +21,7 @@ def test_subset_file_coverage():
     df["date_end"] = pd.to_datetime(df.date_end)
 
     # Ok
-    pd.testing.assert_frame_equal(
-        catalog.subset_file_coverage(df, [1951, 1970], coverage=0.8), df
-    )
+    pd.testing.assert_frame_equal(catalog.subset_file_coverage(df, [1951, 1970], coverage=0.8), df)
 
     # Insufficient coverage (no files)
     pd.testing.assert_frame_equal(
@@ -44,9 +45,7 @@ def test_subset_file_coverage_2300():
         ]
     )
 
-    pd.testing.assert_frame_equal(
-        catalog.subset_file_coverage(df, [2250, 2305], coverage=0.8), df[1:3]
-    )
+    pd.testing.assert_frame_equal(catalog.subset_file_coverage(df, [2250, 2305], coverage=0.8), df[1:3])
 
 
 def test_xrfreq_fix():
@@ -55,8 +54,10 @@ def test_xrfreq_fix():
 
 
 class TestCopyFiles:
-    def test_flat(self, samplecat, tmp_path):
-        newcat = samplecat.copy_files(tmp_path, flat=True)
+    def test_flat(self, samplecat, tmp_path, caplog):
+        with caplog.at_level(logging.DEBUG):
+            newcat = samplecat.copy_files(tmp_path, flat=True)
+        assert f"Will copy {len(newcat.df)} files." in caplog.text
         assert len(list(tmp_path.glob("*.nc"))) == len(newcat.df)
 
     def test_inplace(self, samplecat, tmp_path):
@@ -107,3 +108,129 @@ class TestCopyFiles:
         assert f.suffix == ".zarr"
         assert f.parent.name == ru.name
         assert f.is_dir()
+
+    def test_unzipzarr(self, samplecatzarr, tmp_path):
+        newcat = samplecatzarr.copy_files(tmp_path, unzip=True)
+        assert len(list(tmp_path.glob("*.zarr"))) == len(newcat.df)
+
+
+def test_from_df():
+    df = xs.parse_directory(
+        directories=[SAMPLES_DIR],
+        patterns=["{activity}/{domain}/{institution}/{source}/{experiment}/{member}/{frequency}/{?:_}.nc"],
+        homogenous_info={
+            "mip_era": "CMIP6",
+            "type": "simulation",
+            "processing_level": "raw",
+        },
+        read_from_file=["variable", "date_start", "date_end"],
+    )
+
+    cat = xs.catalog.DataCatalog.from_df(df)
+
+    assert (len(cat.df) == len(df)) and all(cat.df.columns == df.columns)
+
+
+def test_from_df_with_files():
+    cat = xs.catalog.DataCatalog.from_df(notebooks / "samples" / "pangeo-cmip6.csv", esmdata=notebooks / "samples" / "pangeo-cmip6.json")
+
+    assert len(cat.df) == 47
+
+
+def test_search_period():
+    cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json")
+
+    scat = cat.search(periods=["2015", "2016"])
+
+    assert len(scat.df) == 17
+
+    assert scat.df.date_end.min() >= pd.Timestamp("2016-12-31 00:00:00")
+    assert scat.df.date_start.max() <= pd.Timestamp("2015-01-01 00:00:00")
+
+
+def test_search_nothing():
+    cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json")
+
+    scat = cat.search()
+
+    assert (scat.df == cat.df).all().all()
+
+
+def test_exist_in_cat(samplecat, caplog):
+    with caplog.at_level(logging.INFO):
+        assert samplecat.exists_in_cat(variable="tas")
+    assert "An entry exists for: {'variable': 'tas'}" in caplog.text
+    assert not samplecat.exists_in_cat(variable="nonexistent_variable")
+
+
+# segfault on github
+def test_to_dataset(samplecat):
+    ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(concat_on="experiment", xarray_open_kwargs={"engine": "h5netcdf"})
+
+    assert "experiment" in ds.dims
+
+
+def test_to_dataset_ensemble(samplecat):
+    ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(create_ensemble_on="experiment", xarray_open_kwargs={"engine": "h5netcdf"})
+
+    assert "realization" in ds.dims
+    assert "ssp126" in ds.realization.values
+
+    with pytest.raises(ValueError):
+        ds = samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(
+            create_ensemble_on=["experiment"], ensemble_name=["source"], xarray_open_kwargs={"engine": "h5netcdf"}
+        )
+
+
+def test_to_dataset_many(samplecat):
+    # too many experiment
+    with pytest.raises(ValueError):
+        samplecat.search(member="r1i1p1f1", variable="tas").to_dataset(xarray_open_kwargs={"engine": "h5netcdf"})
+
+
+def test_unique_empty(tmpdir):
+    root = str(tmpdir / "_data")
+    pcat = xs.catalog.ProjectCatalog(f"{root}/test.json", create=True, project={"title": "Test Project"})
+    with pytest.raises(ValueError):
+        pcat.unique("variable")
+
+
+def test_project_catalog_create_and_update(tmpdir):
+    root = str(tmpdir / "_data")
+    pcat = xs.catalog.ProjectCatalog(f"{root}/test.json", create=True, project={"title": "Test Project"})
+
+    assert Path(f"{root}/test.json").exists()
+
+    lpcat = len(pcat.df)
+
+    df = xs.parse_directory(
+        directories=[SAMPLES_DIR],
+        patterns=["{activity}/{domain}/{institution}/{source}/{experiment}/{member}/{frequency}/{?:_}.zarr.zip"],
+        homogenous_info={
+            "mip_era": "CMIP6",
+            "type": "simulation",
+            "processing_level": "raw",
+        },
+        read_from_file=["variable", "date_start", "date_end"],
+    )
+
+    pcat.update(df)
+
+    assert len(pcat.df) == lpcat + len(df)
+
+    path = SAMPLES_DIR / "ScenarioMIP/example-region/NCC/NorESM2-MM/ssp126/r1i1p1f1/day/ScenarioMIP_NCC_NorESM2-MM_ssp126_r1i1p1f1_gn_raw.nc"
+    ds = xr.open_dataset(path)
+    pcat.update_from_ds(ds, path, info_dict={"experiment": "ssp999"}, variable="tas")
+
+    assert pcat.df.iloc[-1].experiment == "ssp999"
+    assert "tas" in pcat.df.iloc[-1].variable
+
+
+def test_project_catalog_create_fails(tmpdir):
+    root = str(tmpdir / "_data")
+
+    with pytest.raises(ValueError):
+        xs.catalog.ProjectCatalog(
+            f"{root}/test.json",
+            create=True,
+        )

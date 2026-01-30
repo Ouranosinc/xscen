@@ -34,7 +34,7 @@ clean-build: ## remove build artifacts
 	rm -fr dist/
 	rm -fr .eggs/
 	find . -name '*.egg-info' -exec rm -fr {} +
-	find . -name '*.egg' -exec rm -f {} +
+	find . -name '*.egg' -exec rm -fr {} +
 
 clean-docs: ## remove documentation artifacts
 	rm -fr docs/notebooks/_data/
@@ -60,18 +60,13 @@ lint/flake8: ## check style with flake8
 	python -m flake8 --config=.flake8 src/xscen tests
 	# python -m numpydoc lint src/xscen/**.py  # FIXME: disabled until the codebase is fully numpydoc compliant
 	codespell src/xscen tests docs
-
-lint/black: ## check style with black
-	python -m black --check src/xscen tests
-	python -m blackdoc --check src/xscen docs
-	python -m isort --check src/xscen tests
 	python -m yamllint --config-file=.yamllint.yaml src/xscen
 
 lint/security: ## check dependencies
 	python -m deptry src/xscen
 	python -m vulture src/xscen tests
 
-lint: lint/black lint/flake8 lint/security ## check style
+lint: lint/flake8 lint/security ## check style
 
 test: ## run tests quickly with the default Python
 	python -m pytest

@@ -6,20 +6,29 @@ updates:
   - package-ecosystem: github-actions
     directory: /.github/workflows
     schedule:
-      interval: monthly
+      interval: "quarterly"
     groups:
       actions:
         patterns:
           - "*"
+        update-types:
+          - patch
+          - minor
+          - major
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: pip
-    directory: /
+    directory: /CI
     schedule:
-      interval: monthly
+      interval: "quarterly"
     groups:
-      ci:
-        patterns:
-          - "CI/*"
       python:
         patterns:
-          - "pyproject.toml"
+          - "requirements_ci.*"
+        update-types:
+          - patch
+          - minor
+          - major
+    cooldown:
+      default-days: 7

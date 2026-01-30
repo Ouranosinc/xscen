@@ -5,9 +5,13 @@ import numpy as np
 import pytest
 import xarray as xr
 
+
 try:
     import xesmf as xe
-except ImportError:
+except (ImportError, KeyError) as e:
+    if isinstance(e, KeyError):
+        if e.args[0] != "Author":
+            raise e
     xe = None
 import xscen as xs
 from xscen.testing import datablock_3d
@@ -84,9 +88,7 @@ class TestCreateBoundsGridmapping:
             as_dataset=True,
         )
         ds = ds.rename({"oblique_mercator": "lambert_conformal_conic"})
-        ds["lambert_conformal_conic"].attrs[
-            "grid_mapping_name"
-        ] = "lambert_conformal_conic"
+        ds["lambert_conformal_conic"].attrs["grid_mapping_name"] = "lambert_conformal_conic"
         ds.tas.attrs["grid_mapping"] = "lambert_conformal_conic"
         with pytest.raises(NotImplementedError):
             xs.regrid.create_bounds_gridmapping(ds, "lambert_conformal_conic")
@@ -163,18 +165,14 @@ class TestRegridDataset:
             },
         )
 
-        assert (
-            tmp_path / "weights" / "C_Global_CORDEX_RegionEssai_regrid0patch.nc"
-        ).is_file()
+        assert (tmp_path / "weights" / "C_Global_CORDEX_RegionEssai_regrid0patch.nc").is_file()
         assert out.tas.attrs["grid_mapping"] == "rotated_pole"
         assert out.rotated_pole.attrs == self.dsout_rp.rotated_pole.attrs
         assert "patch" in out.attrs["history"]
         assert out.attrs["cat:processing_level"] == "regridded"
         assert out.chunks["rlon"] == (5, 5)
 
-        hash1 = self.compute_file_hash(
-            tmp_path / "weights" / "C_Global_CORDEX_RegionEssai_regrid0patch.nc"
-        )
+        hash1 = self.compute_file_hash(tmp_path / "weights" / "C_Global_CORDEX_RegionEssai_regrid0patch.nc")
         xs.regrid_dataset(
             self.dsin_reg,
             self.dsout_rp,
@@ -186,9 +184,7 @@ class TestRegridDataset:
             },
         )
         # Check that the weights are not recomputed
-        hash2 = self.compute_file_hash(
-            tmp_path / "weights" / "C_Global_CORDEX_RegionEssai_regrid0patch.nc"
-        )
+        hash2 = self.compute_file_hash(tmp_path / "weights" / "C_Global_CORDEX_RegionEssai_regrid0patch.nc")
         assert hash1 == hash2
 
     def test_mask(self):
@@ -210,9 +206,7 @@ class TestRegridDataset:
             },
         )
         assert "mask" not in out
-        np.testing.assert_equal(
-            out.tas.isel(time=0), xr.where(grid["mask"] == 0, np.nan, 0).values
-        )
+        np.testing.assert_equal(out.tas.isel(time=0), xr.where(grid["mask"] == 0, np.nan, 0).values)
 
     @pytest.mark.parametrize(
         "unmapped_to_nan, skipna",
@@ -230,9 +224,7 @@ class TestRegridDataset:
         )
         if skipna is False and not unmapped_to_nan:
             # This is the only case where unmapped NaNs will be extrapolated
-            np.testing.assert_equal(
-                out.tas.isel(time=0, lat=0), np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-            )
+            np.testing.assert_equal(out.tas.isel(time=0, lat=0), np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]))
         else:
             np.testing.assert_equal(
                 out.tas.isel(time=0, lat=0),
@@ -269,12 +261,8 @@ class TestRegridDataset:
                 "unmapped_to_nan": True,
             },
         )
-        np.testing.assert_allclose(
-            out.tas.isel(time=2, lon=0), np.array([np.nan, np.nan, 0, 0, 0, 0])
-        )
-        np.testing.assert_allclose(
-            out.tas.isel(time=2, lon=1), np.array([0, 0, 0, 0, 0, 0])
-        )
+        np.testing.assert_allclose(out.tas.isel(time=2, lon=0), np.array([np.nan, np.nan, 0, 0, 0, 0]))
+        np.testing.assert_allclose(out.tas.isel(time=2, lon=1), np.array([0, 0, 0, 0, 0, 0]))
         assert "mask" not in out
 
     def test_intermediate(self, tmp_path):
@@ -302,12 +290,8 @@ class TestRegridDataset:
                 "unmapped_to_nan": True,
             },
         )
-        assert (
-            tmp_path / "weights" / "C_Global_CORDEX_RegionEssai_regrid0bilinear.nc"
-        ).is_file()
-        assert (
-            tmp_path / "weights" / "C_Global_CORDEX_RegionEssai_regrid1patch.nc"
-        ).is_file()
+        assert (tmp_path / "weights" / "C_Global_CORDEX_RegionEssai_regrid0bilinear.nc").is_file()
+        assert (tmp_path / "weights" / "C_Global_CORDEX_RegionEssai_regrid1patch.nc").is_file()
         assert "cf_grid_2d with arguments" in out.attrs["history"]
 
     @pytest.mark.parametrize("gridmap", ["oblique_mercator", "rotated_pole"])
@@ -443,25 +427,17 @@ class TestMask:
         assert mask.attrs["where_threshold"] == "tas > 2"
         assert mask.attrs["mask_NaNs"] == str(mask_nans)
         assert "time" not in mask.dims
-        np.testing.assert_allclose(
-            mask, np.stack([np.array([0 if mask_nans else 1, 0, 0, 1, 1, 1])] * 4)
-        )
+        np.testing.assert_allclose(mask, np.stack([np.array([0 if mask_nans else 1, 0, 0, 1, 1, 1])] * 4))
 
-        mask2 = xs.regrid.create_mask(
-            self.ds["tas"], where_operator=">", where_threshold=2, mask_nans=mask_nans
-        )
+        mask2 = xs.regrid.create_mask(self.ds["tas"], where_operator=">", where_threshold=2, mask_nans=mask_nans)
         assert mask2.equals(mask)
 
     def test_units(self):
-        mask = xs.regrid.create_mask(
-            self.ds, variable="tas", where_operator=">=", where_threshold="2 K"
-        )
+        mask = xs.regrid.create_mask(self.ds, variable="tas", where_operator=">=", where_threshold="2 K")
         assert mask.attrs["where_threshold"] == "tas >= 2 K"
         np.testing.assert_allclose(mask, np.stack([np.array([0, 0, 1, 1, 1, 1])] * 4))
 
-        mask2 = xs.regrid.create_mask(
-            self.ds, variable="tas", where_operator=">=", where_threshold="2 C"
-        )
+        mask2 = xs.regrid.create_mask(self.ds, variable="tas", where_operator=">=", where_threshold="2 C")
         assert mask2.attrs["where_threshold"] == "tas >= 2 C"
         np.testing.assert_allclose(mask2, np.stack([np.array([0, 0, 0, 0, 0, 0])] * 4))
 
@@ -471,7 +447,5 @@ class TestMask:
             match="'where_operator' and 'where_threshold' must be used together.",
         ):
             xs.regrid.create_mask(self.ds, variable="tas", where_operator=">")
-        with pytest.raises(
-            ValueError, match="A variable needs to be specified when passing a Dataset."
-        ):
+        with pytest.raises(ValueError, match="A variable needs to be specified when passing a Dataset."):
             xs.regrid.create_mask(self.ds)

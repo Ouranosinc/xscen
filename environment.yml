@@ -3,7 +3,9 @@ channels:
   - conda-forge
 dependencies:
   - python >=3.10,<3.14
-  - pip >=25.0
+  - pip >=25.2
+  # To install xscen via Makefile commands
+  - flit >=3.11.0,<4.0
   # Don't forget to sync changes between environment.yml, environment-dev.yml, and pyproject.toml!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
@@ -15,17 +17,18 @@ dependencies:
   - flox
   - fsspec
   - geopandas >=1.0
-  - h5netcdf
-  - h5py
+  - h5netcdf >=1.5.0
+  - h5py >=3.12.1
   - intake-esm ==2025.2.3
   - matplotlib >=3.6
   - netcdf4
   - numcodecs <0.16.0
   - numpy >=1.24
   - openpyxl
-  - pandas >=2.2
+  - pandas >=2.2,<3.0
   - parse
   - pyarrow >=15.0.0
+  - pydantic >=2.8.2
   - pyproj
   - pyyaml
   - rechunker >=0.5.3
@@ -34,11 +37,11 @@ dependencies:
   - sparse
   - toolz
   - xarray >=2023.11.0, !=2024.6.0
-  - xclim >=0.56, <0.59
+  - xclim >=0.56, <0.61
   - xsdba >=0.4.0
   - zarr >=2.13, <3
   # Opt
   - nc-time-axis >=1.3.1
   - xesmf >=0.7, !=0.8.8
-  # To install from source
-  - flit >=3.10.1,<4.0
+  # Workarounds
+  - fastprogress <1.1  # FIXME: Temporary fix following https://github.com/intake/intake-esm/pull/773. Remove when intake-esm is updated.
