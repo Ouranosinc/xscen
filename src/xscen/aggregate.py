@@ -305,7 +305,6 @@ def climatological_op(  # noqa: C901
                 "stderr",
                 "intercept_stderr",
             ]
-
         else:
             raise ValueError(f"Operation '{op}' not implemented.")
 
