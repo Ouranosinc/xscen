@@ -47,7 +47,7 @@ dependencies = [
   "geopandas >=1.0",
   "h5netcdf >=1.5.0",
   "h5py >=3.12.1",
-  "intake-esm ==2025.2.3",
+  "intake-esm ==2025.12.12",
   "matplotlib >=3.6",
   "netcdf4",
   "numcodecs <0.16.0",
