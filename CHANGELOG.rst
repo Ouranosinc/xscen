@@ -5,7 +5,7 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors: Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
+Contributors: Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -17,6 +17,12 @@ New features and enhancements
 * Make it possible to zip automatically after saving to zarr in ``xs.save_to_zarr``.
 * A conversion from geopotential to orography has been added to the `xclim` modules. (:pull:`673`).
 * Add ``zip_zarrdir`` and ``zip_kwargs`` options to ``xs.io.save_to_zarr`` to automatically zip the zarr directory after saving. (:pull:`679`).
+* Add helper functions for handling station data and spatial suff: (:pull:`619`).
+    + ``xs.spatial.merge_duplicated_stations`` : Merge colocated stations.
+    + ``xs.spatial.voronoi_weights`` : Compute weights for each station inversely proportional to they density, according to a Voronoi diagram.
+    + ``xs.spatial.dataset_extent`` : Get a lat/lon shape or bbox describing the spatial extent of a gridded dataset.
+* Add support for daily frequencies to ``xs.utils.unstack_dates``. Argument ``winter_starts_year``  has been deprecated in favor of ``year_month_start`` allowing for more flexibility (:pull:`619`).
+* Add a fast-track to ``xs.spatial.subset(..., 'gridpoint')`` when fancier clisops options are not requested. (:pull:`619`).
 
 Bug fixes
 ^^^^^^^^^
@@ -24,6 +30,7 @@ Bug fixes
 * dtype encodings are now removed before saving in ``save_to_netcdf`` and ``save_to_zarr``, since it could create inconsistencies. Dtypes should instead be handled through kwargs. (:pull:`665`).
 * Coordinates with dask chunks will now correctly be chunked if using the `rechunk` option in ``xs.io.save_to_netcdf`` and ``xs.io.save_to_zarr``. (:pull:`673`).
 * ``xs.io.estimate_chunks`` now returns the length of the dimension instead of -1 to avoid potential 'OverflowError: can't convert negative value to hsize_t'. (:pull:`673`).
+* ``xs.spatial.get_crs`` can now also guess `latitude_longitude` (`PlateCarree`) even without a grid mapping variable. (:pull:`619`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -35,6 +42,7 @@ Internal changes
 * Add "cat:bias_adjust_reference" guess in ``xs.train`` and ``xs.adjust``. (:pull:`679`).
 * Add ``xs.diagnostics.merge_attrs`` as it was removed from xclim. (:pull:`679`).
 * Add grid mapping attrs to loc coords in ``xs.regrid``. (:pull:`679`).
+* Created the `Region` type for better documentation of the construct. (:pull:`619`).
 
 .. _changes_0.13.1:
 

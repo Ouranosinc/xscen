@@ -6,6 +6,7 @@ import logging
 import warnings
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TypeVar
 
 import cartopy.crs
 
@@ -35,7 +36,6 @@ import xarray as xr
 import xclim as xc
 from pyproj.crs import CRS
 
-from ._types import Region
 from .config import parse_config
 
 
@@ -52,6 +52,9 @@ __all__ = [
     "subset",
     "voronoi_weights",
 ]
+
+
+Region = TypeVar("Region", bound=dict)
 
 
 @parse_config
@@ -699,7 +702,7 @@ def dataset_extent(ds: xr.Dataset, method: str = "shape", name: str | None = Non
 
     Returns
     -------
-    Region : A :py:obj:`~xscen._types.Region` dictionary useful for subsetting other datasets.
+    Region : A :py:data:`~xscen.spatial.Region` dictionary useful for subsetting other datasets.
     """
     from .regrid import create_bounds_gridmapping
 

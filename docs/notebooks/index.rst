@@ -11,3 +11,4 @@ Examples
     4_ensembles
     5_warminglevels
     6_config
+    7_spatial_utils
