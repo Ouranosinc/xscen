@@ -693,7 +693,7 @@ def dataset_extent(ds: xr.Dataset, method: str = "shape", name: str | None = Non
     return region
 
 
-def merge_duplicated_stations(ds: xr.Dataset) -> xr.Dataset:
+def merge_duplicated_stations(ds: xr.Dataset, precision: None) -> xr.Dataset:
     """
     Merge identical locations of a dataset.
 
@@ -704,10 +704,19 @@ def merge_duplicated_stations(ds: xr.Dataset) -> xr.Dataset:
     ----------
     ds: Dataset
         Dataset with `lon` and `lat` coordinates. Both must be 1D and share the same dimension.
+    precision: integer, optional
+        Round the coordinate up to this decimal before looking for duplicated points.
+        Default (None) is not to round.
     """
     dim = ds.lat.dims[0]
     # Geopandas et des Points, c'est plus rapide que Pandas et des tuples
-    df = gpd.GeoDataFrame(index=ds[dim], geometry=[shp.Point(lo, la) for lo, la in zip(ds.lon, ds.lat, strict=True)])
+    if precision is not None:
+        lon = ds.lon.round(precision)
+        lat = ds.lat.round(precision)
+    else:
+        lon, lat = ds.lon, ds.lat
+
+    df = gpd.GeoDataFrame(index=ds[dim], geometry=[shp.Point(lo, la) for lo, la in zip(lon, lat, strict=True)])
     dups = df.duplicated("geometry")
     if dups.sum() == 0:
         # aucun dup
@@ -729,7 +738,7 @@ def merge_duplicated_stations(ds: xr.Dataset) -> xr.Dataset:
             )
 
     h = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Merged {N} co-located points along dimension {dim}."
-    return update_history_and_name(xr.concat(dss, dim), h)
+    return update_history_and_name(xr.concat(dss, dim), h, None)
 
 
 def voronoi_weights(
