@@ -364,7 +364,7 @@ def _subset_gridpoint(
 
     try:
         crs = get_crs(ds)
-    except NotImplementedError:
+    except (NotImplementedError, KeyError):
         crs = None
     if (
         not set(kwargs.values()) - {None}  # No kwargs have been set differently from the default
@@ -738,7 +738,7 @@ def dataset_extent(ds: xr.Dataset, method: str = "shape", name: str | None = Non
     return region
 
 
-def merge_duplicated_stations(ds: xr.Dataset, precision: None) -> xr.Dataset:
+def merge_duplicated_stations(ds: xr.Dataset, precision: float | None = None) -> xr.Dataset:
     """
     Merge identical locations of a dataset.
 
