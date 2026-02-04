@@ -201,6 +201,7 @@ class TestSubset:
         ("kwargs", "name"),
         [
             ({"lon": -70, "lat": 45}, None),
+            ({"lon": -70, "lat": 45, "add_distance": True}, None),
             ({"lon": [-53.3, -69.6], "lat": [49.3, 46.6]}, "foo"),
             (
                 {
@@ -235,6 +236,23 @@ class TestSubset:
             assert "cat:domain" not in out.attrs
         if isinstance(kwargs["lon"], xr.DataArray):
             assert out.lon.dims == kwargs["lon"].dims
+
+    def test_subset_gridpoint_rotated(self):
+        dsr = datablock_3d(
+            np.ones((3, 50, 50)),
+            "tas",
+            "rlon",
+            -70,
+            "rlat",
+            45,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+
+        out = xs.spatial.subset(dsr, "gridpoint", lon=[-70, -60], lat=[45, 45])
+        assert "site" in out.dims
 
     @pytest.mark.parametrize(
         ("kwargs", "tile_buffer", "method"),
@@ -516,3 +534,17 @@ def test_rotate_vectors():
     myuu, myvv = xs.spatial.rotate_vectors(ds.uuc, ds.vvc, reverse=True)
     np.testing.assert_allclose(myuu, ds.uu, atol=1e-3)
     np.testing.assert_allclose(myvv, ds.vv, atol=1e-3)
+
+
+@pytest.mark.parametrize("precision,nexp", [(None, 4), (2, 3)])
+def test_merge_duplicated_stations(precision, nexp):
+    ds = xr.Dataset(
+        coords={"station": xr.DataArray(list("ABCDE"), dims=("station",))},
+        data_vars={
+            "lon": xr.DataArray([-70, -60, -50.002, -50.002, -50], dims=("station",)),
+            "lat": xr.DataArray([47, 46, 46.002, 46.002, 46], dims=("station",)),
+        },
+    )
+    out = xs.spatial.merge_duplicated_stations(ds, precision=precision)
+    assert out.station.size == nexp
+    assert out.station[2].item() == "C"

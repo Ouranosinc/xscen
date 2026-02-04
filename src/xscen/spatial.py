@@ -353,15 +353,44 @@ def _subset_gridpoint(
     if not hasattr(lat, "__iter__"):
         lat = [lat]
 
-    dim = None
     if isinstance(lon, xr.DataArray):
         dim = lon.dims[0]
         lon = lon.rename({dim: "site"})
         lat = lat.rename({dim: "site"})
+    else:
+        dim = "site"
+        lon = xr.DataArray(lon, dims=("site",), name="lon")
+        lat = xr.DataArray(lat, dims=("site",), name="lon")
 
-    ds_subset = cl.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
+    try:
+        crs = get_crs(ds)
+    except NotImplementedError:
+        crs = None
+    if (
+        not set(kwargs.values()) - {None}  # No kwargs have been set differently from the default
+        and crs is not None  # the actual crs of the data is known
+        and "X" in ds.cf.axes
+        and "Y" in ds.cf.axes  # the coords (in the actual crs) are known
+        and (lon.size * ds.cf["Y"].size * ds.cf["X"].size) > 1000  # the work to do is relatively large
+    ):
+        # Fast-track : use xarray's nearest-sel on 1D coordinate by converting the request to the actual CRS
+        PC = cartopy.crs.PlateCarree()
+        if isinstance(crs, cartopy.crs.PlateCarree):
+            X = lon
+            Y = lat
+        else:
+            crds = crs.transform_points(PC, lon, lat)
+            X = xr.DataArray(crds[:, 0], dims=lon.dims, coords=lon.coords, name=ds.cf["X"].name)
+            Y = xr.DataArray(crds[:, 1], dims=lat.dims, coords=lat.coords, name=ds.cf["Y"].name)
 
-    if dim is not None:
+        ds_subset = ds.cf.sel(X=X, Y=Y, method="nearest")
+
+        if ds_subset.site.size == 1:
+            ds_subset = ds_subset.squeeze(dim)
+    else:
+        ds_subset = cl.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
+
+    if dim != "site":
         ds_subset = ds_subset.rename(site=dim)
 
     new_history = (
@@ -583,7 +612,21 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
       The cartopy crs. Only RotatedPole and ObliqueMercator are supported.
     """
     if isinstance(gridmap, xr.Dataset):
-        gridmap = gridmap[get_grid_mapping(gridmap)]
+        gridmap_name = get_grid_mapping(gridmap)
+        if gridmap_name == "" and (
+            "longitude" in gridmap.cf
+            and "X" in gridmap.cf
+            and gridmap.cf["longitude"].name == gridmap.cf["X"].name
+            and gridmap.cf["X"].ndim == 1
+            and "latitude" in gridmap.cf
+            and "Y" in gridmap.cf
+            and gridmap.cf["latitude"].name == gridmap.cf["Y"].name
+            and gridmap.cf["Y"].ndim == 1
+        ):
+            gridmap = xr.DataArray(attrs={"grid_mapping_name": "latitude_longitude"})
+        else:
+            gridmap = gridmap[gridmap_name]
+
     cf_params = gridmap.attrs
     globe = cartopy.crs.Globe(
         datum=cf_params.get("horizontal_datum_name"),
@@ -593,7 +636,9 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
         inverse_flattening=cf_params.get("inverse_flattening"),
         towgs84=cf_params.get("towgs84"),
     )
-    if cf_params["grid_mapping_name"] == "rotated_latitude_longitude":
+    if cf_params["grid_mapping_name"] == "latitude_longitude":
+        crs = cartopy.crs.PlateCarree(globe=globe)
+    elif cf_params["grid_mapping_name"] == "rotated_latitude_longitude":
         crs = cartopy.crs.RotatedPole(
             pole_longitude=cf_params["grid_north_pole_longitude"],
             pole_latitude=cf_params["grid_north_pole_latitude"],
