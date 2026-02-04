@@ -63,7 +63,7 @@ dependencies:
   - pytest-cov >=5.0.0
   - pytest-xdist >=3.2.0
   - ruff >=0.13.3
-  - sphinx >=9  # FIXME: sphinx 8.2 breaks sphinx-autodoc-typehints
+  - sphinx >=7.1.0,<8.2  # FIXME: sphinx 8.2 breaks sphinx-autodoc-typehints
   - sphinx-autodoc-typehints
   - sphinx-codeautolink
   - sphinx-copybutton
