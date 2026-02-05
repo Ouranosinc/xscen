@@ -34,7 +34,7 @@ from .catalog import (
 from .catutils import parse_from_ds
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
-from .spatial import subset
+from .spatial import Region, subset
 from .utils import CV, _xarray_defaults, get_cat_attrs, natural_sort, standardize_periods, xrfreq_to_timedelta
 from .utils import ensure_correct_time as _ensure_correct_time
 
@@ -59,7 +59,7 @@ def extract_dataset(  # noqa: C901
     *,
     variables_and_freqs: dict | None = None,
     periods: list[str | int] | list[list[str | int]] | None = None,
-    region: dict | None = None,
+    region: Region | None = None,
     to_level: str = "extracted",
     ensure_correct_time: bool = True,
     xr_open_kwargs: dict | None = None,
@@ -85,8 +85,8 @@ def extract_dataset(  # noqa: C901
     periods : list of str or list of int or list of lists of str or list of lists of int, optional
         Either [start, end] or list of [start, end] for the periods to be evaluated.
         Will be read from catalog._requested_periods if None. Leave both None to extract everything.
-    region : dict, optional
-        Description of the region and the subsetting method (required fields listed in the Notes) used in `xscen.spatial.subset`.
+    region : :py:data:`~xscen.spatial.Region`, optional
+        Description of the region and the subsetting method used in `xscen.spatial.subset`.
     to_level : str
         The processing level to assign to the output. Defaults to 'extracted'.
     ensure_correct_time : bool
@@ -120,18 +120,6 @@ def extract_dataset(  # noqa: C901
     dict
         Dictionary (keys = xrfreq) with datasets containing all available and computed variables,
         subsetted to the region, everything resampled to the requested frequency.
-
-    Notes
-    -----
-    'region' fields:
-        name: str
-            Region name used to overwrite domain in the catalog.
-        method: str
-            ['gridpoint', 'bbox', shape', 'sel']
-        tile_buffer: float, optional
-            Multiplier to apply to the model resolution.
-        kwargs
-            Arguments specific to the method used.
 
     See Also
     --------

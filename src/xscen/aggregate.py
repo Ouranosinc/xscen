@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
+from typing import Literal
 
 import geopandas as gpd
 import numpy as np
@@ -40,7 +41,7 @@ from xclim.core.units import pint2cfattrs, units2pint
 from .config import parse_config
 from .extract import subset_warming_level
 from .indicators import compute_indicators
-from .spatial import get_grid_mapping, subset
+from .spatial import Region, get_grid_mapping, subset
 from .utils import standardize_periods, unstack_dates, update_attr
 
 
@@ -305,7 +306,6 @@ def climatological_op(  # noqa: C901
                 "stderr",
                 "intercept_stderr",
             ]
-
         else:
             raise ValueError(f"Operation '{op}' not implemented.")
 
@@ -584,7 +584,7 @@ def spatial_mean(  # noqa: C901
     method: str,
     *,
     spatial_subset: bool | None = None,
-    region: dict | str | None = None,
+    region: Region | Literal["global"] | None = None,
     simplify_tolerance: float | None = None,
     kwargs: dict | None = None,
     to_domain: str | None = None,
@@ -604,8 +604,8 @@ def spatial_mean(  # noqa: C901
     spatial_subset : bool, optional
         If True, xscen.spatial.subset will be called prior to the other operations. This requires the 'region' argument.
         If None, this will automatically become True if 'region' is provided and the subsetting method is 'cos-lat'.
-    region : dict or str, optional
-        Description of the region and the subsetting method (required fields listed in the Notes).
+    region : :py:data:`~xscen.spatial.Region` or 'global', optional
+        Description of the region and the subsetting method.
         If method=='xesmf', the bounding box or shapefile is given to SpatialAverager.
         Can also be "global", for global averages.
         The latter is simply a shortcut for `{'name': 'global', 'method': 'bbox', 'lon_bnds' [-180, 180], 'lat_bnds': [-90, 90]}`.
@@ -627,18 +627,6 @@ def spatial_mean(  # noqa: C901
     -------
     xr.Dataset
         Returns a Dataset with the spatial dimensions averaged.
-
-    Notes
-    -----
-    'region' required fields:
-        name: str
-            Region name used to overwrite domain in the catalog.
-        method: str
-            ['gridpoint', 'bbox', shape', 'sel']
-        tile_buffer: float, optional
-            Multiplier to apply to the model resolution. Only used if spatial_subset==True.
-        \*\*kwargs
-            Arguments specific to the method used.
 
     See Also
     --------
