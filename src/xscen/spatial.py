@@ -6,6 +6,7 @@ import logging
 import warnings
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TypeVar
 
 import cartopy.crs
 
@@ -29,6 +30,7 @@ except KeyError as e:
 import dask
 import geopandas as gpd
 import numpy as np
+import shapely as shp
 import sparse as sp
 import xarray as xr
 import xclim as xc
@@ -40,13 +42,39 @@ from .config import parse_config
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "Region",
     "creep_fill",
     "creep_weights",
+    "dataset_extent",
     "get_crs",
     "get_grid_mapping",
+    "merge_duplicated_stations",
     "rotate_vectors",
     "subset",
+    "voronoi_weights",
 ]
+
+
+Region = TypeVar("Region", bound=dict)
+"""
+A region specification, a dictionary with the following valid entries:
+
+- ``name`` : region name for the `domain` column
+- ``method`` : the method used for subsetting the region from a dataset:
+    - ``"shape"`` : The region is defined by a polygon in entry "shape".
+    - ``"bbox"`` : The region is defined by bounds in entries "lat_bnds" and "lon_bnds".
+    - ``"sel"`` : The region is defined by bounds in entries with the same name as the spatial coordinates.
+    - ``"gridpoint"`` : The region is a list of points defined in entries "lon" and "lat"
+
+- ``tile_buffer`` : For methods "bbox" and "shape", the actual subset is enlarged by this many grid cell sizes (approximated).
+  This differs from clisops\' ``buffer`` argument in :py:func:`~clisops.core.subset.subset_shape`.
+- ``shape`` : For method "shape" only. A shapely Polygon, geopandas GeoDataFrame or GeoSeries, or a path to a file that GeoPandas can open.
+  When multiplie shapes are present, the subsetting is done with the unary union of the geometries.
+  When the CRS information is missing, EPSG 4326 is assumed.
+- ``lat_bnds`` and ``lon_bnds`` : For method "bbox" only. Tuples of the minimum and maximum latitude or longitude values.
+- ``lon`` and ``lat`` : For method "gridpoint", 1D arrays of the longitude and latitude coordinates of the points to extract.
+- ``<coordinate name>`` : For method "sel", any other entry is understood as a tuple of the bounds to extract for that spatial dimension.
+"""
 
 
 @parse_config
@@ -348,7 +376,46 @@ def _subset_gridpoint(
     if not hasattr(lat, "__iter__"):
         lat = [lat]
 
-    ds_subset = cl.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
+    if isinstance(lon, xr.DataArray):
+        dim = lon.dims[0]
+        lon = lon.rename({dim: "site"})
+        lat = lat.rename({dim: "site"})
+    else:
+        dim = "site"
+        lon = xr.DataArray(lon, dims=("site",), name="lon")
+        lat = xr.DataArray(lat, dims=("site",), name="lon")
+
+    try:
+        crs = get_crs(ds)
+    except (NotImplementedError, KeyError):
+        crs = None
+    if (
+        not set(kwargs.values()) - {None}  # No kwargs have been set differently from the default
+        and crs is not None  # the actual crs of the data is known
+        and "X" in ds.cf.axes
+        and "Y" in ds.cf.axes  # the coords (in the actual crs) are known
+        and (lon.size * ds.cf["Y"].size * ds.cf["X"].size) > 1000  # the work to do is relatively large
+    ):
+        # Fast-track : use xarray's nearest-sel on 1D coordinate by converting the request to the actual CRS
+        PC = cartopy.crs.PlateCarree()
+        if isinstance(crs, cartopy.crs.PlateCarree):
+            X = lon
+            Y = lat
+        else:
+            crds = crs.transform_points(PC, lon, lat)
+            X = xr.DataArray(crds[:, 0], dims=lon.dims, coords=lon.coords, name=ds.cf["X"].name)
+            Y = xr.DataArray(crds[:, 1], dims=lat.dims, coords=lat.coords, name=ds.cf["Y"].name)
+
+        ds_subset = ds.cf.sel(X=X, Y=Y, method="nearest")
+
+        if ds_subset.site.size == 1:
+            ds_subset = ds_subset.squeeze(dim)
+    else:
+        ds_subset = cl.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
+
+    if dim != "site":
+        ds_subset = ds_subset.rename(site=dim)
+
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"gridpoint spatial subsetting on {len(lon)} coordinates - clisops v{clisops.__version__}"
@@ -421,7 +488,7 @@ def _subset_bbox(
 
 def _subset_shape(
     ds: xr.Dataset,
-    shape: str | Path | gpd.GeoDataFrame,
+    shape: str | Path | gpd.GeoDataFrame | shp.Polygon,
     *,
     name: str | None = None,
     tile_buffer: float = 0,
@@ -434,8 +501,8 @@ def _subset_shape(
     ----------
     ds : xr.Dataset
         Dataset to be subsetted.
-    shape : str or gpd.GeoDataFrame
-        Path to the shapefile or GeoDataFrame.
+    shape : str or gpd.GeoDataFrame or shp.Polygon
+        Path to the shapefile or GeoDataFrame or Polygon (which is assumed to have the ESPG:4326 CRS).
     name: str, optional
         Used to rename the 'cat:domain' attribute.
     tile_buffer: float
@@ -457,15 +524,17 @@ def _subset_shape(
     """
     ds = _load_lon_lat(ds)
 
+    if isinstance(shape, str | Path):
+        shape = gpd.read_file(shape)
+    elif isinstance(shape, shp.Polygon):
+        shape = gpd.GeoDataFrame(geometry=[shape], crs=CRS(4326))
+
     if tile_buffer > 0:
         if kwargs.get("buffer") is not None:
             raise ValueError("Both tile_buffer and clisops' buffer were requested. Use only one.")
         lon_res, lat_res = _estimate_grid_resolution(ds)
 
         # The buffer argument needs to be in the same units as the shapefile, so it's simpler to always project the shapefile to WGS84.
-        if isinstance(shape, str | Path):
-            shape = gpd.read_file(shape)
-
         try:
             shape_crs = shape.crs
         except AttributeError:
@@ -542,7 +611,7 @@ def _load_lon_lat(ds: xr.Dataset) -> xr.Dataset:
 def get_grid_mapping(ds: xr.Dataset) -> str:
     """Get the grid_mapping attribute from the dataset."""
     gridmap = [ds[v].attrs["grid_mapping"] for v in ds.data_vars if "grid_mapping" in ds[v].attrs]
-    gridmap += [c for c in ds.coords if ds[c].attrs.get("grid_mapping_name", None)]
+    gridmap += [c for c in ds.variables if ds[c].attrs.get("grid_mapping_name", None)]
     gridmap = list(np.unique(gridmap))
 
     if len(gridmap) > 1:
@@ -566,7 +635,21 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
       The cartopy crs. Only RotatedPole and ObliqueMercator are supported.
     """
     if isinstance(gridmap, xr.Dataset):
-        gridmap = gridmap[get_grid_mapping(gridmap)]
+        gridmap_name = get_grid_mapping(gridmap)
+        if gridmap_name == "" and (
+            "longitude" in gridmap.cf
+            and "X" in gridmap.cf
+            and gridmap.cf["longitude"].name == gridmap.cf["X"].name
+            and gridmap.cf["X"].ndim == 1
+            and "latitude" in gridmap.cf
+            and "Y" in gridmap.cf
+            and gridmap.cf["latitude"].name == gridmap.cf["Y"].name
+            and gridmap.cf["Y"].ndim == 1
+        ):
+            gridmap = xr.DataArray(attrs={"grid_mapping_name": "latitude_longitude"})
+        else:
+            gridmap = gridmap[gridmap_name]
+
     cf_params = gridmap.attrs
     globe = cartopy.crs.Globe(
         datum=cf_params.get("horizontal_datum_name"),
@@ -576,7 +659,9 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
         inverse_flattening=cf_params.get("inverse_flattening"),
         towgs84=cf_params.get("towgs84"),
     )
-    if cf_params["grid_mapping_name"] == "rotated_latitude_longitude":
+    if cf_params["grid_mapping_name"] == "latitude_longitude":
+        crs = cartopy.crs.PlateCarree(globe=globe)
+    elif cf_params["grid_mapping_name"] == "rotated_latitude_longitude":
         crs = cartopy.crs.RotatedPole(
             pole_longitude=cf_params["grid_north_pole_longitude"],
             pole_latitude=cf_params["grid_north_pole_latitude"],
@@ -617,3 +702,184 @@ def update_history_and_name(ds_subset, new_history, name):
     if name is not None:
         ds_subset.attrs["cat:domain"] = name
     return ds_subset
+
+
+def dataset_extent(ds: xr.Dataset, method: str = "shape", name: str | None = None) -> Region:
+    r"""
+    The dataset's spatial extent expressed as a xscen Region spec.
+
+    Parameters
+    ----------
+    ds: Dataset
+        A dataset containing a grid with latitude and longitude coordinates and either
+        the bounds or a grid mapping understood by :py:func:`~xscen.regrid.create_bounds_gridmapping`.
+    method : {'shape', 'bbox'}
+        One of the two methods recognized by xscen to specify an area.
+        "shape" will compute a shapely polygon in latitude longitude coordinates from
+        the cell bounds. "bbox" will return the total extent of that polygon.
+    name : str, optional
+        A name to give to the region.
+
+    Returns
+    -------
+    Region : A :py:data:`~xscen.spatial.Region` dictionary useful for subsetting other datasets.
+    """
+    from .regrid import create_bounds_gridmapping
+
+    if "lat_bounds" not in ds:
+        if "lat" in ds and ds.lat.ndim == 1:
+            ds = ds.cf.add_bounds(["lon", "lat"])
+        else:
+            ds = create_bounds_gridmapping(ds)
+    if ds["lat_bounds"].ndim == 2:
+        lonb = ds.lon_bounds.isel(bounds=xr.DataArray([0, 0, 1, 1], dims=("bounds",)))
+        latb = ds.lat_bounds.isel(bounds=xr.DataArray([0, 1, 1, 0], dims=("bounds",)))
+        lonb, latb = xr.broadcast(lonb, latb)
+    else:
+        lonb, latb = ds.lon_bounds, ds.lat_bounds
+
+    region = {"method": method}
+    if name is not None:
+        region["name"] = name
+
+    # Tolerance 0 is to merge colinear segments, without degrading anything else
+    p = shp.simplify(
+        shp.unary_union(shp.polygons(shp.linearrings(lonb.transpose(..., "bounds"), latb.transpose(..., "bounds")))),
+        tolerance=0,
+    )
+
+    match method:
+        case "shape":
+            region["shape"] = p
+        case "bbox":
+            bnds = p.bounds
+            region["lon_bnds"] = [bnds[0], bnds[2]]
+            region["lat_bnds"] = [bnds[1], bnds[3]]
+        case _ as err:
+            raise ValueError(f"Method must be 'shape' or 'bbox'. Got {err}.")
+
+    return region
+
+
+def merge_duplicated_stations(ds: xr.Dataset, precision: float | None = None) -> xr.Dataset:
+    """
+    Merge identical locations of a dataset.
+
+    Identical locations are merged by combination of float values (priority from order of the location dimension).
+    Non-float values are taken from the first element.
+
+    Parameters
+    ----------
+    ds: Dataset
+        Dataset with `lon` and `lat` coordinates. Both must be 1D and share the same dimension.
+    precision: integer, optional
+        Round the coordinate up to this decimal before looking for duplicated points.
+        Default (None) is not to round.
+    """
+    dim = ds.lat.dims[0]
+    # Geopandas et des Points, c'est plus rapide que Pandas et des tuples
+    if precision is not None:
+        lon = ds.lon.round(precision)
+        lat = ds.lat.round(precision)
+    else:
+        lon, lat = ds.lon, ds.lat
+
+    df = gpd.GeoDataFrame(index=ds[dim], geometry=[shp.Point(lo, la) for lo, la in zip(lon, lat, strict=True)])
+    dups = df.duplicated("geometry")
+    if dups.sum() == 0:
+        # aucun dup
+        return ds
+
+    dss = []
+    N = 0
+    for _, grp in df.groupby("geometry"):
+        if len(grp) == 1:
+            dss.append(ds.sel({dim: [grp.index[0]]}))
+        else:
+            N += len(grp) - 1
+            dsi = ds.sel({dim: grp.index})
+            dss.append(
+                dsi.map(
+                    lambda x, d: (x.bfill(d) if x.dtype == "f" else x).isel({d: [0]}),
+                    args=(dim,),
+                )
+            )
+
+    h = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Merged {N} co-located points along dimension {dim}."
+    return update_history_and_name(xr.concat(dss, dim), h, None)
+
+
+def voronoi_weights(
+    ds: xr.Dataset,
+    region: gpd.GeoDataFrame | shp.Polygon | None = None,
+    maxfrac: float | None = None,
+    minlocs: int = 0,
+    _pts=None,
+) -> xr.DataArray:
+    """
+    Compute a weight for each location in the dataset inversely proportionnate to the location density.
+
+    The total extent of the dataset is divided in regions using the Voronoi partition and weights are
+    computed from the area of these regions. This is meant for station data for example.
+
+    Parameters
+    ----------
+    ds: Dataset
+        Dataset with `lon` and `lat` coordinates. Both must be 1D and share the same dimension.
+    region: GeoDataFrame or Polygon, optional
+        A polygon to constrain the total area to partition with Voronoi polygons.
+        Can also be a GeoDataFrame, in which case the weights are done for each feature.
+        Defaults to a convex hull around ds with a buffer of 1°.
+        See :py:func:`dataset_extent`.
+    maxfrac: float, optional
+        Limits the maximal region area to this fraction of the total area.
+    minlocs : int
+        When `region` is a GeoDataFrame, features containing less than this number of locations are removed from the output.
+
+    Returns
+    -------
+    DataArray
+        The weights along the same dimension as the locations on the input.
+        If region was a GeoDataFrame, another dimension "geom" partitions the weights
+        for each feature and other columns are added as auxiliary coordinates (as with :py:func:`xs.spatial_mean`).
+    """
+    dim = ds.lon.dims[0]
+    if _pts is None:
+        pts = gpd.GeoDataFrame(
+            index=ds[dim],
+            geometry=[shp.Point(lo, la) for lo, la in zip(ds.lon, ds.lat, strict=True)],
+        )
+    else:  # Shortcut for when iterating over regions
+        pts = _pts
+
+    if region is None:
+        region = pts.union_all().convex_hull.buffer(1)
+    elif isinstance(region, gpd.GeoDataFrame):
+        weights = []
+        for _, row in region.iterrows():
+            weights.append(voronoi_weights(ds, row.geometry, maxfrac=maxfrac, _pts=pts).expand_dims(geom=[row.name]))
+        weight = xr.concat(weights, "geom")
+        weight = weight.assign_coords(region.drop(columns=["geometry"]).to_xarray().rename({region.index.name or "index": "geom"}))
+        if minlocs > 0:
+            weight = weight.where((weight > 0).sum(ds.lon.dims) >= minlocs, drop=True)
+            weight = weight.where((weight > 0).any("geom"), drop=True)
+        return weight
+
+    zones = gpd.GeoDataFrame(geometry=pts.voronoi_polygons(extend_to=region)).clip(region)
+    zones["geometry"] = zones.buffer(0)
+    zones["zone_area"] = zones.geometry.area
+
+    # overlay aligns points with their intersecting polygon
+    # reset_index, set_index, reindex dance to preserve indexing info and sort final DF as input
+    area = (gpd.overlay(pts.reset_index(names="station"), zones).set_index("station").reindex(pts.index)["zone_area"]).fillna(0)
+
+    if maxfrac is not None:
+        maxarea = area.sum() * maxfrac
+        area = area.clip(0, maxarea)
+
+    return xr.DataArray(
+        0 if area.sum() == 0 else area / area.sum(),
+        dims=(dim,),
+        coords=ds[dim].coords,
+        name="weights",
+    )
