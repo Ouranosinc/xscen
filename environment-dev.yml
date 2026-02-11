@@ -20,6 +20,7 @@ dependencies:
   - intake-esm ==2025.2.3
   - matplotlib >=3.6
   - netcdf4
+  - numcodecs
   - numpy >=1.24
   - openpyxl
   - pandas >=2.2
@@ -53,7 +54,7 @@ dependencies:
   - ipython >=8.5.0
   - jupyter_client
   - mypy >=1.18.2
-  - nbsphinx >=0.9.5
+  - nbsphinx >=0.9.8
   - nbval
   - numpydoc >=1.9.0
   - pooch >=1.8.0
@@ -62,7 +63,7 @@ dependencies:
   - pytest-cov >=5.0.0
   - pytest-xdist >=3.2.0
   - ruff >=0.13.3
-  - sphinx >=7.1.0,<8.2  # FIXME: sphinx 8.2 breaks sphinx-autodoc-typehints
+  - sphinx >=8.2
   - sphinx-autodoc-typehints
   - sphinx-codeautolink
   - sphinx-copybutton
@@ -76,4 +77,4 @@ dependencies:
   - tox >=4.30.3
   - tox-gh >=1.5.0
   # Workarounds
-  - fastprogress <1.1  # FIXME: Temporary fix following https://github.com/intake/intake-esm/pull/773. Remove when intake-esm is updated.
+  - fastprogress <1.1  # FIXME: Temporary fix for https://github.com/AnswerDotAI/fastprogress/issues/117 (fastprogress is a dep through intake-esm)
