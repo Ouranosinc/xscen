@@ -1206,6 +1206,8 @@ def subset_warming_level(
         reals = []
         for real in bounds[realdim].values:
             start, end = bounds.sel({realdim: real}).values
+            start = None if pd.isna(start) else start
+            end = None if pd.isna(end) else end
             data = ds.sel({realdim: [real], "time": slice(start, end)})
             wl_not_reached = (start is None) or (data.time.size == 0) or ((data.time.dt.year[-1] - data.time.dt.year[0] + 1) != window)
             if not wl_not_reached:
