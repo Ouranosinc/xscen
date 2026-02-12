@@ -9,6 +9,7 @@ Contributors: Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse 
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* xscen now supports numcodecs > 0.16, Pandas 3 and Python 3.14 (:pull:`692`).
 * The `group=False` option was added to ``xs.train`` to completely skip this argument when calling `xsdba`. (:pull:`668`).
 * The `stack_periods` argument was added to ``xs.adjust`` to pass arguments to ``xsdba.stack_periods`` before adjustment. (:pull:`668`).
 * A conversion from geopotential to orography has been added to the xclim modules. (:pull:`673`).
@@ -43,6 +44,7 @@ Internal changes
 * Add ``xs.diagnostics.merge_attrs`` as it was removed from xclim. (:pull:`679`).
 * Add grid mapping attrs to loc coords in ``xs.regrid``. (:pull:`679`).
 * Created the `Region` type for better documentation of the construct. (:pull:`619`).
+* File ``environment.yml`` has been removed. Doc dependencies have been removed from ``environment-dev.yml`` and a distinct ``environment-docs.yml`` has been created. (:pull:`692`).
 
 .. _changes_0.13.1:
 
