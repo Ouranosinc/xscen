@@ -30,7 +30,7 @@ on:
       - docs/*.rst
       - docs/notebooks
       - environment-dev.yml
-      - environment.yml
+      - environment-docs.yml
       - pyproject.toml
       - src/xscen/__init__.py
       - templates

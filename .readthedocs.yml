@@ -20,11 +20,4 @@ build:
 #      - rm -rf docs/notebooks/_data
 
 conda:
-  environment: environment-dev.yml
-
-python:
-  install:
-    - method: pip
-      path: .
-      extra_requirements:
-        - docs
+  environment: environment-docs.yml

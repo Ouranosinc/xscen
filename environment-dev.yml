@@ -4,7 +4,7 @@ channels:
 dependencies:
   - python >=3.10,<3.15
   - pip >=25.2
-  # Don't forget to sync changes between environment.yml, environment-dev.yml, and pyproject.toml!
+  # Don't forget to sync changes between environment-docs.yml, environment-dev.yml, and pyproject.toml!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
   - cartopy >=0.23.0
