@@ -21,3 +21,10 @@ build:
 
 conda:
   environment: environment-dev.yml
+
+python:
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs

@@ -46,16 +46,11 @@ dependencies:
   - bump-my-version >=1.2.3
   - codespell >=2.4.1
   - coverage >=7.5.0
-  - deptry >=0.23.0
+  - deptry >=0.24.0
   - flake8 >=7.3.0
-  - flake8-rst-docstrings >=0.3.1
+  - flake8-rst-docstrings >=0.4.0
   - flit >=3.11.0,<4.0
-  - ipykernel
-  - ipython >=8.5.0
-  - jupyter_client
   - mypy >=1.18.2
-  - nbsphinx >=0.9.8
-  - nbval
   - numpydoc >=1.9.0
   - pooch >=1.8.0
   - pre-commit >=3.5.0
@@ -63,12 +58,6 @@ dependencies:
   - pytest-cov >=5.0.0
   - pytest-xdist >=3.2.0
   - ruff >=0.13.3
-  - sphinx >=8.2
-  - sphinx-autodoc-typehints
-  - sphinx-codeautolink
-  - sphinx-copybutton
-  - sphinx-mdinclude
-  - sphinx-rtd-theme >=1.0
   - vulture >=2.14
   - watchdog >=4.0.0
   - xdoctest
