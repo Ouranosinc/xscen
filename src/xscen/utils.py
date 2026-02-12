@@ -236,7 +236,7 @@ def date_parser(  # noqa: C901
         date = pd.Timestamp(date)
 
     if isinstance(end_of_period, str) or (end_of_period is True and fmt):
-        quasiday = (pd.Timedelta(1, "d") - pd.Timedelta(1, "s")).as_unit(date.unit)
+        quasiday = (pd.Timedelta(1, "D") - pd.Timedelta(1, "s")).as_unit(date.unit)
         if end_of_period in ["Y", "YE"] or "m" not in fmt:
             date = pd.tseries.frequencies.to_offset("YE-DEC").rollforward(date) + quasiday
         elif end_of_period in ["M", "ME"] or "d" not in fmt:

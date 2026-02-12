@@ -91,7 +91,7 @@ class TestCopyFiles:
         ).popitem()
         _, ds = extract.extract_dataset(scat).popitem()
         ds.to_zarr(tmp_path / "temp.zarr")
-        scat.esmcat.df.loc[0, "path"] = tmp_path / "temp.zarr"
+        scat.esmcat.df.loc[0, "path"] = str(tmp_path / "temp.zarr")
 
         rz = tmp_path / "zipped"
         rz.mkdir()

@@ -20,4 +20,4 @@ build:
 #      - rm -rf docs/notebooks/_data
 
 conda:
-  environment: environment-dev.yml
+  environment: environment-docs.yml

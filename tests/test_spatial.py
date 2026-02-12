@@ -336,7 +336,9 @@ class TestSubset:
             as_dataset=True,
         )
 
-        with pytest.raises(KeyError):
+        # Previous xarray raises KeyError as lon doesn't exist
+        # New xarray raises ValueError as it tries to create an integer lon from scratch, but can't because it would be 2D.
+        with pytest.raises((KeyError, ValueError)):
             xs.spatial.subset(ds, "sel", lon=[-75, -70], lat=[-5, 0])
         out = xs.spatial.subset(ds, "sel", rlon=[-5, 5], rlat=[0, 3])
 
