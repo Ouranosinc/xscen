@@ -8,12 +8,20 @@ Changelog
     ------------------------------------------------------------
     Contributors:
 
-    Changes
-    ^^^^^^^
+    New features and enhancements
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     * No change.
 
-    Fixes
-    ^^^^^
+    Breaking changes
+    ^^^^^^^^^^^^^^^^
+    * No change.
+
+    Bug fixes
+    ^^^^^^^^^
+    * No change.
+
+    Internal changes
+    ^^^^^^^^^^^^^^^^
     * No change.
 
 .. _changes_0.14.0:
