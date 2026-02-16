@@ -3,8 +3,23 @@ Changelog
 =========
 
 
-`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-------------------------------------------------------------
+..
+    `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
+    ------------------------------------------------------------
+    Contributors:
+
+    Changes
+    ^^^^^^^
+    * No change.
+
+    Fixes
+    ^^^^^
+    * No change.
+
+.. _changes_0.14.0:
+
+`v0.14.0 <https://github.com/Ouranosinc/xscen/tree/0.14.0>`_ (2026-02-16)
+-------------------------------------------------------------------------
 Contributors: Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements

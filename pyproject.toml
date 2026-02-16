@@ -131,7 +131,7 @@ all = ["xscen[dev]", "xscen[docs]", "xscen[extras]"]
 [tool]
 
 [tool.bumpversion]
-current_version = "0.14.0-dev.0"
+current_version = "0.14.0"
 commit = true
 commit_args = "--no-verify"
 tag = false
