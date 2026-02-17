@@ -1017,7 +1017,7 @@ def _build_path(
         )
     elif isinstance(data, pd.Series):
         facets = dict(data)
-    else:
+    elif not isinstance(data, dict):
         raise NotImplementedError(f"Cannot build path with object of type {type(data)}")
 
     facets = facets | extra_facets
