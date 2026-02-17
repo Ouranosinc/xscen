@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 import xclim as xc
+from pandas.errors import PerformanceWarning
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
@@ -300,7 +301,8 @@ class TestToTable:
             assert saved.shape == (17, 26)  # Because of the headers
             assert tab.columns.names == ["season", "site"]
             # NOTE: The PerformanceWarning is expected here. Our columns are deemed "unsorted", but we want them that way.
-            np.testing.assert_array_equal(tab.loc[("1993", "pr"), ("JFM",)], ds.pr.sel(time="1993", season="JFM"))
+            with pytest.warns(PerformanceWarning, match="indexing past lexsort depth may impact performance."):
+                np.testing.assert_array_equal(tab.loc[("1993", "pr"), ("JFM",)], ds.pr.sel(time="1993", season="JFM"))
             # Ensure that the coords are not present
             assert len(set(tab.index.get_level_values("variable").unique()).difference(["tas", "pr", "snw"])) == 0
             # Excel is not the prettiest thing to test
