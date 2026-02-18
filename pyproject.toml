@@ -253,6 +253,9 @@ include = [
   "src/xscen/data/*.nc",
   "src/xscen/data/fr/LC_MESSAGES/*.mo",
   "src/xscen/data/fr/LC_MESSAGES/*.po",
+  "templates/readme.rst",
+  "templates/**/*.py",
+  "templates/**/*.yml",
   "tests/*.py"
 ]
 exclude = [
@@ -273,7 +276,6 @@ exclude = [
   "environment-dev.yml",
   "environment-docs.yml",
   "scripts/*.ipynb",
-  "templates",
   "tox.ini"
 ]
 
