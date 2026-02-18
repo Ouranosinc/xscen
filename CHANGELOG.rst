@@ -2,27 +2,25 @@
 Changelog
 =========
 
+`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
+------------------------------------------------------------
+Contributors: Trevor James Smith (:user:`Zeitsperre`).
 
-..
-    `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-    ------------------------------------------------------------
-    Contributors:
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* No change.
 
-    New features and enhancements
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    * No change.
+Breaking changes
+^^^^^^^^^^^^^^^^
+* No change.
 
-    Breaking changes
-    ^^^^^^^^^^^^^^^^
-    * No change.
+Bug fixes
+^^^^^^^^^
+* No change.
 
-    Bug fixes
-    ^^^^^^^^^
-    * No change.
-
-    Internal changes
-    ^^^^^^^^^^^^^^^^
-    * No change.
+Internal changes
+^^^^^^^^^^^^^^^^
+* The `templates` folder has been added to the source distribution in order to run configuration-loading tests on `conda-forge`. (:issue:`697`, :pull:`698`).
 
 .. _changes_0.14.0:
 
@@ -50,7 +48,7 @@ New features and enhancements
 
 Bug fixes
 ^^^^^^^^^
-* Floor time in the preprocess of ``extract_dataset``. (:pull:`660`, :pull:`660`).
+* Floor time in the preprocess of ``extract_dataset``. (:issue:`660`, :pull:`661`).
 * dtype encodings are now removed before saving in ``save_to_netcdf`` and ``save_to_zarr``, since it could create inconsistencies. Dtypes should instead be handled through kwargs. (:pull:`665`).
 * Coordinates with dask chunks will now correctly be chunked if using the `rechunk` option in ``xs.io.save_to_netcdf`` and ``xs.io.save_to_zarr``. (:pull:`673`).
 * ``xs.io.estimate_chunks`` now returns the length of the dimension instead of -1 to avoid potential 'OverflowError: can't convert negative value to hsize_t'. (:pull:`673`).
