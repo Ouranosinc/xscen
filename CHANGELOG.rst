@@ -21,6 +21,7 @@ Bug fixes
 Internal changes
 ^^^^^^^^^^^^^^^^
 * The `templates` folder has been added to the source distribution in order to run configuration-loading tests on `conda-forge`. (:issue:`697`, :pull:`698`).
+* A hyperlink to the `xscen` code repository has been added to the top-level documentation table of contents. (:pull:`699`).
 
 .. _changes_0.14.0:
 
