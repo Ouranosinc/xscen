@@ -76,7 +76,7 @@ autosummary_generate = True
 nbsphinx_execute = "always"
 # To avoid running notebooks on linkcheck and when building PDF.
 try:
-    skip_notebooks = int(os.getenv("SKIP_NOTEBOOKS"))
+    skip_notebooks = bool(os.getenv("SKIP_NOTEBOOKS"))
 except TypeError:
     skip_notebooks = False
 if skip_notebooks:

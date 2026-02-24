@@ -22,7 +22,7 @@ dependencies:
   - intake-esm ==2025.2.3
   - matplotlib >=3.6
   - netcdf4
-  - numcodecs
+  - numcodecs <0.16.0 # FIXME: Pin required for zarr v2.x compatibility
   - numpy >=1.24
   - openpyxl
   - pandas >=2.2
@@ -52,7 +52,7 @@ dependencies:
   - nbsphinx >=0.9.8
   - nbval
   - sphinx >=8.2.0
-  - sphinx-autodoc-typehints
+  - sphinx-autodoc-typehints >=3.1.0
   - sphinx-codeautolink >=0.16.2
   - sphinx-copybutton
   - sphinx-intl
