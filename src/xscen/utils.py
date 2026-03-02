@@ -34,6 +34,7 @@ from .config import parse_config
 
 logger = logging.getLogger(__name__)
 
+
 __all__ = [
     "CV",
     "add_attr",
@@ -46,6 +47,7 @@ __all__ = [
     "maybe_unstack",
     "minimum_calendar",
     "natural_sort",
+    "stack_dates",
     "stack_drop_nans",
     "standardize_periods",
     "translate_time_chunk",
@@ -1072,15 +1074,19 @@ def clean_up(  # noqa: C901
 
 def _unstack_doy(ds: xr.Dataset, new_dim: str | None):
     """Unstack a daily timeseries into dayofyear and year."""
-    ds = ds.assign_coords(
-        xr.Coordinates.from_pandas_multiindex(
-            pd.MultiIndex.from_arrays(
-                (ds.time.dt.year.values, ds.time.dt.dayofyear.values),
-                names=("year", new_dim or "dayofyear"),
-            ),
-            "time",
+    ds = (
+        ds.assign_coords(actual_time=ds.time)
+        .assign_coords(
+            xr.Coordinates.from_pandas_multiindex(
+                pd.MultiIndex.from_arrays(
+                    (ds.time.dt.year.values, ds.time.dt.dayofyear.values),
+                    names=("year", new_dim or "dayofyear"),
+                ),
+                "time",
+            )
         )
-    ).unstack("time")
+        .unstack("time")
+    )
     return ds.rename(year="time").assign_coords(time=pd.to_datetime({"year": ds.year, "month": 1, "day": 1}))
 
 
@@ -1118,6 +1124,7 @@ def unstack_dates(  # noqa: C901
     -------
     xr.Dataset or DataArray
       Same as ds but the time axis is now yearly (YS-JAN) and the seasons are along the new dimension.
+      The previous time dimension is left as the new 2D `actual_time`.
 
     Notes
     -----
@@ -1176,7 +1183,7 @@ def unstack_dates(  # noqa: C901
             seaname = f"{mult}{seaname}"
         # Fast track for annual, if nothing more needs to be done.
         if year_start_month == 1:
-            dso = ds.expand_dims({new_dim: [seaname]})
+            dso = ds.expand_dims({new_dim: [seaname]}).assign_coords(actual_time=ds.time.expand_dims({new_dim: [seaname]}))
             dso["time"] = xr.date_range(
                 f"{first.year}-01-01",
                 f"{last.year}-01-01",
@@ -1254,12 +1261,30 @@ def unstack_dates(  # noqa: C901
     for coord in new_coords:
         if (coord not in ["time", new_dim]) and ("time" in ds[coord].dims):
             new_coords[coord] = reshape_da(dsp[coord])
+    new_coords["actual_time"] = reshape_da(dsp.time)
 
     if isinstance(ds, xr.Dataset):
         dso = dsp.map(reshape_da, keep_attrs=True)
     else:
         dso = reshape_da(dsp)
     return dso.assign_coords(**new_coords)
+
+
+def stack_dates(ds: xr.Dataset):
+    """
+    Revert the effect of :py:func:`unstack_dates`.
+
+    The input must still contain the `actual_time` 2D coordinate added by the unstacking.
+    """
+    time_dims = list(ds.actual_time.dims)
+    season_dim = list(set(time_dims) - {"time"})
+    return (
+        ds.stack(real_time=time_dims)
+        .swap_dims(real_time="actual_time")
+        .drop_vars(["real_time", *time_dims])
+        .rename(actual_time="time")
+        .transpose(*[d for d in ds.dims if d not in season_dim])
+    )
 
 
 def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
