@@ -923,10 +923,10 @@ class TestClimatologicalOp:
 
         assert (out.tas_clim_mean.values == np.tile(np.arange(1, o + 1), (5, 1))).all()
         assert out.sizes == {"horizon": 5} | freq[xrfreq]
-        assert out.original_time.dims == ("horizon",) + ((next(iter(freq[xrfreq])),) if freq[xrfreq] else ())
+        assert out.time.dims == ("horizon",) + ((next(iter(freq[xrfreq])),) if freq[xrfreq] else ())
         assert (out.horizon.values == ["2001-2010", "2006-2015", "2011-2020", "2016-2025", "2021-2030"]).all()
         assert (
-            out.original_time.values == np.array([ds.time.isel(time=slice(i, i + o)).values for i in range(0, ds.time.size - 5 * o, 5 * o)]).squeeze()
+            out.time.values == np.array([ds.time.isel(time=slice(i, i + o)).values for i in range(0, ds.time.size - 5 * o, 5 * o)]).squeeze()
         ).all()
         if xrfreq in ["MS", "QS-DEC"]:
             freq_coords = {

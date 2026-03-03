@@ -1234,8 +1234,17 @@ def unstack_dates(  # noqa: C901
     years = years.pad(time=(pad_left, pad_right), constant_values=(years[0], years[-1]))
     # And pad the original time
     #  a bit more complicated, we use the negative freq feature of date_range to get valid dates before start
-    _before = xr.date_range(ds.indexes["time"][0], freq=f"-1{freq}" if mult == 1 else f"-{freq}", periods=pad_left + 1, inclusive="right")[::-1]
-    _after = xr.date_range(ds.indexes["time"][-1], freq=freq, periods=pad_right + 1, inclusive="right")
+    _before = xr.date_range(
+        ds.indexes["time"][0],
+        freq=f"-1{freq}" if mult == 1 else f"-{freq}",
+        periods=pad_left + 1,
+        inclusive="right",
+        calendar=ds.time.dt.calendar,
+        use_cftime=ds.time.dtype == "O",
+    )[::-1]
+    _after = xr.date_range(
+        ds.indexes["time"][-1], freq=freq, periods=pad_right + 1, inclusive="right", calendar=ds.time.dt.calendar, use_cftime=ds.time.dtype == "O"
+    )
     dsp = dsp.assign_coords(time=_before.append(ds.indexes["time"]).append(_after))
 
     # New coords
