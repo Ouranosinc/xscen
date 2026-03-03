@@ -58,7 +58,7 @@ repos:
     rev: 7.3.0
     hooks:
       - id: flake8
-        additional_dependencies: [ 'flake8-rst-docstrings==0.3.1' ]
+        additional_dependencies: [ 'flake8-rst-docstrings==0.4.0' ]
         args: [ '--config=.flake8' ]
   - repo: https://github.com/jendrikseipp/vulture
     rev: v2.14
@@ -97,7 +97,7 @@ repos:
       - id: check-github-workflows
       - id: check-readthedocs
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.22.0  # FIXME: Rust is missing on our systems to support 1.5.2+
+    rev: v1.22.0
     hooks:
       - id: zizmor
         args: [ '--config=.zizmor.yml' ]
