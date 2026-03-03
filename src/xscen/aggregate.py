@@ -378,7 +378,7 @@ def climatological_op(  # noqa: C901
 
     if not horizons_as_dim:
         return stack_dates(ds_rolling)
-    out = ds_rolling.swap_dims(time="horizon")
+    out = ds_rolling.swap_dims(time="horizon").drop_vars("time").rename(original_time="time")
     if out.sizes.get(unstack_kwargs.get("new_dim", "season")) == 1:
         out = out.squeeze(unstack_kwargs.get("new_dim", "season"), drop=True)
     return out

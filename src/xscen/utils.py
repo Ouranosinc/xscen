@@ -1075,7 +1075,7 @@ def clean_up(  # noqa: C901
 def _unstack_doy(ds: xr.Dataset, new_dim: str | None):
     """Unstack a daily timeseries into dayofyear and year."""
     ds = (
-        ds.assign_coords(actual_time=ds.time)
+        ds.assign_coords(original_time=ds.time)
         .assign_coords(
             xr.Coordinates.from_pandas_multiindex(
                 pd.MultiIndex.from_arrays(
@@ -1124,7 +1124,7 @@ def unstack_dates(  # noqa: C901
     -------
     xr.Dataset or DataArray
       Same as ds but the time axis is now yearly (YS-JAN) and the seasons are along the new dimension.
-      The previous time dimension is left as the new 2D `actual_time`.
+      The previous time dimension is left as the new 2D `original_time`.
 
     Notes
     -----
@@ -1183,7 +1183,7 @@ def unstack_dates(  # noqa: C901
             seaname = f"{mult}{seaname}"
         # Fast track for annual, if nothing more needs to be done.
         if year_start_month == 1:
-            dso = ds.expand_dims({new_dim: [seaname]}).assign_coords(actual_time=ds.time.expand_dims({new_dim: [seaname]}))
+            dso = ds.expand_dims({new_dim: [seaname]}).assign_coords(original_time=ds.time.expand_dims({new_dim: [seaname]}))
             dso["time"] = xr.date_range(
                 f"{first.year}-01-01",
                 f"{last.year}-01-01",
@@ -1232,6 +1232,11 @@ def unstack_dates(  # noqa: C901
     dsp = ds.pad(time=(pad_left, pad_right))  # pad with NaN
     # Similarly pad our "group labels".
     years = years.pad(time=(pad_left, pad_right), constant_values=(years[0], years[-1]))
+    # And pad the original time
+    #  a bit more complicated, we use the negative freq feature of date_range to get valid dates before start
+    _before = xr.date_range(ds.indexes["time"][0], freq=f"-1{freq}" if mult == 1 else f"-{freq}", periods=pad_left + 1, inclusive="right")[::-1]
+    _after = xr.date_range(ds.indexes["time"][-1], freq=freq, periods=pad_right + 1, inclusive="right")
+    dsp = dsp.assign_coords(time=_before.append(ds.indexes["time"]).append(_after))
 
     # New coords
     new_time = xr.date_range(  # New time axis (YS)
@@ -1261,7 +1266,7 @@ def unstack_dates(  # noqa: C901
     for coord in new_coords:
         if (coord not in ["time", new_dim]) and ("time" in ds[coord].dims):
             new_coords[coord] = reshape_da(dsp[coord])
-    new_coords["actual_time"] = reshape_da(dsp.time)
+    new_coords["original_time"] = reshape_da(dsp.time)
 
     if isinstance(ds, xr.Dataset):
         dso = dsp.map(reshape_da, keep_attrs=True)
@@ -1274,17 +1279,18 @@ def stack_dates(ds: xr.Dataset):
     """
     Revert the effect of :py:func:`unstack_dates`.
 
-    The input must still contain the `actual_time` 2D coordinate added by the unstacking.
+    The input must still contain the `original_time` 2D coordinate added by the unstacking.
     """
-    time_dims = list(ds.actual_time.dims)
+    time_dims = list(ds.original_time.dims)
     season_dim = list(set(time_dims) - {"time"})
-    return (
+    out = (
         ds.stack(real_time=time_dims)
-        .swap_dims(real_time="actual_time")
+        .swap_dims(real_time="original_time")
         .drop_vars(["real_time", *time_dims])
-        .rename(actual_time="time")
+        .rename(original_time="time")
         .transpose(*[d for d in ds.dims if d not in season_dim])
     )
+    return out.where(out.time.notnull(), drop=True)
 
 
 def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:

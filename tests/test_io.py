@@ -252,7 +252,7 @@ class TestToTable:
             .assign_coords(site=list("abcdef"))
         )
         .transpose("season", "time", "site")
-        .drop_vars(["actual_time"])
+        .drop_vars(["original_time"])
     )
     ds.attrs = {"foo": "bar", "baz": 1, "qux": 2.0}
 
