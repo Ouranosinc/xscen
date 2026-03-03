@@ -137,27 +137,10 @@ def climatological_op(  # noqa: C901
     If possible, a function that handles NaN values will be used (e.g. op='mean' will use `np.nanmean`), as the
     'min_periods' argument already decides how many NaN values are acceptable.
     """
-    # Daily data is not supported
-    # if len(ds.time) > 3 and xr.infer_freq(ds.time) == "D":
-    #    raise NotImplementedError("xs.climatological_op does not currently support daily data.")
     # more than one operation per call is not supported (yet), case for dict
     if isinstance(op, dict) and len(op) > 1:
         raise NotImplementedError("xs.climatological_op does not currently support more than one operation per call.")
 
-    # unstack 1D time in coords (day, month, and year) to make climatological mean faster
-    # mindex_coords = xr.Coordinates.from_pandas_multiindex(
-    #     pd.MultiIndex.from_arrays(
-    #         [
-    #             ds.time.dt.year.values,
-    #             ds.time.dt.month.values,
-    #             ds.time.dt.day.values,
-    #         ],
-    #         names=["year", "month", "day"],
-    #     ),
-    #     dim="time",
-    # )
-    # ds_unstack = ds.assign_coords(coords=mindex_coords).unstack("time")
-    # define periods, windows, and min_periods
     periods = standardize_periods(periods or [[int(ds.time.dt.year[0]), int(ds.time.dt.year[-1])]])
     window = window or int(periods[0][1]) - int(periods[0][0]) + 1
 
@@ -314,32 +297,6 @@ def climatological_op(  # noqa: C901
         ).astype(str)
         ds_rolling = ds_rolling.assign_coords(horizon=horizons)
 
-        # # revert to 1D time, rebuilding time coord
-        # ds_rolling = ds_rolling.stack(time=("year", "month", "day"))
-        # if isinstance(ds.indexes["time"], pd.core.indexes.datetimes.DatetimeIndex):
-        #     time_coord = pd.to_datetime(
-        #         {
-        #             "year": ds_rolling.year.values - window + 1,
-        #             "month": ds_rolling.month.values,
-        #             "day": ds_rolling.day.values,
-        #         }
-        #     ).to_list()
-        # elif isinstance(ds.indexes["time"], xr.coding.cftimeindex.CFTimeIndex):
-        #     time_coord = [
-        #         xclim.core.calendar.datetime_classes[ds.time.dt.calendar](y - window + 1, m, d)
-        #         for y, m, d in zip(
-        #             ds_rolling.year.values,
-        #             ds_rolling.month.values,
-        #             ds_rolling.day.values,
-        #             strict=False,
-        #         )
-        #     ]
-        # else:
-        #     raise ValueError("The type of 'time' was not understood.")
-        # ds_rolling = ds_rolling.drop_vars({"month", "year", "time", "day"})
-        # ds_rolling = ds_rolling.assign_coords(time=time_coord).transpose("time", ...)
-
-        # append to list of results
         concats.extend([ds_rolling])
         # end loop over periods
 
@@ -382,51 +339,6 @@ def climatological_op(  # noqa: C901
     if out.sizes.get(unstack_kwargs.get("new_dim", "season")) == 1:
         out = out.squeeze(unstack_kwargs.get("new_dim", "season"), drop=True)
     return out
-    # if horizons_as_dim:
-    #     # restructure output to have horizons as a dimension instead of stacked horizons per year/season/month
-    #     new_coords = {1: "year", 4: "season", 12: "month"}
-    #     new_coord_len = len(np.unique(ds_rolling.time.dt.month))
-
-    #     if new_coord_len == 1:
-    #         all_horizons = [
-    #             ds_rolling.sel(time=ds_rolling.horizon == horizon)
-    #             .swap_dims({"time": "horizon"})
-    #             .assign(
-    #                 time_2D=xr.DataArray(
-    #                     ds_rolling.time.sel(time=ds_rolling.horizon == horizon).values.copy(),
-    #                     dims=["time"],
-    #                 )
-    #             )
-    #             .drop_vars("time")
-    #             .rename({"time_2D": "time"})
-    #             .set_coords("time")
-    #             .squeeze(dim="time")
-    #             for horizon in np.unique(ds_rolling.horizon.values)
-    #         ]
-    #     else:
-    #         all_horizons = [
-    #             unstack_dates(
-    #                 ds_rolling.sel(time=ds_rolling.horizon == horizon).assign(
-    #                     time_2D=xr.DataArray(
-    #                         ds_rolling.time.sel(time=ds_rolling.horizon == horizon).values.copy(),
-    #                         dims=["time"],
-    #                     )
-    #                 ),
-    #                 new_dim=new_coords[new_coord_len],
-    #             )
-    #             .drop_vars("horizon")
-    #             .assign_coords(horizon=("time", [horizon]))
-    #             .swap_dims({"time": "horizon"})
-    #             .drop_vars("time")
-    #             .rename({"time_2D": "time"})
-    #             .set_coords("time")
-    #             for horizon in np.unique(ds_rolling.horizon.values)
-    #         ]
-
-    #     return xr.concat(all_horizons, dim="horizon", coords="different", compat="equals")
-
-    # else:
-    #     return ds_rolling
 
 
 @parse_config

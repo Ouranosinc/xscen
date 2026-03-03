@@ -1114,6 +1114,8 @@ def unstack_dates(  # noqa: C901
       The name of the new dimension.
       If None, the name is inferred from the frequency of the time axis.
       See notes.
+    winter_starts_year, bool, optional
+      Deprecated. Setting to True is the old way of passing `year_start_month=12`.
     year_start_month: int, optional
       Change on which month the year starts. If greater than 1, seasons/months between that and 12 (included)
       are associated with the following year. Usually this is used as 12 with seasonal data, so that the DJF season is
