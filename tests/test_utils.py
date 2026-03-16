@@ -1014,7 +1014,7 @@ class TestUnstackDates:
             assert len(out.season) == 1
             np.testing.assert_array_equal(out.season[0], [f"{freq.replace('YS', 'annual')}"])
 
-        # Pour les périodes qui font que ds n'arrête pas à la fin d'une année, on a paddé
+        # Periods that mean that 'ds' doesn't stop at the end of the year have been padded.
         ds2 = xs.utils.stack_dates(out).isel(time=slice(None, 34))
         assert ds2.equals(ds)
 
