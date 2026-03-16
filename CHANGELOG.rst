@@ -8,7 +8,7 @@ Contributors: Trevor James Smith (:user:`Zeitsperre`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* No change.
+* ``xs.climatological_op`` now supports daily inputs. Still best used with uniform calendar or with ``horizons_as_dim=True``. The function now uses ``xs.utils.unstack_dates`` to ungroup the time axis in its sub-year components and it can take options from that function.
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
