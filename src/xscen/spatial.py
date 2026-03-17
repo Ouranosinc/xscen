@@ -651,9 +651,15 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
             gridmap = gridmap[gridmap_name]
 
     cf_params = gridmap.attrs
+    # RotPole is a spherical-only projection, so having a WGS84 ellipse makes it confusing
+    if cf_params["grid_mapping_name"] == "rotated_latitude_longitude":
+        glb_defaults = {"reference_ellipsoid_name": "sphere", "earth_radius": 6370997}
+    else:
+        glb_defaults = {"reference_ellipsoid_name": "WGS84", "semi_major_axis": cartopy.crs.WGS84_SEMIMAJOR_AXIS}
+    cf_params = glb_defaults | cf_params
     globe = cartopy.crs.Globe(
         datum=cf_params.get("horizontal_datum_name"),
-        ellipse=cf_params.get("reference_ellipsoid_name", "WGS84"),
+        ellipse=cf_params.get("reference_ellipsoid_name"),
         semimajor_axis=(cf_params.get("earth_radius") or cf_params.get("semi_major_axis")),
         semiminor_axis=cf_params.get("semi_minor_axis"),
         inverse_flattening=cf_params.get("inverse_flattening"),

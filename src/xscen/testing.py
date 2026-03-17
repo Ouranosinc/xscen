@@ -14,6 +14,8 @@ import xarray as xr
 from xclim.testing.helpers import test_timeseries as timeseries
 from xclim.testing.utils import show_versions as _show_versions
 
+from xscen.spatial import get_crs
+
 
 __all__ = ["datablock_3d", "fake_data", "publish_release_notes", "show_versions"]
 
@@ -120,23 +122,38 @@ def datablock_3d(
 
     # Support for rotated pole and oblique mercator grids
     if x != "lon" and y != "lat":
-        PC = ccrs.PlateCarree()
         if x == "rlon":  # rotated pole
-            GM = ccrs.RotatedPole(pole_longitude=83.0, pole_latitude=42.5, central_rotated_longitude=0.0)
+            GM = xr.DataArray(
+                "",
+                attrs={
+                    "grid_mapping_name": "rotated_latitude_longitude",
+                    "grid_north_pole_latitude": 42.5,
+                    "grid_north_pole_longitude": 83.0,
+                    "north_pole_grid_longitude": 0.0,
+                    "earth_radius": 6370997,
+                },
+            )
             da.attrs["grid_mapping"] = "rotated_pole"
+            CRS = get_crs(GM)
         else:
-            GM = ccrs.ObliqueMercator(
-                azimuth=90,
-                central_latitude=46,
-                central_longitude=-63,
-                scale_factor=1,
-                false_easting=0,
-                false_northing=0,
+            GM = xr.DataArray(
+                "",
+                attrs={
+                    "grid_mapping_name": "oblique_mercator",
+                    "azimuth_of_central_line": 90.0,
+                    "latitude_of_projection_origin": 46.0,
+                    "longitude_of_projection_origin": -63.0,
+                    "scale_factor_at_projection_origin": 1.0,
+                    "false_easting": 0.0,
+                    "false_northing": 0.0,
+                },
             )
             da.attrs["grid_mapping"] = "oblique_mercator"
+            CRS = get_crs(GM)
 
+        PC = ccrs.PlateCarree(globe=CRS.globe)
         YY, XX = xr.broadcast(da[y], da[x])
-        pts = PC.transform_points(GM, XX.values, YY.values)
+        pts = PC.transform_points(CRS, XX.values, YY.values)
         da["lon"] = xr.DataArray(pts[..., 0], dims=XX.dims, attrs=attrs["lon"])
         da["lat"] = xr.DataArray(pts[..., 1], dims=YY.dims, attrs=attrs["lat"])
 
@@ -144,36 +161,9 @@ def datablock_3d(
         if "grid_mapping" in da.attrs:
             da = da.to_dataset()
             if da[variable].attrs["grid_mapping"] == "rotated_pole":
-                da = da.assign_coords(
-                    {
-                        "rotated_pole": xr.DataArray(
-                            "",
-                            attrs={
-                                "grid_mapping_name": "rotated_latitude_longitude",
-                                "grid_north_pole_latitude": 42.5,
-                                "grid_north_pole_longitude": 83.0,
-                                "north_pole_grid_longitude": 0.0,
-                            },
-                        )
-                    }
-                )
+                da = da.assign_coords(rotated_pole=GM)
             else:
-                da = da.assign_coords(
-                    {
-                        "oblique_mercator": xr.DataArray(
-                            "",
-                            attrs={
-                                "grid_mapping_name": "oblique_mercator",
-                                "azimuth_of_central_line": 90.0,
-                                "latitude_of_projection_origin": 46.0,
-                                "longitude_of_projection_origin": -63.0,
-                                "scale_factor_at_projection_origin": 1.0,
-                                "false_easting": 0.0,
-                                "false_northing": 0.0,
-                            },
-                        )
-                    }
-                )
+                da = da.assign_coords(oblique_mercator=GM)
             return da
         else:
             return da.to_dataset()
