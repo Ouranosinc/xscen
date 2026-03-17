@@ -142,7 +142,7 @@ def datablock_3d(
                     "grid_mapping_name": "oblique_mercator",
                     "azimuth_of_central_line": 90.0,
                     "latitude_of_projection_origin": 46.0,
-                    "longitude_of_projection_origin": -63.0,
+                    "longitude_of_projection_origin": 263.0,
                     "scale_factor_at_projection_origin": 1.0,
                     "false_easting": 0.0,
                     "false_northing": 0.0,

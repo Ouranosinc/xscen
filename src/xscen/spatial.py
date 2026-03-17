@@ -652,15 +652,13 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
 
     cf_params = gridmap.attrs
     # RotPole is a spherical-only projection, so having a WGS84 ellipse makes it confusing
-    if cf_params["grid_mapping_name"] == "rotated_latitude_longitude":
-        glb_defaults = {"reference_ellipsoid_name": "sphere", "earth_radius": 6370997}
-    else:
-        glb_defaults = {"reference_ellipsoid_name": "WGS84", "semi_major_axis": cartopy.crs.WGS84_SEMIMAJOR_AXIS}
-    cf_params = glb_defaults | cf_params
+    # Moreover, climate models usually use spherical models of the earth, so we use a spherical globe by default
+    # This is different from cartopy, especially with PROJ >= 9.8
+    # 6370997 m is the conventional of the Earth as a sphere
     globe = cartopy.crs.Globe(
         datum=cf_params.get("horizontal_datum_name"),
-        ellipse=cf_params.get("reference_ellipsoid_name"),
-        semimajor_axis=(cf_params.get("earth_radius") or cf_params.get("semi_major_axis")),
+        ellipse=cf_params.get("reference_ellipsoid_name", "sphere"),
+        semimajor_axis=(cf_params.get("earth_radius") or cf_params.get("semi_major_axis") or 6370997),
         semiminor_axis=cf_params.get("semi_minor_axis"),
         inverse_flattening=cf_params.get("inverse_flattening"),
         towgs84=cf_params.get("towgs84"),
@@ -680,6 +678,17 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
             central_latitude=cf_params["latitude_of_projection_origin"],
             scale_factor=cf_params["scale_factor_at_projection_origin"],
             azimuth=cf_params["azimuth_of_central_line"],
+            false_easting=cf_params.get("false_easting", 0),
+            false_northing=cf_params.get("false_northing", 0),
+            globe=globe,
+        )
+    elif cf_params["grid_mapping_name"] == "lambert_conformal_conic":
+        crs = cartopy.crs.LambertConformal(
+            standard_parallels=(cf_params["standard_parallel"],)
+            if np.isscalar(cf_params["standard_parallel"])
+            else tuple(cf_params["standard_parallel"]),
+            central_longitude=cf_params["longitude_of_central_meridian"],
+            central_latitude=cf_params["latitude_of_projection_origin"],
             false_easting=cf_params.get("false_easting", 0),
             false_northing=cf_params.get("false_northing", 0),
             globe=globe,
