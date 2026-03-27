@@ -121,8 +121,8 @@ def test_parse_directory_readgroups(tmp_path):
     da = xr.DataArray(list("rien"), dims=("x",), coords={"x": range(4)})
     xr.Dataset({"abc": da, "ghi": da}).to_netcdf(tmp_path / "abc_sim1_exp.nc")
     xr.Dataset({"ijk": da, "mno": da}).to_netcdf(tmp_path / "ijk_sim1_exp.nc")
-    xr.Dataset({"abc": da, "ghi": da}).to_netcdf(tmp_path / "abc_sim2_exp.nc")
-    xr.Dataset({"ijk": da, "mno": da}).to_netcdf(tmp_path / "ijk_sim2_exp.nc")
+    xr.Dataset({"abc": da}).to_netcdf(tmp_path / "abc_sim2_exp.nc")
+    xr.Dataset({"ijk": da}).to_netcdf(tmp_path / "ijk_sim2_exp.nc")
 
     df = cu.parse_directory(
         directories=[str(tmp_path)],
