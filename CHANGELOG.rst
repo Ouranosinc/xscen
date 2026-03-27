@@ -13,7 +13,7 @@ New features and enhancements
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* No change.
+* `h5py` and `h5netcdf` are no longer pinned. (:issue:`704`, :pull:`705`)
 
 Bug fixes
 ^^^^^^^^^
