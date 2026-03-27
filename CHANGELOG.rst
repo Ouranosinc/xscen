@@ -18,6 +18,7 @@ Breaking changes
 Bug fixes
 ^^^^^^^^^
 * When creating cartopy CRS objects from CF attributes, xscen will default to a spherical earth of radius 6370997 m. This fixes issues raised by the update of PROJ 9.8 (:pull:`701`).
+* Fix a bug stemming from a change in Pandas 3 in ``parse_directory`` when ``read_from_file`` tries to overwrite a column previously parsed as strings. (:pull:`703`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
