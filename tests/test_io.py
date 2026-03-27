@@ -228,28 +228,32 @@ class TestRechunkForSaving:
 
 
 class TestToTable:
-    ds = xs.utils.unstack_dates(
-        xr.merge(
-            [
-                xs.testing.datablock_3d(
-                    np.ones((20, 3, 2)),
-                    v,
-                    "lon",
-                    0,
-                    "lat",
-                    0,
-                    1,
-                    1,
-                    "1993-01-01",
-                    "QS-JAN",
-                )
-                for v in ["tas", "pr", "snw"]
-            ]
+    ds = (
+        xs.utils.unstack_dates(
+            xr.merge(
+                [
+                    xs.testing.datablock_3d(
+                        np.ones((20, 3, 2)),
+                        v,
+                        "lon",
+                        0,
+                        "lat",
+                        0,
+                        1,
+                        1,
+                        "1993-01-01",
+                        "QS-JAN",
+                    )
+                    for v in ["tas", "pr", "snw"]
+                ]
+            )
+            .stack(site=["lat", "lon"])
+            .reset_index("site")
+            .assign_coords(site=list("abcdef"))
         )
-        .stack(site=["lat", "lon"])
-        .reset_index("site")
-        .assign_coords(site=list("abcdef"))
-    ).transpose("season", "time", "site")
+        .transpose("season", "time", "site")
+        .drop_vars(["original_time"])
+    )
     ds.attrs = {"foo": "bar", "baz": 1, "qux": 2.0}
 
     @pytest.mark.parametrize("multiple, as_dataset", [(True, True), (False, True), (False, False)])

@@ -4,11 +4,12 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors: Trevor James Smith (:user:`Zeitsperre`).
+Contributors: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* No change.
+* ``xs.climatological_op`` now supports daily inputs. Still best used with uniform calendar or with ``horizons_as_dim=True``. The function now uses ``xs.utils.unstack_dates`` to ungroup the time axis in its sub-year components and it can take options from that function. (:pull:`701`).
+* ``xs.spatial.get_crs`` now understands "lambert_conformal_conic" projections. (:pull:`701`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
@@ -16,7 +17,7 @@ Breaking changes
 
 Bug fixes
 ^^^^^^^^^
-* No change.
+* When creating cartopy CRS objects from CF attributes, xscen will default to a spherical earth of radius 6370997 m. This fixes issues raised by the update of PROJ 9.8 (:pull:`701`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^

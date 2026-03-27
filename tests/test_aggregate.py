@@ -200,7 +200,7 @@ class TestProduceHorizon:
         "periods, to_level",
         [
             (None, None),
-            ([["1995", "2007"], ["1995", "1996"]], "for_testing"),
+            ([["1995", "2007"], ["1994", "1996"]], "for_testing"),
         ],
     )
     def test_options(self, periods, to_level):
@@ -219,7 +219,7 @@ class TestProduceHorizon:
         assert len(out.horizon) == 1 if periods is None else len(periods)
         np.testing.assert_array_equal(
             out.horizon,
-            ["1981-2010"] if periods is None else ["1995-2007", "1995-1996"],
+            ["1981-2010"] if periods is None else ["1995-2007", "1994-1996"],
         )
         assert out.attrs["cat:processing_level"] == ("for_testing" if to_level is not None else "horizons")
         assert out.attrs["cat:xrfreq"] == "fx"
@@ -639,31 +639,14 @@ class TestClimatologicalOp:
         op_format = dict.fromkeys(("mean", "std", "var", "sum"), "adj") | dict.fromkeys(("max", "min"), "noun")
         return xclim.core.formatting.default_formatter.format_field(s, op_format[s])
 
-    def test_daily(self):
-        ds = timeseries(
-            np.tile(np.arange(1, 13), 3),
-            variable="tas",
-            start="2001-01-01",
-            freq="D",
-            as_dataset=True,
-        )
-        with pytest.raises(NotImplementedError):
-            xs.climatological_op(ds, op="mean")
-
-    @pytest.mark.parametrize("xrfreq", ["MS", "YS-JAN"])
+    @pytest.mark.parametrize("xrfreq", ["D", "MS", "YS-JAN"])
     @pytest.mark.parametrize("op", ["max", "mean", "median", "min", "std", "sum", "var", "linregress"])
     def test_all_default(self, xrfreq, op):
         if op == "linregress" and Version(__scipy_version__) < Version("1.16.0"):
             pytest.skip("Skipping linregress on older scipy")
-        o = 12 if xrfreq == "MS" else 1
+        o = {"MS": 12, "D": 365, "YS-JAN": 1}[xrfreq]
 
-        ds = timeseries(
-            np.tile(np.arange(1, o + 1), 30),
-            variable="tas",
-            start="2001-01-01",
-            freq=xrfreq,
-            as_dataset=True,
-        )
+        ds = timeseries(np.tile(np.arange(1, o + 1), 30), variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
         out = xs.climatological_op(ds, op=op)
         expected = (
             dict.fromkeys(("max", "mean", "median", "min"), np.arange(1, o + 1))

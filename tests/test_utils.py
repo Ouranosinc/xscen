@@ -1014,6 +1014,10 @@ class TestUnstackDates:
             assert len(out.season) == 1
             np.testing.assert_array_equal(out.season[0], [f"{freq.replace('YS', 'annual')}"])
 
+        # Periods that mean that 'ds' doesn't stop at the end of the year have been padded.
+        ds2 = xs.utils.stack_dates(out).isel(time=slice(None, 34))
+        assert ds2.equals(ds)
+
     @pytest.mark.parametrize("freq", ["MS", "QS", "YS"])
     def test_seasons(self, freq):
         ds = timeseries(
@@ -1139,6 +1143,10 @@ class TestUnstackDates:
         out = xs.utils.unstack_dates(ds)
         assert tuple(out.dims) == ("dayofyear", "time")
         np.testing.assert_array_equal(out.tas.isel(time=0), ds.tas.isel(time=slice(None, 366)))
+        assert out.original_time.isel(dayofyear=-1, time=1).isnull().item()
+
+        ds2 = xs.utils.stack_dates(out)
+        assert ds.equals(ds2)
 
 
 class TestEnsureTime:
