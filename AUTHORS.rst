@@ -26,3 +26,4 @@ Contributors
 * Blaise Gauvin St-Denis <gauvin-st-denis.blaise@ouranos.ca> `@bstdenis <https://github.com/bstdenis>`_
 * Éric Dupuis <dupuis.eric@ouranos.ca> `@coxipi <https://github.com/coxipi>`_
 * Artem Buyalo <artbuy1@ouranos.ca> `@ArtemBuyalo <https://github.com/ArtemBuyalo>`_
+* Asli Bese <bese.asli@ouranos.ca> `@aslibese <https://github.com/aslibese>`_
