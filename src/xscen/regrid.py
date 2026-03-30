@@ -409,6 +409,9 @@ def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str | None = None) -> xr.
     ds_bnds = xr.merge([lonb, latb]).assign(dict([("lon", ds.lon), ("lat", ds.lat), (gridmap, ds[gridmap])]))
     ds_bnds[yname] = ds[yname]
     ds_bnds[xname] = ds[xname]
+    # Drop "bounds" attribute added by cf-xarray on 1D coords (we didn't keep these)
+    ds_bnds[xname].attrs.pop("bounds", "")
+    ds_bnds[yname].attrs.pop("bounds", "")
     ds_bnds.lat.attrs["bounds"] = "lat_bounds"
     ds_bnds.lon.attrs["bounds"] = "lon_bounds"
     return ds_bnds.transpose(*ds.lon.dims, "bounds")

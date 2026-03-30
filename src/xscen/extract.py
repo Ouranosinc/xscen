@@ -154,10 +154,9 @@ def extract_dataset(  # noqa: C901
         if preprocess:
             ds = preprocess(ds)
         # if ensure_correct_time, we fix "anchor" for daily and finer, by flooring
-        if "time" in ds and ensure_correct_time:
-            xrfreq = xr.infer_freq(ds.time) if ds.time.size > 2 else None
-            if xrfreq in "DHTMUL":
-                ds["time"] = ds.time.dt.floor(xrfreq)
+        # however, if we can't infer freq, we hope the postprocess version will fix it
+        if ensure_correct_time and "time" in ds and (xrfreq := (xr.infer_freq(ds.time) if ds.time.size > 2 else None)) in list("DHTMUL"):
+            ds["time"] = ds.time.dt.floor(xrfreq)
         return ds
 
     # Open the catalog

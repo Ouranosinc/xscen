@@ -117,21 +117,24 @@ def test_parse_directory():
     assert set(df[df["id"] == "CMIP6_ScenarioMIP_driver_NCC_NorESM2-MM_ssp126_1f1p1i1r_exreg"]["version"]) == {"v20191108", "v20200702"}
 
 
-@pytest.mark.requires_netcdf
-def test_parse_directory_readgroups():
+def test_parse_directory_readgroups(tmp_path):
+    da = xr.DataArray(list("rien"), dims=("x",), coords={"x": range(4)})
+    xr.Dataset({"abc": da, "ghi": da}).to_netcdf(tmp_path / "abc_sim1_exp.nc")
+    xr.Dataset({"ijk": da, "mno": da}).to_netcdf(tmp_path / "ijk_sim1_exp.nc")
+    xr.Dataset({"abc": da}).to_netcdf(tmp_path / "abc_sim2_exp.nc")
+    xr.Dataset({"ijk": da}).to_netcdf(tmp_path / "ijk_sim2_exp.nc")
+
     df = cu.parse_directory(
-        directories=[str(SAMPLES_DIR)],
-        patterns=["{activity}/{domain}/{institution}/{source}/{experiment}/{member}/{frequency}/{?:_}.nc"],
+        directories=[str(tmp_path)],
+        patterns=["{variable}_{source}_{experiment}.nc"],
         read_from_file=[
-            ["experiment", "frequency"],
-            ["variable", "date_start", "date_end"],
+            ["variable", "source"],
+            ["variable"],
         ],
-        cvs={"variable": {"sftlf": None, "tas": "t2m"}},
+        homogenous_info={"domain": "global", "frequency": "fx"},
     )
-    assert len(df) == 10
-    t2m = df.variable.apply(lambda v: "t2m" in v)
-    assert (df[t2m]["date_end"] == pd.Timestamp("2002-12-31")).all()
-    assert (df[~t2m].variable.apply(len) == 0).all()
+    assert len(df) == 4
+    assert df.iloc[0].variable == ("abc", "ghi")
 
 
 @pytest.mark.requires_netcdf

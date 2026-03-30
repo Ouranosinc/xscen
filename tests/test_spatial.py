@@ -496,8 +496,7 @@ def test_rotate_vectors():
     crs = xr.DataArray(
         attrs={
             "grid_mapping_name": "rotated_latitude_longitude",
-            "semi_major_axis": 6370997,
-            "semi_minor_axis": 6370997,
+            "earth_radius": 6370997,
             "grid_north_pole_latitude": 31.758312454493154,
             "grid_north_pole_longitude": 87.59703130293302,
             "north_pole_grid_longitude": 0,

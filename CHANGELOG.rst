@@ -4,19 +4,21 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors: Trevor James Smith (:user:`Zeitsperre`), Asli Bese (:user:`aslibese`)
+Contributors: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* Add annual global tas timeseries for CMIP6's models ACCESS-ESM1-5 r11i1p1f1 (ssp370), EC-Earth3-AerChem r1i1p1f1 (ssp370), GISS-E2-1-H r1i1p1f2 (ssp370), IPSL-CM5A2-INCA r1i1p1f1 (ssp370), CanESM5-CanOE r1i1p2f1 (ssp370), FGOALS-f3-L r1i1p1f1 (ssp370), and CAMS-CSM1-0 r1i1p1f1 (ssp370) (:pull:`706`).
+* ``xs.climatological_op`` now supports daily inputs. Still best used with uniform calendar or with ``horizons_as_dim=True``. The function now uses ``xs.utils.unstack_dates`` to ungroup the time axis in its sub-year components and it can take options from that function. (:pull:`701`).
+* ``xs.spatial.get_crs`` now understands "lambert_conformal_conic" projections. (:pull:`701`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* No change.
+* `h5py` and `h5netcdf` are no longer pinned. (:issue:`704`, :pull:`705`)
 
 Bug fixes
 ^^^^^^^^^
-* No change.
+* When creating cartopy CRS objects from CF attributes, xscen will default to a spherical earth of radius 6370997 m. This fixes issues raised by the update of PROJ 9.8 (:pull:`701`).
+* Fix a bug stemming from a change in Pandas 3 in ``parse_directory`` when ``read_from_file`` tries to overwrite a column previously parsed as strings. (:pull:`703`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
