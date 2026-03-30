@@ -4,12 +4,13 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`).
+Contributors: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Asli Bese (:user:`aslibese`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * ``xs.climatological_op`` now supports daily inputs. Still best used with uniform calendar or with ``horizons_as_dim=True``. The function now uses ``xs.utils.unstack_dates`` to ungroup the time axis in its sub-year components and it can take options from that function. (:pull:`701`).
 * ``xs.spatial.get_crs`` now understands "lambert_conformal_conic" projections. (:pull:`701`).
+* Add annual global tas timeseries for CMIP6's models ACCESS-ESM1-5 r11i1p1f1 (ssp370), EC-Earth3-AerChem r1i1p1f1 (ssp370), GISS-E2-1-H r1i1p1f2 (ssp370), IPSL-CM5A2-INCA r1i1p1f1 (ssp370), CanESM5-CanOE r1i1p2f1 (ssp370), FGOALS-f3-L r1i1p1f1 (ssp370), and CAMS-CSM1-0 r1i1p1f1 (ssp370) (:pull:`706`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
