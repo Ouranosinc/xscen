@@ -4,11 +4,11 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors: Trevor James Smith (:user:`Zeitsperre`).
+Contributors: Trevor James Smith (:user:`Zeitsperre`), Asli Bese (:user:`aslibese`)
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* No change.
+* Add annual global tas timeseries for CMIP6's models ACCESS-ESM1-5 r11i1p1f1 (ssp370), EC-Earth3-AerChem r1i1p1f1 (ssp370), GISS-E2-1-H r1i1p1f2 (ssp370), IPSL-CM5A2-INCA r1i1p1f1 (ssp370), CanESM5-CanOE r1i1p2f1 (ssp370), FGOALS-f3-L r1i1p1f1 (ssp370), and CAMS-CSM1-0 r1i1p1f1 (ssp370) (:pull:`706`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
