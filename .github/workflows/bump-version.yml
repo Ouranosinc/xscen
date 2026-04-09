@@ -1,4 +1,4 @@
-name: Bump Patch Version
+name: Bump Version
 
 on:
   push:
@@ -35,15 +35,16 @@ on:
       - src/xscen/__init__.py
       - templates
       - tests/*.py
-      - tox.ini
+      - tox.toml
 
 permissions:
   contents: read
 
 jobs:
   bump_patch_version:
-    name: Bump Patch Version
+    name: Bump build/patch version
     runs-on: ubuntu-latest
+    environment: automation
     permissions:
       actions: read
     strategy:

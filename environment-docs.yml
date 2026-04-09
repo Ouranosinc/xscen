@@ -1,6 +1,7 @@
 name: xscen
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   - python >=3.13,<3.14
   - pip >=25.2
@@ -54,7 +55,7 @@ dependencies:
   - sphinx >=8.2.0
   - sphinx-autodoc-typehints >=3.1.0
   - sphinx-codeautolink >=0.16.2
-  - sphinx-copybutton
+  - sphinx-copybutton >=0.5.2
   - sphinx-intl
   - sphinx-mdinclude
   - sphinx-rtd-theme >=1.0

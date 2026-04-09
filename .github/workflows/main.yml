@@ -54,7 +54,7 @@ jobs:
         with:
           path: |
             .tox
-          key: ${{ hashFiles('pyproject.toml', 'tox.ini') }}-lint
+          key: ${{ hashFiles('pyproject.toml', 'tox.toml') }}-lint
       - name: Run linting suite
         run: |
           python -m tox -e lint
@@ -107,17 +107,18 @@ jobs:
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: .tox
-          key: ${{ matrix.os }}-Python${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'tox.ini') }}
+          key: ${{ matrix.os }}-Python${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'tox.toml') }}
       - name: Test with tox
         run: |
           python -m tox -e py${{ matrix.python-version }}
         env:
           ESMF_VERSION: ${{ env.esmf-version }}
           XCLIM_VERSION: ${{ matrix.xclim-min-version }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
-          COVERALLS_PARALLEL: true
-          COVERALLS_SERVICE_NAME: github
+      - name: Report Coverage
+        uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
+        with:
+          flag-name: run-Python${{ matrix.python-version }}-pypi
+          parallel: true
 
 #      - name: Install esmpy
 #        run: |

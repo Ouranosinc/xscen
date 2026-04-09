@@ -1,0 +1,107 @@
+diff a/pyproject.toml b/pyproject.toml	(rejected hunks)
+@@ -26,49 +75,18 @@ classifiers = [
+   "Programming Language :: Python :: 3.11",
+   "Programming Language :: Python :: 3.12",
+   "Programming Language :: Python :: 3.13",
++  "Programming Language :: Python :: 3.14",
+   "Programming Language :: Python :: Implementation :: CPython",
+   "Typing :: Typed"
+ ]
+ dynamic = ["description", "version"]
+ dependencies = [
+-  "click >=8.3.0"
++  "click >=8.3.1"
+   
+ ]
+ 
+ [project.optional-dependencies]
+-dev = [
+-  # Dev tools and testing
+-  "bump-my-version >=1.2.3",
+-  "coverage >=7.5.0",
+-  "deptry >=0.23.1",
+-  "flake8 >=7.3.0",
+-  "flake8-rst-docstrings >=0.3.1",
+-  "flit >=3.12.0,<4.0",
+-  "mypy >=1.18.2",
+-  "numpydoc >=1.9.0",
+-  "pip >=25.2",
+-  "pre-commit >=3.5.0",
+-  "pytest >=8.3.2",
+-  "pytest-cov >=5.0.0",
+-  "ruff >=0.13.3",
+-  "tox >=4.30.3",
+-  "vulture >=2.14",
+-  "watchdog >=4.0.0"
+-]
+-docs = [
+-  # Documentation and examples
+-  "ipykernel",
+-  "ipython",
+-  "jupyter_client",
+-  "nbsphinx >=0.9.5",
+-  "sphinx >=7.1.0,<8.2",
+-  "sphinx-click",
+-  "sphinx-codeautolink >=0.16.2",
+-  "sphinx-copybutton",
+-  "sphinx-intl",
+-  "sphinx-rtd-theme >=1.0"
+-]
+-all = ["xscen[dev]", "xscen[docs]"]
++extras = []
+ 
+ [project.scripts]
+ xscen = "xscen.cli:app"
+@@ -123,6 +141,13 @@ replace = """\
+ -----------------------------------------------------------------------------------------
+ """
+ 
++[[tool.bumpversion.files]]
++filename = "CITATION.cff"
++include_bumps = ["release"]
++search = "^version: \"[0-9]+\\.[0-9]+\\.[0-9]\""
++regex = true
++replace = "version: \"{new_version}\""
++
+ [[tool.bumpversion.files]]
+ filename = "src/xscen/__init__.py"
+ search = "__version__ = \"{current_version}\""
+@@ -149,7 +174,7 @@ values = [
+ ]
+ 
+ [tool.codespell]
+-ignore-words-list = "astroid,socio-economic"
++ignore-words-list = "astroid,socio-economic,thirdparty"
+ 
+ [tool.coverage.paths]
+ source = ["src/xscen/", "*/site-packages/xscen/"]
+@@ -160,8 +185,8 @@ relative_files = true
+ source = ["xscen"]
+ 
+ [tool.deptry]
+-extend_exclude = ["docs"]
+-pep621_dev_dependency_groups = ["all", "dev", "docs"]
++extend_exclude = ["extras"]
++pep621_dev_dependency_groups = ["extras"]
+ 
+ [tool.flit.sdist]
+ include = [
+@@ -183,7 +208,7 @@ include = [
+   "docs/make.bat",
+   "src/xscen",
+   "tests/*.py",
+-  "tox.ini"
++  "tox.toml"
+ ]
+ exclude = [
+   "*.py[co]",
+@@ -241,7 +266,8 @@ override_SS05 = [
+   '^Access '
+ ]
+ 
+-[tool.pytest.ini_options]
++[tool.pytest]
++minversion = "9.0"
+ addopts = [
+   "-ra",
+   "--color=yes",
