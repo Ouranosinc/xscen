@@ -1,6 +1,6 @@
 envlist = [
   "lint",
-  { product = [{ prefix = "py3.", start = 10, stop = 14 }] },
+  {product = [{prefix = "py3.", start = 10, stop = 14}]},
   "docs-esmpy"
 ]
 skip_missing_interpreters = true
@@ -44,8 +44,8 @@ passenv = ["CI", "COVERALLS_*", "ESMFMKFILE", "ESMF_VERSION", "GITHUB_*", "XCLIM
 download = true
 dependency_groups = ["test"]
 deps = [
-  { replace = "if", condition = "env.ESMF_VERSION", then = ["git+https://github.com/esmf-org/esmf.git@v{env:ESMF_VERSION}#subdirectory=src/addon/esmpy"], extend = true},
-  { replace = "if", condition = "env.XCLIM_VERSION", then = ["xclim=={env:XCLIM_VERSION}"], extend = true }
+  {replace = "if", condition = "env.ESMF_VERSION", then = ["git+https://github.com/esmf-org/esmf.git@v{env:ESMF_VERSION}#subdirectory=src/addon/esmpy"], extend = true},
+  {replace = "if", condition = "env.XCLIM_VERSION", then = ["xclim=={env:XCLIM_VERSION}"], extend = true}
 ]
 install_command = ["python", "-m", "pip", "install", "--no-user", "{opts}", "{packages}"]
 commands_pre = [["pip", "list"], ["pip", "check"]]
