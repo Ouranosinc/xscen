@@ -50,7 +50,6 @@ deps = [
 install_command = ["python", "-m", "pip", "install", "--no-user", "{opts}", "{packages}"]
 commands_pre = [["pip", "list"], ["pip", "check"]]
 commands = [
-  ["python", "-m", "pip", "install", "--no-user", "--no-deps", "--force-reinstall", "--no-binary", "h5py", "h5py>=3.12.1"],
   ["pytest", "{posargs}"]
 ]
 commands_post = [
