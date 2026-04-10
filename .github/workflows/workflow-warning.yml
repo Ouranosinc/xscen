@@ -41,14 +41,14 @@ jobs:
         run: |
           WARNING_TEXT="This Pull Request modifies GitHub workflows and is coming from a fork."
           NOTE_TEXT="Workflow changes in this Pull Request have been approved!"
- 
+
           # Fetch existing comments
           COMMENTS=$(gh api repos/$REPO/issues/$PR_NUMBER/comments)
 
           # Find warning comment ID
           WARNING_COMMENT_ID=$(echo "$COMMENTS" | jq -r \
             '.[] | select(.user.login=="github-actions[bot]") | select(.body | contains("'"$WARNING_TEXT"'")) | .id' | head -n 1)
- 
+
           # Find note comment ID
           NOTE_COMMENT_ID=$(echo "$COMMENTS" | jq -r \
             '.[] | select(.user.login=="github-actions[bot]") | select(.body | contains("'"$NOTE_TEXT"'")) | .id' | head -n 1)

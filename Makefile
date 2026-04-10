@@ -51,7 +51,7 @@ clean-pyc: ## remove Python file artifacts
 	find . -name '__pycache__' -exec rm -fr {} +
 
 clean-test: ## remove test and coverage artifacts
-	rm -fr .coverage/	
+	rm -fr .coverage/
 	rm -fr .pytest_cache
 	rm -fr .tox/
 	rm -fr htmlcov/
@@ -68,20 +68,14 @@ install-test: ## install dependencies needed for standard testing
 install-tox: ## install base dependencies needed for running tox
 	python -m pip install --quiet --group tox
 
-+lint: install-lint ## check style
- 	python -m ruff check src/xscen tests
- 	python -m flake8 --config=.flake8 src/xscen tests
- 	# python -m numpydoc lint src/xscen/**.py # FIXME: disabled until the codebase is fully numpydoc compliant
+lint: install-lint ## check style
+	python -m ruff check src/xscen tests
+	python -m flake8 --config=.flake8 src/xscen tests
+	# python -m numpydoc lint src/xscen/**.py # FIXME: disabled until the codebase is fully numpydoc compliant
 	python -m vulture src/xscen tests
 	codespell src/xscen tests docs
 	python -m deptry src
 	python -m yamllint --config-file=.yamllint.yaml src/xscen
-
-lint/security: ## check dependencies
-	python -m deptry src/xscen
-	python -m vulture src/xscen tests
-
-lint: lint/flake8 lint/security ## check style
 
 test: install-test ## run tests quickly with the default Python
 	python -m pytest

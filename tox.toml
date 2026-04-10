@@ -1,0 +1,65 @@
+envlist = [
+  "lint",
+  { product = [{ prefix = "py3.", start = 10, stop = 14 }] },
+  "docs-esmpy"
+]
+skip_missing_interpreters = true
+
+[env.docs]
+description = "Build the documentation with makefile under {basepython}"
+labels = ["docs"]
+dependency_groups = ["docs"]
+extras = ["xesmf"]
+commands = [
+  ["make", "build-docs"]
+]
+commands_post = []
+allowlist_externals = ["make"]
+
+[env.doctests]
+description = "Run documentation linters and doctests with pytest under {basepython}"
+dependency_groups = ["docs", "test"]
+commands = [
+  ["pytest", "--no-cov", "--nbval", "docs/notebooks", "--durations=10", "{posargs}"],
+  ["pytest", "--xdoctest", "xscen", "--durations=10", "{posargs}"]
+]
+commands_post = []
+
+[env.lint]
+description = "Run code quality compliance tests and French translation verifications under {basepython}"
+labels = ["lint"]
+skip_install = true
+dependency_groups = ["lint"]
+commands = [
+  ["make", "lint"],
+  ["make", "checkfrench"]
+]
+commands_post = []
+allowlist_externals = ["make"]
+
+[env_run_base]
+description = "Run tests with pytest under {basepython}"
+setenv = {PYTEST_ADDOPTS = "--color=yes --cov=xscen --cov-report=lcov", PYTHONPATH = "{toxinidir}"}
+passenv = ["CI", "COVERALLS_*", "ESMFMKFILE", "ESMF_VERSION", "GITHUB_*", "XCLIM_*"]
+download = true
+dependency_groups = ["test"]
+deps = [
+  { replace = "if", condition = "env.ESMF_VERSION", then = ["git+https://github.com/esmf-org/esmf.git@v{env:ESMF_VERSION}#subdirectory=src/addon/esmpy"], extend = true},
+  { replace = "if", condition = "env.XCLIM_VERSION", then = ["xclim=={env:XCLIM_VERSION}"], extend = true }
+]
+install_command = ["python", "-m", "pip", "install", "--no-user", "{opts}", "{packages}"]
+commands_pre = [["pip", "list"], ["pip", "check"]]
+commands = [
+  ["python", "-m", "pip", "install", "--no-user", "--no-deps", "--force-reinstall", "--no-binary", "h5py", "h5py>=3.12.1"],
+  ["pytest", "{posargs}"]
+]
+commands_post = [
+  ["coverage", "report"]
+]
+
+[gh.python]
+"3.10" = ["py3.10"]
+"3.11" = ["py3.11"]
+"3.12" = ["py3.12"]
+"3.13" = ["py3.13"]
+"3.14" = ["py3.14"]
