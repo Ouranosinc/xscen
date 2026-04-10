@@ -63,15 +63,20 @@ jobs:
     name: Test with Python${{ matrix.python-version }} (tox, ${{ matrix.os }})
     needs: lint
     runs-on: ${{ matrix.os }}
-    env:
-      COVERALLS_PARALLEL: true
-      COVERALLS_SERVICE_NAME: github
-      esmf-version: 8.7.0  # 8.8.0 breaks h5py
     strategy:
       matrix:
         os: [ 'ubuntu-latest' ]
-        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        xclim-min-version: [ "0.56" ]
+        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
+        esmf-version: [ "8.7.0" ]  # 8.8.0 breaks h5py
+        include:
+          - os: 'macos-latest'
+            python-version: "3.12"
+          - os: "windows-latest"
+            python-version: "3.11"
+          - os: 'ubuntu-latest'
+            python-version: "3.10"
+            esmf-version: [ "8.7.0" ]  # 8.8.0 breaks h5py
+            xclim-version: "0.56"  # minimum supported version
     defaults:
       run:
         shell: bash -l {0}
@@ -110,7 +115,7 @@ jobs:
           key: ${{ matrix.os }}-Python${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'tox.toml') }}
       - name: Test with tox
         run: |
-          python -m tox -e py${{ matrix.python-version }}
+          python -m tox
         env:
           ESMF_VERSION: ${{ env.esmf-version }}
           XCLIM_VERSION: ${{ matrix.xclim-min-version }}
@@ -119,29 +124,6 @@ jobs:
         with:
           flag-name: run-Python${{ matrix.python-version }}-pypi
           parallel: true
-
-#      - name: Install esmpy
-#        run: |
-#          pip install git+https://github.com/esmf-org/esmf.git@v${{ matrix.esmf-version }}#subdirectory=src/addon/esmpy
-#      - name: Install xscen
-#        run: |
-#          pip install --editable ".[dev]"
-#      - name: Check versions
-#        run: |
-#          pip list
-#          pip check
-#      - name: Test with pytest
-#        run: |
-#          pytest tests
-#      - name: Report coverage
-#        run: |
-#          coveralls
-#        env:
-#          ESMF_VERSION: ${{ matrix.esmf-version }}
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
-#          COVERALLS_PARALLEL: true
-#          COVERALLS_SERVICE_NAME: github
 
   test-conda:
     name: Test with Python${{ matrix.python-version }} (Anaconda, ${{ matrix.os }})
