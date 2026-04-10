@@ -1,6 +1,7 @@
 name: xscen-dev
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
   - python >=3.10,<3.15
   - pip >=26.0.1
