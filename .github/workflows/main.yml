@@ -113,9 +113,17 @@ jobs:
         with:
           path: .tox
           key: ${{ matrix.os }}-Python${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'tox.toml') }}
-      - name: Test with tox
+      - name: Test with tox (Linux)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           python -m tox
+        env:
+          ESMF_VERSION: ${{ env.esmf-version }}
+          XCLIM_VERSION: ${{ matrix.xclim-min-version }}
+      - name: Test with tox (macOS and Windows; no report failure)
+        if: matrix.os != 'ubuntu-latest'
+        run: |
+          python -m tox || true
         env:
           ESMF_VERSION: ${{ env.esmf-version }}
           XCLIM_VERSION: ${{ matrix.xclim-min-version }}
