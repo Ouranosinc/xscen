@@ -1,7 +1,7 @@
 envlist = [
   "lint",
   {product = [{prefix = "py3.", start = 10, stop = 14}]},
-  "docs-esmpy"
+  "docs"
 ]
 skip_missing_interpreters = true
 
