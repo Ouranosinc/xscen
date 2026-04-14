@@ -14,7 +14,8 @@ New features and enhancements
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* `h5py` and `h5netcdf` are no longer pinned. (:issue:`704`, :pull:`705`)
+* `h5py` and `h5netcdf` are no longer pinned. (:issue:`704`, :pull:`705`).
+* Development dependencies now follow the `dependency-groups` standard (`PEP 735 <https://peps.python.org/pep-0735/>`_). (:pull:`715`).
 
 Bug fixes
 ^^^^^^^^^
@@ -25,6 +26,16 @@ Internal changes
 ^^^^^^^^^^^^^^^^
 * The `templates` folder has been added to the source distribution in order to run configuration-loading tests on `conda-forge`. (:issue:`697`, :pull:`698`).
 * A hyperlink to the `xscen` code repository has been added to the top-level documentation table of contents. (:pull:`699`).
+* Added Windows and macOS builds to the GitHub CI tests (currently allowed to fail). (:pull:`715`).
+* Updated the cookiecutter template to the latest version. (:pull:`715`):
+    * PyPI builds now test against latest `xclim` release.
+    * Migrated developement-based `optional-dependencies` to `dependency-groups`.
+    * Sets token-based workflows to run within an `automation` environment.
+    * Updated and synchornized dependencies.
+    * `pre-commit` has been replaced by `prek`.
+    * `Makefile` now handles some dependency installation logic.
+    * `tox.toml` has been adjusted to use Makefile commands.
+    * `tox.toml` no longer reinstalls `h5py` explicitly.
 
 .. _changes_0.14.0:
 

@@ -54,7 +54,7 @@ jobs:
         with:
           path: |
             .tox
-          key: ${{ hashFiles('pyproject.toml', 'tox.ini') }}-lint
+          key: ${{ hashFiles('pyproject.toml', 'tox.toml') }}-lint
       - name: Run linting suite
         run: |
           python -m tox -e lint
@@ -63,15 +63,20 @@ jobs:
     name: Test with Python${{ matrix.python-version }} (tox, ${{ matrix.os }})
     needs: lint
     runs-on: ${{ matrix.os }}
-    env:
-      COVERALLS_PARALLEL: true
-      COVERALLS_SERVICE_NAME: github
-      esmf-version: 8.7.0  # 8.8.0 breaks h5py
     strategy:
       matrix:
         os: [ 'ubuntu-latest' ]
-        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        xclim-min-version: [ "0.56" ]
+        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
+        esmf-version: [ "8.7.0" ]  # 8.8.0 breaks h5py
+        include:
+          - os: 'macos-latest'
+            python-version: "3.12"
+          - os: "windows-latest"
+            python-version: "3.11"
+          - os: 'ubuntu-latest'
+            python-version: "3.10"
+            esmf-version:  "8.7.0"  # 8.8.0 breaks h5py
+            xclim-version: "0.56"  # minimum supported version
     defaults:
       run:
         shell: bash -l {0}
@@ -92,7 +97,7 @@ jobs:
           cache-environment: true
           environment-name: xscen-pypi
           create-args: >-
-            esmf=${{ env.esmf-version }}
+            esmf=${{ matrix.esmf-version }}
             hdf5
             python=${{ matrix.python-version }}
       - name: Set up Python${{ matrix.python-version }}
@@ -107,40 +112,26 @@ jobs:
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: .tox
-          key: ${{ matrix.os }}-Python${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'tox.ini') }}
-      - name: Test with tox
+          key: ${{ matrix.os }}-Python${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'tox.toml') }}
+      - name: Test with tox (Linux)
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          python -m tox -e py${{ matrix.python-version }}
+          python -m tox
         env:
-          ESMF_VERSION: ${{ env.esmf-version }}
-          XCLIM_VERSION: ${{ matrix.xclim-min-version }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
-          COVERALLS_PARALLEL: true
-          COVERALLS_SERVICE_NAME: github
-
-#      - name: Install esmpy
-#        run: |
-#          pip install git+https://github.com/esmf-org/esmf.git@v${{ matrix.esmf-version }}#subdirectory=src/addon/esmpy
-#      - name: Install xscen
-#        run: |
-#          pip install --editable ".[dev]"
-#      - name: Check versions
-#        run: |
-#          pip list
-#          pip check
-#      - name: Test with pytest
-#        run: |
-#          pytest tests
-#      - name: Report coverage
-#        run: |
-#          coveralls
-#        env:
-#          ESMF_VERSION: ${{ matrix.esmf-version }}
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#          COVERALLS_FLAG_NAME: run-Python${{ matrix.python-version }}
-#          COVERALLS_PARALLEL: true
-#          COVERALLS_SERVICE_NAME: github
+          ESMF_VERSION: ${{ matrix.esmf-version }}
+          XCLIM_VERSION: ${{ matrix.xclim-version }}
+      - name: Test with tox (macOS and Windows; no report failure)
+        if: matrix.os != 'ubuntu-latest'
+        run: |
+          python -m tox || true
+        env:
+          ESMF_VERSION: ${{ matrix.esmf-version }}
+          XCLIM_VERSION: ${{ matrix.xclim-version }}
+      - name: Report Coverage
+        uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
+        with:
+          flag-name: run-Python${{ matrix.python-version }}-pypi-${{ matrix.os }}
+          parallel: true
 
   test-conda:
     name: Test with Python${{ matrix.python-version }} (Anaconda, ${{ matrix.os }})
@@ -150,6 +141,12 @@ jobs:
       matrix:
         os: [ 'ubuntu-latest' ]
         python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # FIXME: Uncomment when multiplatform tests are passing
+        # include:
+        #   - os: 'macos-latest'
+        #     python-version: "3.11"
+        #   - os: 'windows-latest'
+        #     python-version: "3.12"
     defaults:
       run:
         shell: bash -l {0}
@@ -185,7 +182,7 @@ jobs:
       - name: Report Coverage
         uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
         with:
-          flag-name: run-Python${{ matrix.python-version }}-conda
+          flag-name: run-Python${{ matrix.python-version }}-conda-${{ matrix.os }}
           parallel: true
 
   finish:
