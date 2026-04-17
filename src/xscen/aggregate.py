@@ -548,6 +548,8 @@ def spatial_mean(  # noqa: C901
     --------
     xesmf.SpatialAverager
     """
+    if isinstance(ds, xr.DataArray):
+        warnings.warn("Input is a DataArray, but should be a Dataset. This could lead to errors, especially with rotated poles.", stacklevel=2)
     kwargs = (kwargs or {}).copy()
 
     # Determine the coordinates
@@ -682,7 +684,7 @@ def spatial_mean(  # noqa: C901
         # Preemptive segmentization. Same threshold as xESMF, but there isn't strong analysis behind this choice
         geoms = shapely.segmentize(polygon.geometry, 1)
 
-        if ds.cf["longitude"].ndim == 2 and "longitude" not in ds.cf.bounds and "rotated_pole" in ds:
+        if ds.cf["longitude"].ndim == 2 and "longitude" not in ds.cf.bounds and "rotated_latitude_longitude" in ds.cf.grid_mapping_names:
             from .regrid import create_bounds_gridmapping
 
             ds = ds.assign_coords(**create_bounds_gridmapping(ds))
