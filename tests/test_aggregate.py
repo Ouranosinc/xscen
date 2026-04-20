@@ -513,8 +513,12 @@ class TestSpatialMean:
         assert avg.attrs["regrid_method"] == "conservative"
         assert "xesmf.SpatialAverager over 1 polygon" in avg.attrs["history"]
 
-    @pytest.mark.parametrize("simplify_tolerance", [None, 50])
-    def test_xesmf_rot_shape(self, simplify_tolerance):
+    @pytest.mark.parametrize(
+        "simplify_tolerance",
+        [None, 50],
+    )
+    @pytest.mark.parametrize("namerotpol", ["rotated_pole", "crs"])
+    def test_xesmf_rot_shape(self, simplify_tolerance, namerotpol):
         if xe is None:
             pytest.skip("xesmf needed for testing averaging with method xesmf")
         ds = datablock_3d(
@@ -528,6 +532,13 @@ class TestSpatialMean:
             10,
             as_dataset=True,
         )
+        # test rot pole with a different coord name
+
+        if namerotpol == "crs":
+            ds = ds.rename({"rotated_pole": "crs"})
+            for var in ds.data_vars:
+                ds[var].attrs["grid_mapping"] = "crs"
+
         poly = gpd.GeoDataFrame(
             geometry=[
                 Polygon(
