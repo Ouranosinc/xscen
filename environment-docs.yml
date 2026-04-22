@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python >=3.10,<3.15
+  - python >=3.11,<3.15
   - pip >=26.0.1
   # To install xscen via Makefile commands
   - flit >=3.11.0,<4.0
