@@ -72,8 +72,10 @@ def get_engine(file: str | os.PathLike) -> str:
         Engine to use with xarray
     """
     # find the ideal engine for xr.open_mfdataset
-    if Path(file).suffix in [".zarr", ".zip", ".zarr.zip"]:
+    if Path(file).suffix == ".zarr":
         engine = "zarr"
+    elif Path(file).suffix == ".zip":
+        engine = "zarrzip"
     elif h5py.is_hdf5(file):
         engine = "h5netcdf"
     else:

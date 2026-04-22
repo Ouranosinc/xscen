@@ -1,5 +1,7 @@
 """Zipped Zarr support for Zarr 3."""
 
+# FIXME: Remove this when Zarr supports transparent opening of zips (probably through ZEP8 url pipeline)
+# noqa: D102 is to squash warnings about missing docstrings
 import os
 from pathlib import Path
 

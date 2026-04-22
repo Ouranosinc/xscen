@@ -15,9 +15,12 @@ from xscen.testing import datablock_3d
 
 @pytest.mark.parametrize("suffix", [".zarr", ".zarr.zip", "h5", "nc"])
 def test_get_engine(tmpdir, suffix):
-    if suffix in [".zarr", ".zarr.zip"]:
+    if suffix == ".zarr":
         path = "some/path" + suffix
         assert xs.io.get_engine(path) == "zarr"
+    elif suffix == ".zarr.zip":
+        path = "some/path" + suffix
+        assert xs.io.get_engine(path) == "zarrzip"
     else:
         ds = timeseries(
             np.zeros(60),
@@ -792,3 +795,15 @@ def test_save_load_sparse(tmpdir):
     w2 = xs.io.load_sparse(Path(tmpdir) / "sparse.nc")
 
     xr.testing.assert_identical(w1, w2)
+
+
+def test_zarrzip_engine(tmpdir):
+    ds = timeseries(
+        np.zeros(60),
+        variable="tas",
+        as_dataset=True,
+    )
+    ds.to_zarr(Path(tmpdir) / "test.zarr")
+    xs.io.zip_directory(Path(tmpdir) / "test.zarr", Path(tmpdir) / "test.zarr.zip")
+
+    xr.open_dataset(Path(tmpdir) / "test.zarr.zip", chunks={}).load()
