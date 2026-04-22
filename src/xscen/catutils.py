@@ -1,6 +1,5 @@
 """Catalog creation and path building tools."""
 
-import json
 import logging
 import operator as op
 import os
@@ -701,7 +700,9 @@ def parse_directory(  # noqa: C901
     # Create id from user specifications
     df["id"] = generate_id(df, id_columns)
 
-    # TODO: ensure variable is a tuple ?
+    # ensure variable is a tuple
+    if "variable" in df.columns:
+        df["variable"] = df.variable.apply(lambda v: (v,) if isinstance(v, str) else tuple(v))
 
     # ensure path is a string
     df["path"] = df.path.apply(str)
@@ -799,7 +800,7 @@ def _parse_from_zarr(path: os.PathLike | str, get_vars: bool = True, get_time: b
     """
     Obtain the list of variables, the time coordinate and the list of global attributes from a zarr dataset.
 
-    Vars and attrs from reading the JSON files directly, time by reading the data with zarr.
+    Reading with zarr directly.
 
     Variables are those
     - where .zattrs/_ARRAY_DIMENSIONS is not empty
@@ -816,36 +817,33 @@ def _parse_from_zarr(path: os.PathLike | str, get_vars: bool = True, get_time: b
         If True, return the time coordinate.
     """
     path = Path(path)
-
-    if (path / ".zattrs").is_file():
-        with (path / ".zattrs").open() as f:
-            ds_attrs = json.load(f)
-    else:
-        ds_attrs = {}
+    if path.suffix == ".zip":
+        path = zarr.storage.ZipStore(path)
+    ds = zarr.open(path)
 
     variables = []
     if get_vars:
-        coords = []
-        for varpath in path.iterdir():
-            if varpath.is_dir() and (varpath / ".zattrs").is_file():
-                with (varpath / ".zattrs").open() as f:
-                    var_attrs = json.load(f)
-                if varpath.name in var_attrs["_ARRAY_DIMENSIONS"] or len(var_attrs["_ARRAY_DIMENSIONS"]) == 0:
-                    coords.append(varpath.name)
-                if "coordinates" in var_attrs:
-                    coords.extend(list(map(str.strip, var_attrs["coordinates"].split(" "))))
-        variables = [varpath.name for varpath in path.iterdir() if varpath.name not in coords and varpath.is_dir()]
+        coords = set()
+        for var in ds.keys():
+            dv = ds[var]
+            if var in dv.metadata.dimension_names:
+                coords.add(var)
+            if dv.ndim == 0:
+                coords.add(var)
+            if "coordinates" in dv.attrs:
+                coords = coords | set(map(str.strip, dv.attrs["coordinates"].split(" ")))
+        variables = set(ds.keys()) - coords
+
     time = None
-    if get_time and (path / "time").is_dir():
-        ds = zarr.open(path)
+    if get_time and "time" in ds:
         time = xr.CFTimeIndex(
             cftime.num2date(
-                ds.time[:],
-                calendar=ds.time.attrs["calendar"],
-                units=ds.time.attrs["units"],
+                ds["time"][:],
+                calendar=ds["time"].attrs["calendar"],
+                units=ds["time"].attrs["units"],
             )
         )
-    return ds_attrs, variables, time
+    return dict(ds.attrs), variables, time
 
 
 def _parse_from_nc(path: os.PathLike | str, get_vars: bool = True, get_time: bool = True):

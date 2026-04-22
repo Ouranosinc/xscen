@@ -37,6 +37,7 @@ from . import (
     spatial,
     testing,
     utils,
+    zarrzip,
 )
 
 # Import top-level functions
