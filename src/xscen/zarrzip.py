@@ -24,8 +24,11 @@ class ZarrZipBackendEntrypoint(ZarrBackendEntrypoint):
         return False
 
     def open_dataset(self, filename_or_obj: T_PathFileOrDataStore, **kwargs) -> Dataset:  # noqa: D102
-
+        # storage options only useful for urls
+        kwargs.pop("storage_options", None)
         return super().open_dataset(ZipStore(filename_or_obj), **kwargs)
 
     def open_groups_as_dict(self, filename_or_obj: T_PathFileOrDataStore, **kwargs) -> dict[str, Dataset]:  # noqa: D102
+        # storage options only useful for urls
+        kwargs.pop("storage_options", None)
         return super().open_groups_as_dict(ZipStore(filename_or_obj), **kwargs)

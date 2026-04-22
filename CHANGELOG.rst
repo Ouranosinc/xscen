@@ -6,6 +6,8 @@ Changelog
 ------------------------------------------------------------
 Contributors: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Asli Bese (:user:`aslibese`).
 
+This version drops support for Python 3.10, Zarr 2 and intake-esm < 2025.12.12.
+
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * ``xs.climatological_op`` now supports daily inputs. Still best used with uniform calendar or with ``horizons_as_dim=True``. The function now uses ``xs.utils.unstack_dates`` to ungroup the time axis in its sub-year components and it can take options from that function. (:pull:`701`).
@@ -17,6 +19,8 @@ Breaking changes
 ^^^^^^^^^^^^^^^^
 * `h5py` and `h5netcdf` are no longer pinned. (:issue:`704`, :pull:`705`).
 * Development dependencies now follow the `dependency-groups` standard (`PEP 735 <https://peps.python.org/pep-0735/>`_). (:pull:`715`).
+* Upgrade intake-esm to 2025.12.12 which also means now depending on zarr > 3.1 (:issue:`618`, :pull:`636`).
+* When opening a assets through ``xs.extract_dataset`` or ``xs.Catalog.to_dataset()``, engine determination is forwarded to xarray itself, skipping inference made by intake-esm according to the "format" column of the catalog. This was done to allow the use of the ``zarrzip`` engine and of the ``netcdf_engine_order`` option in xarray. This means that some smart storage parsing is lost, xscen doesn't aim to support the same remote storage options as intake-esm (:pull:`636`).
 
 Bug fixes
 ^^^^^^^^^
