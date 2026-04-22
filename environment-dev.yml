@@ -68,4 +68,4 @@ dependencies:
   - tox >=4.52.0
   - tox-gh >=1.7.1
   # Workarounds
-  - fastprogress != 1.1  # FIXME: Temporary fix for https://github.com/AnswerDotAI/fastprogress/issues/117 (fastprogress is a dep through intake-esm)
+  - fastprogress <1.1  # FIXME: Temporary fix for https://github.com/AnswerDotAI/fastprogress/issues/117 (fastprogress is a dep through intake-esm)

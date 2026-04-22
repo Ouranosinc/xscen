@@ -46,7 +46,7 @@ dependencies:
   - nc-time-axis >=1.3.1
   - xesmf >=0.7, !=0.8.8
   # Workarounds
-  - fastprogress != 1.1  # FIXME: Temporary fix for https://github.com/AnswerDotAI/fastprogress/issues/117 (fastprogress is a dep through intake-esm)
+  - fastprogress <1.1  # FIXME: Temporary fix for https://github.com/AnswerDotAI/fastprogress/issues/117 (fastprogress is a dep through intake-esm)
   # Docs
   - ipykernel
   - ipython >=8.5.0
