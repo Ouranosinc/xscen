@@ -447,6 +447,8 @@ def _parse_first_ds(grp: pd.DataFrame, cols: list[str], attrs_map: dict, xr_open
     logger.info(msg)
     out = grp.copy()
     for col, val in fromfile.items():
+        if isinstance(val, tuple) and out.dtypes[col] != "O":
+            out[col] = out[col].astype("O")
         for i in grp.index:  # If val is an iterable we can't use loc.
             out.at[i, col] = val
     return out
@@ -1017,7 +1019,7 @@ def _build_path(
         )
     elif isinstance(data, pd.Series):
         facets = dict(data)
-    else:
+    elif not isinstance(data, dict):
         raise NotImplementedError(f"Cannot build path with object of type {type(data)}")
 
     facets = facets | extra_facets

@@ -27,7 +27,7 @@ class TestScripting:
     }
 
     def test_save_and_update(self):
-        root = str(notebooks / "_data")
+        root = notebooks / "_data"
 
         cat = xs.ProjectCatalog.create(
             f"{root}/test_cat.json",
@@ -35,10 +35,10 @@ class TestScripting:
             overwrite=True,
         )
 
-        first_path = root + "/test_{member}.zarr"
+        first_path = root.joinpath("test_{member}.zarr")
         sc.save_and_update(TestScripting.ds, cat, path=first_path)
 
-        assert cat.df.path[0] == root + "/test_r1i1p1f1.zarr"
+        assert cat.df.path[0] == f"{root}/test_r1i1p1f1.zarr"
         assert cat.df.experiment[0] == "ssp585"
 
         sc.save_and_update(
@@ -46,19 +46,40 @@ class TestScripting:
             cat,
             file_format="nc",
             # To fix hdf5 issues with h5py 3.11 on pip
-            save_kwargs=dict(netcdf_kwargs={"engine": "netcdf4"}),
+            save_kwargs={"netcdf_kwargs": {"engine": "netcdf4"}},
             build_path_kwargs={"root": root},
         )
 
-        assert (
-            cat.df.path[1]
-            == root
-            + "/simulation/raw/CMIP6/ScenarioMIP/global/CCCma/CanESM5/ssp585/r1i1p1f1/yr/tas/tas_yr_CMIP6_ScenarioMIP_global_CCCma_CanESM5_ssp585_r1i1p1f1_2000-2049.nc"  # noqa: E501
+        assert cat.df.path[1] == str(
+            root.joinpath(
+                "simulation/raw/CMIP6/ScenarioMIP/global/CCCma/CanESM5/ssp585/r1i1p1f1/yr/tas/tas_yr_CMIP6_ScenarioMIP_global_CCCma_CanESM5_ssp585_r1i1p1f1_2000-2049.nc"  # noqa: E501
+            )
         )
         assert cat.df.source[1] == "CanESM5"
 
+        sc.save_and_update(
+            TestScripting.ds,
+            cat,
+            # To fix hdf5 issues with h5py 3.11 on pip
+            save_kwargs=dict(netcdf_kwargs={"engine": "netcdf4"}),
+            build_path_kwargs={"root": root, "format": "nc"},
+        )
+
+        assert cat.df.path[1] == str(
+            root.joinpath(
+                "simulation/raw/CMIP6/ScenarioMIP/global/CCCma/CanESM5/ssp585/r1i1p1f1/yr/tas/tas_yr_CMIP6_ScenarioMIP_global_CCCma_CanESM5_ssp585_r1i1p1f1_2000-2049.nc"  # noqa: E501
+            )
+        )
+        assert cat.df.source[1] == "CanESM5"
+
+        last_path = root.joinpath("test_{member}")
+        sc.save_and_update(TestScripting.ds, cat, path=last_path)
+
+        assert cat.df.path[0] == f"{root}/test_r1i1p1f1.zarr"
+        assert cat.df.experiment[0] == "ssp585"
+
     def test_move_and_delete(self):
-        root = str(notebooks / "_data")
+        root = notebooks / "_data"
 
         cat = xs.ProjectCatalog.create(
             f"{root}/test_cat.json",
@@ -66,28 +87,32 @@ class TestScripting:
             overwrite=True,
         )
 
-        sc.save_and_update(TestScripting.ds, cat, path=root + "/dir1/test_r1i1p1f1.zarr")
-        sc.save_and_update(TestScripting.ds, cat, path=root + "/dir1/test_r1i1p1f2.zarr")
+        dir1forcing1 = root.joinpath("dir1/test_r1i1p1f1.zarr")
+        dir1forcing2 = root.joinpath("dir1/test_r1i1p1f2.zarr")
+        dir2forcing2 = root.joinpath("dir2/test_r1i1p1f2.zarr")
+
+        sc.save_and_update(TestScripting.ds, cat, path=dir1forcing1)
+        sc.save_and_update(TestScripting.ds, cat, path=dir1forcing2)
 
         sc.move_and_delete(
-            moving=[[root + "/dir1/test_r1i1p1f2.zarr", root + "/dir2/test_r1i1p1f2.zarr"]],
+            moving=[[dir1forcing2, dir2forcing2]],
             pcat=cat,
-            deleting=[root + "/dir1"],
+            deleting=[f"{root}/dir1"],
         )
         cat.update()
 
         # f2 should be moved to dir2 and dir1 should be deleted (not in row 0  anymore)
-        assert cat.df.path[0] == root + "/dir2/test_r1i1p1f2.zarr"
+        assert cat.df.path[0] == str(dir2forcing2)
         assert len(cat.df) == 1  # only one file left
 
         sc.move_and_delete(
-            moving=[[root + "/dir2/test_r1i1p1f2.zarr", root + "/dir1/test_r1i1p1f2.zarr"]],
+            moving=[[dir2forcing2, dir1forcing2]],
             pcat=cat,
             copy=True,
         )
         cat.update()
 
         # f2 should be copied to dir1 and f1 should still exist
-        assert cat.df.path[0] == root + "/dir2/test_r1i1p1f2.zarr"
-        assert cat.df.path[1] == root + "/dir1/test_r1i1p1f2.zarr"
+        assert cat.df.path[0] == str(dir2forcing2)
+        assert cat.df.path[1] == str(dir1forcing2)
         assert len(cat.df) == 2  # only one file left

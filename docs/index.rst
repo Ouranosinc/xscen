@@ -42,3 +42,8 @@ Features
     :caption: Package Structure
 
     apidoc/modules
+
+.. toctree::
+    :caption: GitHub Repository
+
+    Ouranosinc/xscen <https://github.com/Ouranosinc/xscen>

@@ -62,17 +62,18 @@ class TestCreateBoundsGridmapping:
             np.zeros((20, 10, 10)),
             "tas",
             "x",
-            -5000,
+            0,
             "y",
-            5000,
+            0,
             100000,
             100000,
             "2000-01-01",
             as_dataset=True,
         )
         bnds = xs.regrid.create_bounds_gridmapping(ds, "oblique_mercator")
-        np.testing.assert_allclose(bnds.lon_bounds[-1, -1, -1], -48.98790806)
-        np.testing.assert_allclose(bnds.lat_bounds[-1, -1, -1], 52.9169163)
+        # values taken from MPI-M-MPI-ESM-LR_historical_r1i1p1_NCAR-RegCM4_v4-4-rc8 (CORDEX CMIP5)
+        np.testing.assert_allclose(bnds.lon_bounds[-1, -1, -1], -82.8832932, atol=1e-3)
+        np.testing.assert_allclose(bnds.lat_bounds[-1, -1, -1], 52.8639221, atol=1e-3)
 
     def test_error(self):
         ds = datablock_3d(
@@ -87,11 +88,11 @@ class TestCreateBoundsGridmapping:
             "2000-01-01",
             as_dataset=True,
         )
-        ds = ds.rename({"oblique_mercator": "lambert_conformal_conic"})
-        ds["lambert_conformal_conic"].attrs["grid_mapping_name"] = "lambert_conformal_conic"
-        ds.tas.attrs["grid_mapping"] = "lambert_conformal_conic"
+        ds = ds.rename({"oblique_mercator": "stereographic"})
+        ds["stereographic"].attrs["grid_mapping_name"] = "stereographic"
+        ds.tas.attrs["grid_mapping"] = "stereographic"
         with pytest.raises(NotImplementedError):
-            xs.regrid.create_bounds_gridmapping(ds, "lambert_conformal_conic")
+            xs.regrid.create_bounds_gridmapping(ds, "stereographic")
 
     def test_error_gridmap(self):
         ds = datablock_3d(

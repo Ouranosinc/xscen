@@ -196,6 +196,27 @@ class TestAdjust:
                 np.concatenate([np.ones(365 * 1) * 1, np.ones(365 * 1) * 3]),
             )
 
+    def test_ref_automatic(
+        self,
+    ):
+        dref = self.dref.copy()
+        dref.attrs["cat:source"] = "casr"
+
+        dtrain = xs.train(
+            dref.copy(),
+            self.dsim.sel(time=slice("2001", "2003")),
+            var="tas",
+            period=["2001", "2003"],
+        )
+
+        out = xs.adjust(
+            dtrain,
+            self.dsim.copy(),
+            periods=["2001", "2003"],
+        )
+
+        assert out.attrs["cat:bias_adjust_reference"] == "casr"
+
     def test_write_train(self, tmpdir):
         dtrain = xs.train(
             self.dref.copy(),
@@ -494,3 +515,54 @@ class TestMultivariate:
             dref=ds,
         )
         np.testing.assert_array_equal(dscen_looped.tasmax.values, dscen_stacked.tasmax.values)
+
+
+class TestExtremes:
+    def test_extremes(self):
+        pr_ref = timeseries(
+            np.arange(365 * 30.0 + 7),
+            variable="pr",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="proleptic_gregorian",
+            units="mm/day",
+        )
+        pr_sim = timeseries(
+            np.arange(365 * 60.0) + 5,
+            variable="pr",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+            units="mm/day",
+        )
+        pr_scen = timeseries(
+            np.arange(365 * 60.0) + 1,
+            variable="pr",
+            start="2001-01-01",
+            freq="D",
+            as_dataset=True,
+            calendar="noleap",
+            units="mm/day",
+        )
+        dtrain = xs.train(
+            pr_ref,
+            pr_sim,
+            var=["pr"],
+            method="ExtremeValues",
+            period=["2001", "2030"],
+            jitter_under={"thresh": "0.5 mm d-1"},
+            group=False,
+            xsdba_train_args={"cluster_thresh": "1 mm d-1", "q_thresh": 0.95},
+        )
+        ds_out = xs.adjust(
+            dtrain=dtrain,
+            dsim=pr_sim,
+            periods=[
+                ["2001", "2060"],
+            ],
+            stack_periods={"window": 30, "stride": 10, "start": "2001-01-01"},
+            xsdba_adjust_args={"scen": pr_scen["pr"], "frac": 0.25},
+        )
+        np.testing.assert_array_equal(ds_out.pr.time, pr_sim.time)

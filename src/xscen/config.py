@@ -247,7 +247,7 @@ def _setup_external(module, config):
         xc.set_options(**config)
     elif module == "xarray":
         xr.set_options(**config)
-    elif module == "warning":
+    elif module == "warnings":
         for category, action in config.items():
             if category == "all":
                 warnings.simplefilter(action)
@@ -265,6 +265,8 @@ def get_configurable():
         if isinstance(modobj, types.ModuleType):
             for func in dir(modobj):
                 funcobj = getattr(modobj, func)
-                if getattr(funcobj, "configurable", False) or getattr(getattr(funcobj, "__init__", None), "configurable", False):
-                    configurable[f"xscen.{module}.{func}"] = funcobj
+                # avoid imported functions
+                if isinstance(funcobj, (types.FunctionType, type)) and funcobj.__module__ == modobj.__name__:
+                    if getattr(funcobj, "configurable", False) or getattr(getattr(funcobj, "__init__", None), "configurable", False):
+                        configurable[f"xscen.{module}.{func}"] = funcobj
     return configurable

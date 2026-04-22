@@ -34,6 +34,7 @@ from .config import parse_config
 
 logger = logging.getLogger(__name__)
 
+
 __all__ = [
     "CV",
     "add_attr",
@@ -46,6 +47,7 @@ __all__ = [
     "maybe_unstack",
     "minimum_calendar",
     "natural_sort",
+    "stack_dates",
     "stack_drop_nans",
     "standardize_periods",
     "translate_time_chunk",
@@ -236,7 +238,7 @@ def date_parser(  # noqa: C901
         date = pd.Timestamp(date)
 
     if isinstance(end_of_period, str) or (end_of_period is True and fmt):
-        quasiday = (pd.Timedelta(1, "d") - pd.Timedelta(1, "s")).as_unit(date.unit)
+        quasiday = (pd.Timedelta(1, "D") - pd.Timedelta(1, "s")).as_unit(date.unit)
         if end_of_period in ["Y", "YE"] or "m" not in fmt:
             date = pd.tseries.frequencies.to_offset("YE-DEC").rollforward(date) + quasiday
         elif end_of_period in ["M", "ME"] or "d" not in fmt:
@@ -409,7 +411,7 @@ def stack_drop_nans(
         domain = ds.attrs.get("cat:domain", "unknown")
         to_file = to_file.format(domain=domain, shape=original_shape)
         if not Path(to_file).parent.exists():
-            Path(to_file).parent.mkdir(exist_ok=True)
+            Path(to_file).parent.mkdir(exist_ok=True, parents=True)
         # Add all coordinates that might have been affected by the stack
         mask = mask.assign_coords({c: ds[c] for c in ds.coords if any(d in mask.dims for d in ds[c].dims)})
         mask.coords.to_dataset().to_netcdf(to_file)
@@ -821,6 +823,7 @@ def clean_up(  # noqa: C901
     ds: xr.Dataset,
     *,
     variables_and_units: dict | None = None,
+    fill_nan_ds: xr.Dataset | None = None,
     convert_calendar_kwargs: dict | None = None,
     missing_by_var: dict | None = None,
     maybe_unstack_dict: dict | None = None,
@@ -856,6 +859,9 @@ def clean_up(  # noqa: C901
         Input dataset to clean up
     variables_and_units : dict, optional
         Dictionary of variable to convert. e.g. {'tasmax': 'degC', 'pr': 'mm d-1'}
+    fill_nan_ds: xarray.Dataset, optional
+        Dataset with the same spatial dimensions as ds and the same cat:domain attrs.
+        Will fill NaNs in ds with the values from the variables of the same name in this Dataset.
     convert_calendar_kwargs : dict, optional
         Dictionary of arguments to feed to xarray.Dataset.convert_calendar. This will be the same for all variables.
         If missing_by_vars is given, it will override the 'missing' argument given here.
@@ -913,6 +919,25 @@ def clean_up(  # noqa: C901
         msg = f"Converting units: {variables_and_units}"
         logger.info(msg)
         ds = change_units(ds=ds, variables_and_units=variables_and_units)
+
+    if fill_nan_ds is not None:
+        # check if any non-time dimension are different
+        if any([ds.sizes[d] != fill_nan_ds.sizes[d] for d in ds.dims if d != "time"]) or (
+            ds.attrs.get("cat:domain", "foo") != fill_nan_ds.attrs.get("cat:domain", "foo")
+        ):
+            raise ValueError(
+                "The non-time dimensions or the cat:domain attribute of the simulation"
+                " and reference datasets do not match. "
+                "Cannot fill missing values."
+            )
+        for var in ds.data_vars:
+            if var in fill_nan_ds:
+                ds[var] = ds[var].combine_first(fill_nan_ds[var])
+
+                new_history = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Filled missing values using {fill_nan_ds.get('cat:id', '')} dataset."
+                history = f"{new_history}\n{ds[var].attrs['history']}" if "history" in ds[var].attrs else new_history
+                ds[var].attrs["history"] = history
+
     # convert calendar
     if convert_calendar_kwargs:
         vars_with_no_time = [v for v in ds.data_vars if "time" not in ds[v].dims]
@@ -1047,11 +1072,30 @@ def clean_up(  # noqa: C901
     return ds
 
 
+def _unstack_doy(ds: xr.Dataset, new_dim: str | None):
+    """Unstack a daily timeseries into dayofyear and year."""
+    ds = (
+        ds.assign_coords(original_time=ds.time)
+        .assign_coords(
+            xr.Coordinates.from_pandas_multiindex(
+                pd.MultiIndex.from_arrays(
+                    (ds.time.dt.year.values, ds.time.dt.dayofyear.values),
+                    names=("year", new_dim or "dayofyear"),
+                ),
+                "time",
+            )
+        )
+        .unstack("time")
+    )
+    return ds.rename(year="time").assign_coords(time=pd.to_datetime({"year": ds.year, "month": 1, "day": 1}))
+
+
 def unstack_dates(  # noqa: C901
     ds: xr.Dataset,
     seasons: dict[int, str] | None = None,
     new_dim: str | None = None,
     winter_starts_year: bool = False,
+    year_start_month: int = 1,
 ):
     """
     Unstack a multi-season timeseries into a yearly axis and a season one.
@@ -1060,24 +1104,29 @@ def unstack_dates(  # noqa: C901
     ----------
     ds : xr.Dataset or DataArray
       The xarray object with a "time" coordinate.
-      Only supports monthly or coarser frequencies.
+      Only supports daily or coarser frequencies (excluding weekly).
       The time axis must be complete and regular (`xr.infer_freq(ds.time)` doesn't fail).
     seasons : dict, optional
       A dictionary from month number (as int) to a season name.
       If not given, it is guessed from the time coordinate frequency.
-      See notes.
+      Not used with daily data. See notes.
     new_dim : str, optional
       The name of the new dimension.
       If None, the name is inferred from the frequency of the time axis.
       See notes.
-    winter_starts_year : bool
-      If True, the year of winter (DJF) is built from the year of January, not December.
-      i.e. DJF made from [Dec 1980, Jan 1981, and Feb 1981] will be associated with the year 1981, not 1980.
+    winter_starts_year, bool, optional
+      Deprecated. Setting to True is the old way of passing `year_start_month=12`.
+    year_start_month: int, optional
+      Change on which month the year starts. If greater than 1, seasons/months between that and 12 (included)
+      are associated with the following year. Usually this is used as 12 with seasonal data, so that the DJF season is
+      associated with the next year, i.e. DJF made from [Dec 1980, Jan 1981, and Feb 1981] will be associated with the year 1981, not 1980.
+      Not used with daily data. Replaces `winter_starts_year`.
 
     Returns
     -------
     xr.Dataset or DataArray
       Same as ds but the time axis is now yearly (YS-JAN) and the seasons are along the new dimension.
+      The previous time dimension is left as the new 2D `original_time`.
 
     Notes
     -----
@@ -1092,6 +1141,15 @@ def unstack_dates(  # noqa: C901
     - For MS, the new dimension is "month".
 
     """
+    if winter_starts_year:
+        warnings.warn(
+            "Since xscen 0.14, `winter_starts_year=True` has been deprecated in favor of `year_start_month=12`."
+            " It will be removed in a future release.",
+            FutureWarning,
+            stacklevel=1,
+        )
+        year_start_month = 12
+
     # Get some info about the time axis
     freq = xr.infer_freq(ds.time)
     if freq is None:
@@ -1105,8 +1163,10 @@ def unstack_dates(  # noqa: C901
     calendar = ds.time.dt.calendar
     mult, base, isstart, anchor = parse_offset(freq)
 
+    if base == "D":  # fast-track for daily
+        return _unstack_doy(ds, new_dim)
     if base not in "YAQM":
-        raise ValueError(f"Only monthly frequencies or coarser are supported. Got: {freq}.")
+        raise ValueError(f"Only daily frequencies or coarser are supported. Got: {freq}.")
 
     if new_dim is None:
         if base == "M" and mult == 1:
@@ -1124,8 +1184,8 @@ def unstack_dates(  # noqa: C901
         if mult > 1:
             seaname = f"{mult}{seaname}"
         # Fast track for annual, if nothing more needs to be done.
-        if winter_starts_year is False:
-            dso = ds.expand_dims({new_dim: [seaname]})
+        if year_start_month == 1:
+            dso = ds.expand_dims({new_dim: [seaname]}).assign_coords(original_time=ds.time.expand_dims({new_dim: [seaname]}))
             dso["time"] = xr.date_range(
                 f"{first.year}-01-01",
                 f"{last.year}-01-01",
@@ -1153,18 +1213,17 @@ def unstack_dates(  # noqa: C901
     else:
         # Only keep the entries for the months in the data
         seasons = {m: seasons[m] for m in np.unique(ds.time.dt.month)}
-    # The ordered season names
-    seas_list = [seasons[month] for month in sorted(seasons.keys())]
 
-    # Multi-month seasons that isn't synced with january
-    if winter_starts_year and 1 not in seasons:
-        # The last label is the period that overlaps the year
-        winter_month = max(seasons.keys())
-        # Put it back in the beginning
-        seas_list = [seasons[winter_month]] + seas_list[:-1]
-        # The year associated with each timestamp (add 1 in winter)
-        years = ds.time.dt.year + xr.where(ds.time.dt.month == winter_month, 1, 0)
-    else:  # Monthly or aligned seasons
+    if year_start_month > 1:
+        # Sort season names from the beginning of the year
+        seas_list = [seasons[m] for m in sorted(seasons.keys()) if m >= year_start_month] + [
+            seasons[m] for m in sorted(seasons.keys()) if m < year_start_month
+        ]
+        # The year associated with each timestamp
+        years = ds.time.dt.year + xr.where(ds.time.dt.month >= year_start_month, 1, 0)
+    else:
+        # The ordered season names
+        seas_list = [seasons[month] for month in sorted(seasons.keys())]
         years = ds.time.dt.year
 
     # The goal here is to use `reshape()` instead of `unstack` to limit the number of dask operations.
@@ -1175,6 +1234,20 @@ def unstack_dates(  # noqa: C901
     dsp = ds.pad(time=(pad_left, pad_right))  # pad with NaN
     # Similarly pad our "group labels".
     years = years.pad(time=(pad_left, pad_right), constant_values=(years[0], years[-1]))
+    # And pad the original time
+    #  a bit more complicated, we use the negative freq feature of date_range to get valid dates before start
+    _before = xr.date_range(
+        ds.indexes["time"][0],
+        freq=f"-1{freq}" if mult == 1 else f"-{freq}",
+        periods=pad_left + 1,
+        inclusive="right",
+        calendar=ds.time.dt.calendar,
+        use_cftime=ds.time.dtype == "O",
+    )[::-1]
+    _after = xr.date_range(
+        ds.indexes["time"][-1], freq=freq, periods=pad_right + 1, inclusive="right", calendar=ds.time.dt.calendar, use_cftime=ds.time.dtype == "O"
+    )
+    dsp = dsp.assign_coords(time=_before.append(ds.indexes["time"]).append(_after))
 
     # New coords
     new_time = xr.date_range(  # New time axis (YS)
@@ -1204,12 +1277,31 @@ def unstack_dates(  # noqa: C901
     for coord in new_coords:
         if (coord not in ["time", new_dim]) and ("time" in ds[coord].dims):
             new_coords[coord] = reshape_da(dsp[coord])
+    new_coords["original_time"] = reshape_da(dsp.time)
 
     if isinstance(ds, xr.Dataset):
         dso = dsp.map(reshape_da, keep_attrs=True)
     else:
         dso = reshape_da(dsp)
     return dso.assign_coords(**new_coords)
+
+
+def stack_dates(ds: xr.Dataset):
+    """
+    Revert the effect of :py:func:`unstack_dates`.
+
+    The input must still contain the `original_time` 2D coordinate added by the unstacking.
+    """
+    time_dims = list(ds.original_time.dims)
+    season_dim = list(set(time_dims) - {"time"})
+    out = (
+        ds.stack(real_time=time_dims)
+        .swap_dims(real_time="original_time")
+        .drop_vars(["real_time", *time_dims])
+        .rename(original_time="time")
+        .transpose(*[d for d in ds.dims if d not in season_dim])
+    )
+    return out.where(out.time.notnull(), drop=True)
 
 
 def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
@@ -1224,6 +1316,7 @@ def ensure_correct_time(ds: xr.Dataset, xrfreq: str) -> xr.Dataset:
     inffreq = xr.infer_freq(ds.time) if ds.time.size > 2 else None
     if inffreq == xrfreq:
         # Even when the freq is correct, we ensure the correct "anchor" for daily and finer
+        # also done in preprocess
         if xrfreq in "DHTMUL":
             ds["time"] = ds.time.dt.floor(xrfreq)
     else:

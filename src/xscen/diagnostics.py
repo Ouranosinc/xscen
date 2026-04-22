@@ -9,13 +9,11 @@ from pathlib import Path
 from types import ModuleType
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 import xclim as xc
 import xclim.core.dataflags
 from xclim.core import ValidationError
-from xclim.core.formatting import (  # noqa: F401
-    _merge_attrs_drop_conflicts as merge_attrs,
-)
 from xclim.core.indicator import Indicator
 
 from .config import parse_config
@@ -95,7 +93,7 @@ def health_checks(  # noqa: C901
     missing: dict or str or list of str, optional
         String, list of strings, or dictionary where the key is the method to check for missing data
         and the values are the arguments to pass to the method.
-        The methods are: "missing_any", "at_least_n_valid", "missing_pct", "missing_wmo".
+        The methods are: "missing_any", "at_least_n_valid", "missing_pct", "missing_wmo", "missing_some_but_not_all".
         See :py:func:`xclim.core.missing` for more details.
     flags: dict, optional
         Dictionary where the key is the variable to check and the values are the flags.
@@ -122,17 +120,7 @@ def health_checks(  # noqa: C901
         ds = ds.to_dataset()
     raise_on = raise_on or []
     if "all" in raise_on:
-        raise_on = [
-            "structure",
-            "calendar",
-            "start_date",
-            "end_date",
-            "variables_and_units",
-            "cfchecks",
-            "freq",
-            "missing",
-            "flags",
-        ]
+        raise_on = ["structure", "calendar", "start_date", "end_date", "variables_and_units", "cfchecks", "freq", "missing", "flags"]
 
     warns = []
     errs = []
@@ -302,6 +290,9 @@ def health_checks(  # noqa: C901
 
     _message()
     if return_flags and flags is not None:
+        base = "The following health checks failed:"
+        if len(warns) > 0:
+            out.attrs["warnings"] = "\n  - ".join([base] + warns)
         return out
 
 
@@ -619,3 +610,28 @@ def measures_improvement_2d(dict_input: dict, to_level: str = "diag-improved-2d"
     ds_merge.attrs["cat:processing_level"] = to_level
 
     return ds_merge
+
+
+# Adapted from xarray.structure.merge_attrs and copied from xclim who got rid of it
+def merge_attrs(*objs):
+    """Merge attributes from different xarray objects, dropping any attributes that conflict."""
+    out = {}
+    dropped = set()
+    for obj in objs:
+        attrs = obj.attrs
+        out.update({key: value for key, value in attrs.items() if key not in out and key not in dropped})
+        out = {key: value for key, value in out.items() if key not in attrs or _equivalent_attrs(attrs[key], value)}
+        dropped |= {key for key in attrs if key not in out}
+    return out
+
+
+# Adapted from xarray.core.utils.equivalent and copied from xclim who got rid of it
+def _equivalent_attrs(first, second) -> bool:
+    """Return whether two attributes are identical or not."""
+    if first is second:
+        return True
+    if isinstance(first, list) or isinstance(second, list):
+        if len(first) != len(second):
+            return False
+        return all(_equivalent_attrs(f, s) for f, s in zip(first, second, strict=False))
+    return (first == second) or (pd.isnull(first) and pd.isnull(second))

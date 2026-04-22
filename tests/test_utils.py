@@ -534,6 +534,60 @@ class TestVariablesUnits:
             xs.clean_up(ds, variables_and_units={"pr": "mm"})
 
 
+class TestFillNanDs:
+    def testfillnands(self):
+        data = [1] * (365 * 4 + 2)
+        data[4] = np.nan
+        ds = timeseries(
+            data,
+            variable="tas",
+            start="2000-01-01",
+            freq="D",
+            as_dataset=True,
+        )
+        data = [2] * (365 * 4 + 2)
+        ds_ref = timeseries(
+            data,
+            variable="tas",
+            start="2000-01-01",
+            freq="D",
+            as_dataset=True,
+        )
+
+        out = xs.clean_up(ds, fill_nan_ds=ds_ref)
+        assert out.tas.isel(time=4).values == 2
+        assert out.tas.isel(time=5).values == 1
+        assert "Filled missing values using" in out.tas.attrs["history"]
+
+    def testerror(self):
+        ds = datablock_3d(
+            np.zeros((20, 10, 10)),
+            "tas",
+            "lon",
+            -5,
+            "lat",
+            80.5,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        ds_ref = datablock_3d(
+            np.zeros((20, 9, 9)),
+            "tas",
+            "lon",
+            -5,
+            "lat",
+            80.5,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        with pytest.raises(ValueError, match="The non-time dimensions"):
+            xs.clean_up(ds, fill_nan_ds=ds_ref)
+
+
 class TestCalendar:
     def test_normal(self):
         ds = timeseries(
@@ -960,6 +1014,10 @@ class TestUnstackDates:
             assert len(out.season) == 1
             np.testing.assert_array_equal(out.season[0], [f"{freq.replace('YS', 'annual')}"])
 
+        # Periods that mean that 'ds' doesn't stop at the end of the year have been padded.
+        ds2 = xs.utils.stack_dates(out).isel(time=slice(None, 34))
+        assert ds2.equals(ds)
+
     @pytest.mark.parametrize("freq", ["MS", "QS", "YS"])
     def test_seasons(self, freq):
         ds = timeseries(
@@ -1018,7 +1076,7 @@ class TestUnstackDates:
         )
         out = xs.utils.unstack_dates(ds)
         assert pd.Timestamp(str(out.time[0].values).split("T")[0]) == pd.Timestamp("2000-01-01")
-        out = xs.utils.unstack_dates(ds, winter_starts_year=True)
+        out = xs.utils.unstack_dates(ds, year_start_month=12)
         assert pd.Timestamp(str(out.time[0].values).split("T")[0]) == pd.Timestamp("2001-01-01")
 
     def test_coords(self):
@@ -1052,13 +1110,13 @@ class TestUnstackDates:
 
     def test_errors(self):
         ds = timeseries(
-            np.arange(1, 365 * 4 + 2),
+            np.arange(1, 365 * 8 + 4),
             variable="tas",
             start="2000-01-01",
-            freq="D",
+            freq="12h",
             as_dataset=True,
         )
-        with pytest.raises(ValueError, match="Only monthly frequencies"):
+        with pytest.raises(ValueError, match="Only daily frequencies"):
             xs.utils.unstack_dates(ds)
         ds = ds.where(ds.time.dt.day != 1, drop=True)
         with pytest.raises(ValueError, match="The data must have a clean time coordinate."):
@@ -1073,6 +1131,22 @@ class TestUnstackDates:
         )
         with pytest.raises(ValueError, match="Only periods that divide the year evenly are supported."):
             xs.utils.unstack_dates(ds)
+
+    def test_daily(self):
+        ds = timeseries(
+            np.arange(1, 365 * 4 + 2),
+            variable="tas",
+            start="2004-01-01",
+            freq="D",
+            as_dataset=True,
+        )
+        out = xs.utils.unstack_dates(ds)
+        assert tuple(out.dims) == ("dayofyear", "time")
+        np.testing.assert_array_equal(out.tas.isel(time=0), ds.tas.isel(time=slice(None, 366)))
+        assert out.original_time.isel(dayofyear=-1, time=1).isnull().item()
+
+        ds2 = xs.utils.stack_dates(out)
+        assert ds.equals(ds2)
 
 
 class TestEnsureTime:

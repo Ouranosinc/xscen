@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import shutil as sh
+import warnings
 from collections import defaultdict
 from collections.abc import Sequence
 from inspect import signature
@@ -23,6 +24,7 @@ from numcodecs.bitround import BitRound
 # from rechunker import rechunk as _rechunk
 from xclim.core.options import METADATA_LOCALES
 from xclim.core.options import OPTIONS as XC_OPTIONS
+from xclim.core.utils import uses_dask
 
 from .config import parse_config
 from .scripting import TimeoutException
@@ -141,7 +143,7 @@ def estimate_chunks(  # noqa: C901
 
             estimated_chunks = _estimate_chunks(ds, target_mb, size_of_slice, rechunk_dims)
             for other in set(ds[v].dimensions).difference(dims):
-                estimated_chunks[other] = -1
+                estimated_chunks[other] = len(ds[other])
 
             if chunk_per_variable:
                 out[v] = estimated_chunks
@@ -164,7 +166,7 @@ def estimate_chunks(  # noqa: C901
 
             estimated_chunks = _estimate_chunks(ds, target_mb, size_of_slice, rechunk_dims)
             for other in set(ds[v].dims).difference(dims):
-                estimated_chunks[other] = -1
+                estimated_chunks[other] = len(ds[other])
 
             if chunk_per_variable:
                 out[v] = estimated_chunks
@@ -398,8 +400,9 @@ def save_to_netcdf(
     for var in list(ds.data_vars.keys()):
         if keepbits := _get_keepbits(bitround, var, ds[var].dtype):
             ds = ds.assign({var: round_bits(ds[var], keepbits)})
-        # Remove original_shape from encoding, since it can cause issues with some engines.
+        # Remove a few problematic entries from encoding, since it can cause issues with some engines.
         ds[var].encoding.pop("original_shape", None)
+        ds[var].encoding.pop("dtype", None)
 
     if strip_cat_metadata:
         ds = strip_cat_attrs(ds)
@@ -407,6 +410,12 @@ def save_to_netcdf(
     _coerce_attrs(ds.attrs)
     for var in ds.variables.values():
         _coerce_attrs(var.attrs)
+
+    if "encoding" in netcdf_kwargs:
+        netcdf_kwargs = netcdf_kwargs.copy()
+        encoding = netcdf_kwargs.pop("encoding")
+        for var in encoding:
+            ds[var].encoding.update(encoding[var])
 
     return ds.to_netcdf(filename, compute=compute, **netcdf_kwargs)
 
@@ -425,6 +434,8 @@ def save_to_zarr(  # noqa: C901
     itervar: bool = False,
     timeout_cleanup: bool = True,
     strip_cat_metadata: bool = False,
+    zip_zarrdir: str | None = None,
+    zip_kwargs: dict | None = None,
 ):
     """
     Save a Dataset to Zarr format, rechunking and compressing if requested.
@@ -435,8 +446,9 @@ def save_to_zarr(  # noqa: C901
     ----------
     ds : xr.Dataset
         The Dataset to be saved.
-    filename : str
+    filename : str or os.PathLike
         Name of the Zarr file to be saved.
+        If this ends with .zip, the zarr directory will be zipped after saving.
     rechunk : dict, optional
         This is a mapping from dimension name to new chunks (in any format understood by dask).
         Spatial dimensions can be generalized as 'X' and 'Y' which will be mapped to the actual grid type's
@@ -469,6 +481,18 @@ def save_to_zarr(  # noqa: C901
         This does nothing if `compute` is False.
     strip_cat_metadata : bool
         If True (default), strips all catalog-added attributes before saving the dataset.
+    zip_zarrdir: string, optional
+        If given and filename ends in zip, the saved zarr directory is first saved in this directory,
+        then zipped to `filename`. For the initial zarr, if the zip_zarrdir ends in .zarr, it is used as is. If it
+        does not end in .zarr, the name of `filename` is used inside this dir.
+        If given, but `filename` does not end with .zip, this is ignored.
+        If not given and filename ends in zip, the initial zarr is saved directly to `filename` without .zip suffix, then zip to `filename`.
+        It is possible to pass a path with environment variables like ${SLURM_TMPDIR} to ``zip_zarrdir``.
+    zip_kwargs : dict, optional
+        If given and `filename` ends in zip, the saved zarr directory is zipped using ``xs.io.zip_directory(**zip_kwargs)``.
+        If `zipfile` arg is given, it is ignored. The `zipfile` is always set to `filename`.
+        If given but `filename` does not end with .zip, this is ignored.
+        Tip: Pass `delete=True` here to erase the temporary zarr file.
 
     Returns
     -------
@@ -487,6 +511,23 @@ def save_to_zarr(  # noqa: C901
         ds = rechunk_for_saving(ds, rechunk)
 
     path = Path(filename)
+
+    # if path is zip, make sure it is zipped later
+    if path.suffix == ".zip":
+        zip_kwargs = zip_kwargs or {}
+        if "zipfile" in zip_kwargs:
+            warnings.warn("The 'zipfile' argument in zip_kwargs will be ignored since the filename ends with .zip", stacklevel=2)
+        zip_kwargs["zipfile"] = path
+
+        # make path for zarr
+        if zip_zarrdir and Path(zip_zarrdir).suffix == ".zarr":
+            path = Path(zip_zarrdir)
+        elif zip_zarrdir:
+            # expand var allows to pass ${SLURM_TMPDIR} or similar
+            path = Path(os.path.expandvars(zip_zarrdir)) / path.with_suffix("").name
+        else:
+            path = Path(path.with_suffix(""))
+
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_dir():
         tgtds = zarr.open(str(path), mode="r")
@@ -495,7 +536,6 @@ def save_to_zarr(  # noqa: C901
 
     if encoding:
         encoding = encoding.copy()
-
     # Prepare to_zarr kwargs
     if zarr_kwargs is None:
         zarr_kwargs = {}
@@ -535,9 +575,9 @@ def save_to_zarr(  # noqa: C901
             continue
         if keepbits := _get_keepbits(bitround, var, ds[var].dtype):
             ds = ds.assign({var: round_bits(ds[var], keepbits)})
-        # Remove original_shape from encoding, since it can cause issues with some engines.
+        # Remove a few problematic entries from encoding, since it can cause issues with some engines.
         ds[var].encoding.pop("original_shape", None)
-
+        ds[var].encoding.pop("dtype", None)
     if len(ds.data_vars) == 0:
         return None
 
@@ -547,7 +587,6 @@ def save_to_zarr(  # noqa: C901
     _coerce_attrs(ds.attrs)
     for var in ds.variables.values():
         _coerce_attrs(var.attrs)
-
     if itervar:
         zarr_kwargs["compute"] = True
         allvars = set(ds.data_vars.keys())
@@ -562,7 +601,7 @@ def save_to_zarr(  # noqa: C901
             logger.debug(msg)
             dsvar = ds.drop_vars(allvars - {name})
             try:
-                dsvar.to_zarr(
+                z = dsvar.to_zarr(
                     path,
                     mode="a",
                     encoding={k: v for k, v in (encoding or {}).items() if k in dsvar},
@@ -577,11 +616,16 @@ def save_to_zarr(  # noqa: C901
         msg = f"Writing {list(ds.data_vars.keys())} for {filename}."
         logger.debug(msg)
         try:
-            return ds.to_zarr(filename, compute=compute, mode="a", encoding=encoding, **zarr_kwargs)
+            z = ds.to_zarr(path, compute=compute, mode="a", encoding=encoding, **zarr_kwargs)
         except TimeoutException:
             if timeout_cleanup:
                 clean_incomplete(path, incomplete=list(ds.data_vars.keys()))
             raise
+
+    if Path(filename).suffix == ".zip":
+        zip_directory(path, **zip_kwargs)
+        z = None
+    return z
 
 
 def _to_dataframe(
@@ -902,9 +946,10 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
     xr.Dataset
         The dataset with new chunking.
     """
-    for rechunk_var in ds.data_vars:
+    variables = list(ds.data_vars) + list(c for c in ds.coords if uses_dask(ds[c]))
+    for rechunk_var in variables:
         # Support for chunks varying per variable
-        if rechunk_var in rechunk:
+        if rechunk_var in rechunk and isinstance(rechunk[rechunk_var], dict):
             rechunk_dims = rechunk[rechunk_var].copy()
         else:
             rechunk_dims = rechunk.copy()
@@ -915,7 +960,9 @@ def rechunk_for_saving(ds: xr.Dataset, rechunk: dict):
         if "Y" in rechunk_dims and "Y" not in ds.dims:
             rechunk_dims[ds.cf.axes["Y"][0]] = rechunk_dims.pop("Y")
 
-        ds[rechunk_var] = ds[rechunk_var].chunk({d: chnks for d, chnks in rechunk_dims.items() if d in ds[rechunk_var].dims})
+        # keep only the dimensions actually in the variable
+        rechunk_dims = {d: chnks for d, chnks in rechunk_dims.items() if d in ds[rechunk_var].dims}
+        ds[rechunk_var] = ds[rechunk_var].chunk(rechunk_dims)
         ds[rechunk_var].encoding["chunksizes"] = tuple(rechunk_dims[d] if d in rechunk_dims else ds[d].shape[0] for d in ds[rechunk_var].dims)
         ds[rechunk_var].encoding.pop("chunks", None)
         ds[rechunk_var].encoding["preferred_chunks"] = rechunk_dims

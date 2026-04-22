@@ -4,12 +4,99 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`).
+Contributors: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Asli Bese (:user:`aslibese`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* ``xs.climatological_op`` now supports daily inputs. Still best used with uniform calendar or with ``horizons_as_dim=True``. The function now uses ``xs.utils.unstack_dates`` to ungroup the time axis in its sub-year components and it can take options from that function. (:pull:`701`).
+* ``xs.spatial.get_crs`` now understands "lambert_conformal_conic" projections. (:pull:`701`).
+* Add annual global tas timeseries for CMIP6's models ACCESS-ESM1-5 r11i1p1f1 (ssp370), EC-Earth3-AerChem r1i1p1f1 (ssp370), GISS-E2-1-H r1i1p1f2 (ssp370), IPSL-CM5A2-INCA r1i1p1f1 (ssp370), CanESM5-CanOE r1i1p2f1 (ssp370), FGOALS-f3-L r1i1p1f1 (ssp370), and CAMS-CSM1-0 r1i1p1f1 (ssp370) (:pull:`706`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* `h5py` and `h5netcdf` are no longer pinned. (:issue:`704`, :pull:`705`).
+* Development dependencies now follow the `dependency-groups` standard (`PEP 735 <https://peps.python.org/pep-0735/>`_). (:pull:`715`).
+
+Bug fixes
+^^^^^^^^^
+* When creating cartopy CRS objects from CF attributes, xscen will default to a spherical earth of radius 6370997 m. This fixes issues raised by the update of PROJ 9.8 (:pull:`701`).
+* Fix a bug stemming from a change in Pandas 3 in ``parse_directory`` when ``read_from_file`` tries to overwrite a column previously parsed as strings. (:pull:`703`).
+* Fix bug in ``xs.spatial_mean`` where the function would fail if the dataset had a `crs` coords instead of `rotated_pole`. (:pull:`716`, :issue:`718`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* The `templates` folder has been added to the source distribution in order to run configuration-loading tests on `conda-forge`. (:issue:`697`, :pull:`698`).
+* A hyperlink to the `xscen` code repository has been added to the top-level documentation table of contents. (:pull:`699`).
+* Added Windows and macOS builds to the GitHub CI tests (currently allowed to fail). (:pull:`715`).
+* Updated the cookiecutter template to the latest version. (:pull:`715`):
+    * PyPI builds now test against latest `xclim` release.
+    * Migrated developement-based `optional-dependencies` to `dependency-groups`.
+    * Sets token-based workflows to run within an `automation` environment.
+    * Updated and synchornized dependencies.
+    * `pre-commit` has been replaced by `prek`.
+    * `Makefile` now handles some dependency installation logic.
+    * `tox.toml` has been adjusted to use Makefile commands.
+    * `tox.toml` no longer reinstalls `h5py` explicitly.
+
+.. _changes_0.14.0:
+
+`v0.14.0 <https://github.com/Ouranosinc/xscen/tree/0.14.0>`_ (2026-02-17)
+-------------------------------------------------------------------------
+Contributors: Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* xscen now supports numcodecs > 0.16, Pandas 3 and Python 3.14 (:pull:`692`).
+* The `group=False` option was added to ``xs.train`` to completely skip this argument when calling `xsdba`. (:pull:`668`).
+* The `stack_periods` argument was added to ``xs.adjust`` to pass arguments to ``xsdba.stack_periods`` before adjustment. (:pull:`668`).
+* A conversion from geopotential to orography has been added to the xclim modules. (:pull:`673`).
+* Add ``fill_nan_ds`` option to clean_up to fill NaNs in one dataset from value of another dataset. (:pull:`679`).
+* Warnings of ``xs.health_checks`` are now added as an attribute to the returned dataset. (:pull:`679`).
+* Make it possible to zip automatically after saving to zarr in ``xs.save_to_zarr``.
+* A conversion from geopotential to orography has been added to the `xclim` modules. (:pull:`673`).
+* Add ``zip_zarrdir`` and ``zip_kwargs`` options to ``xs.io.save_to_zarr`` to automatically zip the zarr directory after saving. (:pull:`679`).
+* Add helper functions for handling station data and spatial suff: (:pull:`619`).
+    + ``xs.spatial.merge_duplicated_stations`` : Merge colocated stations.
+    + ``xs.spatial.voronoi_weights`` : Compute weights for each station inversely proportional to they density, according to a Voronoi diagram.
+    + ``xs.spatial.dataset_extent`` : Get a lat/lon shape or bbox describing the spatial extent of a gridded dataset.
+* Add support for daily frequencies to ``xs.utils.unstack_dates``. Argument ``winter_starts_year``  has been deprecated in favor of ``year_month_start`` allowing for more flexibility (:pull:`619`).
+* Add a fast-track to ``xs.spatial.subset(..., 'gridpoint')`` when fancier clisops options are not requested. (:pull:`619`).
+
+Bug fixes
+^^^^^^^^^
+* Floor time in the preprocess of ``extract_dataset``. (:issue:`660`, :pull:`661`).
+* dtype encodings are now removed before saving in ``save_to_netcdf`` and ``save_to_zarr``, since it could create inconsistencies. Dtypes should instead be handled through kwargs. (:pull:`665`).
+* Coordinates with dask chunks will now correctly be chunked if using the `rechunk` option in ``xs.io.save_to_netcdf`` and ``xs.io.save_to_zarr``. (:pull:`673`).
+* ``xs.io.estimate_chunks`` now returns the length of the dimension instead of -1 to avoid potential 'OverflowError: can't convert negative value to hsize_t'. (:pull:`673`).
+* ``xs.spatial.get_crs`` can now also guess `latitude_longitude` (`PlateCarree`) even without a grid mapping variable. (:pull:`619`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Added test for catalog and config (:pull:`664`).
+* More explicit calls to `coords`, `compat`, and `join` in calls to ``xr.concat`` and ``xr.merge`` to avoid FutureWarnings from `xarray`. (:pull:`665`).
+* Add test for ``xs.health_checks`` for new xclim missing option `missing_some_but_not_all`. (:pull:`679`).
+* Added a workflow for automatically approving and merging non-major Dependabot updates. (:pull:`682`).
+* Temporarily pinned `pandas` (``<3.0``) until changes can be made to adapt to the new API. (:pull:`682`).
+* Add "cat:bias_adjust_reference" guess in ``xs.train`` and ``xs.adjust``. (:pull:`679`).
+* Add ``xs.diagnostics.merge_attrs`` as it was removed from xclim. (:pull:`679`).
+* Add grid mapping attrs to loc coords in ``xs.regrid``. (:pull:`679`).
+* Created the `Region` type for better documentation of the construct. (:pull:`619`).
+* File ``environment.yml`` has been removed. Doc dependencies have been removed from ``environment-dev.yml`` and a distinct ``environment-docs.yml`` has been created. (:pull:`692`).
+
+.. _changes_0.13.1:
+
+`v0.13.1 <https://github.com/Ouranosinc/xscen/tree/0.13.1>`_ (2025-10-21)
+-------------------------------------------------------------------------
+Contributors to this version: Juliette Lavoie (:user:`juliettelavoie`), Trevor James Smith (:user:`Zeitsperre`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * New official column ``bias_adjust_reference``. When a bias_adjust_project has multiple references (e.g., CanLead, ESPO6 v2.0), the information is stored in this column. (:pull:`643`, :pull:`644`).
 * Add ``clip_var`` option in ``xs.clean_up`` to clip values outside a given range. (:pull:`645`).
+
+Bug fixes
+^^^^^^^^^
+* Fixed a bug in ``ProjectCatalog.update`` where the function would crash on Windows systems. (:pull:`656`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^

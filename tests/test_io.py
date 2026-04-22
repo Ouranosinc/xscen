@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 import xclim as xc
+from pandas.errors import PerformanceWarning
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
@@ -55,9 +56,9 @@ class TestEstimateChunks:
         out2 = xs.io.estimate_chunks(self.ds2, dims=["time", "lat", "lon"], target_mb=1)
         assert out2 == {"time": 35, "lat": 70, "lon": 105}
         out3 = xs.io.estimate_chunks(self.ds, dims=["lat", "lon"], target_mb=1)
-        assert out3 == {"lon": 65, "lat": 40, "time": -1}
+        assert out3 == {"lon": 65, "lat": 40, "time": 50}
         out4 = xs.io.estimate_chunks(self.ds2, dims=["time"], target_mb=1)
-        assert out4 == {"time": 15, "lat": -1, "lon": -1}
+        assert out4 == {"time": 15, "lat": 100, "lon": 150}
 
     @pytest.mark.parametrize("chunk_per_variable", [True, False])
     @pytest.mark.parametrize("as_file", [True, False])
@@ -71,10 +72,10 @@ class TestEstimateChunks:
 
         out = xs.io.estimate_chunks(ds, dims=["lat", "lon"], target_mb=1, chunk_per_variable=chunk_per_variable)
         if chunk_per_variable is False:
-            assert out == {"lon": 65, "lat": 40, "time": -1}
+            assert out == {"lon": 65, "lat": 40, "time": 50}
         else:
             assert out == {
-                "tas": {"lon": 65, "lat": 40, "time": -1},
+                "tas": {"lon": 65, "lat": 40, "time": 50},
                 "pr": {"lon": 150, "lat": 100},
             }
 
@@ -227,28 +228,32 @@ class TestRechunkForSaving:
 
 
 class TestToTable:
-    ds = xs.utils.unstack_dates(
-        xr.merge(
-            [
-                xs.testing.datablock_3d(
-                    np.ones((20, 3, 2)),
-                    v,
-                    "lon",
-                    0,
-                    "lat",
-                    0,
-                    1,
-                    1,
-                    "1993-01-01",
-                    "QS-JAN",
-                )
-                for v in ["tas", "pr", "snw"]
-            ]
+    ds = (
+        xs.utils.unstack_dates(
+            xr.merge(
+                [
+                    xs.testing.datablock_3d(
+                        np.ones((20, 3, 2)),
+                        v,
+                        "lon",
+                        0,
+                        "lat",
+                        0,
+                        1,
+                        1,
+                        "1993-01-01",
+                        "QS-JAN",
+                    )
+                    for v in ["tas", "pr", "snw"]
+                ]
+            )
+            .stack(site=["lat", "lon"])
+            .reset_index("site")
+            .assign_coords(site=list("abcdef"))
         )
-        .stack(site=["lat", "lon"])
-        .reset_index("site")
-        .assign_coords(site=list("abcdef"))
-    ).transpose("season", "time", "site")
+        .transpose("season", "time", "site")
+        .drop_vars(["original_time"])
+    )
     ds.attrs = {"foo": "bar", "baz": 1, "qux": 2.0}
 
     @pytest.mark.parametrize("multiple, as_dataset", [(True, True), (False, True), (False, False)])
@@ -299,7 +304,9 @@ class TestToTable:
             assert tab.shape == (15, 24)
             assert saved.shape == (17, 26)  # Because of the headers
             assert tab.columns.names == ["season", "site"]
-            np.testing.assert_array_equal(tab.loc[("1993", "pr"), ("JFM",)], ds.pr.sel(time="1993", season="JFM"))
+            # NOTE: The PerformanceWarning is expected here. Our columns are deemed "unsorted", but we want them that way.
+            with pytest.warns(PerformanceWarning, match="indexing past lexsort depth may impact performance."):
+                np.testing.assert_array_equal(tab.loc[("1993", "pr"), ("JFM",)], ds.pr.sel(time="1993", season="JFM"))
             # Ensure that the coords are not present
             assert len(set(tab.index.get_level_values("variable").unique()).difference(["tas", "pr", "snw"])) == 0
             # Excel is not the prettiest thing to test
@@ -581,6 +588,50 @@ class TestSaveToZarr:
         ds3 = xr.open_zarr(Path(tmpdir) / "test.zarr")
         np.testing.assert_array_almost_equal(ds3.tas.isel(time=0), [1])
 
+    def test_zarr_zip(self, tmpdir):
+        ds1 = timeseries(
+            np.arange(1, 5),
+            variable="tas",
+            as_dataset=True,
+        )
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test.zarr.zip")
+
+        assert (Path(tmpdir) / "test.zarr.zip").exists()
+        assert (Path(tmpdir) / "test.zarr").exists()
+
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test2.zarr.zip", zip_kwargs={"delete": True})
+
+        assert (Path(tmpdir) / "test2.zarr.zip").exists()
+        assert not (Path(tmpdir) / "test2.zarr").exists()
+
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test3.zarr", zip_kwargs={"zipfile": Path(tmpdir) / "test4.zarr.zip"})
+
+        assert not (Path(tmpdir) / "test4.zarr.zip").exists()  # filename is not zip, so ignore zip_kwargs
+        assert (Path(tmpdir) / "test3.zarr").exists()
+
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test5.zarr.zip", zip_zarrdir=Path(tmpdir) / "test/")
+
+        assert (Path(tmpdir) / "test5.zarr.zip").exists()
+        assert (Path(tmpdir) / "test/test5.zarr").exists()
+
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test6.zarr.zip", zip_zarrdir=Path(tmpdir) / "test7.zarr")
+
+        assert (Path(tmpdir) / Path(tmpdir) / "test6.zarr.zip").exists()
+        assert (Path(tmpdir) / "test7.zarr").exists()
+
+    def test_zarr_zip_warn(self, tmpdir):
+        ds1 = timeseries(
+            np.arange(1, 5),
+            variable="tas",
+            as_dataset=True,
+        )
+
+        with pytest.warns(UserWarning, match="The 'zipfile' argument in zip_kwargs will be ignored since the filename ends with .zip"):
+            xs.save_to_zarr(ds1, Path(tmpdir) / "test.zarr.zip", zip_kwargs={"zipfile": Path(tmpdir) / "test1.zarr.zip"})
+
+        assert (Path(tmpdir) / "test.zarr.zip").exists()
+        assert not (Path(tmpdir) / "test1.zarr").exists()
+
 
 @pytest.mark.parametrize("engine", ["netcdf", "zarr"])
 def test_savefuncs_normal(tmpdir, engine):
@@ -595,7 +646,7 @@ def test_savefuncs_normal(tmpdir, engine):
     )
     ds["pr"] = ds["tas"].copy()
     ds["other"] = ds["tas"].copy()
-    ds["other"].encoding = {"dtype": "float32"}
+    ds["other"].encoding = {"dtype": "float32"}  # This should get ignored
     ds.attrs["foo"] = {"bar": 1}
     ds["pr"].attrs["foo"] = {"bar": 2}
 
@@ -606,28 +657,18 @@ def test_savefuncs_normal(tmpdir, engine):
     rechunk = {"time": 5, "lon": 2, "lat": 2}
     bitround = {"tas": 2, "pr": 3}
     if engine == "netcdf":
-        xs.save_to_netcdf(
-            ds,
-            Path(tmpdir) / "test.nc",
-            rechunk=rechunk,
-            bitround=bitround,
-        )
+        xs.save_to_netcdf(ds, Path(tmpdir) / "test.nc", rechunk=rechunk, bitround=bitround, netcdf_kwargs={"encoding": {"tas": {"dtype": "float32"}}})
         ds2 = xr.open_dataset(Path(tmpdir) / "test.nc", chunks={})
     else:
-        xs.save_to_zarr(
-            ds,
-            Path(tmpdir) / "test.zarr",
-            rechunk=rechunk,
-            bitround=bitround,
-        )
+        xs.save_to_zarr(ds, Path(tmpdir) / "test.zarr", rechunk=rechunk, bitround=bitround, encoding={"tas": {"dtype": "float32"}})
         ds2 = xr.open_zarr(Path(tmpdir) / "test.zarr")
 
     # Chunks
     assert ds2.tas.chunks == ((5, 5, 5), (2, 2, 1), (2,))
 
     # Dtype
-    assert ds2.tas.dtype == np.float64
-    assert ds2.other.dtype == np.float32
+    assert ds2.tas.dtype == np.float32
+    assert ds2.other.dtype == np.float64
 
     # Bitround
     np.testing.assert_array_almost_equal(ds2.tas.isel(time=0, lat=0, lon=0), [0.00010681], decimal=8)

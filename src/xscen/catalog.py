@@ -621,8 +621,6 @@ class ProjectCatalog(DataCatalog):
             raise ValueError('At least one of "id" or "title" must be given in the metadata.')
 
         project["catalog_file"] = str(data_path)
-        if "id" not in project:
-            project["id"] = project.get("title", "").replace(" ", "")
 
         esmdata = recursive_update(esm_col_data.copy(), project)
 
@@ -642,7 +640,6 @@ class ProjectCatalog(DataCatalog):
             meta["catalog_file"] = data_path.name
         with Path(meta_path).open("w", encoding="utf-8") as f:
             json.dump(meta, f, indent=2)
-
         return cls(str(meta_path))
 
     def __init__(
@@ -736,13 +733,18 @@ class ProjectCatalog(DataCatalog):
 
         # make sure year really has 4 digits
         if "date_start" in self.df:
+            if os.name == "nt":
+                y_format = "%Y"
+            else:
+                y_format = "%4Y"
+
             df_fix_date = self.df.copy()
             df_fix_date["date_start"] = pd.Series(
-                [(x if isinstance(x, str) else "" if pd.isnull(x) else x.strftime("%4Y-%m-%d %H:00")) for x in self.df.date_start]
+                [(x if isinstance(x, str) else "" if pd.isnull(x) else x.strftime(f"{y_format}-%m-%d %H:00")) for x in self.df.date_start]
             )
 
             df_fix_date["date_end"] = pd.Series(
-                [(x if isinstance(x, str) else "" if pd.isnull(x) else x.strftime("%4Y-%m-%d %H:00")) for x in self.df.date_end]
+                [(x if isinstance(x, str) else "" if pd.isnull(x) else x.strftime(f"{y_format}-%m-%d %H:00")) for x in self.df.date_end]
             )
 
             df_str = df_fix_date

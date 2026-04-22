@@ -34,7 +34,7 @@ from .catalog import (
 from .catutils import parse_from_ds
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
-from .spatial import subset
+from .spatial import Region, subset
 from .utils import CV, _xarray_defaults, get_cat_attrs, natural_sort, standardize_periods, xrfreq_to_timedelta
 from .utils import ensure_correct_time as _ensure_correct_time
 
@@ -59,7 +59,7 @@ def extract_dataset(  # noqa: C901
     *,
     variables_and_freqs: dict | None = None,
     periods: list[str | int] | list[list[str | int]] | None = None,
-    region: dict | None = None,
+    region: Region | None = None,
     to_level: str = "extracted",
     ensure_correct_time: bool = True,
     xr_open_kwargs: dict | None = None,
@@ -85,8 +85,8 @@ def extract_dataset(  # noqa: C901
     periods : list of str or list of int or list of lists of str or list of lists of int, optional
         Either [start, end] or list of [start, end] for the periods to be evaluated.
         Will be read from catalog._requested_periods if None. Leave both None to extract everything.
-    region : dict, optional
-        Description of the region and the subsetting method (required fields listed in the Notes) used in `xscen.spatial.subset`.
+    region : :py:data:`~xscen.spatial.Region`, optional
+        Description of the region and the subsetting method used in `xscen.spatial.subset`.
     to_level : str
         The processing level to assign to the output. Defaults to 'extracted'.
     ensure_correct_time : bool
@@ -121,18 +121,6 @@ def extract_dataset(  # noqa: C901
         Dictionary (keys = xrfreq) with datasets containing all available and computed variables,
         subsetted to the region, everything resampled to the requested frequency.
 
-    Notes
-    -----
-    'region' fields:
-        name: str
-            Region name used to overwrite domain in the catalog.
-        method: str
-            ['gridpoint', 'bbox', shape', 'sel']
-        tile_buffer: float, optional
-            Multiplier to apply to the model resolution.
-        kwargs
-            Arguments specific to the method used.
-
     See Also
     --------
     intake_esm.core.esm_datastore.to_dataset_dict, xarray.open_dataset, xarray.combine_by_coords
@@ -161,9 +149,19 @@ def extract_dataset(  # noqa: C901
     # Default arguments to send xarray
     xr_kwargs = _xarray_defaults(xr_open_kwargs=xr_open_kwargs or {}, xr_combine_kwargs=xr_combine_kwargs or {})
 
+    def new_preprocess(ds):
+        # existing preprocess first
+        if preprocess:
+            ds = preprocess(ds)
+        # if ensure_correct_time, we fix "anchor" for daily and finer, by flooring
+        # however, if we can't infer freq, we hope the postprocess version will fix it
+        if ensure_correct_time and "time" in ds and (xrfreq := (xr.infer_freq(ds.time) if ds.time.size > 2 else None)) in list("DHTMUL"):
+            ds["time"] = ds.time.dt.floor(xrfreq)
+        return ds
+
     # Open the catalog
     ds_dict = catalog.to_dataset_dict(
-        preprocess=preprocess,
+        preprocess=new_preprocess,
         # Only print a progress bar when it is minimally useful
         progressbar=(len(catalog.keys()) > 1),
         **xr_kwargs,
@@ -594,10 +592,14 @@ def search_data_catalogs(  # noqa: C901
         cat_kwargs = {"registry": registry_from_module(load_xclim_module(conversion_yaml))}
 
     # Prepare a unique catalog to search from, with the DerivedCat added if required
+    dfs = [
+        dc.df.astype({col: dc.df[col].dtype.categories.dtype for col in dc.df.columns if isinstance(dc.df.dtypes[col], pd.CategoricalDtype)})
+        for dc in data_catalogs
+    ]
     catalog = DataCatalog(
         {
             "esmcat": data_catalogs[0].esmcat.model_dump(),
-            "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
+            "df": pd.concat(dfs, ignore_index=True),
         },
         **cat_kwargs,
     )
@@ -1203,6 +1205,8 @@ def subset_warming_level(
         reals = []
         for real in bounds[realdim].values:
             start, end = bounds.sel({realdim: real}).values
+            start = None if pd.isna(start) else start
+            end = None if pd.isna(end) else end
             data = ds.sel({realdim: [real], "time": slice(start, end)})
             wl_not_reached = (start is None) or (data.time.size == 0) or ((data.time.dt.year[-1] - data.time.dt.year[0] + 1) != window)
             if not wl_not_reached:

@@ -3,6 +3,8 @@ import pytest
 import xarray as xr
 import xclim as xc
 from conftest import notebooks
+from packaging.version import Version
+from xclim import __version__ as __xclim_version__
 from xclim.testing.helpers import test_timeseries as timeseries
 
 import xscen as xs
@@ -197,6 +199,46 @@ class TestHealthChecks:
         else:
             xs.diagnostics.health_checks(ds, missing=missing, raise_on=["all"])
 
+    def test_missing_some_but_not_all(self):
+        if Version(__xclim_version__) < Version("0.60.0"):
+            pytest.skip("Skipping missing_some_but_not_all on o.lder xclim")
+        data = np.array([[[0, 1, 2], [1, 2, 3], [2, 3, 4]]] * 31, "float")
+        data[:, 0, 0] = [np.nan] * 31  # zeros all along the time axis
+
+        ds = datablock_3d(
+            data,
+            "tas",
+            "lon",
+            -70,
+            "lat",
+            15,
+            30,
+            30,
+            as_dataset=True,
+        )
+
+        # should pass
+        xs.diagnostics.health_checks(ds, missing={"missing_some_but_not_all": {"freq": "D"}}, raise_on=["all"])
+
+        data[0, 1, 1] = np.nan  # a single nan
+        ds = datablock_3d(
+            data,
+            "tas",
+            "lon",
+            -70,
+            "lat",
+            15,
+            30,
+            30,
+            as_dataset=True,
+        )
+        # should raise
+        with pytest.raises(
+            ValueError,
+            match="The variable 'tas' has missing values according to the 'missing_some_but_not_all' method.",
+        ):
+            xs.diagnostics.health_checks(ds, missing={"missing_some_but_not_all": {"freq": "MS"}}, raise_on=["all"])
+
     @pytest.mark.parametrize("flag", ["good", "bad"])
     def test_flags(self, flag):
         tasmin = np.array([-15] * 365 * 3)
@@ -366,8 +408,7 @@ class TestPropertiesMeasures:
             properties=self.yaml_file,
             dref_for_measure=p1,
         )
-        print(m2)
-        print(m2["maximum_length_of_warm_spell"].values)
+
         assert m1.sizes == {}
         np.testing.assert_allclose(m2["maximum_length_of_warm_spell"].values, 0)
 
