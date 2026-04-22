@@ -110,7 +110,7 @@ dependencies = [
   "intake-esm >2025.7.9",
   "matplotlib >=3.6",
   "netcdf4",
-  "numcodecs", # <0.16.0", # FIXME: Pin required for zarr v2.x compatibility
+  "numcodecs",
   "numpy >=1.24",
   "openpyxl",
   "pandas >=2.2",
@@ -120,7 +120,6 @@ dependencies = [
   "pydantic >=2.8.2",
   "pyproj",
   "pyyaml",
-  # "rechunker >=0.5.3",
   "scipy >=1.11.0",
   "shapely >=2.0",
   "sparse",
