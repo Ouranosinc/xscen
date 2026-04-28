@@ -656,12 +656,12 @@ class TestClimatologicalOp:
         if op == "linregress" and Version(__scipy_version__) < Version("1.16.0"):
             pytest.skip("Skipping linregress on older scipy")
         o = {"MS": 12, "D": 365, "YS-JAN": 1}[xrfreq]
-        
+
         if op == "theilslopes":
             base = np.arange(1, o + 1)
             values = np.concatenate([base + i for i in range(30)])
             ds = timeseries(values, variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
-            
+
         else:
             ds = timeseries(np.tile(np.arange(1, o + 1), 30), variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
         startyr = -1 * (ds.time.dt.year[0].values - 30)
@@ -673,14 +673,7 @@ class TestClimatologicalOp:
             | dict(
                 {
                     "theilslopes": np.array(
-                        [
-                            np.ones(o), 
-                            np.arange(startyr, startyr + o, 1), 
-                            np.ones(o), 
-                            np.ones(o), 
-                            np.ones(o), 
-                            np.ones(o) * 7.5399756e-33
-                         ]  
+                        [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.ones(o), np.ones(o), np.ones(o) * 7.5399756e-33]
                     ).T
                 }
             )

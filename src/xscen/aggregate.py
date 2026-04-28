@@ -96,8 +96,8 @@ def climatological_op(  # noqa: C901
               ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr'].
 
             - 'theilslopes' : Computes the Theil-Sen estimator over time, using
-              scipy.stats.theilslopes and employing years as regressors. 
-              Correlation and p-value for the correlation are also computed using scipy.stats.kendalltau, 
+              scipy.stats.theilslopes and employing years as regressors.
+              Correlation and p-value for the correlation are also computed using scipy.stats.kendalltau,
               as the Theil-Sen estimator is based on Kendall's tau.
               The output will have a new dimension 'theilslopes_param' with coordinates:
               ['slope', 'intercept', 'lower_slope', 'upper_slope', 'correlation', 'p_value'].
@@ -167,32 +167,32 @@ def climatological_op(  # noqa: C901
         else:
             out = np.full(6, np.nan)
         return out
-    
-    def _theilslopes(x, y, **kwargs):
-            # Wrapper for scipy.stats.theilslopes to unpack multiple return values in xr.apply_ufunc
-            valid_x = ~np.isnan(x)
-            valid_y = ~np.isnan(y)
-            mask = valid_x & valid_y
-            if np.sum(mask) >= kwargs.get("min_periods", 1):
-                x = x[mask]
-                y = y[mask]
-                reg = scipy.stats.theilslopes(y, x, alpha=kwargs.get("alpha", 0.95), method=kwargs.get("method", "separate"))
-                correlation, p_value = scipy.stats.kendalltau(x, y)
-                out = np.array(
-                    [
-                        reg.slope,  # slope
-                        reg.intercept,  # intercept
-                        reg.low_slope,  # lower bound of slope confidence interval
-                        reg.high_slope,  # upper bound of slope confidence interval
-                        correlation, # correlation coefficient for kendall tau 
-                        p_value, # significance of the correlation for kendall tau
-                    ]
-                )
 
-            else:
-                out = np.full(6, np.nan)
-            return out
-    
+    def _theilslopes(x, y, **kwargs):
+        # Wrapper for scipy.stats.theilslopes to unpack multiple return values in xr.apply_ufunc
+        valid_x = ~np.isnan(x)
+        valid_y = ~np.isnan(y)
+        mask = valid_x & valid_y
+        if np.sum(mask) >= kwargs.get("min_periods", 1):
+            x = x[mask]
+            y = y[mask]
+            reg = scipy.stats.theilslopes(y, x, alpha=kwargs.get("alpha", 0.95), method=kwargs.get("method", "separate"))
+            correlation, p_value = scipy.stats.kendalltau(x, y)
+            out = np.array(
+                [
+                    reg.slope,  # slope
+                    reg.intercept,  # intercept
+                    reg.low_slope,  # lower bound of slope confidence interval
+                    reg.high_slope,  # upper bound of slope confidence interval
+                    correlation,  # correlation coefficient for kendall tau
+                    p_value,  # significance of the correlation for kendall tau
+                ]
+            )
+
+        else:
+            out = np.full(6, np.nan)
+        return out
+
     def _common_trend_utils(ds_rolling=None, func=None, **kwargs):
         # prepare kwargs
         trend_kwargs = {k: v for k, v in op_kwargs.items() if "keep_attrs" not in k}
@@ -236,10 +236,10 @@ def climatological_op(  # noqa: C901
         )
         # label new coords
         if func == "linregress":
-            ds_rolling = ds_rolling.rename({'trend_param': 'linreg_param'})
+            ds_rolling = ds_rolling.rename({"trend_param": "linreg_param"})
             ds_rolling = ds_rolling.assign_coords(linreg_param=["slope", "intercept", "rvalue", "pvalue", "stderr", "intercept_stderr"])
         elif func == "theilslopes":
-            ds_rolling = ds_rolling.rename({'trend_param': 'theilslopes_param'})
+            ds_rolling = ds_rolling.rename({"trend_param": "theilslopes_param"})
             ds_rolling = ds_rolling.assign_coords(theilslopes_param=["slope", "intercept", "lower_slope", "upper_slope", "correlation", "p_value"])
         return ds_rolling
 
@@ -330,7 +330,7 @@ def climatological_op(  # noqa: C901
             # Shift by window - 1 to position the label at the start of the window
             # Select the windows at provided stride, dropping the last incomplete windows
             ds_rolling = ds_rolling.shift(time=-(window - 1)).isel(time=slice(None, -(window - 1), stride))
-        elif op == 'theilslopes':
+        elif op == "theilslopes":
             ds_rolling = _common_trend_utils(ds_rolling=ds_rolling, func="theilslopes")
         elif op == "linregress":
             ds_rolling = _common_trend_utils(ds_rolling=ds_rolling, func="linregress")
