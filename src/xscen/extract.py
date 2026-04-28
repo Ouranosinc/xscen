@@ -895,8 +895,8 @@ def get_period_from_warming_level(  # noqa: C901
 
         if window % 2 != 0:  # odd window
             rolling_diff = rolling_diff.shift(time=1)
-        # ensure series is monotonic -- keep only first year above point
-        rolling_diff = rolling_diff.cumulative("time").max()
+        # ensure series is monotonic -- keep only first year above point, drop any nans
+        rolling_diff = rolling_diff.cumulative("time").max().dropna('time')
         # create interpolator
         interp = interp1d(
             rolling_diff,
