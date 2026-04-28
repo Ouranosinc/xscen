@@ -87,13 +87,20 @@ def climatological_op(  # noqa: C901
         If 'op' is a dictionary, the key is the operation name and the value is a dict of kwargs
         accepted by the equivalent NumPy function. See the Notes for more information.
         While other operations are technically possible, the following are recommended and tested:
-        ['max', 'mean', 'median', 'min', 'std', 'sum', 'var', 'linregress'].
+        ['max', 'mean', 'median', 'min', 'std', 'sum', 'var', 'linregress', 'theilslopes'].
         Operations beyond methods of xarray.core.rolling.DatasetRolling include:
 
             - 'linregress' : Computes the linear regression over time, using
               scipy.stats.linregress and employing years as regressors.
               The output will have a new dimension 'linreg_param' with coordinates:
               ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr'].
+
+            - 'theilslopes' : Computes the Theil-Sen estimator over time, using
+              scipy.stats.theilslopes and employing years as regressors. 
+              Correlation and p-value for the correlation are also computed using scipy.stats.kendalltau, 
+              as the Theil-Sen estimator is based on Kendall's tau.
+              The output will have a new dimension 'theilslopes_param' with coordinates:
+              ['slope', 'intercept', 'lower_slope', 'upper_slope', 'correlation', 'p_value'].
 
         Only one operation per call is supported, so len(op)==1 if a dict.
     window : int, optional
@@ -137,6 +144,105 @@ def climatological_op(  # noqa: C901
     If possible, a function that handles NaN values will be used (e.g. op='mean' will use `np.nanmean`), as the
     'min_periods' argument already decides how many NaN values are acceptable.
     """
+
+    def _ulinregress(x, y, **kwargs):
+        # Wrapper for scipy.stats.linregress to unpack multiple return values in xr.apply_ufunc
+        valid_x = ~np.isnan(x)
+        valid_y = ~np.isnan(y)
+        mask = valid_x & valid_y
+        if np.sum(mask) >= kwargs.get("min_periods", 1):
+            x = x[mask]
+            y = y[mask]
+            reg = scipy.stats.linregress(x, y, alternative=kwargs.get("alternative", "two-sided"))
+            out = np.array(
+                [
+                    reg.slope,
+                    reg.intercept,
+                    reg.rvalue,
+                    reg.pvalue,
+                    reg.stderr,
+                    reg.intercept_stderr,
+                ]
+            )
+        else:
+            out = np.full(6, np.nan)
+        return out
+    
+    def _theilslopes(x, y, **kwargs):
+            # Wrapper for scipy.stats.theilslopes to unpack multiple return values in xr.apply_ufunc
+            valid_x = ~np.isnan(x)
+            valid_y = ~np.isnan(y)
+            mask = valid_x & valid_y
+            if np.sum(mask) >= kwargs.get("min_periods", 1):
+                x = x[mask]
+                y = y[mask]
+                reg = scipy.stats.theilslopes(y, x, alpha=kwargs.get("alpha", 0.95), method=kwargs.get("method", "separate"))
+                correlation, p_value = scipy.stats.kendalltau(x, y)
+                out = np.array(
+                    [
+                        reg.slope,  # slope
+                        reg.intercept,  # intercept
+                        reg.low_slope,  # lower bound of slope confidence interval
+                        reg.high_slope,  # upper bound of slope confidence interval
+                        correlation, # correlation coefficient for kendall tau 
+                        p_value, # significance of the correlation for kendall tau
+                    ]
+                )
+
+            else:
+                out = np.full(6, np.nan)
+            return out
+    
+    def _common_trend_utils(ds_rolling=None, func=None, **kwargs):
+        # prepare kwargs
+        trend_kwargs = {k: v for k, v in op_kwargs.items() if "keep_attrs" not in k}
+        trend_kwargs["min_periods"] = min_periods
+
+        # unwrap DatasetRolling object and select years subset
+        dsr_construct = ds_rolling.construct(window_dim="window", keep_attrs=True)
+        dsr_construct = dsr_construct.shift(time=-(window - 1)).isel(time=slice(None, -(window - 1), stride))
+
+        # construct array to use years as x values (==regressors) in xr.apply_ufunc
+        years_as_x_values = xr.DataArray(
+            np.arange(dsr_construct.window.size).repeat(dsr_construct.time.size).reshape(dsr_construct.window.size, dsr_construct.time.size)
+            + dsr_construct.time.dt.year.values
+            - window
+            + 1,
+            dims=["window", "time"],
+            coords={
+                "window": dsr_construct.window.values,
+                "time": dsr_construct.time,
+            },
+        )
+        if func == "linregress":
+            subfunc = _ulinregress
+        elif func == "theilslopes":
+            subfunc = _theilslopes
+        else:
+            raise ValueError(f"Unknown func: {func}")
+        # apply linregress along windows
+        ds_rolling = xr.apply_ufunc(
+            subfunc,
+            years_as_x_values,
+            dsr_construct,
+            input_core_dims=[["window"], ["window"]],
+            output_core_dims=[["trend_param"]],
+            vectorize=True,
+            dask="parallelized",
+            output_dtypes=["float32"],
+            dask_gufunc_kwargs={"output_sizes": {"trend_param": 6}},
+            keep_attrs="no_conflicts",
+            kwargs=trend_kwargs,
+        )
+        # label new coords
+        if func == "linregress":
+            ds_rolling = ds_rolling.rename({'trend_param': 'linreg_param'})
+            ds_rolling = ds_rolling.assign_coords(linreg_param=["slope", "intercept", "rvalue", "pvalue", "stderr", "intercept_stderr"])
+        elif func == "theilslopes":
+            ds_rolling = ds_rolling.rename({'trend_param': 'theilslopes_param'})
+            ds_rolling = ds_rolling.assign_coords(theilslopes_param=["slope", "intercept", "lower_slope", "upper_slope", "correlation", "p_value"])
+        return ds_rolling
+
     # more than one operation per call is not supported (yet), case for dict
     if isinstance(op, dict) and len(op) > 1:
         raise NotImplementedError("xs.climatological_op does not currently support more than one operation per call.")
@@ -224,69 +330,10 @@ def climatological_op(  # noqa: C901
             # Shift by window - 1 to position the label at the start of the window
             # Select the windows at provided stride, dropping the last incomplete windows
             ds_rolling = ds_rolling.shift(time=-(window - 1)).isel(time=slice(None, -(window - 1), stride))
-
+        elif op == 'theilslopes':
+            ds_rolling = _common_trend_utils(ds_rolling=ds_rolling, func="theilslopes")
         elif op == "linregress":
-
-            def _ulinregress(x, y, **kwargs):
-                # Wrapper for scipy.stats.linregress to unpack multiple return values in xr.apply_ufunc
-                valid_x = ~np.isnan(x)
-                valid_y = ~np.isnan(y)
-                mask = valid_x & valid_y
-                if np.sum(mask) >= kwargs.get("min_periods", 1):
-                    x = x[mask]
-                    y = y[mask]
-                    reg = scipy.stats.linregress(x, y, alternative=kwargs.get("alternative", "two-sided"))
-                    out = np.array(
-                        [
-                            reg.slope,
-                            reg.intercept,
-                            reg.rvalue,
-                            reg.pvalue,
-                            reg.stderr,
-                            reg.intercept_stderr,
-                        ]
-                    )
-                else:
-                    out = np.full(6, np.nan)
-                return out
-
-            # prepare kwargs
-            linreg_kwargs = {k: v for k, v in op_kwargs.items() if "keep_attrs" not in k}
-            linreg_kwargs["min_periods"] = min_periods
-
-            # unwrap DatasetRolling object and select years subset
-            dsr_construct = ds_rolling.construct(window_dim="window", keep_attrs=True)
-            dsr_construct = dsr_construct.shift(time=-(window - 1)).isel(time=slice(None, -(window - 1), stride))
-
-            # construct array to use years as x values (==regressors) in xr.apply_ufunc
-            years_as_x_values = xr.DataArray(
-                np.arange(dsr_construct.window.size).repeat(dsr_construct.time.size).reshape(dsr_construct.window.size, dsr_construct.time.size)
-                + dsr_construct.time.dt.year.values
-                - window
-                + 1,
-                dims=["window", "time"],
-                coords={
-                    "window": dsr_construct.window.values,
-                    "time": dsr_construct.time,
-                },
-            )
-
-            # apply linregress along windows
-            ds_rolling = xr.apply_ufunc(
-                _ulinregress,
-                years_as_x_values,
-                dsr_construct,
-                input_core_dims=[["window"], ["window"]],
-                output_core_dims=[["linreg_param"]],
-                vectorize=True,
-                dask="parallelized",
-                output_dtypes=["float32"],
-                dask_gufunc_kwargs={"output_sizes": {"linreg_param": 6}},
-                keep_attrs="no_conflicts",
-                kwargs=linreg_kwargs,
-            )
-            # label new coords
-            ds_rolling = ds_rolling.assign_coords(linreg_param=["slope", "intercept", "rvalue", "pvalue", "stderr", "intercept_stderr"])
+            ds_rolling = _common_trend_utils(ds_rolling=ds_rolling, func="linregress")
         else:
             raise ValueError(f"Operation '{op}' not implemented.")
 
