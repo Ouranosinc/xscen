@@ -96,11 +96,11 @@ def climatological_op(  # noqa: C901
               ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr'].
 
             - 'theilslopes' : Computes the Theil-Sen estimator over time, using
-              scipy.stats.theilslopes and employing years as regressors. 
+              scipy.stats.theilslopes and employing years as regressors.
               Correlation and p-value for the correlation are also computed using scipy.stats.kendalltau,
               as the Theil-Sen estimator is based on Kendall's tau.
-              Other kwargs can be passed by defining an 'op' dictionary as described above but in this case 
-              users must specify kwargs for both theilslopes and kendalltau functions : 
+              Other kwargs can be passed by defining an 'op' dictionary as described above but in this case
+              users must specify kwargs for both theilslopes and kendalltau functions :
               example op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}}.
               The output will have a new dimension 'theilslopes_param' with coordinates:
               ['slope', 'intercept', 'lower_slope', 'upper_slope', 'correlation', 'p_value'].
@@ -147,8 +147,6 @@ def climatological_op(  # noqa: C901
     If possible, a function that handles NaN values will be used (e.g. op='mean' will use `np.nanmean`), as the
     'min_periods' argument already decides how many NaN values are acceptable.
     """
-
-
     # more than one operation per call is not supported (yet), case for dict
     if isinstance(op, dict) and len(op) > 1:
         raise NotImplementedError("xs.climatological_op does not currently support more than one operation per call.")
@@ -237,9 +235,13 @@ def climatological_op(  # noqa: C901
             # Select the windows at provided stride, dropping the last incomplete windows
             ds_rolling = ds_rolling.shift(time=-(window - 1)).isel(time=slice(None, -(window - 1), stride))
         elif op == "theilslopes":
-            ds_rolling = _common_trend_utils(ds_rolling=ds_rolling, func="theilslopes", op_kwargs=op_kwargs, window=window,  stride=stride, min_periods=min_periods)
+            ds_rolling = _common_trend_utils(
+                ds_rolling=ds_rolling, func="theilslopes", op_kwargs=op_kwargs, window=window, stride=stride, min_periods=min_periods
+            )
         elif op == "linregress":
-            ds_rolling = _common_trend_utils(ds_rolling=ds_rolling, func="linregress",  op_kwargs=op_kwargs, window=window, stride=stride, min_periods=min_periods)
+            ds_rolling = _common_trend_utils(
+                ds_rolling=ds_rolling, func="linregress", op_kwargs=op_kwargs, window=window, stride=stride, min_periods=min_periods
+            )
         else:
             raise ValueError(f"Operation '{op}' not implemented.")
 
@@ -850,6 +852,7 @@ def _ulinregress(x, y, **kwargs):
         out = np.full(6, np.nan)
     return out
 
+
 def _theilslopes(x, y, **kwargs):
     # Wrapper for scipy.stats.theilslopes to unpack multiple return values in xr.apply_ufunc
     valid_x = ~np.isnan(x)
@@ -875,6 +878,7 @@ def _theilslopes(x, y, **kwargs):
     else:
         out = np.full(6, np.nan)
     return out
+
 
 def _common_trend_utils(ds_rolling=None, func=None, op_kwargs=None, min_periods=None, window=None, stride=None, **kwargs):
     # prepare kwargs

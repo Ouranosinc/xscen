@@ -661,7 +661,7 @@ class TestClimatologicalOp:
             base = np.arange(1, o + 1)
             values = np.concatenate([base + i for i in range(30)])
             ds = timeseries(values, variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
-            #op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}}
+            # op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}}
         else:
             ds = timeseries(np.tile(np.arange(1, o + 1), 30), variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
         startyr = -1 * (ds.time.dt.year[0].values - 30)
@@ -708,7 +708,9 @@ class TestClimatologicalOp:
         assert out.attrs["cat:processing_level"] == "climatology"
 
     @pytest.mark.parametrize("xrfreq", ["D", "MS", "YS-JAN"])
-    @pytest.mark.parametrize("op", [{"linregress": {'alternative': 'two-sided'}}, {"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}}]) #op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}}
+    @pytest.mark.parametrize(
+        "op", [{"linregress": {"alternative": "two-sided"}}, {"theilslopes": {"theilslopes": {"alpha": 0.90}, "kendalltau": {"method": "auto"}}}]
+    )  # op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}}
     def test_trend_parameters(self, xrfreq, op):
         if "linregress" in op and Version(__scipy_version__) < Version("1.16.0"):
             pytest.skip("Skipping linregress on older scipy")
@@ -722,28 +724,25 @@ class TestClimatologicalOp:
             ds = timeseries(np.tile(np.arange(1, o + 1), 30), variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
         startyr = -1 * (ds.time.dt.year[0].values - 30)
         out = xs.climatological_op(ds, op=op)
-        expected = (
-            dict(
-                {
-                    "theilslopes": np.array(
-                        [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.ones(o), np.ones(o), np.ones(o) * 7.5399756e-33]
-                    ).T
-                }
-            )
-            | dict(
-                {
-                    "linregress": np.array(
-                        [
-                            np.zeros(o),
-                            np.arange(1, o + 1),
-                            np.zeros(o) * np.nan,
-                            np.zeros(o) * np.nan,
-                            np.zeros(o) * np.nan,
-                            np.zeros(o) * np.nan,
-                        ]
-                    ).T
-                }
-            )
+        expected = dict(
+            {
+                "theilslopes": np.array(
+                    [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.ones(o), np.ones(o), np.ones(o) * 7.5399756e-33]
+                ).T
+            }
+        ) | dict(
+            {
+                "linregress": np.array(
+                    [
+                        np.zeros(o),
+                        np.arange(1, o + 1),
+                        np.zeros(o) * np.nan,
+                        np.zeros(o) * np.nan,
+                        np.zeros(o) * np.nan,
+                        np.zeros(o) * np.nan,
+                    ]
+                ).T
+            }
         )
         # Test output variable name, values, length, horizon
         op_key = "linregress" if "linregress" in op else "theilslopes"
