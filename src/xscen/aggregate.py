@@ -96,9 +96,12 @@ def climatological_op(  # noqa: C901
               ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr'].
 
             - 'theilslopes' : Computes the Theil-Sen estimator over time, using
-              scipy.stats.theilslopes and employing years as regressors.
+              scipy.stats.theilslopes and employing years as regressors. 
               Correlation and p-value for the correlation are also computed using scipy.stats.kendalltau,
               as the Theil-Sen estimator is based on Kendall's tau.
+              Other kwargs can be passed by defining an 'op' dictionary as described above but in this case 
+              users must specify kwargs for both theilslopes and kendalltau functions : 
+              example op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}}.
               The output will have a new dimension 'theilslopes_param' with coordinates:
               ['slope', 'intercept', 'lower_slope', 'upper_slope', 'correlation', 'p_value'].
 
@@ -829,9 +832,10 @@ def _ulinregress(x, y, **kwargs):
     valid_y = ~np.isnan(y)
     mask = valid_x & valid_y
     if np.sum(mask) >= kwargs.get("min_periods", 1):
+        kwargs.pop("min_periods", None)
         x = x[mask]
         y = y[mask]
-        reg = scipy.stats.linregress(x, y, alternative=kwargs.get("alternative", "two-sided"))
+        reg = scipy.stats.linregress(x, y, **kwargs)
         out = np.array(
             [
                 reg.slope,
@@ -852,10 +856,11 @@ def _theilslopes(x, y, **kwargs):
     valid_y = ~np.isnan(y)
     mask = valid_x & valid_y
     if np.sum(mask) >= kwargs.get("min_periods", 1):
+        kwargs.pop("min_periods", None)
         x = x[mask]
         y = y[mask]
-        reg = scipy.stats.theilslopes(y, x, alpha=kwargs.get("alpha", 0.95), method=kwargs.get("method", "separate"))
-        correlation, p_value = scipy.stats.kendalltau(x, y)
+        reg = scipy.stats.theilslopes(y, x, **kwargs.get("theilslopes", {}))
+        correlation, p_value = scipy.stats.kendalltau(x, y, **kwargs.get("kendalltau", {}))
         out = np.array(
             [
                 reg.slope,  # slope
