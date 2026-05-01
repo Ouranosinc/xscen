@@ -865,7 +865,6 @@ def _theilslopes(x, y, **kwargs):
     valid_y = ~np.isnan(y)
     mask = valid_x & valid_y
     if np.sum(mask) >= kwargs.pop("min_periods", 1):
-
         if kwargs:
             # theilslopes and kendalltau can both take kwargs,
             # make sure that the user is explicit about which kwargs are for which function
