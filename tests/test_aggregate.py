@@ -657,7 +657,7 @@ class TestClimatologicalOp:
             pytest.skip("Skipping linregress on older scipy")
         o = {"MS": 12, "D": 365, "YS-JAN": 1}[xrfreq]
 
-        if op == "theilslopes":
+        if op in ["theilslopes", "linregress"]:
             base = np.arange(1, o + 1)
             values = np.concatenate([base + i for i in range(30)])
             ds = timeseries(values, variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
@@ -680,14 +680,7 @@ class TestClimatologicalOp:
             | dict(
                 {
                     "linregress": np.array(
-                        [
-                            np.zeros(o),
-                            np.arange(1, o + 1),
-                            np.zeros(o) * np.nan,
-                            np.zeros(o) * np.nan,
-                            np.zeros(o) * np.nan,
-                            np.zeros(o) * np.nan,
-                        ]
+                        [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.zeros(o), np.zeros(o), np.zeros(o)]
                     ).T
                 }
             )
@@ -716,33 +709,28 @@ class TestClimatologicalOp:
             pytest.skip("Skipping linregress on older scipy")
         o = {"MS": 12, "D": 365, "YS-JAN": 1}[xrfreq]
 
-        if "theilslopes" in op:
-            base = np.arange(1, o + 1)
-            values = np.concatenate([base + i for i in range(30)])
-            ds = timeseries(values, variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
-        else:
-            ds = timeseries(np.tile(np.arange(1, o + 1), 30), variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
+        
+        base = np.arange(1, o + 1)
+        values = np.concatenate([base + i for i in range(30)])
+        ds = timeseries(values, variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
+    
         startyr = -1 * (ds.time.dt.year[0].values) + 1
         out = xs.climatological_op(ds, op=op)
-        expected = dict(
-            {
-                "theilslopes": np.array(
-                    [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.ones(o), np.ones(o), np.ones(o) * 7.5399756e-33]
-                ).T
-            }
-        ) | dict(
-            {
-                "linregress": np.array(
-                    [
-                        np.zeros(o),
-                        np.arange(1, o + 1),
-                        np.zeros(o) * np.nan,
-                        np.zeros(o) * np.nan,
-                        np.zeros(o) * np.nan,
-                        np.zeros(o) * np.nan,
-                    ]
-                ).T
-            }
+        expected =  (
+            dict(
+                {
+                    "theilslopes": np.array(
+                        [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.ones(o), np.ones(o), np.ones(o) * 7.5399756e-33]
+                    ).T
+                }
+            )
+            | dict(
+                {
+                    "linregress": np.array(
+                        [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.zeros(o), np.zeros(o), np.zeros(o)]
+                    ).T
+                }
+            )
         )
         # Test output variable name, values, length, horizon
         op_key = "linregress" if "linregress" in op else "theilslopes"
