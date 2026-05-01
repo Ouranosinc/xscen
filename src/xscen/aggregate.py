@@ -868,7 +868,7 @@ def _theilslopes(x, y, **kwargs):
         kwargs.pop("min_periods", None)
 
         if kwargs:
-            # theilslopes and kendalltau can both take kwargs, 
+            # theilslopes and kendalltau can both take kwargs,
             # make sure that the user is explicit about which kwargs are for which function
             if not set(kwargs.keys()).issubset({"theilslopes", "kendalltau"}):
                 op_str = 'climatological_op(op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}})'
