@@ -146,6 +146,12 @@ def climatological_op(  # noqa: C901
     additional arguments to the operation, we instead use the 'reduce' method and pass the operation as a numpy function.
     If possible, a function that handles NaN values will be used (e.g. op='mean' will use `np.nanmean`), as the
     'min_periods' argument already decides how many NaN values are acceptable.
+
+    See Also
+    --------
+    scipy.stats.linregress
+    scipy.stats.theilslopes
+
     """
     # more than one operation per call is not supported (yet), case for dict
     if isinstance(op, dict) and len(op) > 1:
