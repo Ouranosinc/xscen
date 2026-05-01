@@ -651,13 +651,20 @@ class TestClimatologicalOp:
         return xclim.core.formatting.default_formatter.format_field(s, op_format[s])
 
     @pytest.mark.parametrize("xrfreq", ["D", "MS", "YS-JAN"])
-    @pytest.mark.parametrize("op", ["max", "mean", "median", "min", "std", "sum", "var", "linregress"])
+    @pytest.mark.parametrize("op", ["max", "mean", "median", "min", "std", "sum", "var", "linregress", "theilslopes"])
     def test_all_default(self, xrfreq, op):
         if op == "linregress" and Version(__scipy_version__) < Version("1.16.0"):
             pytest.skip("Skipping linregress on older scipy")
         o = {"MS": 12, "D": 365, "YS-JAN": 1}[xrfreq]
 
-        ds = timeseries(np.tile(np.arange(1, o + 1), 30), variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
+        if op in ["theilslopes", "linregress"]:
+            base = np.arange(1, o + 1)
+            values = np.concatenate([base + i for i in range(30)])
+            ds = timeseries(values, variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
+            # op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}}
+        else:
+            ds = timeseries(np.tile(np.arange(1, o + 1), 30), variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
+        startyr = -1 * (ds.time.dt.year[0].values) + 1
         out = xs.climatological_op(ds, op=op)
         expected = (
             dict.fromkeys(("max", "mean", "median", "min"), np.arange(1, o + 1))
@@ -665,31 +672,63 @@ class TestClimatologicalOp:
             | dict({"sum": np.arange(1, o + 1) * 30})
             | dict(
                 {
-                    "linregress": np.array(
-                        [
-                            np.zeros(o),
-                            np.arange(1, o + 1),
-                            np.zeros(o) * np.nan,
-                            np.zeros(o) * np.nan,
-                            np.zeros(o) * np.nan,
-                            np.zeros(o) * np.nan,
-                        ]
+                    "theilslopes": np.array(
+                        [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.ones(o), np.ones(o), np.ones(o) * 7.5399756e-33]
                     ).T
                 }
             )
+            | dict({"linregress": np.array([np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.zeros(o), np.zeros(o), np.zeros(o)]).T})
         )
         # Test output variable name, values, length, horizon
         assert list(out.data_vars.keys()) == [f"tas_clim_{op}"]
-        np.testing.assert_array_equal(out[f"tas_clim_{op}"], expected[op])
+        np.testing.assert_array_almost_equal(out[f"tas_clim_{op}"], expected[op], decimal=6)
         assert len(out.time) == (o * len(np.unique(out.horizon.values)))
         np.testing.assert_array_equal(out.time[0], ds.time[0])
         assert (out.horizon == "2001-2030").all()
         # Test metadata
-        operation = self._format(op) if op not in ["median", "linregress"] else op
+        operation = self._format(op) if op not in ["median", "linregress", "theilslopes"] else op
         assert out[f"tas_clim_{op}"].attrs["description"] == f"30-year climatological {operation} of {ds.tas.attrs['description']}"
         assert (
             f"30-year climatological {operation} over window (non-centered), with a minimum of 30 years of data"
             in out[f"tas_clim_{op}"].attrs["history"]
+        )
+        assert out.attrs["cat:processing_level"] == "climatology"
+
+    @pytest.mark.parametrize("xrfreq", ["D", "MS", "YS-JAN"])
+    @pytest.mark.parametrize(
+        "op", [{"linregress": {"alternative": "two-sided"}}, {"theilslopes": {"theilslopes": {"alpha": 0.90}, "kendalltau": {"method": "auto"}}}]
+    )  # op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}}
+    def test_trend_parameters(self, xrfreq, op):
+        if "linregress" in op and Version(__scipy_version__) < Version("1.16.0"):
+            pytest.skip("Skipping linregress on older scipy")
+        o = {"MS": 12, "D": 365, "YS-JAN": 1}[xrfreq]
+
+        base = np.arange(1, o + 1)
+        values = np.concatenate([base + i for i in range(30)])
+        ds = timeseries(values, variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
+
+        startyr = -1 * (ds.time.dt.year[0].values) + 1
+        out = xs.climatological_op(ds, op=op)
+        expected = dict(
+            {
+                "theilslopes": np.array(
+                    [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.ones(o), np.ones(o), np.ones(o) * 7.5399756e-33]
+                ).T
+            }
+        ) | dict({"linregress": np.array([np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.zeros(o), np.zeros(o), np.zeros(o)]).T})
+        # Test output variable name, values, length, horizon
+        op_key = "linregress" if "linregress" in op else "theilslopes"
+        assert list(out.data_vars.keys()) == [f"tas_clim_{op_key}"]
+        np.testing.assert_array_almost_equal(out[f"tas_clim_{op_key}"], expected[op_key], decimal=6)
+        assert len(out.time) == (o * len(np.unique(out.horizon.values)))
+        np.testing.assert_array_equal(out.time[0], ds.time[0])
+        assert (out.horizon == "2001-2030").all()
+        # Test metadata
+        operation = self._format(op_key) if op_key not in ["median", "linregress", "theilslopes"] else op_key
+        assert out[f"tas_clim_{op_key}"].attrs["description"] == f"30-year climatological {operation} of {ds.tas.attrs['description']}"
+        assert (
+            f"30-year climatological {operation} over window (non-centered), with a minimum of 30 years of data"
+            in out[f"tas_clim_{op_key}"].attrs["history"]
         )
         assert out.attrs["cat:processing_level"] == "climatology"
 
