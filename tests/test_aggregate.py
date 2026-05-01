@@ -664,7 +664,7 @@ class TestClimatologicalOp:
             # op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}}
         else:
             ds = timeseries(np.tile(np.arange(1, o + 1), 30), variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
-        startyr = -1 * (ds.time.dt.year[0].values) +1 
+        startyr = -1 * (ds.time.dt.year[0].values) + 1
         out = xs.climatological_op(ds, op=op)
         expected = (
             dict.fromkeys(("max", "mean", "median", "min"), np.arange(1, o + 1))
