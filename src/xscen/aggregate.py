@@ -908,9 +908,7 @@ def _common_trend_utils(ds_rolling=None, func=None, op_kwargs=None, min_periods=
     # construct array to use years as x values (==regressors) in xr.apply_ufunc
     years_as_x_values = xr.DataArray(
         np.arange(dsr_construct.window.size).repeat(dsr_construct.time.size).reshape(dsr_construct.window.size, dsr_construct.time.size)
-        + dsr_construct.time.dt.year.values
-        - window
-        + 1,
+        + dsr_construct.time.dt.year.values,
         dims=["window", "time"],
         coords={
             "window": dsr_construct.window.values,
