@@ -677,13 +677,7 @@ class TestClimatologicalOp:
                     ).T
                 }
             )
-            | dict(
-                {
-                    "linregress": np.array(
-                        [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.zeros(o), np.zeros(o), np.zeros(o)]
-                    ).T
-                }
-            )
+            | dict({"linregress": np.array([np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.zeros(o), np.zeros(o), np.zeros(o)]).T})
         )
         # Test output variable name, values, length, horizon
         assert list(out.data_vars.keys()) == [f"tas_clim_{op}"]
@@ -709,29 +703,19 @@ class TestClimatologicalOp:
             pytest.skip("Skipping linregress on older scipy")
         o = {"MS": 12, "D": 365, "YS-JAN": 1}[xrfreq]
 
-        
         base = np.arange(1, o + 1)
         values = np.concatenate([base + i for i in range(30)])
         ds = timeseries(values, variable="tas", start="2001-01-01", freq=xrfreq, as_dataset=True, calendar="noleap")
-    
+
         startyr = -1 * (ds.time.dt.year[0].values) + 1
         out = xs.climatological_op(ds, op=op)
-        expected =  (
-            dict(
-                {
-                    "theilslopes": np.array(
-                        [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.ones(o), np.ones(o), np.ones(o) * 7.5399756e-33]
-                    ).T
-                }
-            )
-            | dict(
-                {
-                    "linregress": np.array(
-                        [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.zeros(o), np.zeros(o), np.zeros(o)]
-                    ).T
-                }
-            )
-        )
+        expected = dict(
+            {
+                "theilslopes": np.array(
+                    [np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.ones(o), np.ones(o), np.ones(o) * 7.5399756e-33]
+                ).T
+            }
+        ) | dict({"linregress": np.array([np.ones(o), np.arange(startyr, startyr + o, 1), np.ones(o), np.zeros(o), np.zeros(o), np.zeros(o)]).T})
         # Test output variable name, values, length, horizon
         op_key = "linregress" if "linregress" in op else "theilslopes"
         assert list(out.data_vars.keys()) == [f"tas_clim_{op_key}"]
