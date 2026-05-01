@@ -860,13 +860,13 @@ def _theilslopes(x, y, **kwargs):
     mask = valid_x & valid_y
     if np.sum(mask) >= kwargs.get("min_periods", 1):
         kwargs.pop("min_periods", None)
-        
+
         if kwargs:
-            # theilslopes and kendalltau can both take kwargs, but we need to make sure that the user is explicit about which kwargs are for which function, 
+            # theilslopes and kendalltau can both take kwargs, but we need to make sure that the user is explicit about which kwargs are for which function,
             # since they have different signatures.
             if not set(kwargs.keys()).issubset({"theilslopes", "kendalltau"}):
                 op_str = 'climatological_op(op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}})'
-                msg = f'Sending scipy kwargs to climatological_op(op="theilslopes") requires explicit key, value pairs for "scipy.stats.theilslopes" and/or "scipy.stats.kendalltau".'
+                msg = 'Sending scipy kwargs to climatological_op(op="theilslopes") requires explicit key, value pairs for "scipy.stats.theilslopes" and/or "scipy.stats.kendalltau".'
                 msg += f" Example: {op_str}, received {kwargs}"
                 raise ValueError(msg)
         x = x[mask]
