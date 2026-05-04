@@ -22,10 +22,10 @@ Features
 
 Acknowledgments
 ^^^^^^^^^^^^^^^
-`xscen` development is funded through `Ouranos <https://www.ouranos.ca/>`_, a not-for-profit collaborative innovation organization fostering resilient adaptation to climate change, based in Québec, Canada.
+`xscen` development is funded through `Ouranos <https://www.ouranos.ca/en>`_, a not-for-profit collaborative innovation organization fostering resilient adaptation to climate change, based in Québec, Canada.
 
 .. image:: https://raw.githubusercontent.com/Ouranosinc/.github/refs/heads/main/images/logo-ouranos-horizontal-couleur.svg
-    :target: https://www.ouranos.ca/
+    :target: https://www.ouranos.ca/en
     :align: center
 
 .. toctree::
