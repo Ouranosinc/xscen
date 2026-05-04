@@ -40,6 +40,7 @@ Internal changes
     * `Makefile` now handles some dependency installation logic.
     * `tox.toml` has been adjusted to use Makefile commands.
     * `tox.toml` no longer reinstalls `h5py` explicitly.
+* Added acknowledgement of funding support and Ouranos logo to documentation landing page and ``README.rst``. (:pull:`724`).
 
 .. _changes_0.14.0:
 
