@@ -19,6 +19,8 @@ import xarray as xr
 import xclim as xc
 import xclim.core.calendar
 
+from .regrid import create_bounds_gridmapping
+
 
 try:
     import xesmf as xe
@@ -575,7 +577,7 @@ def spatial_mean(  # noqa: C901
             dims = ds.cf["longitude"].dims + ds.cf["latitude"].dims
         else:
             if "longitude" not in ds.cf.bounds:
-                ds = ds.cf.add_bounds(["longitude", "latitude"])
+                ds = ds.assign_coords(**create_bounds_gridmapping(ds))
             # Weights the weights by the cell area (in °²)
             weights = weights * xr.DataArray(
                 shapely.area(shapely.polygons(shapely.linearrings(ds.lon_bounds, ds.lat_bounds))),
@@ -646,8 +648,6 @@ def spatial_mean(  # noqa: C901
         geoms = shapely.segmentize(polygon.geometry, 1)
 
         if ds.cf["longitude"].ndim == 2 and "longitude" not in ds.cf.bounds:
-            from .regrid import create_bounds_gridmapping
-
             ds = ds.assign_coords(**create_bounds_gridmapping(ds))
 
         savg = xe.SpatialAverager(ds, geoms, **kwargs_copy)
