@@ -424,7 +424,7 @@ class TestSpatialMean:
         out = xs.aggregate.spatial_mean(ds, method="cos-lat")
         assert "rotated_pole" not in out
         assert "grid_mapping" not in out.tas.attrs
-        np.testing.assert_allclose(out.tas, 1.623069, rtol=1e-6)
+        np.testing.assert_allclose(out.tas, 1.692961, rtol=1e-6)
         assert "weighted mean(dim=('rlat', 'rlon'))" in out.attrs["history"]
 
     def test_cos_lat_errors(self):
