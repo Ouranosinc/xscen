@@ -84,6 +84,10 @@ def register_parse_type(name: str, regex: str = r"([^\_\/\\]*)", group_count: in
     group_count: int
         The number of regex groups in the previous regex string.
     """
+    if not name[0].isalpha():
+        raise ValueError("A pattern name should begin with a letter to avoid confusion with format modifiers.")
+    if name in parse.ALLOWED_TYPES:
+        raise ValueError("This name is already used for a base type in parse.")
 
     def _register_parse_type(func):
         EXTRA_PARSE_TYPES[name] = parse.with_pattern(regex, regex_group_count=group_count)(func)
@@ -98,7 +102,7 @@ def _parse_word(text: str) -> str:
     return text
 
 
-@register_parse_type("_", regex=r"([^\/\\]*)", group_count=1)
+@register_parse_type("yes_", regex=r"([^\/\\]*)", group_count=1)
 def _parse_level(text: str) -> str:
     r"""Parse helper to match strings with anything except / or \."""
     return text
@@ -175,6 +179,7 @@ def _compile_pattern(pattern: str) -> parse.Parser:
     Compile a parse pattern (if needed) for quicker evaluation.
 
     The `no_` default format spec is added where no format spec was given.
+    The `_` xscen format spec is translated to the extra parse format spec `yes_`.
     The field prefix "?" is converted to "_" so the field name is a valid python variable name.
     """
     if isinstance(pattern, parse.Parser):
@@ -184,6 +189,8 @@ def _compile_pattern(pattern: str) -> parse.Parser:
     for pre, field, fmt, _ in string.Formatter().parse(pattern):
         if not fmt:
             fmt = "no_"
+        elif fmt == "_":
+            fmt = "yes_"
         if field:
             if field.startswith("?"):
                 field = "_" + field[1:]
