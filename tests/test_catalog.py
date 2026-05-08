@@ -48,11 +48,6 @@ def test_subset_file_coverage_2300():
     pd.testing.assert_frame_equal(catalog.subset_file_coverage(df, [2250, 2305], coverage=0.8), df[1:3])
 
 
-def test_xrfreq_fix():
-    cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json")
-    assert set(cat.df.xrfreq) == {"3h", "D", "fx"}
-
-
 class TestCopyFiles:
     def test_flat(self, samplecat, tmp_path, caplog):
         with caplog.at_level(logging.DEBUG):

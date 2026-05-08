@@ -1479,7 +1479,9 @@ def _xarray_defaults(**kwargs):
     if "xr_combine_kwargs" in kwargs:
         kwargs["xarray_combine_by_coords_kwargs"] = kwargs.pop("xr_combine_kwargs")
 
-    kwargs.setdefault("xarray_open_kwargs", {}).setdefault("chunks", {})
+    xok = kwargs.setdefault("xarray_open_kwargs", {})
+    xok.setdefault("chunks", {})
+    xok.setdefault("engine", None)
     kwargs.setdefault("xarray_combine_by_coords_kwargs", {}).setdefault("data_vars", "minimal")
     return kwargs
 

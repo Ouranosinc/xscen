@@ -1304,7 +1304,7 @@ def test_xarray_defaults():
     assert out == {
         "chunks": {"time": 10},
         "foo": "bar",
-        "xarray_open_kwargs": {"decode_times": False, "chunks": {}},
+        "xarray_open_kwargs": {"decode_times": False, "chunks": {}, "engine": None},
         "xarray_combine_by_coords_kwargs": {
             "combine_attrs": "drop",
             "data_vars": "minimal",

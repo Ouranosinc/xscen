@@ -66,17 +66,17 @@ jobs:
     strategy:
       matrix:
         os: [ 'ubuntu-latest' ]
-        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
-        esmf-version: [ "8.7.0" ]  # 8.8.0 breaks h5py
+        python-version: [ "3.12", "3.13", "3.14" ]
+        esmf-version: [ "8.9.1" ]
         include:
           - os: 'macos-latest'
             python-version: "3.12"
           - os: "windows-latest"
             python-version: "3.11"
-          - os: 'ubuntu-latest'
-            python-version: "3.10"
-            esmf-version:  "8.7.0"  # 8.8.0 breaks h5py
-            xclim-version: "0.56"  # minimum supported version
+          - os: "ubuntu-latest"
+            python-version: "3.11"
+            xclim-version: "0.56"
+            esmf-version: "8.7.0"
     defaults:
       run:
         shell: bash -l {0}
@@ -140,7 +140,7 @@ jobs:
     strategy:
       matrix:
         os: [ 'ubuntu-latest' ]
-        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         # FIXME: Uncomment when multiplatform tests are passing
         # include:
         #   - os: 'macos-latest'

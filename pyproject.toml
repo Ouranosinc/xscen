@@ -74,7 +74,7 @@ maintainers = [
   {name = "Trevor James Smith", email = "smith.trevorj@ouranos.ca"}
 ]
 readme = "README.rst"
-requires-python = ">=3.10.0"
+requires-python = ">=3.11.0"
 keywords = ["xscen"]
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -86,7 +86,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -108,19 +107,19 @@ dependencies = [
   "geopandas >=1.0",
   "h5netcdf",
   "h5py",
-  "intake-esm ==2025.2.3",
+  "intake-esm >2025.7.9",
   "matplotlib >=3.6",
   "netcdf4",
-  "numcodecs <0.16.0", # FIXME: Pin required for zarr v2.x compatibility
+  "numcodecs",
   "numpy >=1.24",
   "openpyxl",
   "pandas >=2.2",
   "parse",
+  "polars",
   "pyarrow >=15.0.0",
   "pydantic >=2.8.2",
   "pyproj",
   "pyyaml",
-  "rechunker >=0.5.3",
   "scipy >=1.11.0",
   "shapely >=2.0",
   "sparse",
@@ -128,8 +127,11 @@ dependencies = [
   "xarray >=2023.11.0, !=2024.6.0",
   "xclim >=0.56, <0.61",
   "xsdba >=0.4.0",
-  "zarr >=2.13,<3.0"
+  "zarr >=3.1"
 ]
+
+[project.entry-points."xarray.backends"]
+zarrzip = "xscen:zarrzip.ZarrZipBackendEntrypoint"
 
 [project.optional-dependencies]
 extras = [
@@ -299,7 +301,7 @@ exclude = [
 
 [tool.mypy]
 files = "."
-python_version = "3.10"
+python_version = "3.11"
 show_error_codes = true
 strict = true
 warn_no_return = true
