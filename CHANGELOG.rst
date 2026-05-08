@@ -26,6 +26,7 @@ Bug fixes
 * Fix bug in ``xs.spatial_mean`` where the function would fail if the dataset had a `crs` coords instead of `rotated_pole`. (:pull:`716`, :issue:`718`).
 * Fix bug in ``xs.get_period_from_warming_level`` when requesting ``window > 50``. (:pull:`722`).
 * Fix a bug in ``xs.aggregate.spatial_mean`` with the `cos-lat` method where the function would give incorrect results if the dataset had irregular grid cells. (:issue:`726`, :pull:`727`).
+* Fix a bug ``xs.parse_directory`` when the `{...:_}` pattern is used and the `parse` module is newer than 1.20.2. (:pull:`729`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
