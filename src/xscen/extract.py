@@ -1035,23 +1035,21 @@ def _wl_prep_infomodels(realization, ignore_member, fields):
     info_models = []
 
     def _is_valid(name):
-        if name is None or name == "" or (isinstance(name, float) and np.isnan(name)):
-            return False
-        return True
+        return not (name == "" or pd.isna(name))
 
     for real in reals:
         info = {}
         if isinstance(real, xr.Dataset):
             attrs = get_cat_attrs(real)
             # get info on ds
-            if _is_valid(attrs.get("driving_model")) is False:
+            if not _is_valid(attrs.get("driving_model")):
                 info["source"] = attrs["source"]
             else:
                 info["source"] = attrs["driving_model"]
             info["experiment"] = attrs["experiment"]
             if ignore_member:
                 info["member"] = ".*"
-            elif _is_valid(attrs.get("driving_member")) is False:
+            elif not _is_valid(attrs.get("driving_member")):
                 info["member"] = attrs["member"]
             else:
                 info["member"] = attrs["driving_member"]
