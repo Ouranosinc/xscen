@@ -25,6 +25,7 @@ Bug fixes
 * Fix a bug stemming from a change in Pandas 3 in ``parse_directory`` when ``read_from_file`` tries to overwrite a column previously parsed as strings. (:pull:`703`).
 * Fix bug in ``xs.spatial_mean`` where the function would fail if the dataset had a `crs` coords instead of `rotated_pole`. (:pull:`716`, :issue:`718`).
 * Fix bug in ``xs.get_period_from_warming_level`` when requesting ``window > 50``. (:pull:`722`).
+* Fix bug in ``xs.get_period_from_warming_level`` and ``xs.get_warming_level_from_period`` where the functions would fail if the `driving_model` column of the catalog was a NaN instead of None. (:pull:`732`).
 * Fix a bug in ``xs.aggregate.spatial_mean`` with the `cos-lat` method where the function would give incorrect results if the dataset had irregular grid cells. (:issue:`726`, :pull:`727`).
 * Fix a bug in ``xs.parse_directory`` when the ``{...:_}`` pattern is used and the `parse` module is newer than 1.20.2. (:pull:`729`).
 
