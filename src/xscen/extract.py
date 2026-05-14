@@ -1033,19 +1033,25 @@ def _wl_prep_infomodels(realization, ignore_member, fields):
         reals = realization
 
     info_models = []
+
+    def _is_valid(name):
+        if name is None or name == "" or (isinstance(name, float) and np.isnan(name)):
+            return False
+        return True
+
     for real in reals:
         info = {}
         if isinstance(real, xr.Dataset):
             attrs = get_cat_attrs(real)
             # get info on ds
-            if attrs.get("driving_model") is None:
+            if _is_valid(attrs.get("driving_model")) is False:
                 info["source"] = attrs["source"]
             else:
                 info["source"] = attrs["driving_model"]
             info["experiment"] = attrs["experiment"]
             if ignore_member:
                 info["member"] = ".*"
-            elif attrs.get("driving_member") is None:
+            elif _is_valid(attrs.get("driving_member")) is False:
                 info["member"] = attrs["member"]
             else:
                 info["member"] = attrs["driving_member"]
@@ -1062,11 +1068,11 @@ def _wl_prep_infomodels(realization, ignore_member, fields):
         # Dict or Series (DataFrame row)
         elif hasattr(real, "keys") and set(real.keys()).issuperset((set(fields) - {"member"}) if ignore_member else fields):
             info = real
-            if info.get("driving_model") is not None:
+            if _is_valid(info.get("driving_model")):
                 info["source"] = info["driving_model"]
             if ignore_member:
                 info["member"] = ".*"
-            elif info.get("driving_member") is not None:
+            elif _is_valid(info.get("driving_member")):
                 info["member"] = info["driving_member"]
         else:
             raise ValueError(f"'realization' must be a Dataset, dict, string or list. Received {type(real)}.")
