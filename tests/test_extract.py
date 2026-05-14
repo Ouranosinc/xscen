@@ -474,7 +474,7 @@ class TestGetWarmingLevel:
 
         # Computed when downloading the updated timeseries
         wl2 = np.mean(xs.get_warming_level_from_period("obs-IPCC-updated", [1986, 2005]))
-        assert np.round(wl2, 2) == 0.67
+        assert np.round(wl2, 2) == 0.68
 
 
 class TestSubsetWarmingLevel:

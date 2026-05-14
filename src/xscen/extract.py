@@ -1030,9 +1030,9 @@ def _wl_prep_infomodels(realization, ignore_member, fields):
     obs_cnst = {"experiment": "obs", "mip_era": "obs", "member": ""}
     if isinstance(realization, str):
         if realization == "obs-IPCC-AR6":
-            return [{"source": src} | obs_cnst for src in ["Berkeley-Old", "HadCRUT5", "Kadow_v100", "NOAAGlobalTempv5"]]
+            return [{"source": src} | obs_cnst for src in ["Berkeley-LowRes", "HadCRUT5", "Kadow2020", "NOAAGlobalTempv5"]]
         if realization == "obs-IPCC-updated":
-            return [{"source": src} | obs_cnst for src in ["Berkeley", "HadCRUT5", "Kadow_v103", "NOAAGlobalTempv6"]]
+            return [{"source": src} | obs_cnst for src in ["Berkeley-HighRes", "HadCRUT5", "Kadow2026", "NOAAGlobalTempv6"]]
 
     if isinstance(realization, xr.Dataset | str | dict | pd.Series):
         reals = [realization]
