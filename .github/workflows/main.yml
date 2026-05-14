@@ -72,9 +72,10 @@ jobs:
           - os: 'macos-latest'
             esmf-version: "8.7.0"
             python-version: "3.12"
-          - os: "windows-2025"
-            esmf-version: "8.7.0"
-            python-version: "3.11"
+          # FIXME: setup-micromamba and Windows images fail with code 3221225781 (STATUS_ACCESS_VIOLATION)
+          # - os: "windows-latest"
+          #   esmf-version: "8.7.0"
+          #   python-version: "3.11"
           - os: 'ubuntu-latest'
             python-version: "3.10"
             esmf-version: "8.7.0"
