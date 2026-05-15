@@ -467,6 +467,15 @@ class TestGetWarmingLevel:
         out2 = xs.get_warming_level_from_period(reals, [2026 - 9, 2026 + 10])
         np.testing.assert_array_almost_equal(out2, [2.0418553921, 2.1353053921])
 
+    def test_obs_meta(self):
+        # Same as Figure 1.12 of Chap 1 of AR6 WG1 IPCC report
+        wl1 = np.mean(xs.get_warming_level_from_period("obs-IPCC-AR6", [1986, 2005]))
+        assert np.round(wl1, 2) == 0.69
+
+        # Computed when downloading the updated timeseries
+        wl2 = np.mean(xs.get_warming_level_from_period("obs-IPCC-updated", [1986, 2005]))
+        assert np.round(wl2, 2) == 0.68
+
 
 class TestSubsetWarmingLevel:
     ds = timeseries(

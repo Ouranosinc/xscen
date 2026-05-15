@@ -835,6 +835,8 @@ def get_period_from_warming_level(  # noqa: C901
        'cat:mip_era', 'cat:experiment', 'cat:member',
        and either 'cat:source' for global models or 'cat:driving_model' for regional models.
        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
+       Additionally, it can be "obs-IPCC-AR6" to get the exact same observational ensemble as used in the IPCC AR6 WG1 Chap1, Figure 1.12,
+       or "obs-IPCC-updated" to get the same ensemble but with updated sources.
     wl : float, np.ndarray
        Warming level(s).
        e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
@@ -965,6 +967,8 @@ def get_warming_level_from_period(
        'cat:mip_era', 'cat:experiment', 'cat:member', and 'cat:source' for global models.
        For regional models : 'cat:mip_era', 'cat:experiment', 'cat:driving_member', and 'cat:driving_model'.
        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
+       Additionally, it can be "obs-IPCC-AR6" to get the exact same observational ensemble as used in the IPCC AR6 WG1 Chap1, Figure 1.12,
+       or "obs-IPCC-updated" to get the same ensemble but with updated sources.
     period : list of str
        [start, end] of the period for which to compute the warming level.
     tas_baseline_period : list, optional
@@ -1023,6 +1027,13 @@ def get_warming_level_from_period(
 
 
 def _wl_prep_infomodels(realization, ignore_member, fields):
+    obs_cnst = {"experiment": "obs", "mip_era": "obs", "member": ""}
+    if isinstance(realization, str):
+        if realization == "obs-IPCC-AR6":
+            return [{"source": src} | obs_cnst for src in ["Berkeley-LowRes", "HadCRUT5", "Kadow2020", "NOAAGlobalTempv5"]]
+        if realization == "obs-IPCC-updated":
+            return [{"source": src} | obs_cnst for src in ["Berkeley-HighRes", "HadCRUT5", "Kadow2026", "NOAAGlobalTempv6"]]
+
     if isinstance(realization, xr.Dataset | str | dict | pd.Series):
         reals = [realization]
     elif isinstance(realization, pd.DataFrame):
