@@ -2,8 +2,23 @@
 Changelog
 =========
 
-`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-------------------------------------------------------------
+..
+    `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
+    ------------------------------------------------------------
+    Contributors:
+
+    Changes
+    ^^^^^^^
+    * No change.
+
+    Fixes
+    ^^^^^
+    * No change.
+
+.. _changes_0.15.0:
+
+`v0.15.0 <https://github.com/Ouranosinc/xscen/tree/0.15.0>`_ (2026-05-19)
+-------------------------------------------------------------------------
 Contributors: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Asli Bese (:user:`aslibese`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
 New features and enhancements
