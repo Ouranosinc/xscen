@@ -1251,12 +1251,15 @@ def subset_warming_level(
         def _make_bounds(bnds):
             s, e = bnds
             if not isinstance(s, str) and np.isnan(s):
-                return np.array([np.nan, np.nan])
+                # Need to return the proper dtype, this will be masked with wl_not_reached
+                return np.array([date_cls(1000, 1, 1), date_cls(1000, 1, 1)])
             # xscen returns first and last year included in the period
             # cf conventions want the time point that finishes the periods
             return np.array([date_cls(int(s), 1, 1), date_cls(int(e) + 1, 1, 1)])
 
-        bnds_crd = xr.apply_ufunc(_make_bounds, bounds, input_core_dims=[["wl_bounds"]], vectorize=True, output_core_dims=[["wl_bounds"]])
+        bnds_crd = xr.apply_ufunc(_make_bounds, bounds, input_core_dims=[["wl_bounds"]], vectorize=True, output_core_dims=[["wl_bounds"]]).where(
+            ~wl_not_reached
+        )
 
         ds_wl = (
             ds.sel(time=timesels)
