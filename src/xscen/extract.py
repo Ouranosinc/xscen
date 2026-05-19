@@ -1208,28 +1208,6 @@ def subset_warming_level(
                 coords={"warminglevel": wl_crd, "wl_bounds": [0, 1]},
             )
 
-        # Weird, but much easier to use xarray/pandas indexing for selecting years and much cleaner code using apply_ufunc
-        def _bounds_to_sel(time, bnds):
-            s, e = bnds
-            time = xr.DataArray(time, dims=("time",), coords={"time": time})
-            if not isinstance(s, str) and np.isnan(s):
-                sl = time.isel(time=slice(0, fake_time.size))
-            else:
-                sl = time.sel(time=slice(s, e))
-            if sl.time.size != fake_time.size:
-                sl = time.isel(time=slice(0, fake_time.size))
-            return sl.values
-
-        # from IPython import embed; embed()
-        timesels = xr.apply_ufunc(
-            _bounds_to_sel,
-            ds.time,
-            bounds,
-            input_core_dims=[["time"], ["wl_bounds"]],
-            vectorize=True,
-            output_core_dims=[["fake_time"]],
-        ).assign_coords(fake_time=fake_time)
-
         def _wl_not_reached(time, bnds):
             s, e = bnds
             if not isinstance(s, str) and np.isnan(s):
@@ -1246,20 +1224,40 @@ def subset_warming_level(
             vectorize=True,
         )
 
+        # Weird, but much easier to use xarray/pandas indexing for selecting years and much cleaner code using apply_ufunc
+        def _bounds_to_sel(time, bnds, not_reached):
+            time = xr.DataArray(time, dims=("time",), coords={"time": time})
+            if not_reached:
+                sl = time.isel(time=slice(0, fake_time.size))
+            else:
+                sl = time.sel(time=slice(*bnds))
+            return sl.values
+
+        # from IPython import embed; embed()
+        timesels = xr.apply_ufunc(
+            _bounds_to_sel,
+            ds.time,
+            bounds,
+            wl_not_reached,
+            input_core_dims=[["time"], ["wl_bounds"], []],
+            vectorize=True,
+            output_core_dims=[["fake_time"]],
+        ).assign_coords(fake_time=fake_time)
+
         date_cls = ds.indexes["time"][0].__class__
 
-        def _make_bounds(bnds):
-            s, e = bnds
-            if not isinstance(s, str) and np.isnan(s):
-                # Need to return the proper dtype, this will be masked with wl_not_reached
+        def _make_bounds(bnds, not_reached):
+            # Need to return the proper dtype for apply_ufunc, this will be masked with wl_not_reached afterwards
+            if not_reached:
                 return np.array([date_cls(1000, 1, 1), date_cls(1000, 1, 1)])
+            s, e = bnds
             # xscen returns first and last year included in the period
             # cf conventions want the time point that finishes the periods
             return np.array([date_cls(int(s), 1, 1), date_cls(int(e) + 1, 1, 1)])
 
-        bnds_crd = xr.apply_ufunc(_make_bounds, bounds, input_core_dims=[["wl_bounds"]], vectorize=True, output_core_dims=[["wl_bounds"]]).where(
-            ~wl_not_reached
-        )
+        bnds_crd = xr.apply_ufunc(
+            _make_bounds, bounds, wl_not_reached, input_core_dims=[["wl_bounds"], []], vectorize=True, output_core_dims=[["wl_bounds"]]
+        ).where(~wl_not_reached)
 
         ds_wl = (
             ds.sel(time=timesels)
