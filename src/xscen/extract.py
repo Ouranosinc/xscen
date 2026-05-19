@@ -1210,7 +1210,7 @@ def subset_warming_level(
 
         def _wl_not_reached(time, bnds):
             s, e = bnds
-            if not isinstance(s, str) and np.isnan(s):
+            if not isinstance(s, str) or not isinstance(e, str):
                 return True
             time = xr.DataArray(time, dims=("time",), coords={"time": time})
             sl = time.sel(time=slice(s, e)).time.dt.year.values
