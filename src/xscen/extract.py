@@ -1233,7 +1233,6 @@ def subset_warming_level(
                 sl = time.sel(time=slice(*bnds))
             return sl.values
 
-        # from IPython import embed; embed()
         timesels = xr.apply_ufunc(
             _bounds_to_sel,
             ds.time,
