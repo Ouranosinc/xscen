@@ -1117,12 +1117,13 @@ def subset_warming_level(
     wl: float | Sequence[float],
     to_level: str = "warminglevel-{wl}vs{period0}-{period1}",
     wl_dim: str | bool = "+{wl}Cvs{period0}-{period1}",
+    min_periods: int | None = None,
     **kwargs,
 ) -> xr.Dataset | None:
     r"""
     Subsets the input dataset with only the window of time over which the requested level of global warming
     is first reached, using the IPCC Atlas method.
-    A warming level is considered reached only if the full `window` years are available in the dataset.
+    A warming level is considered reached only if at least `min_periods` years are available in the dataset.
 
     Parameters
     ----------
@@ -1148,6 +1149,11 @@ def subset_warming_level(
        `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
        If None, no new dimensions will be added, invalid if `wl` is a sequence.
        If True, the dimension will include `wl` as numbers and units of "degC".
+    min_periods : int, optional
+       The minimum number of years from the warming level period available in the dataset to keep it.
+       If fewer years are available, `nan` is returned. This only concerns the subsetting, the full window
+       must still exist in the global mean temperature dataset for the given simulation.
+       Defaults to the same as `window`.
     \*\*kwargs :
         Instructions on how to search for warming levels, passed to :py:func:`get_period_from_warming_level`.
 
@@ -1158,11 +1164,12 @@ def subset_warming_level(
         If a single realization and warming level is requested and that warming level is never reached, None is returned.
         The dataset will have a new dimension `warminglevel` with `wl_dim` as coordinates.
         If `wl` was a list or if ds was multiple realizations (along a "realization" coord) the "time" axis
-        is a fake time starting in 1000-01-01 and with a length of `window` years.
+        is a fake time starting in 1000-01-01 and with a length of `window` years. Nans are appended when the subset is shorter than the window.
         Start and end of the subsets are added as bounds, in the new coordinate "warminglevel_bounds".
     """
     tas_baseline_period = standardize_periods(kwargs.get("tas_baseline_period", ["1850", "1900"]), multiple=False)
     window = kwargs.get("window", 20)
+    min_periods = min_periods or window
     if isinstance(wl, int | float):
         wl = [wl]
 
@@ -1214,7 +1221,7 @@ def subset_warming_level(
                 return True
             time = xr.DataArray(time, dims=("time",), coords={"time": time})
             sl = time.sel(time=slice(s, e)).time.dt.year.values
-            return len(sl) == 0 or (sl[-1] - sl[0] + 1) < window
+            return len(sl) == 0 or (sl[-1] - sl[0] + 1) < min_periods
 
         wl_not_reached = xr.apply_ufunc(
             _wl_not_reached,
@@ -1224,13 +1231,20 @@ def subset_warming_level(
             vectorize=True,
         )
 
+        date_cls = ds.indexes["time"][0].__class__
+        # sentinel value for NaT, having this value is highly improbable and it should always be smaller then the first time
+        # makes no sense to have data going before 1850 when working with warming levels
+        sentinel = date_cls(1849, 12, 31, 23, 59, 59)
         # Weird, but much easier to use xarray/pandas indexing for selecting years and much cleaner code using apply_ufunc
+
         def _bounds_to_sel(time, bnds, not_reached):
             time = xr.DataArray(time, dims=("time",), coords={"time": time})
             if not_reached:
                 sl = time.isel(time=slice(0, fake_time.size))
             else:
                 sl = time.sel(time=slice(*bnds))
+                if min_periods != window:
+                    sl = sl.pad(time=(0, fake_time.size - sl.time.size), constant_values=sentinel)
             return sl.values
 
         timesels = xr.apply_ufunc(
@@ -1243,12 +1257,10 @@ def subset_warming_level(
             output_core_dims=[["fake_time"]],
         ).assign_coords(fake_time=fake_time)
 
-        date_cls = ds.indexes["time"][0].__class__
-
         def _make_bounds(bnds, not_reached):
             # Need to return the proper dtype for apply_ufunc, this will be masked with wl_not_reached afterwards
             if not_reached:
-                return np.array([date_cls(1000, 1, 1), date_cls(1000, 1, 1)])
+                return np.array([sentinel, sentinel])
             s, e = bnds
             # xscen returns first and last year included in the period
             # cf conventions want the time point that finishes the periods
@@ -1258,11 +1270,14 @@ def subset_warming_level(
             _make_bounds, bounds, wl_not_reached, input_core_dims=[["wl_bounds"], []], vectorize=True, output_core_dims=[["wl_bounds"]]
         ).where(~wl_not_reached)
 
+        if min_periods != window:
+            sentinel_ds = xr.zeros_like(ds.isel(time=0)).assign_coords(time=[sentinel])
+            ds = xr.concat([sentinel_ds, ds], "time")
         ds_wl = (
             ds.sel(time=timesels)
             .drop_vars("time")
+            .where(~wl_not_reached & (timesels != sentinel))
             .rename(fake_time="time")
-            .where(~wl_not_reached)
             .assign_coords(warminglevel_bounds=bnds_crd)
             .drop_vars("wl_bounds")
         )
@@ -1271,7 +1286,7 @@ def subset_warming_level(
         start_yr, end_yr = get_period_from_warming_level(ds, wl=wl[0], return_central_year=False, **kwargs)
         # cut the window selected above and expand dims with wl_crd
         ds_wl = ds.sel(time=slice(start_yr, end_yr))
-        wl_not_reached = (start_yr is None) or (ds_wl.time.size == 0) or ((ds_wl.time.dt.year[-1] - ds_wl.time.dt.year[0] + 1) != window)
+        wl_not_reached = (start_yr is None) or (ds_wl.time.size == 0) or ((ds_wl.time.dt.year[-1] - ds_wl.time.dt.year[0] + 1) < min_periods)
         # WL not reached, not in ds, or not fully contained in ds.time
         if wl_not_reached:
             return None

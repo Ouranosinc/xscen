@@ -604,6 +604,24 @@ class TestSubsetWarmingLevel:
         ds_sub = xs.subset_warming_level(ds, wl=[1.5, 2, 20])
         assert ds_sub.time.size == 20 * 365
 
+    @pytest.mark.parametrize("calendar", ["noleap", "standard"])
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_minperiods(self, calendar, use_dask):
+        ds = self.ds
+        if use_dask:
+            ds = ds.chunk()
+        if calendar != "standard":
+            ds = ds.convert_calendar(calendar)
+
+        # Multi reals
+        ds_multi = ds.expand_dims(realization=["CMIP6_CanESM5_ssp126_r1i1p1f1", "CMIP6_CanESM5_ssp245_r1i1p1f1"])
+        ds_sub = xs.subset_warming_level(ds_multi, wl=1, window=30, min_periods=10)
+        np.testing.assert_array_equal(ds_sub.tas.isnull().sum("time").values, [[16], [16]])
+
+        # Single real
+        ds_sub = xs.subset_warming_level(ds, wl=1, window=30, min_periods=10)
+        assert ds_sub.time.size == 14
+
 
 class TestResample:
     @pytest.mark.parametrize(
