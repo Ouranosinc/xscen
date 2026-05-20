@@ -9,6 +9,7 @@ Contributors: Pascal Bourgault (:user:`aulemahal`).
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Performance enhancement of ``xs.subset_warminglevels`` when multiple realizations and/or multiple warming levels are requested. The change reduces the dask complexity of the function and adds support for subsetting timeseries with any frequencies. The function still can't do vectorized subsetting on sub-monthly timeseries with non-uniform calendars. (:pull:`736`).
+   + Also added a ``min_periods`` argument to allow subsetting periods shorter than the ``window``.
 
 .. _changes_0.15.0:
 
