@@ -543,6 +543,7 @@ class TestSubsetWarmingLevel:
                     ],
                 )
             )
+            dim = "real"
         else:
             ds = self.ds.expand_dims(
                 realization=[
@@ -551,14 +552,17 @@ class TestSubsetWarmingLevel:
                     "fake_faux_falsch_falso",
                 ]
             )
+            dim = "realization"
         ds_sub = xs.subset_warming_level(
             ds,
             wl=1.5,
             to_level="tests",
         )
         np.testing.assert_array_equal(ds_sub.time.dt.year, np.arange(1000, 1020))
-        np.testing.assert_array_equal(ds_sub.warminglevel_bounds[:2].dt.year, [[[2004, 2023]], [[2004, 2023]]])
-        assert ds_sub.warminglevel_bounds[2].isnull().all()
+        np.testing.assert_array_equal(
+            ds_sub.warminglevel_bounds.isel(**{dim: [0, 1]}).transpose(dim, "warminglevel", "wl_bounds").dt.year, [[[2004, 2024]], [[2004, 2024]]]
+        )
+        assert ds_sub.warminglevel_bounds.isel(**{dim: 2}).isnull().all()
 
     def test_multilevels(self):
         ds_sub = xs.subset_warming_level(
@@ -571,6 +575,52 @@ class TestSubsetWarmingLevel:
             ["+1Cvs1850-1900", "+2Cvs1850-1900", "+3Cvs1850-1900", "+20Cvs1850-1900"],
         )
         np.testing.assert_array_equal(ds_sub.tas.isnull().sum("time"), [20, 0, 20, 20])
+
+    def test_subyearly(self):
+        ds = timeseries(
+            np.arange(365 * 50),
+            variable="tas",
+            start="2000-01-01",
+            freq="D",
+            calendar="standard",
+            as_dataset=True,
+        ).assign_attrs(
+            {
+                "cat:mip_era": "CMIP6",
+                "cat:source": "CanESM5",
+                "cat:experiment": "ssp585",
+                "cat:member": "r1i1p1f1",
+            }
+        )
+        # single wl
+        ds_sub = xs.subset_warming_level(ds, wl=1.5)
+        assert ds_sub.time.equals(ds.sel(time=slice("2003", "2022")).time)
+
+        # multiple wl
+        with pytest.raises(ValueError, match="Subsetting by warming levels"):
+            ds_sub = xs.subset_warming_level(ds, wl=[1.5, 2, 20])
+
+        ds = ds.convert_calendar("noleap")
+        ds_sub = xs.subset_warming_level(ds, wl=[1.5, 2, 20])
+        assert ds_sub.time.size == 20 * 365
+
+    @pytest.mark.parametrize("calendar", ["noleap", "standard"])
+    @pytest.mark.parametrize("use_dask", [True, False])
+    def test_minperiods(self, calendar, use_dask):
+        ds = self.ds
+        if use_dask:
+            ds = ds.chunk()
+        if calendar != "standard":
+            ds = ds.convert_calendar(calendar)
+
+        # Multi reals
+        ds_multi = ds.expand_dims(realization=["CMIP6_CanESM5_ssp126_r1i1p1f1", "CMIP6_CanESM5_ssp245_r1i1p1f1"])
+        ds_sub = xs.subset_warming_level(ds_multi, wl=1, window=30, min_periods=10)
+        np.testing.assert_array_equal(ds_sub.tas.isnull().sum("time").values, [[16], [16]])
+
+        # Single real
+        ds_sub = xs.subset_warming_level(ds, wl=1, window=30, min_periods=10)
+        assert ds_sub.time.size == 14
 
 
 class TestResample:
