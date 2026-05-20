@@ -1270,7 +1270,7 @@ def subset_warming_level(
             _make_bounds, bounds, wl_not_reached, input_core_dims=[["wl_bounds"], []], vectorize=True, output_core_dims=[["wl_bounds"]]
         ).where(~wl_not_reached)
 
-        if min_periods != window:
+        if min_periods != window and (timesels == sentinel).any():
             sentinel_ds = xr.zeros_like(ds.isel(time=0)).assign_coords(time=[sentinel])
             ds = xr.concat([sentinel_ds, ds], "time")
         ds_wl = (
