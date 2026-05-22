@@ -146,7 +146,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
     Parameters
     ----------
-    *args : str or os.PathLike or dict
+    \*args : str or os.PathLike or dict
         Path to a catalog JSON file. If a dict, it must have two keys: 'esmcat' and 'df'.
         'esmcat' must be a dict representation of the ESM catalog.
         'df' must be a Pandas DataFrame containing content that would otherwise be in the CSV file.
@@ -254,7 +254,7 @@ class DataCatalog(intake_esm.esm_datastore):
         else:
             return data.apply(_find_unique, result_type="reduce").to_dict()
 
-    def unique(self, columns: str | Sequence[str] | None = None) -> pd.Series:
+    def unique(self, columns: str | Sequence[str] | None = None) -> pd.Series | list[str]:
         """
         Return a series of unique values in the catalog.
 
@@ -265,8 +265,9 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Returns
         -------
-        pd.Series
-            Pandas Series of unique values.
+        pd.Series or list of str
+            If `columns` is a string, returns a list of unique values for that column.
+            If `columns` is a sequence of strings, returns a Series of lists of unique values for each column.
         """
         if self.df.size == 0:
             raise ValueError("Catalog is empty.")
@@ -283,7 +284,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
     # FIXME: What are the type expectations here?
     def iter_unique(self, *columns: str) -> Generator[Any, Any]:
-        """
+        r"""
         Iterate over sub-catalogs for each group of unique values for all specified columns.
 
         This is a generator that yields a tuple of the unique values of the current
@@ -291,7 +292,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Parameters
         ----------
-        *columns : Sequence of str
+        \*columns : Sequence of str
             Columns to iterate over.
 
         Yields
@@ -306,19 +307,23 @@ class DataCatalog(intake_esm.esm_datastore):
             if sim:  # So we never yield empty catalogs
                 yield values, sim
 
-    def search(self, **columns: str) -> "DataCatalog":
+    def search(self, **columns: dict) -> "DataCatalog":
         r"""
         Modification of .search() to add the 'periods' keyword.
 
         Parameters
         ----------
-        **columns : sequence of str
-            Columns to iterate over.
+        **columns : dict
+            Search criteria, given as column names and values.
 
         Returns
         -------
         DataCatalog
             A DataCatalog of search results.
+
+        See Also
+        --------
+        intake_esm.core.esm_datastore.search : Search the catalog for entries matching the given criteria.
         """
         periods = columns.pop("periods", False)
         if len(columns) > 0:
@@ -618,7 +623,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
 
 class ProjectCatalog(DataCatalog):
-    """
+    r"""
     A DataCatalog with additional 'write' functionalities that can update and upload itself.
 
     Parameters
@@ -626,7 +631,7 @@ class ProjectCatalog(DataCatalog):
     df : str or dict
         If str, this must be a path or URL to a catalog JSON file.
         If dict, this must be a dict representation of an ESM catalog.  See the notes below.
-    *args : Any
+    \*args : Any
         Creation arguments.
     create : bool
         If True, and if 'df' is a string, this will create an empty ProjectCatalog if none already exists.
@@ -738,7 +743,7 @@ class ProjectCatalog(DataCatalog):
         df : str or dict
             If str, this must be a path or URL to a catalog JSON file.
             If dict, this must be a dict representation of an ESM catalog.  See the notes below.
-        *args : Any
+        \*args : Any
             Creation arguments.
         create : bool
             If True, and if 'df' is a string, this will create an empty ProjectCatalog if none already exists.
@@ -933,7 +938,7 @@ class ProjectCatalog(DataCatalog):
 
 
 def concat_data_catalogs(*dcs) -> DataCatalog:
-    """
+    r"""
     Concatenate a multiple DataCatalogs.
 
     Output catalog is the union of all rows and all derived variables, with the "esmcat"
@@ -941,7 +946,7 @@ def concat_data_catalogs(*dcs) -> DataCatalog:
 
     Parameters
     ----------
-    *dcs : Sequence of DataCatalog
+    \*dcs : Sequence of DataCatalog
         The DataCatalogs to concatenate.
 
     Returns
