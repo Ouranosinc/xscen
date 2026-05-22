@@ -774,7 +774,7 @@ def reduce_ensemble(
         Subset of horizons on which to create the data. Only used if `data` needs to be built.
     create_kwargs : dict, optional
         Arguments to pass to py:func:`xclim.ensembles.create_ensemble` if `data` is not an xr.DataArray.
-    \*\*kwargs : dict
+    **kwargs : dict
         Arguments to send to either py:func:`xclim.ensembles.kkz_reduce_ensemble` or py:func:`xclim.ensembles.kmeans_reduce_ensemble`.
 
     Returns

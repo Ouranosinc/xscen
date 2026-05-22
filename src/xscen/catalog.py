@@ -146,7 +146,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
     Parameters
     ----------
-    \*args : str or os.PathLike or dict
+    *args : str or os.PathLike or dict
         Path to a catalog JSON file. If a dict, it must have two keys: 'esmcat' and 'df'.
         'esmcat' must be a dict representation of the ESM catalog.
         'df' must be a Pandas DataFrame containing content that would otherwise be in the CSV file.
@@ -292,7 +292,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Parameters
         ----------
-        \*columns : Sequence of str
+        *columns : Sequence of str
             Columns to iterate over.
 
         Yields
@@ -631,7 +631,7 @@ class ProjectCatalog(DataCatalog):
     df : str or dict
         If str, this must be a path or URL to a catalog JSON file.
         If dict, this must be a dict representation of an ESM catalog.  See the notes below.
-    \*args : Any
+    *args : Any
         Creation arguments.
     create : bool
         If True, and if 'df' is a string, this will create an empty ProjectCatalog if none already exists.
@@ -743,7 +743,7 @@ class ProjectCatalog(DataCatalog):
         df : str or dict
             If str, this must be a path or URL to a catalog JSON file.
             If dict, this must be a dict representation of an ESM catalog.  See the notes below.
-        \*args : Any
+        *args : Any
             Creation arguments.
         create : bool
             If True, and if 'df' is a string, this will create an empty ProjectCatalog if none already exists.
@@ -946,7 +946,7 @@ def concat_data_catalogs(*dcs) -> DataCatalog:
 
     Parameters
     ----------
-    \*dcs : Sequence of DataCatalog
+    *dcs : Sequence of DataCatalog
         The DataCatalogs to concatenate.
 
     Returns

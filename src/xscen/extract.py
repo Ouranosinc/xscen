@@ -785,7 +785,7 @@ def get_warming_level(*args, **kwargs) -> xr.Dataset | xr.DataArray | dict | pd.
 
     Parameters
     ----------
-    \*args : list
+    *args : list
         Arguments to pass to get_period_from_warming_level.
     **kwargs : dict
         Keyword arguments to pass to get_period_from_warming_level.

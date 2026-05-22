@@ -294,7 +294,7 @@ def subset(
     tile_buffer : float
         For ['bbox', shape'], uses an approximation of the grid cell size to add a buffer around the requested region.
         This differs from clisops' 'buffer' argument in subset_shape().
-    \*\*kwargs : dict
+    **kwargs : dict
         Arguments to be sent to clisops. See relevant function for details. Depending on the method, required kwargs are:
         - gridpoint: lon, lat
         - bbox: lon_bnds, lat_bnds
@@ -359,7 +359,7 @@ def _subset_gridpoint(
         Latitude coordinate(s). Must be of the same length as lon.
     name: str, optional
         Used to rename the 'cat:domain' attribute.
-    \*\*kwargs : dict
+    **kwargs : dict
         Other arguments to be sent to clisops. Possible kwargs are:
         - start_date (str): Start date for the subset in the format 'YYYY-MM-DD'.
         - end_date (str): End date for the subset in the format 'YYYY-MM-DD'.
@@ -451,7 +451,7 @@ def _subset_bbox(
         Used to rename the 'cat:domain' attribute.
     tile_buffer: float
         Uses an approximation of the grid cell size to add a dynamic buffer around the requested region.
-    \*\*kwargs : dict
+    **kwargs : dict
         Other arguments to be sent to clisops. Possible kwargs are:
         - start_date (str): Start date for the subset in the format 'YYYY-MM-DD'.
         - end_date (str): End date for the subset in the format 'YYYY-MM-DD'.
@@ -510,7 +510,7 @@ def _subset_shape(
         Used to rename the 'cat:domain' attribute.
     tile_buffer: float
         Uses an approximation of the grid cell size to add a buffer around the requested region.
-    \*\*kwargs : dict
+    **kwargs : dict
         Other arguments to be sent to clisops. Possible kwargs are:
         - raster_crs (str or int): EPSG number or PROJ4 string.
         - shape_crs (str or int): EPSG number or PROJ4 string.
@@ -579,7 +579,7 @@ def _subset_sel(ds: xr.Dataset, *, name: str | None = None, **kwargs) -> xr.Data
         Dataset to be subsetted.
     name: str, optional
         Used to rename the 'cat:domain' attribute.
-    \*\*kwargs : dict
+    **kwargs : dict
         The keys are the dimensions to subset and the values are turned into a slice.
 
     Returns

@@ -275,7 +275,7 @@ def minimum_calendar(*calendars) -> str:
 
     Parameters
     ----------
-    \*calendars : str
+    *calendars : str
         Calendar names, given as successive arguments.
 
     Returns
