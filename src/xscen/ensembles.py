@@ -52,7 +52,7 @@ def ensemble_stats(  # noqa: C901
         Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
         If a single Dataset is passed, it is assumed to already be an ensemble and will be used as is. The 'realization' dimension is required.
     statistics : dict
-        xclim.ensembles statistics to be called. Dictionary in the format {function: arguments}.
+        The xclim.ensembles statistics to be called. Dictionary in the format {function: arguments}.
         If a function requires 'weights', you can leave it out of this dictionary and
         it will be applied automatically if the 'weights' argument is provided.
         See the Notes section for more details on robustness statistics, which are more complex in their usage.
@@ -62,7 +62,7 @@ def ensemble_stats(  # noqa: C901
         Weights to apply along the 'realization' dimension. This array cannot contain missing values.
     common_attrs_only : bool
         If True, keeps only the global attributes that are the same for all datasets and generate new id.
-        If False, keeps global attrs of the first dataset (same behaviour as xclim.ensembles.create_ensemble)
+        If False, keeps global attrs of the first dataset (same behaviour as xclim.ensembles.create_ensemble).
     to_level : str
         The processing level to assign to the output.
 
@@ -73,10 +73,12 @@ def ensemble_stats(  # noqa: C901
 
     See Also
     --------
-    xclim.ensembles._base.create_ensemble, xclim.ensembles._base.ensemble_percentiles,
-    xclim.ensembles._base.ensemble_mean_std_max_min,
-    xclim.ensembles._robustness.robustness_fractions, xclim.ensembles._robustness.robustness_categories,
-    xclim.ensembles._robustness.robustness_coefficient,
+    xclim.ensembles._base.create_ensemble: Concatenate datasets along a new 'realization' dimension.
+    xclim.ensembles._base.ensemble_percentiles: Calculate percentiles along the 'realization' dimension.
+    xclim.ensembles._base.ensemble_mean_std_max_min: Calculate mean, std, max, and min along the 'realization' dimension.
+    xclim.ensembles._robustness.robustness_fractions: Calculate robustness metrics.
+    xclim.ensembles._robustness.robustness_categories: Categorize the robustness of changes.
+    xclim.ensembles._robustness.robustness_coefficient: Calculate the robustness coefficient.
 
     Notes
     -----
@@ -229,8 +231,8 @@ def generate_weights(  # noqa: C901
     independence_level : str
         'model': Weights using the method '1 model - 1 Vote',
         where every unique combination of 'source' and 'driving_model' is considered a model.
-        'GCM': Weights using the method '1 GCM - 1 Vote'
-        'institution': Weights using the method '1 institution - 1 Vote'
+        'GCM': Weights using the method '1 GCM - 1 Vote'é
+        'institution': Weights using the method '1 institution - 1 Vote'.
     balance_experiments : bool
         If True, each experiment will be given a total weight of 1
         (prior to subsequent weighting made through `attribute_weights`).
@@ -244,7 +246,7 @@ def generate_weights(  # noqa: C901
         as the datasets (ex: time, horizon) and the attribute being weighted (ex: experiment).
         A `others` key can be used to give the same weight to all entries not specifically named in the dictionary.
         Example #1: {'source': {'MPI-ESM-1-2-HAM': 0.25, 'MPI-ESM1-2-HR': 0.5}},
-        Example #2: {'experiment': {'ssp585': xr.DataArray, 'ssp126': xr.DataArray}, 'institution': {'CCCma': 0.5, 'others': 1}}
+        Example #2: {'experiment': {'ssp585': xr.DataArray, 'ssp126': xr.DataArray}, 'institution': {'CCCma': 0.5, 'others': 1}}.
     skipna : bool
         If True, weights will be computed from attributes only.
         If False, weights will be computed from the number of non-missing values.
@@ -686,7 +688,7 @@ def build_partition_data(
         In that case, the ensembles will be loaded separately for each `bias_adjust_project`,
         the subsetting or regridding can be applied before combining the datasets through concatenation.
         If `bias_adjust_project` is not in `partition_dim`, `source` will be used instead.
-    partition_dim: list[str]
+    partition_dim : list[str]
         Components of the partition. They will become the dimension of the output.
         The default is ['source', 'experiment', 'bias_adjust_project'].
         For source, the dimension will actually be institution_source_member.
@@ -701,7 +703,7 @@ def build_partition_data(
         The default is {'source': 'model', 'bias_adjust_project': 'downscaling', 'experiment': 'scenario'}.
     to_dataset_kw : dict, optional
         Arguments to pass to `xscen.DataCatalog.to_dataset()` if datasets is a DataCatalog.
-    to_level: str
+    to_level : str
         The processing level of the output dataset. Default is 'partition-ensemble'.
 
     Returns
@@ -711,7 +713,7 @@ def build_partition_data(
 
     See Also
     --------
-    xclim.ensembles
+    xclim.ensembles: Module with functions to compute ensemble statistics and reduce ensembles using clustering algorithms.
     """
     if partition_dim is None:
         partition_dim = ["realization", "experiment", "bias_adjust_project"]
