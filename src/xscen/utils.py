@@ -1426,7 +1426,19 @@ def xrfreq_to_timedelta(freq: str):
 
 
 def ensure_new_xrfreq(freq: str) -> str:  # noqa: C901
-    """Convert the frequency string to the newer syntax (pandas >= 2.2) if needed."""
+    """
+    Convert the frequency string to the newer syntax (pandas >= 2.2), if needed.
+
+    Parameters
+    ----------
+    freq : str
+        Frequency string.
+
+    Returns
+    -------
+    str
+        New format frequency string.
+    """
     # Copied from xarray xr.coding.cftime_offsets._legacy_to_new_freq
     # https://github.com/pydata/xarray/pull/8627/files
     if not isinstance(freq, str):
@@ -1485,6 +1497,16 @@ def _xarray_defaults(**kwargs):
 
 
 def rechunk_for_resample(obj: xr.DataArray | xr.Dataset, **resample_kwargs):
+    """
+    Rechunk object for resampling
+
+    Parameters
+    ----------
+    obj : xr.DataArray or xr.Dataset
+        Object.
+    **resample_kwargs : dict
+        Resampling keyword arguments.
+    """
     if not uses_dask(obj):
         return obj
 

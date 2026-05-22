@@ -1065,7 +1065,7 @@ def zip_directory(
         The zip file to create.
     delete : bool
         If True, the original directory is deleted after zipping.
-    \*\*zip_args
+    **zip_args : dict
         Any other arguments to pass to :py:mod:`zipfile.ZipFile`, such as "compression".
         The default is to make no compression (``compression=ZIP_STORED``).
     """
@@ -1150,12 +1150,13 @@ def load_sparse(filename: str | os.PathLike):
 
     Parameters
     ----------
-    filename: pathlike
+    filename : pathlike
         Path of the netCDF to read.
 
     Returns
     -------
-    xr.DataArray: DataArray wrapping a sparse.COO array.
+    xr.DataArray
+        DataArray wrapping a sparse.COO array.
     """
     ds = xr.open_dataset(filename)
     return xr.DataArray(

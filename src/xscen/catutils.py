@@ -66,7 +66,7 @@ Add your own types with the :py:func:`register_parse_type` decorator.
 """
 
 
-def register_parse_type(name: str, regex: str = r"([^\_\/\\]*)", group_count: int = 1):
+def register_parse_type(name: str, regex: str = r"([^\_\/\\]*)", group_count: int = 1) -> Callable:
     r"""
     Register a new parse type to be available in :py:func:`parse_directory` patterns.
 
@@ -76,13 +76,18 @@ def register_parse_type(name: str, regex: str = r"([^\_\/\\]*)", group_count: in
 
     Parameters
     ----------
-    name: str
+    name : str
         The type name. To make use of this type, put "{field:name}" in your pattern.
-    regex: str
+    regex : str
         A regex string to determine what can be matched by this type.
         The default matches anything but / \ and _, same as the default parse type.
-    group_count: int
+    group_count : int
         The number of regex groups in the previous regex string.
+
+    Returns
+    -------
+    Callable
+        Parsing function.
     """
     if not name[0].isalpha():
         raise ValueError("A pattern name should begin with a letter to avoid confusion with format modifiers.")
@@ -231,7 +236,7 @@ def _name_parser(
 
     Returns
     -------
-    dict or None
+    dict, optional
         The metadata fields parsed from the path using the first matching pattern.
         If no pattern matched, None is returned.
 
@@ -300,7 +305,7 @@ def _parse_dir(  # noqa: C901
         This pattern can not include the asset's basename.
     skip_dirs : list of strings or Paths, optional
         A list of directories to skip in the walk.
-    checks: list of str, optional
+    checks : list of str, optional
         A list of checks to perform, available values are:
         - "readable" : Check that the file is readable by the current user.
         - "writable" : Check that the file is writable by the current user.
@@ -490,7 +495,7 @@ def parse_directory(  # noqa: C901
     id_columns : list of str, optional
         List of column names on which to base the dataset definition. Empty columns will be skipped.
         If None (default), it uses :py:data:`ID_COLUMNS`.
-    read_from_file : boolean or set of strings or tuple of 2 sets of strings or list of tuples
+    read_from_file : bool or set of strings or tuple of 2 sets of strings or list of tuples
         If True, if some fields were not parsed from their path, files are opened and
         missing fields are parsed from their metadata, if found.
         If a sequence of column names, only those fields are parsed from the file, if missing.
@@ -504,7 +509,7 @@ def parse_directory(  # noqa: C901
     homogenous_info : dict, optional
         Using the {column_name: description} format, information to apply to all files.
         These are applied before the `cvs`.
-    cvs: str or os.PathLike or dict, optional
+    cvs : str or os.PathLike or dict, optional
         Dictionary with mapping from parsed term to preferred terms (Controlled VocabularieS) for each column.
         May have an additional "attributes" entry which maps from attribute names in the files to
         official column names. The attribute translation is done before the rest.
@@ -516,9 +521,9 @@ def parse_directory(  # noqa: C901
         Only folders matching the pattern are parsed to find datasets.
     skip_dirs : list of str or Paths, optional
         A list of folders that will be removed from the search, should be absolute.
-    xr_open_kwargs: dict
+    xr_open_kwargs : dict
         If needed, arguments to send xr.open_dataset() when opening the file to read the attributes.
-    only_official_columns: bool
+    only_official_columns : bool
         If True (default), this ensures the final catalog only has the columns defined in :py:data:`xscen.catalog.COLUMNS`.
         Other fields in the patterns will raise an error.
         If False, the columns are those used in the patterns and the homogeneous info.
@@ -526,15 +531,20 @@ def parse_directory(  # noqa: C901
         Path, format, and id are always present in the output.
     progress : bool
         If True, a counter is shown in stdout when finding files on disk. Does nothing if `parallel_dirs` is not False.
-    parallel_dirs: bool or int
+    parallel_dirs : bool or int
         If True, each directory is searched in parallel. If an int, it is the number of parallel searches.
         This should only be significantly useful if the directories are on different disks.
-    file_checks: list of str, optional
+    file_checks : list of str, optional
         A list of file checks to run on the parsed files. Available values are:
         - "readable" : Check that the file is readable by the current user.
         - "writable" : Check that the file is writable by the current user.
         - "ncvalid" : For netCDF, check that it is valid (openable with netCDF4).
         Any check will slow down the parsing.
+
+    Returns
+    -------
+    pd.DataFrame
+        Parsed directory files.
 
     Notes
     -----
@@ -560,11 +570,6 @@ def parse_directory(  # noqa: C901
         The first section of the filename will be excluded from the output, it was given a name (ignore project name) to make the pattern readable.
         The last section of the filenames ("dates") will yield a "date_start" / "date_end" couple.
         All other sections in the middle will be ignored, as they match "{?:_}".
-
-    Returns
-    -------
-    pd.DataFrame
-        Parsed directory files
     """
     if isinstance(directories, str | Path):
         directories = [directories]
@@ -724,8 +729,8 @@ def parse_from_ds(  # noqa: C901
     names: Sequence[str],
     attrs_map: Mapping[str, str] | None = None,
     **xrkwargs,
-):
-    """
+) -> dict[str, Any]:
+    r"""
     Parse a list of catalog fields from the file/dataset itself.
 
     If passed a path, this opens the file.
@@ -740,14 +745,19 @@ def parse_from_ds(  # noqa: C901
 
     Parameters
     ----------
-    obj: str or os.PathLike or xr.Dataset
+    obj : str or os.PathLike or xr.Dataset
         Dataset to parse.
-    names: sequence of str
+    names : sequence of str
         List of attributes to be parsed from the dataset.
-    attrs_map: dict, optional
+    attrs_map : dict, optional
         In the case of non-standard names in the file, this can be used to match entries in the files to specific 'names' in the requested list.
-    xrkwargs:
+    **xrkwargs : dict
         Arguments to be passed to open_dataset().
+
+    Returns
+    -------
+    dict
+        Attributes.
     """
     get_time = bool({"frequency", "xrfreq", "date_start", "date_end"}.intersection(names))
     if not isinstance(obj, xr.Dataset):
@@ -1016,9 +1026,10 @@ def _build_path(
     schemas: dict,
     root: str | os.PathLike,
     get_type: bool = False,
-    **extra_facets,
+    **extra_facets: dict[str, Any],
 ) -> Path | tuple[Path, str]:
     # Get all known metadata
+    facets = {}
     if isinstance(data, xr.Dataset | xr.DataArray):
         facets = (
             # Get non-attribute metadata
@@ -1070,7 +1081,7 @@ def build_path(
     data: dict | xr.Dataset | xr.DataArray | pd.Series | DataCatalog | pd.DataFrame,
     schemas: str | os.PathLike | dict | None = None,
     root: str | os.PathLike | None = None,
-    **extra_facets,
+    **extra_facets: dict[str, Any],
 ) -> Path | DataCatalog | pd.DataFrame:
     r"""
     Parse the schema from a configuration and construct path using a dictionary of facets.
@@ -1089,7 +1100,7 @@ def build_path(
         Or a single schema dict (single element of the yaml).
     root : str or Path, optional
         If given, the generated path(s) is given under this root one.
-    \*\*extra_facets
+    **extra_facets : dict
         Extra facets to supplement or override metadadata missing from the first input.
 
     Returns
@@ -1140,17 +1151,31 @@ def _as_template(a):
     return "{" + a + "}"
 
 
-def partial_format(template, **fmtargs):
-    """Format a template only partially, leaving un-formatted templates intact."""
+def partial_format(template: str, **fmtargs):
+    """
+    Format a template only partially, leaving un-formatted templates intact.
 
-    class PartialFormatDict(dict):
+    Parameters
+    ----------
+    template : str
+        Template to format.
+    **fmtargs : dict
+        Formatting keyword arguments.
+
+    Returns
+    -------
+    str
+        Partially-formatted template.
+    """
+
+    class _PartialFormatDict(dict):
         def __missing__(self, key):
             return _as_template(key)
 
-    return template.format_map(PartialFormatDict(**fmtargs))
+    return template.format_map(_PartialFormatDict(**fmtargs))
 
 
-def patterns_from_schema(schema: str | dict, exts: Sequence[str] | None = None):
+def patterns_from_schema(schema: str | dict, exts: Sequence[str] | None = None) -> list[str]:
     """
     Generate all valid patterns for a given schema.
 
@@ -1160,17 +1185,18 @@ def patterns_from_schema(schema: str | dict, exts: Sequence[str] | None = None):
 
     Parameters
     ----------
-    schema: dict or str
+    schema : dict or str
         A dict with keys "with" (optional), "folders" and "filename", constructed as described
         in the `xscen/data/file_schema.yml` file.
         Or the name of a pattern group from that file.
-    exts: sequence of strings, optional
+    exts : sequence of strings, optional
         A list of file extensions to consider, with the leading dot.
         Defaults to ``[".nc", ".zarr", ".zarr.zip"]``.
 
     Returns
     -------
-    list of patterns compatible with :py:func:`parse_directory`.
+    list[str]
+        List of patterns compatible with :py:func:`parse_directory`.
     """
     if isinstance(schema, str):
         schemas = Path(__file__).parent / "data" / "file_schema.yml"

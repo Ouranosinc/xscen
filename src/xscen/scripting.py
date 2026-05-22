@@ -55,16 +55,16 @@ def send_mail(
 
     Parameters
     ----------
-    subject: str
+    subject : str
       Subject line.
-    msg: str
+    msg : str
       Main content of the email. Can be UTF-8 and multi-line.
-    to: str, optional
+    to : str, optional
       Email address to which send the email. If None (default), the email is sent to "{os.getlogin()}@{os.uname().nodename}".
       On unix systems simply put your real email address in `$HOME/.forward` to receive the emails sent to this local address.
     server : str
       SMTP server url. Defaults to 127.0.0.1, the local host. This function does not try to log-in.
-    port: int
+    port : int
       Port of the SMTP service on the server. Defaults to 25, which is usually the default port on unix-like systems.
     attachments : list of paths or matplotlib figures or tuples of a string and a path or figure, optional
       List of files to attach to the email.

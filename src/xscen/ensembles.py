@@ -69,7 +69,14 @@ def ensemble_stats(  # noqa: C901
     Returns
     -------
     xr.Dataset
-        Dataset with ensemble statistics
+        Dataset with ensemble statistics.
+
+    See Also
+    --------
+    xclim.ensembles._base.create_ensemble, xclim.ensembles._base.ensemble_percentiles,
+    xclim.ensembles._base.ensemble_mean_std_max_min,
+    xclim.ensembles._robustness.robustness_fractions, xclim.ensembles._robustness.robustness_categories,
+    xclim.ensembles._robustness.robustness_coefficient,
 
     Notes
     -----
@@ -91,13 +98,6 @@ def ensemble_stats(  # noqa: C901
       using 'ref' is only accepted if 'robustness_fractions' (or 'robustness_categories') is the only statistic being computed.
     * If you want to use compute a robustness statistic on a climatology, you should first compute the climatologies and deltas yourself,
       then leave 'ref' as None and pass the deltas as the 'datasets' argument. This will be compatible with other statistics.
-
-    See Also
-    --------
-    xclim.ensembles._base.create_ensemble, xclim.ensembles._base.ensemble_percentiles,
-    xclim.ensembles._base.ensemble_mean_std_max_min,
-    xclim.ensembles._robustness.robustness_fractions, xclim.ensembles._robustness.robustness_categories,
-    xclim.ensembles._robustness.robustness_coefficient,
     """
     create_kwargs = create_kwargs or {}
     statistics = deepcopy(statistics)  # to avoid modifying the original dictionary
@@ -254,6 +254,11 @@ def generate_weights(  # noqa: C901
     standardize : bool
         If True, the weights are standardized to sum to 1 (per timestep/horizon, if skipna=False).
 
+    Returns
+    -------
+    xr.DataArray
+        Weights along the 'realization' dimension, or 2D weights along the 'realization' and 'time/horizon' dimensions if skipna=False.
+
     Notes
     -----
     The following attributes are required for the function to work:
@@ -263,11 +268,6 @@ def generate_weights(  # noqa: C901
         - 'cat:experiment' in all datasets if split_experiments=True
 
     Even when not required, the 'cat:member' and 'cat:experiment' attributes are strongly recommended to ensure the weights are computed correctly.
-
-    Returns
-    -------
-    xr.DataArray
-        Weights along the 'realization' dimension, or 2D weights along the 'realization' and 'time/horizon' dimensions if skipna=False.
     """
     if isinstance(datasets, list):
         datasets = {i: datasets[i] for i in range(len(datasets))}
