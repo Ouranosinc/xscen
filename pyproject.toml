@@ -329,7 +329,10 @@ checks = [
 exclude = [
   # don't report on objects that match any of these regex
   '\.undocumented_method$',
-  '\.__repr__$'
+  '\.__repr__$',
+  # any object starting with an underscore is a private object
+  '\._',
+  '\._\w+'
 ]
 override_SS05 = [
   # override SS05 to allow docstrings starting with these words
