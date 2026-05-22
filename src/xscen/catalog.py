@@ -7,7 +7,7 @@ import logging
 import os
 import re
 import shutil as sh
-from collections.abc import Mapping, Sequence
+from collections.abc import Generator, Mapping, Sequence
 from copy import deepcopy
 from functools import reduce
 from operator import or_
@@ -146,7 +146,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
     Parameters
     ----------
-    \*args : str or os.PathLike or dict
+    *args : str or os.PathLike or dict
         Path to a catalog JSON file. If a dict, it must have two keys: 'esmcat' and 'df'.
         'esmcat' must be a dict representation of the ESM catalog.
         'df' must be a Pandas DataFrame containing content that would otherwise be in the CSV file.
@@ -154,12 +154,12 @@ class DataCatalog(intake_esm.esm_datastore):
         If True, will check that all files in the catalog exist on disk and remove those that don't.
     drop_duplicates : bool
         If True, will drop duplicates in the catalog based on the 'id' and 'path' columns.
-    \**kwargs : dict
+    **kwargs : dict
         Any other arguments are passed to intake_esm.esm_datastore.
 
     See Also
     --------
-    intake_esm.core.esm_datastore
+    intake_esm.core.esm_datastore : Intake plugin for parsing an ESM (Earth System Model) Catalog and loading assets into xarray datasets.
     """
 
     def __init__(self, *args, check_valid: bool = False, drop_duplicates: bool = False, **kwargs):
@@ -195,19 +195,26 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Parameters
         ----------
-        data: DataFrame or path or sequence of paths
-          A DataFrame or one or more paths to csv files.
-        esmdata: path or dict, optional
-          The "ESM collection data" as a path to a json file or a dict.
-          If None (default), xscen's default :py:data:`esm_col_data` is used.
+        data : DataFrame or path or sequence of paths
+            A DataFrame or one or more paths to csv files.
+        esmdata : path or dict, optional
+            The "ESM collection data" as a path to a json file or a dict.
+            If None (default), xscen's default :py:data:`esm_col_data` is used.
         read_csv_kwargs : dict, optional
-          Extra kwargs to pass to `pd.read_csv`, in addition to the ones in :py:data:`csv_kwargs`.
-        name: str
-          If `metadata` doesn't contain it, a name to give to the catalog.
+            Extra kwargs to pass to `pd.read_csv`, in addition to the ones in :py:data:`csv_kwargs`.
+        name : str
+            If `metadata` doesn't contain it, a name to give to the catalog.
+        **intake_kwargs : dict
+            Keyword argunments passed to intake.
+
+        Returns
+        -------
+        dict
+            DataCatalog object.
 
         See Also
         --------
-        pandas.read_csv
+        pandas.read_csv : Read a comma-separated values (csv) file into DataFrame.
         """
         if isinstance(data, pd.DataFrame):
             df = data
@@ -235,7 +242,7 @@ class DataCatalog(intake_esm.esm_datastore):
         return super().__dir__() + rv
 
     def _unique(self, columns) -> dict:
-        def _find_unique(series):
+        def _find_unique(series) -> list:
             values = series.dropna()
             if series.name in self.esmcat.columns_with_iterables:
                 values = tlz.concat(values)
@@ -247,14 +254,19 @@ class DataCatalog(intake_esm.esm_datastore):
         else:
             return data.apply(_find_unique, result_type="reduce").to_dict()
 
-    def unique(self, columns: str | Sequence[str] | None = None):
+    def unique(self, columns: str | Sequence[str] | None = None) -> pd.Series:
         """
         Return a series of unique values in the catalog.
 
         Parameters
         ----------
         columns : str or sequence of str, optional
-          The columns to get unique values from. If None, all columns are used.
+            The columns to get unique values from. If None, all columns are used.
+
+        Returns
+        -------
+        pd.Series
+            Pandas Series of unique values.
         """
         if self.df.size == 0:
             raise ValueError("Catalog is empty.")
@@ -269,19 +281,32 @@ class DataCatalog(intake_esm.esm_datastore):
             return uni[columns]
         return uni
 
-    def iter_unique(self, *columns):
+    # FIXME: What are the type expectations here?
+    def iter_unique(self, *columns: str) -> Generator[Any, Any]:
         """
         Iterate over sub-catalogs for each group of unique values for all specified columns.
 
         This is a generator that yields a tuple of the unique values of the current
         group, in the same order as the arguments, and the sub-catalog.
+
+        Parameters
+        ----------
+        *columns : Sequence of str
+            Columns to iterate over.
+
+        Yields
+        ------
+        Any
+            Values.
+        Any
+            Sim.
         """
         for values in itertools.product(*self.unique(columns)):
             sim = self.search(**dict(zip(columns, values, strict=False)))
             if sim:  # So we never yield empty catalogs
                 yield values, sim
 
-    def search(self, **columns):
+    def search(self, **columns: str):
         """Modification of .search() to add the 'periods' keyword."""
         periods = columns.pop("periods", False)
         if len(columns) > 0:
@@ -298,7 +323,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Parameters
         ----------
-        columns: list of str, optional
+        column : list of str, optional
             The columns used to identify duplicates. If None, 'id' and 'path' are used.
         """
         # In case variables are being added in an existing Zarr, append them
