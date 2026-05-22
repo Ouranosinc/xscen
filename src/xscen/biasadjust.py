@@ -66,33 +66,33 @@ def train(
     Parameters
     ----------
     dref : xr.Dataset
-      The target timeseries, on the reference period.
+        The target timeseries, on the reference period.
     dhist : xr.Dataset
-      The timeseries to adjust, on the reference period.
+        The timeseries to adjust, on the reference period.
     var : str or list of str
-      Variable(s) on which to do the adjustment.
+        Variable(s) on which to do the adjustment.
     period : list of str
-      [start, end] of the reference period
+        [start, end] of the reference period.
     method : str
-      Name of the `xsdba.TrainAdjust` method of xclim.
+        Name of the `xsdba.TrainAdjust` method of xclim.
     group : str or xsdba.Grouper or dict or bool, optional
-      Grouping information. If a string, it is interpreted as a grouper on the time dimension. If a dict, it is passed to `xsdba.Grouper.from_kwargs`.
-      Defaults to {"group": "time.dayofyear", "window": 31}.
-      If False, this argument will be skipped and never passed to the adjustment.
+        Grouping information. If a string, it is interpreted as a grouper on the time dimension. If a dict, it is passed to `xsdba.Grouper.from_kwargs`.
+        Defaults to {"group": "time.dayofyear", "window": 31}.
+        If False, this argument will be skipped and never passed to the adjustment.
     xsdba_train_args : dict, optional
-      Dict of arguments to pass to the `.train` of the adjustment object.
+        Dict of arguments to pass to the `.train` of the adjustment object.
     xclim_train_args : dict, optional
-      Dict of arguments to pass to the `.train` of the adjustment object.
-      A warning will be emitted stating that this a legacy argument replaced with `xsdba_train_args`.
-    maximal_calendar: str
-      Maximal calendar dhist can be. The hierarchy: 360_day < noleap < standard < all_leap.
-      If dhist's calendar is higher than maximal calendar, it will be converted to the maximal calendar.
-    jitter_under: dict, optional
-      If given, a dictionary of args to pass to `jitter_under_thresh`.
-    jitter_over: dict, optional
-      If given, a dictionary of args to pass to `jitter_over_thresh`.
-    align_on: str, optional
-      `align_on` argument for the function `xr.DataArray.convert_calendar`.
+        Dict of arguments to pass to the `.train` of the adjustment object.
+        A warning will be emitted stating that this a legacy argument replaced with `xsdba_train_args`.
+    maximal_calendar : str
+        Maximal calendar dhist can be. The hierarchy: 360_day < noleap < standard < all_leap.
+        If dhist's calendar is higher than maximal calendar, it will be converted to the maximal calendar.
+    jitter_under : dict, optional
+        If given, a dictionary of args to pass to `jitter_under_thresh`.
+    jitter_over : dict, optional
+        If given, a dictionary of args to pass to `jitter_over_thresh`.
+    align_on : str, optional
+        `align_on` argument for the function `xr.DataArray.convert_calendar`.
     additive_space : dict, optional
         A dictionary of variables and their arguments to convert them to additive space.
         The transformation will be applied to both `dref` and `dhist` datasets,
@@ -104,13 +104,14 @@ def train(
     Returns
     -------
     xr.Dataset
-      Trained algorithm's data.
+        Trained algorithm's data.
 
     See Also
     --------
-    xsdba.adjustment.DetrendedQuantileMapping, xsdba.adjustment.ExtremeValues,
-     xsdba.processing.to_additive_space, xsdba.processing.from_additive_space
-
+    xsdba.adjustment.DetrendedQuantileMapping
+    xsdba.adjustment.ExtremeValues
+    xsdba.processing.to_additive_space
+    xsdba.processing.from_additive_space
     """
     if xclim_train_args is not None:
         warnings.warn(
@@ -237,35 +238,35 @@ def adjust(  # noqa: C901
     Parameters
     ----------
     dtrain : xr.Dataset
-      A trained algorithm's dataset, as returned by `train`.
+        A trained algorithm's dataset, as returned by `train`.
     dsim : xr.Dataset
-      Simulated timeseries, projected period.
+        Simulated timeseries, projected period.
     periods : list of str or list of lists of str
-      Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
+        Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
     stack_periods : dict | None, optional
-      Dictionary of arguments to pass to `xsdba.stack_periods` before adjustment. `xsdba.unstack_periods` will be called after.
-      If given, the 'periods' argument must contain a single period, which will be subsetted before calling `xsdba.stack_periods`.
+        Dictionary of arguments to pass to `xsdba.stack_periods` before adjustment. `xsdba.unstack_periods` will be called after.
+        If given, the 'periods' argument must contain a single period, which will be subsetted before calling `xsdba.stack_periods`.
     dref : xr.Dataset, optional
-      Reference timeseries, needed only for certain methods.
+        Reference timeseries, needed only for certain methods.
     xsdba_adjust_args : dict, optional
-      Dict of arguments to pass to the `.adjust` of the adjustment object.
+        Dict of arguments to pass to the `.adjust` of the adjustment object.
     xclim_adjust_args : dict, optional
-      Dict of arguments to pass to the `.adjust` of the adjustment object
-      A warning will be emitted stating that this a legacy argument replaced with `xclim_train_args`.
+        Dict of arguments to pass to the `.adjust` of the adjustment object
+        A warning will be emitted stating that this a legacy argument replaced with `xclim_train_args`.
     to_level : str
-      The processing level to assign to the output.
-      Defaults to 'biasadjusted'
+        The processing level to assign to the output.
+        Defaults to 'biasadjusted'
     bias_adjust_institution : str, optional
-      The institution to assign to the output.
+        The institution to assign to the output.
     bias_adjust_project : str, optional
-      The project to assign to the output.
-    align_on: str, optional
-      `align_on` argument for the function `xr.DataArray.convert_calendar`.
+        The project to assign to the output.
+    align_on : str, optional
+        `align_on` argument for the function `xr.DataArray.convert_calendar`.
 
     Returns
     -------
     xr.Dataset
-      dscen, the bias-adjusted timeseries.
+        dscen, the bias-adjusted timeseries.
 
     Notes
     -----
@@ -274,8 +275,8 @@ def adjust(  # noqa: C901
 
     See Also
     --------
-    xsdba.adjustment.DetrendedQuantileMapping, xsdba.adjustment.ExtremeValues
-
+    xsdba.adjustment.DetrendedQuantileMapping
+    xsdba.adjustment.ExtremeValues
     """
     if xclim_adjust_args is not None:
         warnings.warn(

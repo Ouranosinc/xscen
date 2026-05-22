@@ -144,8 +144,8 @@ def climatological_op(  # noqa: C901
 
     See Also
     --------
-    scipy.stats.linregress
-    scipy.stats.theilslopes
+    scipy.stats.linregress : Linear least-squares regression for two sets of measurements.
+    scipy.stats.theilslopes : Theil-Sen estimator for a set of points (x, y).
 
     Notes
     -----
@@ -508,7 +508,7 @@ def spatial_mean(  # noqa: C901
 
     See Also
     --------
-    xesmf.SpatialAverager
+    xesmf.SpatialAverager : The exact average of a gridded array over a geometry.
     """
     if isinstance(ds, xr.DataArray):
         warnings.warn("Input is a DataArray, but should be a Dataset. This could lead to errors, especially with rotated poles.", stacklevel=2)
@@ -694,11 +694,9 @@ def produce_horizon(  # noqa: C901
     to_level: str | None = "horizons",
 ) -> xr.Dataset:
     """
-    Compute indicators, then the climatological mean, and finally unstack dates in order
-    to have a single dataset with all indicators of different frequencies.
+    Compute indicators, the climatological mean, and unstack dates in order to have a single dataset with all indicators of different frequencies.
 
-    Once this is done, the function drops 'time' in favor of 'horizon'.
-    This function computes the indicators and does an interannual mean.
+    Once this is done, the function drops 'time' in favor of 'horizon'. This function computes the indicators and does an interannual mean.
     It stacks the season and month in different dimensions and adds a dimension `horizon` for the period or the warming level, if given.
 
     Parameters
@@ -706,7 +704,7 @@ def produce_horizon(  # noqa: C901
     ds : xr.Dataset
         Input dataset with a time dimension.
         If 'indicators' is None, the dataset should contain the precomputed indicators.
-    indicators :  str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]] | ModuleType, optional
+    indicators : str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]] | ModuleType, optional
         Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start_year, end_year] for the period(s) to be evaluated.

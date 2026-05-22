@@ -65,22 +65,22 @@ def load_xclim_module(filename: str | os.PathLike, reload: bool = False) -> Modu
 
 def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str):
     """
-    Returns the variables names and resampling frequency of a given indicator.
+    Return the variables names and resampling frequency of a given indicator.
 
-    CAUTION : Some indicators will build the variable name on-the-fly according to the arguments.
+    CAUTION: Some indicators will build the variable name on-the-fly according to the arguments.
     This function will return the template string (with "{}").
 
     Parameters
     ----------
     ind : Indicator
-        An xclim indicator
+        An xclim indicator.
     in_freq : str
         The data's sampling frequency.
 
     Returns
     -------
     var_names : list
-        List of variable names
+        List of variable names.
     freq : str
         Indicator resampling frequency. "fx" for time-reducing indicator.
     """
@@ -117,7 +117,7 @@ def compute_indicators(  # noqa: C901
     ----------
     ds : xr.Dataset
         Dataset to use for the indicators.
-    indicators : str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType
+    indicators : str or os.PathLike or Sequence[Indicator] or Sequence[tuple[str, Indicator]] or ModuleType
         Path to a YAML file that instructs on how to calculate missing variables.
         Can also be only the "stem", if translations and custom indices are implemented.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
@@ -146,7 +146,8 @@ def compute_indicators(  # noqa: C901
 
     See Also
     --------
-    xclim.indicators, xclim.core.indicator.build_indicator_module_from_yaml
+    xclim.indicators : Indicators module of xclim.
+    xclim.core.indicator.build_indicator_module_from_yaml : YAML indicator constructor function of xclim.
     """
     if isinstance(indicators, str | os.PathLike):
         logger.debug("Loading indicator module.")
@@ -324,7 +325,7 @@ def select_inds_for_avail_vars(
     ----------
     ds : xr.Dataset
         Dataset to use for the indicators.
-    indicators : str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]]
+    indicators : str or os.PathLike or Sequence[Indicator] or Sequence[Tuple[str, Indicator]]
         Path to a YAML file that instructs on how to calculate indicators.
         Can also be only the "stem", if translations and custom indices are implemented.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
@@ -332,11 +333,13 @@ def select_inds_for_avail_vars(
 
     Returns
     -------
-    ModuleType – An indicator module of 'length' ∈ [0, n].
+    ModuleType
+        An indicator module of 'length' ∈ [0, n].
 
     See Also
     --------
-    xclim.indicators, xclim.core.indicator.build_indicator_module_from_yaml
+    xclim.indicators : Indicators module of xclim.
+    xclim.core.indicator.build_indicator_module_from_yaml : YAML indicator constructor function of xclim.
     """
     # Transform the 'indicators' input into a list of tuples (name, indicator)
     is_list_of_tuples = isinstance(indicators, list) and all(isinstance(i, tuple) for i in indicators)
@@ -361,12 +364,31 @@ def _wrap_month(m):
     return (m % 12) or 12
 
 
-def fix_semiannual(ds, freq):
+def fix_semiannual(ds: xr.Dataset, freq: str) -> xr.Dataset:
     """
     Avoid wrong start dates for semiannual frequency.
 
     Resampling with offsets that are multiples of a base frequency (ex: 2QS-OCT) is broken in pandas (https://github.com/pandas-dev/pandas/issues/51563).
     This will cut the beginning of the dataset so it starts exactly at the beginning of the resampling period.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        The Dataset to be adjusted.
+    freq : str
+        Frequency string.
+
+    Returns
+    -------
+    xr.Dataset
+        The adjusted Dataset.
+
+    Raises
+    ------
+    NotImplementedError
+        When a non-2Q frequency is passed.
+    ValueError
+        If a start date cannot be found in dataset.
     """
     # I hate that we have to do that
     mul, b, s, anc = parse_offset(freq)
