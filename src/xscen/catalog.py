@@ -306,8 +306,20 @@ class DataCatalog(intake_esm.esm_datastore):
             if sim:  # So we never yield empty catalogs
                 yield values, sim
 
-    def search(self, **columns: str):
-        """Modification of .search() to add the 'periods' keyword."""
+    def search(self, **columns: str) -> "DataCatalog":
+        r"""
+        Modification of .search() to add the 'periods' keyword.
+
+        Parameters
+        ----------
+        **columns : sequence of str
+            Columns to iterate over.
+
+        Returns
+        -------
+        DataCatalog
+            A DataCatalog of search results.
+        """
         periods = columns.pop("periods", False)
         if len(columns) > 0:
             cat = super().search(**columns)
@@ -323,7 +335,7 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Parameters
         ----------
-        column : list of str, optional
+        columns : list of str, optional
             The columns used to identify duplicates. If None, 'id' and 'path' are used.
         """
         # In case variables are being added in an existing Zarr, append them
@@ -352,10 +364,9 @@ class DataCatalog(intake_esm.esm_datastore):
 
         If a file is a Zarr, it will also check that all variables are present and remove those that aren't.
         """
-        len_df = len(self.df)  # This line is required to avoid a D202 pydocstyle error
 
         # In case files were deleted manually, double-check that files do exist
-        def check_existing(row):
+        def _check_existing(row):
             path = Path(row.path)
             exists = (path.is_dir() and path.suffix == ".zarr") or (path.is_file())
             if not exists:
@@ -364,7 +375,7 @@ class DataCatalog(intake_esm.esm_datastore):
             return exists
 
         # In case variables were deleted manually in a Zarr, double-check that they still exist
-        def check_variables(row):
+        def _check_variables(row):
             path = Path(row.path)
             if path.suffix == ".zarr":
                 variables = [p.parts[-1] for p in path.iterdir()]
@@ -373,10 +384,11 @@ class DataCatalog(intake_esm.esm_datastore):
                 exists = row.variable
             return exists
 
-        if len_df > 0:
-            self.esmcat._df = self.df[self.df.apply(check_existing, axis=1)].reset_index(drop=True)
-            if len_df > 0:
-                self.esmcat._df["variable"] = self.df.apply(check_variables, axis=1)
+        df_len = len(self.df)
+        if df_len > 0:
+            self.esmcat._df = self.df[self.df.apply(_check_existing, axis=1)].reset_index(drop=True)
+            if df_len > 0:  # FIXME: What's going on here?
+                self.esmcat._df["variable"] = self.df.apply(_check_variables, axis=1)
 
     def exists_in_cat(self, **columns) -> bool:
         """
@@ -384,7 +396,8 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Parameters
         ----------
-        columns: Arguments that will be given to `catalog.search`
+        **columns : dict
+            Arguments that will be given to `catalog.search`.
 
         Returns
         -------
@@ -419,34 +432,35 @@ class DataCatalog(intake_esm.esm_datastore):
         Parameters
         ----------
         concat_on : list of str or str, optional
-          A list of catalog columns over which to concat the datasets (in addition to 'time').
-          Each will become a new dimension with the column values as coordinates.
-          Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
+            A list of catalog columns over which to concat the datasets (in addition to 'time').
+            Each will become a new dimension with the column values as coordinates.
+            Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
         create_ensemble_on : list of str or str, optional
-          The given column values will be merged into a new id-like "realization" column, which will be concatenated over.
-          The given columns are removed from the dataset id, to remove them from the groupby_attrs logic.
-          Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
+            The given column values will be merged into a new id-like "realization" column, which will be concatenated over.
+            The given columns are removed from the dataset id, to remove them from the groupby_attrs logic.
+            Xarray concatenation rules apply and can be acted upon through `xarray_combine_by_coords_kwargs`.
         ensemble_name : list of strings, optional
-          If `create_ensemble_on` is given, this can be a subset of those column names to use when constructing the realization coordinate.
-          If None, this will be the same as `create_ensemble_on`.
-          The resulting coordinate must be unique.
+            If `create_ensemble_on` is given, this can be a subset of those column names to use when constructing the realization coordinate.
+            If None, this will be the same as `create_ensemble_on`.
+            The resulting coordinate must be unique.
         calendar : str, optional
-          If `create_ensemble_on` is given but not `preprocess`, all datasets are converted to this calendar before concatenation.
-          Ignored otherwise (default). If None, no conversion is done. `align_on` is always "date".
-          If `preprocess` is given, it must do the needed calendar handling.
-        kwargs:
-          Any other arguments are passed to :py:meth:`~intake_esm.core.esm_datastore.to_dataset_dict`.
-          The `preprocess` argument must convert calendars as needed if `create_ensemble_on` is given.
+            If `create_ensemble_on` is given but not `preprocess`, all datasets are converted to this calendar before concatenation.
+            Ignored otherwise (default). If None, no conversion is done. `align_on` is always "date".
+            If `preprocess` is given, it must do the needed calendar handling.
+        **kwargs : dict
+            Any other arguments are passed to :py:meth:`~intake_esm.core.esm_datastore.to_dataset_dict`.
+            The `preprocess` argument must convert calendars as needed if `create_ensemble_on` is given.
 
         Returns
         -------
-        :py:class:`~xarray.Dataset`
+        xr.Dataset
+            A dataset built on catalog entries.
 
         See Also
         --------
-        intake_esm.core.esm_datastore.to_dataset_dict
-        intake_esm.core.esm_datastore.to_dask
-        xclim.ensembles.create_ensemble
+        intake_esm.core.esm_datastore.to_dataset_dict : Convert DataStore to a dataset dict.
+        intake_esm.core.esm_datastore.to_dask : Convert DataStore to an xarray dataset.
+        xclim.ensembles.create_ensemble : Create an xarray dataset of an ensemble of climate simulation from a list of netcdf files.
         """
         cat = deepcopy(self)
         # Put back what was removed by the copy...
@@ -526,26 +540,26 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Parameters
         ----------
-        cat: DataCatalog or ProjectCatalog
-            A catalog to copy.
-        dest: str, path
+        dest : str, path
             The root directory of the destination.
-        flat: bool
+        flat : bool
             If True (default), all dataset files are copied in the same directory.
             Renaming with an integer suffix ("{name}_01.{ext}") is done in case of duplicate file names.
             If False, :py:func:`xscen.catutils.build_path` (with default arguments) is used to generated the new path below the destination.
             Nothing is done in case of duplicates in that case.
-        unzip: bool
+        unzip : bool
             If True, any datasets with a `.zip` suffix are unzipped during the copy (or rather instead of a copy).
-        zipzarr: bool
+        zipzarr : bool
             If True, any datasets with a `.zarr` suffix are zipped during the copy (or rather instead of a copy).
         inplace : bool
             If True, the catalog is updated in place. If False (default), a copy is returned.
 
         Returns
         -------
-        If inplace is False, this returns a catalog similar to self except with updated filenames. Some special attributes are not preserved,
-        such as those added by :py:func:`xscen.extract.search_data_catalogs`. In this case, use `inplace=True`.
+        DataCatalog or ProjectCatalog
+            If inplace is False, this returns a catalog similar to self except with updated filenames.
+            Some special attributes are not preserved, such as those added by :py:func:`xscen.extract.search_data_catalogs`.
+            In this case, use `inplace=True`.
         """
         # Local imports to avoid circular imports
         from .catutils import build_path
@@ -607,9 +621,29 @@ class ProjectCatalog(DataCatalog):
     """
     A DataCatalog with additional 'write' functionalities that can update and upload itself.
 
+    Parameters
+    ----------
+    df : str or dict
+        If str, this must be a path or URL to a catalog JSON file.
+        If dict, this must be a dict representation of an ESM catalog.  See the notes below.
+    *args : Any
+        Creation arguments.
+    create : bool
+        If True, and if 'df' is a string, this will create an empty ProjectCatalog if none already exists.
+    overwrite : bool
+        If this and 'create' are True, this will overwrite any existing JSON and CSV file with an empty catalog.
+    project : dict, optional
+        Metadata to create the catalog, if required.
+    check_valid : bool
+        If True (default), will check that all files in the catalog exist on disk and remove those that don't.
+    drop_duplicates : bool
+        If True (default), will drop duplicates in the catalog based on the 'id' and 'path' columns.
+    **kwargs : dict
+        Any other arguments are passed to xscen.catalog.DataCatalog.
+
     See Also
     --------
-    intake_esm.core.esm_datastore
+    intake_esm.core.esm_datastore : An intake plugin for parsing an ESM (Earth System Model) Catalog and loading assets into xarray datasets.
     """
 
     @classmethod
@@ -704,6 +738,8 @@ class ProjectCatalog(DataCatalog):
         df : str or dict
             If str, this must be a path or URL to a catalog JSON file.
             If dict, this must be a dict representation of an ESM catalog.  See the notes below.
+        *args : Any
+            Creation arguments.
         create : bool
             If True, and if 'df' is a string, this will create an empty ProjectCatalog if none already exists.
         overwrite : bool
@@ -714,7 +750,7 @@ class ProjectCatalog(DataCatalog):
             If True (default), will check that all files in the catalog exist on disk and remove those that don't.
         drop_duplicates : bool
             If True (default), will drop duplicates in the catalog based on the 'id' and 'path' columns.
-        \**kwargs : dict
+        **kwargs : dict
             Any other arguments are passed to xscen.catalog.DataCatalog.
 
 
@@ -742,7 +778,7 @@ class ProjectCatalog(DataCatalog):
     # TODO: Implement a way to easily destroy part of the catalog to "reset" some steps
     def update(
         self,
-        df: None | (DataCatalog | intake_esm.esm_datastore | pd.DataFrame | pd.Series | Sequence[pd.Series]) = None,
+        df: (DataCatalog | intake_esm.esm_datastore | pd.DataFrame | pd.Series | Sequence[pd.Series]) | None = None,
     ):
         """
         Update the catalog with new data and writes the new data to the csv file.
@@ -752,15 +788,15 @@ class ProjectCatalog(DataCatalog):
         written back to the csv. This means that nothing is _removed_* from the csv when
         calling this method, and it is safe to use even with a subset of the catalog.
 
-        Warnings
-        --------
-        If a file was deleted between the parsing of the catalog and this call,
-        it will be removed from the csv if `check_valid` is called.
-
         Parameters
         ----------
-        df : DataCatalog | intake_esm.esm_datastore | pd.DataFrame | pd.Series  | Sequence[pd.Series], optional
+        df : DataCatalog or intake_esm.esm_datastore or pd.DataFrame or pd.Series or Sequence[pd.Series], optional
             Data to be added to the catalog. If None, nothing is added, but the catalog is still updated.
+
+        Notes
+        -----
+        If a file was deleted between the parsing of the catalog and this call,
+        it will be removed from the csv if `check_valid` is called.
         """
         # Append the new DataFrame or Series
         if isinstance(df, DataCatalog) or isinstance(df, intake_esm.esm_datastore):
@@ -833,20 +869,22 @@ class ProjectCatalog(DataCatalog):
         written back to the csv. This means that nothing is _removed_* from the csv when
         calling this method, and it is safe to use even with a subset of the catalog.
 
-        Warnings
-        --------
-        If a file was deleted between the parsing of the catalog and this call,
-        it will be removed from the csv if `check_valid` is called.
-
         Parameters
         ----------
         ds : xarray.Dataset
             Dataset that we want to add to the catalog.
             The columns of the catalog will be filled from the global attributes starting with 'cat:' of the dataset.
-        info_dict : dict, optional
-            Extra information to fill in the catalog.
         path : os.PathLike or str
             Path to the file that contains the dataset. This will be added to the 'path' column of the catalog.
+        info_dict : dict, optional
+            Extra information to fill in the catalog.
+        **info_kwargs : dict
+            Information keyword arguments.
+
+        Notes
+        -----
+        If a file was deleted between the parsing of the catalog and this call,
+        it will be removed from the csv if `check_valid` is called.
         """
         d = {}
 
@@ -887,19 +925,29 @@ class ProjectCatalog(DataCatalog):
         if len(self.df) != initlen:
             self.update()
 
-    def __repr__(self) -> str:  # noqa: D105
+    def __repr__(self) -> str:  # noqa: D105  # numpydoc ignore=RT01
         return (
             f"<{self.esmcat.id or ''} project catalog with {len(self)} dataset(s) from "
             f"{len(self.df)} asset(s) ({'subset' if self.meta_file is None else 'full'})>"
         )
 
 
-def concat_data_catalogs(*dcs):
+def concat_data_catalogs(*dcs) -> DataCatalog:
     """
     Concatenate a multiple DataCatalogs.
 
     Output catalog is the union of all rows and all derived variables, with the "esmcat"
     of the first DataCatalog. Duplicate rows are dropped and the index is reset.
+
+    Parameters
+    ----------
+    *dcs : Sequence of DataCatalog
+        The DataCatalogs to concatenate.
+
+    Returns
+    -------
+    DataCatalog
+        Concatenated DataCatalog.
     """
     registry = {}
     catalogs = []
@@ -939,11 +987,12 @@ def generate_id(df: pd.DataFrame | xr.Dataset, id_columns: list | None = None) -
 
     Parameters
     ----------
-    df: pd.DataFrame, xr.Dataset
-      Data for which to create an ID.
+    df : pd.DataFrame, xr.Dataset
+        Data for which to create an ID.
     id_columns : list, optional
-      List of column names on which to base the dataset definition. Empty columns will be skipped.
-      If None (default), uses :py:data:`ID_COLUMNS`.
+        List of column names on which to base the dataset definition.
+        Empty columns will be skipped.
+        If None (default), uses :py:data:`ID_COLUMNS`.
 
     Returns
     -------

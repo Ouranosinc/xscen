@@ -15,7 +15,6 @@ for function ``function`` defined in ``module.py`` of this package, the config w
         function:
             ...kwargs...
 
-
 The :py:func:`load_config` function fills the ``CONFIG`` dict from yaml files.
 It always updates the dictionary, so the latest file read has the highest priority.
 
