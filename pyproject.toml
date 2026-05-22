@@ -319,9 +319,11 @@ ignore_missing_imports = true
 [tool.numpydoc_validation]
 checks = [
   "all", # report on all checks, except the below
-  "EX01",
-  "SA01",
-  "ES01"
+  "ES01", # "No extended summary found"
+  "EX01", # "No examples section found"
+  "GL06", # "Found unknown section \"{section}\""
+  "SA01", # "See Also section not found",
+  "SS01" # "No summary found"
 ]
 # remember to use single quotes for regex in TOML
 exclude = [
