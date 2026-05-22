@@ -8,7 +8,7 @@ import queue
 import string
 import threading
 import warnings
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from fnmatch import fnmatch
 from functools import partial, reduce

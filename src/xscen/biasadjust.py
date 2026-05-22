@@ -76,7 +76,8 @@ def train(
     method : str
         Name of the `xsdba.TrainAdjust` method of xclim.
     group : str or xsdba.Grouper or dict or bool, optional
-        Grouping information. If a string, it is interpreted as a grouper on the time dimension. If a dict, it is passed to `xsdba.Grouper.from_kwargs`.
+        Grouping information. If a string, it is interpreted as a grouper on the time dimension.
+        If a dict, it is passed to `xsdba.Grouper.from_kwargs`.
         Defaults to {"group": "time.dayofyear", "window": 31}.
         If False, this argument will be skipped and never passed to the adjustment.
     xsdba_train_args : dict, optional
@@ -108,10 +109,10 @@ def train(
 
     See Also
     --------
-    xsdba.adjustment.DetrendedQuantileMapping
-    xsdba.adjustment.ExtremeValues
-    xsdba.processing.to_additive_space
-    xsdba.processing.from_additive_space
+    xsdba.adjustment.DetrendedQuantileMapping : Detrended Quantile Mapping bias-adjustment.
+    xsdba.adjustment.ExtremeValues : Adjustment correction for extreme values.
+    xsdba.processing.to_additive_space : Transform a non-additive variable into an additive space by the means of a log or logit transformation.
+    xsdba.processing.from_additive_space : Transform back to the physical space a variable that was transformed with to_additive_space.
     """
     if xclim_train_args is not None:
         warnings.warn(
@@ -243,7 +244,7 @@ def adjust(  # noqa: C901
         Simulated timeseries, projected period.
     periods : list of str or list of lists of str
         Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
-    stack_periods : dict | None, optional
+    stack_periods : dict, optional
         Dictionary of arguments to pass to `xsdba.stack_periods` before adjustment. `xsdba.unstack_periods` will be called after.
         If given, the 'periods' argument must contain a single period, which will be subsetted before calling `xsdba.stack_periods`.
     dref : xr.Dataset, optional
@@ -255,28 +256,30 @@ def adjust(  # noqa: C901
         A warning will be emitted stating that this a legacy argument replaced with `xclim_train_args`.
     to_level : str
         The processing level to assign to the output.
-        Defaults to 'biasadjusted'
+        Defaults to 'biasadjusted'.
     bias_adjust_institution : str, optional
         The institution to assign to the output.
     bias_adjust_project : str, optional
         The project to assign to the output.
+    bias_adjust_reference : str, optional
+        FIXME: What is this exactly? TBD.
     align_on : str, optional
         `align_on` argument for the function `xr.DataArray.convert_calendar`.
 
     Returns
     -------
     xr.Dataset
-        dscen, the bias-adjusted timeseries.
+        The bias-adjusted timeseries (dscen).
+
+    See Also
+    --------
+    xsdba.adjustment.DetrendedQuantileMapping : Detrended Quantile Mapping bias-adjustment.
+    xsdba.adjustment.ExtremeValues : Adjustment correction for extreme values.
 
     Notes
     -----
     If `dref` is given as input,  `dref` and `dsim` must have the same (non-zero) number
     of time steps over training period given as input in ``xscen.train``.
-
-    See Also
-    --------
-    xsdba.adjustment.DetrendedQuantileMapping
-    xsdba.adjustment.ExtremeValues
     """
     if xclim_adjust_args is not None:
         warnings.warn(

@@ -7,12 +7,12 @@ from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 import xclim as xc
-import xclim.core.dataflags
 from xclim.core import ValidationError
 from xclim.core.indicator import Indicator
 
@@ -68,52 +68,52 @@ def health_checks(  # noqa: C901
 
     Parameters
     ----------
-    ds: xr.Dataset or xr.DataArray
+    ds : xr.Dataset or xr.DataArray
         Dataset to check.
-    structure: dict, optional
+    structure : dict, optional
         Dictionary with keys "dims" and "coords" containing the expected dimensions and coordinates.
         This check will fail is extra dimensions or coordinates are found.
-    calendar: str, optional
+    calendar : str, optional
         Expected calendar. Synonyms should be detected correctly (e.g. "standard" and "gregorian").
-    start_date: str, optional
+    start_date : str, optional
         To check if the dataset starts at least at this date.
-    end_date: str, optional
+    end_date : str, optional
         To check if the dataset ends at least at this date.
-    variables_and_units: dict, optional
+    variables_and_units : dict, optional
         Dictionary containing the expected variables and units.
-    strict_units: bool
+    strict_units : bool
         If True, the units in variables_and_units need to match exactly.
-    cfchecks: dict, optional
+    cfchecks : dict, optional
         Dictionary where the key is the variable to check and the values are the cfchecks.
         The cfchecks themselves must be a dictionary with the keys being the cfcheck names
         and the values being the arguments to pass to the cfcheck.
         See `xclim.core.cfchecks` for more details.
-    freq: str, optional
+    freq : str, optional
         Expected frequency, written as the result of xr.infer_freq(ds.time).
-    missing: dict or str or list of str, optional
+    missing : dict or str or list of str, optional
         String, list of strings, or dictionary where the key is the method to check for missing data
         and the values are the arguments to pass to the method.
         The methods are: "missing_any", "at_least_n_valid", "missing_pct", "missing_wmo", "missing_some_but_not_all".
         See :py:func:`xclim.core.missing` for more details.
-    flags: dict, optional
+    flags : dict, optional
         Dictionary where the key is the variable to check and the values are the flags.
         The flags themselves must be a dictionary with the keys being the data_flags names
         and the values being the arguments to pass to the data_flags.
         If `None` is passed instead of a dictionary, then xclim's default flags for the given variable are run.
         See :py:data:`xclim.core.utils.VARIABLES`.
         See also :py:func:`xclim.core.dataflags.data_flags` for the list of possible flags.
-    flags_kwargs: dict, optional
+    flags_kwargs : dict, optional
         Additional keyword arguments to pass to the data_flags ("dims" and "freq").
-    return_flags: bool
+    return_flags : bool
         Whether to return the Dataset created by data_flags.
-    raise_on: list of str, optional
+    raise_on : list of str, optional
         Whether to raise an error if a check fails, else there will only be a warning.
         The possible values are the names of the checks.
         Use ["all"] to raise on all checks.
 
     Returns
     -------
-    xr.Dataset or None
+    xr.Dataset, optional
         Dataset containing the flags if return_flags is True & raise_on is False for the "flags" check.
     """
     if isinstance(ds, xr.DataArray):
@@ -315,13 +315,13 @@ def properties_and_measures(  # noqa: C901
     ----------
     ds : xr.Dataset
         Input dataset.
-    properties : str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType
+    properties : str or os.PathLike or Sequence[Indicator] or Sequence[tuple[str, Indicator]] or ModuleType
         Path to a YAML file that instructs on how to calculate properties.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
         tuples (indicator name, indicator) as returned by `iter_indicators()`.
     period : list of str, optional
-        [start, end] of the period to be evaluated. The period will be selected on ds
-        and dref_for_measure if it is given.
+        [start, end] of the period to be evaluated.
+        The period will be selected on ds and dref_for_measure if it is given.
     unstack : bool
         Whether to unstack ds before computing the properties.
     rechunk : dict, optional
@@ -337,20 +337,22 @@ def properties_and_measures(  # noqa: C901
         It can be useful to convert units before computing the properties, because it is sometimes
         easier to convert the units of the variables than the units of the properties (e.g. variance).
     to_level_prop : str
-        processing_level to give the first output (prop)
+        The processing_level to give the first output (prop).
     to_level_meas : str
-        processing_level to give the second output (meas)
+        The processing_level to give the second output (meas).
 
     Returns
     -------
     prop : xr.Dataset
-        Dataset of properties of ds
+        Dataset of properties of ds.
     meas : xr.Dataset
-        Dataset of measures between prop and dref_for_meas
+        Dataset of measures between prop and dref_for_meas.
 
     See Also
     --------
-    xsdba.properties, xsdba.measures, xclim.core.indicator.build_indicator_module_from_yaml
+    xsdba.properties : Properties module, extending from `xclim`.
+    xsdba.measures : Measures modules, extending from `xclim`.
+    xclim.core.indicator.build_indicator_module_from_yaml : YAML indicator constructor function of `xclim`.
     """
     if isinstance(properties, str | Path):
         logger.debug("Loading properties module.")
@@ -512,14 +514,14 @@ def measures_improvement(
 
     Parameters
     ----------
-    meas_datasets: list[xr.Dataset] | dict
-        List of 2 datasets: Initial dataset of measures and final (improved) dataset of measures.
+    meas_datasets : list[xr.Dataset] or dict
+        List of two datasets: Initial dataset of measures and final (improved) dataset of measures.
         Both datasets must have the same variables.
         It is also possible to pass a dictionary where the values are the datasets and the key are not used.
     dim : str or sequence of str, optional
         Dimension(s) on which to compute the percentage of improved grid points. Default is `None`, which reduces all dimensions.
-    to_level: str
-        processing_level to assign to the output dataset
+    to_level : str
+        The processing_level to assign to the output dataset.
 
     Returns
     -------
@@ -573,18 +575,18 @@ def measures_improvement(
     return ds_better
 
 
-def measures_improvement_2d(dict_input: dict, to_level: str = "diag-improved-2d") -> xr.Dataset:
+def measures_improvement_2d(dict_input: dict[str, Any], to_level: str = "diag-improved-2d") -> xr.Dataset:
     """
     Create a 2D dataset with dimension `realization` showing the fraction of improved grid cell.
 
     Parameters
     ----------
-    dict_input: dict
-      If dict of datasets, the datasets should be the output of `measures_improvement`.
-      If dict of dict/list, the dict/list should be the input `meas_datasets` to `measures_improvement`.
-      The keys will be the values of the dimension `realization`.
-    to_level: str
-      Processing_level to assign to the output dataset.
+    dict_input : dict
+        If dict of datasets, the datasets should be the output of `measures_improvement`.
+        If dict of dict/list, the dict/list should be the input `meas_datasets` to `measures_improvement`.
+        The keys will be the values of the dimension `realization`.
+    to_level : str
+        Processing_level to assign to the output dataset.
 
     Returns
     -------
@@ -613,8 +615,20 @@ def measures_improvement_2d(dict_input: dict, to_level: str = "diag-improved-2d"
 
 
 # Adapted from xarray.structure.merge_attrs and copied from xclim who got rid of it
-def merge_attrs(*objs):
-    """Merge attributes from different xarray objects, dropping any attributes that conflict."""
+def merge_attrs(*objs: xr.DataArray | xr.Dataset) -> dict[str, Any]:
+    """
+    Merge attributes from different xarray objects, dropping any attributes that conflict.
+
+    Parameters
+    ----------
+    *objs : Sequence of xr.DataArray or xr.Dataset
+        Objects that conform to xarray data types.
+
+    Returns
+    -------
+    dict
+        Merged attributes.
+    """
     out = {}
     dropped = set()
     for obj in objs:
