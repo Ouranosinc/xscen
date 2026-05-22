@@ -80,16 +80,35 @@ class ConfigDict(dict):
             return ConfigDict(deepcopy(value))
         return value
 
-    def set(self, key, value):
+    def set(self, key: str, value: Any):
+        """
+        Setter.
+
+        Parameters
+        ----------
+        key : str
+            Key.
+        value : Any
+            Value.
+        """
         parts = key.split(".")
         d = self
         for part in parts[:-1]:
             d = d.setdefault(part, {})
             if not isinstance(d, collections.abc.Mapping):
-                raise ValueError(f"Key {key} points to an invalid config section ({part} if not a mapping).")
+                msg = f"Key {key} points to an invalid config section ({part} if not a mapping)."
+                raise ValueError(msg)
         d[parts[-1]] = value
 
-    def update_from_list(self, pairs):
+    def update_from_list(self, pairs: tuple[str, str]):
+        """
+        Update from list.
+
+        Parameters
+        ----------
+        pairs : tuple[str, str]
+            Tuples of (str, str).
+        """
         for key, valstr in pairs:
             try:
                 val = ast.literal_eval(valstr)
@@ -101,16 +120,16 @@ class ConfigDict(dict):
 CONFIG = ConfigDict()
 
 
-def recursive_update(d, other):
+def recursive_update(d: dict[str, Any], other: dict[str, Any]) -> dict[str, Any]:
     """
     Update a dictionary recursively with another dictionary.
 
     Values that are Mappings are updated recursively as well.
     """
     for k, v in other.items():
-        if isinstance(v, collections.abc.Mapping):
+        if isinstance(v, dict):
             old_v = d.get(k)
-            if isinstance(old_v, collections.abc.Mapping):
+            if isinstance(old_v, dict):
                 d[k] = recursive_update(old_v, v)
             else:
                 d[k] = v
