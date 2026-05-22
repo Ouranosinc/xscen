@@ -69,7 +69,7 @@ def get_engine(file: str | os.PathLike) -> str:
     Returns
     -------
     str
-        Engine to use with xarray
+        Engine to use with xarray.
     """
     # find the ideal engine for xr.open_mfdataset
     if Path(file).suffix in [".zarr", ".zip", ".zarr.zip"]:
@@ -244,10 +244,6 @@ def clean_incomplete(
     incomplete : sequence of strings, optional
         Name of variables that should be removed. Coordinates and dimensions will never be removed through this function.
         Use either `complete` or `incomplete`, not both.
-
-    Returns
-    -------
-    None
     """
     path = Path(path)
 
@@ -303,7 +299,7 @@ def _np_bitround(array: xr.DataArray, keepbits: int):
     return codec.decode(encoded)
 
 
-def round_bits(da: xr.DataArray, keepbits: int):
+def round_bits(da: xr.DataArray, keepbits: int) -> xr.DataArray:
     """
     Round floating point variable by keeping a given number of bits in the mantissa, dropping the rest. This allows for a much better compression.
 
@@ -313,6 +309,11 @@ def round_bits(da: xr.DataArray, keepbits: int):
         Variable to be rounded.
     keepbits : int
         The number of bits of the mantissa to keep.
+
+    Returns
+    -------
+    xr.DataArray
+        The rounded DataArray.
     """
     encoding = da.encoding
     da = xr.apply_ufunc(_np_bitround, da, keepbits, dask="parallelized", keep_attrs=True)
@@ -321,6 +322,7 @@ def round_bits(da: xr.DataArray, keepbits: int):
     new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Data compressed with BitRound by keeping {keepbits} bits."
     history = new_history + " \n " + da.attrs["history"] if "history" in da.attrs else new_history
     da.attrs["history"] = history
+
     return da
 
 
@@ -374,17 +376,18 @@ def save_to_netcdf(
     compute : bool
         Whether to start the computation or return a delayed object.
     netcdf_kwargs : dict, optional
-        Additional arguments to send to_netcdf()
+        Additional arguments to send to_netcdf().
     strip_cat_metadata : bool
         If True (default), strips all catalog-added attributes before saving the dataset.
 
     Returns
     -------
-    None
+    dask.delayed or None
+        A dask.delayed object if compute=False, None otherwise.
 
     See Also
     --------
-    xarray.Dataset.to_netcdf
+    xarray.Dataset.to_netcdf: The xarray function used to save the dataset.
     """
     if rechunk:
         ds = rechunk_for_saving(ds, rechunk)
@@ -458,10 +461,6 @@ def save_to_zarr(  # noqa: C901
         Additional arguments to send `to_zarr()`.
     compute : bool
         Whether to start the computation or return a delayed object.
-    mode : {'f', 'o', 'a'}
-        If 'f', fails if any variable already exists.
-        if 'o', removes the existing variables.
-        if 'a', skip existing variables, writes the others.
     encoding : dict, optional
         If given here instead of 'zarr_kwargs', encoding will only be applied to the variables that are being written,
         skipping those that are already in the zarr.
@@ -472,6 +471,10 @@ def save_to_zarr(  # noqa: C901
         If a dict, a mapping from variable name to the number of bits to keep.
         If True, the number of bits to keep is guessed based on the variable's name, defaulting to 12,
         which yields a relative error of 0.012%.
+    mode : {'f', 'o', 'a'}
+        If 'f', fails if any variable already exists.
+        If 'o', removes the existing variables.
+        If 'a', skip existing variables, writes the others.
     itervar : bool
         If True, (data) variables are written one at a time, appending to the zarr.
         If False, this function computes, no matter what was passed to kwargs.
@@ -481,7 +484,7 @@ def save_to_zarr(  # noqa: C901
         This does nothing if `compute` is False.
     strip_cat_metadata : bool
         If True (default), strips all catalog-added attributes before saving the dataset.
-    zip_zarrdir: string, optional
+    zip_zarrdir : str, optional
         If given and filename ends in zip, the saved zarr directory is first saved in this directory,
         then zipped to `filename`. For the initial zarr, if the zip_zarrdir ends in .zarr, it is used as is. If it
         does not end in .zarr, the name of `filename` is used inside this dir.
@@ -496,11 +499,12 @@ def save_to_zarr(  # noqa: C901
 
     Returns
     -------
-    dask.delayed object if compute=False, None otherwise.
+    dask.delayed or None
+        A dask.delayed object if compute=False, None otherwise.
 
     See Also
     --------
-    xarray.Dataset.to_zarr
+    xarray.Dataset.to_zarr: The xarray function used to save the dataset.
     """
     # to address this issue https://github.com/pydata/xarray/issues/3476
     for v in list(ds.coords.keys()):
@@ -689,7 +693,7 @@ def to_table(
         Default is "variable", i.e. the name of the variable(s).
     sheet : str or sequence of str, optional
         Name of the dimension(s) to use as sheet names.
-    coords: bool or str or sequence of str
+    coords : bool or str or sequence of str
         A list of auxiliary coordinates to add to the columns (as would variables).
         If True, all (if any) are added.
 
@@ -849,7 +853,7 @@ def save_to_table(  # noqa: C901
         must appear in one of `row`, `column` or `sheet`.
     filename : str or os.PathLike
         Name of the file to be saved.
-    output_format: {'csv', 'excel', ...}, optional
+    output_format : {'csv', 'excel', ...}, optional
         The output format. If None (default), it is inferred
         from the extension of `filename`. Not all possible output format are supported for inference.
         Valid values are any that matches a :py:class:`pandas.DataFrame` method like "df.to_{format}".
@@ -863,7 +867,7 @@ def save_to_table(  # noqa: C901
     sheet : str or sequence of str, optional
         Name of the dimension(s) to use as sheet names.
         Only valid if the output format is excel.
-    coords: bool or sequence of str
+    coords : bool or sequence of str
         A list of auxiliary coordinates to add to the columns (as would variables).
         If True, all (if any) are added.
     col_sep : str,
@@ -875,7 +879,7 @@ def save_to_table(  # noqa: C901
         A table of content to add as the first sheet. Only valid if the output format is excel.
         If True, :py:func:`make_toc` is used to generate the toc.
         The sheet name of the toc can be given through the "name" attribute of the DataFrame, otherwise "Content" is used.
-    \*\*kwargs:
+    **kwargs :
         Other arguments passed to the pandas function.
         If the output format is excel, kwargs to :py:class:`pandas.ExcelWriter` can be given here as well.
     """
@@ -1004,13 +1008,9 @@ def rechunk(
     overwrite : bool
         If True, it will delete whatever is in path_out before doing the rechunking.
 
-    Returns
-    -------
-    None
-
     See Also
     --------
-    rechunker.rechunk
+    rechunker.rechunk: Function from the rechunker library used to perform the rechunking.
     """
     if Path(path_out).is_dir() and overwrite:
         sh.rmtree(path_out)
@@ -1128,7 +1128,7 @@ def save_sparse(
 
     See Also
     --------
-    load_sparse
+    load_sparse: Load a sparse array that was saved with :py:func:`~xscen.io.save_sparse`.
     """
     arr = da.data
     ds = xr.Dataset(
