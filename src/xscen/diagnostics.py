@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import xclim as xc
-from xclim.core import ValidationError
+from xclim.core import dataflags, ValidationError
 from xclim.core.indicator import Indicator
 
 from .config import parse_config
@@ -271,7 +271,7 @@ def health_checks(  # noqa: C901
         if return_flags:
             out = xr.Dataset()
         for v in flags:
-            dsflags = xc.core.dataflags.data_flags(
+            dsflags = dataflags.data_flags(
                 ds[v],
                 ds,
                 flags=flags[v],
