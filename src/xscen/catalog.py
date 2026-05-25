@@ -282,7 +282,7 @@ class DataCatalog(intake_esm.esm_datastore):
             return uni[columns]
         return uni
 
-    def iter_unique(self, *columns: str) -> Generator[Sequence[str], DataCatalog]:
+    def iter_unique(self, *columns: str) -> Generator[Sequence[str], "DataCatalog"]:
         r"""
         Iterate over sub-catalogs for each group of unique values for all specified columns.
 
