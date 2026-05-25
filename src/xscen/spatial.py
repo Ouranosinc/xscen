@@ -93,7 +93,7 @@ def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "c
       All dimensions are creep filled.
     n : int
       The order of neighbouring to use. 1 means only the adjacent grid cells are used.
-    steps: int
+    steps : int
       Apply the algorithm this number of times, creeping `n` neighbours at each step.
     mode : {'clip', 'wrap'}
       If a cell is on the edge of the domain, `mode='wrap'` will wrap around to find neighbours.
@@ -162,16 +162,17 @@ def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
 
     Parameters
     ----------
-    da: DataArray
+    da : xr.DataArray
       A DataArray sharing the dimensions with the one used to compute the weights.
       It can have other dimensions.
       Dask is supported as long as there are no chunks over the creeped dims.
-    w: DataArray
+    w : xr.DataArray
       The result of `creep_weights`.
 
     Returns
     -------
-    xarray.DataArray, same shape as `da`, but values filled according to `w`.
+    xr.DataArray
+       Same shape as `da`, but values filled according to `w`.
 
     Examples
     --------
@@ -220,7 +221,7 @@ def rotate_vectors(
       Must be CF-compliant, so its coordinates are correctly found.
     crs : pyproj.CRS, optional
       The projection of the UU and VV grid. If not given, the grid mapping attribute from UU is read.
-    reverse: bool
+    reverse : bool
       If True, the opposite rotation is performed : inputs are understood as in the real S-N, W-E axes and are
       rotated back to the grid axes.
 
@@ -293,7 +294,7 @@ def subset(
     tile_buffer : float
         For ['bbox', shape'], uses an approximation of the grid cell size to add a buffer around the requested region.
         This differs from clisops' 'buffer' argument in subset_shape().
-    \*\*kwargs : dict
+    **kwargs : dict
         Arguments to be sent to clisops. See relevant function for details. Depending on the method, required kwargs are:
         - gridpoint: lon, lat
         - bbox: lon_bnds, lat_bnds
@@ -307,7 +308,9 @@ def subset(
 
     See Also
     --------
-    clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
+    clisops.core.subset.subset_gridpoint : Used for the 'gridpoint' method.
+    clisops.core.subset.subset_bbox : Used for the 'bbox' method.
+    clisops.core.subset.subset_shape : Used for the 'shape' method.
     """
     if cl is None and method in ["gridpoint", "bbox", "shape"]:
         raise ImportError("The clisops package is required for the 'gridpoint', 'bbox' and 'shape' methods.")
@@ -356,7 +359,7 @@ def _subset_gridpoint(
         Latitude coordinate(s). Must be of the same length as lon.
     name: str, optional
         Used to rename the 'cat:domain' attribute.
-    \*\*kwargs : dict
+    **kwargs : dict
         Other arguments to be sent to clisops. Possible kwargs are:
         - start_date (str): Start date for the subset in the format 'YYYY-MM-DD'.
         - end_date (str): End date for the subset in the format 'YYYY-MM-DD'.
@@ -448,7 +451,7 @@ def _subset_bbox(
         Used to rename the 'cat:domain' attribute.
     tile_buffer: float
         Uses an approximation of the grid cell size to add a dynamic buffer around the requested region.
-    \*\*kwargs : dict
+    **kwargs : dict
         Other arguments to be sent to clisops. Possible kwargs are:
         - start_date (str): Start date for the subset in the format 'YYYY-MM-DD'.
         - end_date (str): End date for the subset in the format 'YYYY-MM-DD'.
@@ -507,7 +510,7 @@ def _subset_shape(
         Used to rename the 'cat:domain' attribute.
     tile_buffer: float
         Uses an approximation of the grid cell size to add a buffer around the requested region.
-    \*\*kwargs : dict
+    **kwargs : dict
         Other arguments to be sent to clisops. Possible kwargs are:
         - raster_crs (str or int): EPSG number or PROJ4 string.
         - shape_crs (str or int): EPSG number or PROJ4 string.
@@ -576,7 +579,7 @@ def _subset_sel(ds: xr.Dataset, *, name: str | None = None, **kwargs) -> xr.Data
         Dataset to be subsetted.
     name: str, optional
         Used to rename the 'cat:domain' attribute.
-    \*\*kwargs : dict
+    **kwargs : dict
         The keys are the dimensions to subset and the values are turned into a slice.
 
     Returns
@@ -609,7 +612,19 @@ def _load_lon_lat(ds: xr.Dataset) -> xr.Dataset:
 
 
 def get_grid_mapping(ds: xr.Dataset) -> str:
-    """Get the grid_mapping attribute from the dataset."""
+    """
+    Get the grid_mapping attribute from the dataset.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        The dataset to get the grid mapping from.
+
+    Returns
+    -------
+    str
+        The name of the grid mapping variable, or an empty string if not found.
+    """
     gridmap = [ds[v].attrs["grid_mapping"] for v in ds.data_vars if "grid_mapping" in ds[v].attrs]
     gridmap += [c for c in ds.variables if ds[c].attrs.get("grid_mapping_name", None)]
     gridmap = list(np.unique(gridmap))
@@ -626,7 +641,7 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
 
     Parameters
     ----------
-    gridmap: xr.Dataset or xr.DataArray
+    gridmap : xr.Dataset or xr.DataArray
       Either a dataset that has a grid mapping variable or that grid mapping variable directly.
 
     Returns
@@ -712,6 +727,23 @@ def _estimate_grid_resolution(ds: xr.Dataset) -> tuple[float, float]:
 
 
 def update_history_and_name(ds_subset, new_history, name):
+    """
+    Update the history attribute and optionally the domain name of a dataset.
+
+    Parameters
+    ----------
+    ds_subset : xarray.Dataset
+        The dataset to update.
+    new_history : str
+        The new history entry.
+    name : str, optional
+        The new domain name.
+
+    Returns
+    -------
+    xarray.Dataset
+        The updated dataset.
+    """
     history = new_history + " \n " + ds_subset.attrs["history"] if "history" in ds_subset.attrs else new_history
     ds_subset.attrs["history"] = history
     if name is not None:
@@ -725,7 +757,7 @@ def dataset_extent(ds: xr.Dataset, method: str = "shape", name: str | None = Non
 
     Parameters
     ----------
-    ds: Dataset
+    ds : Dataset
         A dataset containing a grid with latitude and longitude coordinates and either
         the bounds or a grid mapping understood by :py:func:`~xscen.regrid.create_bounds_gridmapping`.
     method : {'shape', 'bbox'}
@@ -737,7 +769,8 @@ def dataset_extent(ds: xr.Dataset, method: str = "shape", name: str | None = Non
 
     Returns
     -------
-    Region : A :py:data:`~xscen.spatial.Region` dictionary useful for subsetting other datasets.
+    Region
+        A :py:data:`~xscen.spatial.Region` dictionary useful for subsetting other datasets.
     """
     from .regrid import create_bounds_gridmapping
 
@@ -785,11 +818,16 @@ def merge_duplicated_stations(ds: xr.Dataset, precision: float | None = None) ->
 
     Parameters
     ----------
-    ds: Dataset
+    ds : Dataset
         Dataset with `lon` and `lat` coordinates. Both must be 1D and share the same dimension.
-    precision: integer, optional
+    precision : float, optional
         Round the coordinate up to this decimal before looking for duplicated points.
         Default (None) is not to round.
+
+    Returns
+    -------
+    Dataset
+        A dataset with the same variables as the input but with duplicated locations merged.
     """
     dim = ds.lat.dims[0]
     # Geopandas et des Points, c'est plus rapide que Pandas et des tuples
@@ -821,6 +859,7 @@ def merge_duplicated_stations(ds: xr.Dataset, precision: float | None = None) ->
             )
 
     h = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Merged {N} co-located points along dimension {dim}."
+
     return update_history_and_name(xr.concat(dss, dim), h, None)
 
 
@@ -829,7 +868,7 @@ def voronoi_weights(
     region: gpd.GeoDataFrame | shp.Polygon | None = None,
     maxfrac: float | None = None,
     minlocs: int = 0,
-    _pts=None,
+    _pts: gpd.GeoDataFrame | None = None,
 ) -> xr.DataArray:
     """
     Compute a weight for each location in the dataset inversely proportionnate to the location density.
@@ -839,17 +878,20 @@ def voronoi_weights(
 
     Parameters
     ----------
-    ds: Dataset
+    ds : Dataset
         Dataset with `lon` and `lat` coordinates. Both must be 1D and share the same dimension.
-    region: GeoDataFrame or Polygon, optional
+    region : GeoDataFrame or Polygon, optional
         A polygon to constrain the total area to partition with Voronoi polygons.
         Can also be a GeoDataFrame, in which case the weights are done for each feature.
         Defaults to a convex hull around ds with a buffer of 1°.
         See :py:func:`dataset_extent`.
-    maxfrac: float, optional
+    maxfrac : float, optional
         Limits the maximal region area to this fraction of the total area.
     minlocs : int
         When `region` is a GeoDataFrame, features containing less than this number of locations are removed from the output.
+    _pts : GeoDataFrame, optional
+        A GeoDataFrame of points to use for the Voronoi partition.
+        This is a shortcut for when iterating over regions.
 
     Returns
     -------

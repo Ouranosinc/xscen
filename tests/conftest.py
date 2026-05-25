@@ -82,6 +82,6 @@ def datablock_3d():
 
     See Also
     --------
-    xscen.testing.datablock_3d
+    xscen.testing.datablock_3d : For create a generic timeseries objects.
     """
     return _datablock_3d

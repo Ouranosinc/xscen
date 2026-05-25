@@ -76,7 +76,7 @@ def climatological_op(  # noqa: C901
     horizons_as_dim: bool = False,
     **unstack_kwargs,
 ) -> xr.Dataset:
-    """
+    r"""
     Perform an operation 'op' over time, for given time periods, respecting the temporal resolution of ds.
 
     Parameters
@@ -134,7 +134,7 @@ def climatological_op(  # noqa: C901
         If True, the output will have 'horizon' and the frequency as 'month', 'season' or 'year' as
         dimensions and coordinates. The 'time' coordinate will be unstacked to horizon and frequency dimensions.
         Horizons originate from periods and/or windows and their stride in the rolling operation.
-    **unstack_kwargs
+    **unstack_kwargs : dict
         Other arguments to pass to `py:func:~xscen.utils.unstack_dates`.
 
     Returns
@@ -142,18 +142,17 @@ def climatological_op(  # noqa: C901
     xr.Dataset
         Dataset with the results from the climatological operation.
 
+    See Also
+    --------
+    scipy.stats.linregress : Linear least-squares regression for two sets of measurements.
+    scipy.stats.theilslopes : Theil-Sen estimator for a set of points (x, y).
+
     Notes
     -----
     xarray.core.rolling.DatasetRolling functions do not support kwargs other than 'keep_attrs'. In order to pass
     additional arguments to the operation, we instead use the 'reduce' method and pass the operation as a numpy function.
     If possible, a function that handles NaN values will be used (e.g. op='mean' will use `np.nanmean`), as the
     'min_periods' argument already decides how many NaN values are acceptable.
-
-    See Also
-    --------
-    scipy.stats.linregress
-    scipy.stats.theilslopes
-
     """
     # more than one operation per call is not supported (yet), case for dict
     if isinstance(op, dict) and len(op) > 1:
@@ -509,7 +508,7 @@ def spatial_mean(  # noqa: C901
 
     See Also
     --------
-    xesmf.SpatialAverager
+    xesmf.SpatialAverager : The exact average of a gridded array over a geometry.
     """
     if isinstance(ds, xr.DataArray):
         warnings.warn("Input is a DataArray, but should be a Dataset. This could lead to errors, especially with rotated poles.", stacklevel=2)
@@ -695,11 +694,9 @@ def produce_horizon(  # noqa: C901
     to_level: str | None = "horizons",
 ) -> xr.Dataset:
     """
-    Compute indicators, then the climatological mean, and finally unstack dates in order
-    to have a single dataset with all indicators of different frequencies.
+    Compute indicators, the climatological mean, and unstack dates in order to have a single dataset with all indicators of different frequencies.
 
-    Once this is done, the function drops 'time' in favor of 'horizon'.
-    This function computes the indicators and does an interannual mean.
+    Once this is done, the function drops 'time' in favor of 'horizon'. This function computes the indicators and does an interannual mean.
     It stacks the season and month in different dimensions and adds a dimension `horizon` for the period or the warming level, if given.
 
     Parameters
@@ -707,7 +704,7 @@ def produce_horizon(  # noqa: C901
     ds : xr.Dataset
         Input dataset with a time dimension.
         If 'indicators' is None, the dataset should contain the precomputed indicators.
-    indicators :  str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]] | ModuleType, optional
+    indicators : str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]] | ModuleType, optional
         Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start_year, end_year] for the period(s) to be evaluated.

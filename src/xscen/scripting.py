@@ -55,26 +55,22 @@ def send_mail(
 
     Parameters
     ----------
-    subject: str
+    subject : str
       Subject line.
-    msg: str
+    msg : str
       Main content of the email. Can be UTF-8 and multi-line.
-    to: str, optional
+    to : str, optional
       Email address to which send the email. If None (default), the email is sent to "{os.getlogin()}@{os.uname().nodename}".
       On unix systems simply put your real email address in `$HOME/.forward` to receive the emails sent to this local address.
     server : str
       SMTP server url. Defaults to 127.0.0.1, the local host. This function does not try to log-in.
-    port: int
+    port : int
       Port of the SMTP service on the server. Defaults to 25, which is usually the default port on unix-like systems.
-    attachments : list of paths or matplotlib figures or tuples of a string and a path or figure, optional
+    attachments : list of paths or matplotlib figures or tuples of a str and path or figure, optional
       List of files to attach to the email.
       Elements of the list can be paths, the mimetypes of those is guessed and the files are read and sent.
       Elements can also be matplotlib Figures which are send as png image (savefig) with names like "Figure00.png".
       Finally, elements can be tuples of a filename to use in the email and the attachment, handled as above.
-
-    Returns
-    -------
-    None
     """
     # Inspired by https://betterprogramming.pub/how-to-send-emails-with-attachments-using-python-dd37c4b6a7fd
     email = EmailMessage()
@@ -125,7 +121,7 @@ class ExitWatcher:
         self.hooked = False
 
     def hook(self):
-        """Hooks the watcher to the system by monkeypatching `sys` with its own methods."""
+        """Hook the watcher to the system by monkeypatching `sys` with its own methods."""
         if not self.hooked:
             self.orig_exit = sys.exit
             self.orig_excepthook = sys.excepthook
@@ -136,6 +132,7 @@ class ExitWatcher:
             warnings.warn("Exit hooks have already been overridden.", stacklevel=2)
 
     def unhook(self):
+        """Undo the monkeypatch."""
         if self.hooked:
             sys.exit = self.orig_exit
             sys.excepthook = self.orig_excepthook
@@ -143,10 +140,18 @@ class ExitWatcher:
             raise ValueError("Exit hooks were not overridden. Cannot unhook.")
 
     def exit(self, code=0):
+        """
+        Set the exit code.
+
+        Parameters
+        ----------
+        code : int
+            Exit code.
+        """
         self.code = code
         self.orig_exit(code)
 
-    def err_handler(self, *exc_info):
+    def err_handler(self, *exc_info):  # numpydoc ignore=GL08
         self.error = exc_info
         self.orig_excepthook(*exc_info)
 
@@ -165,7 +170,7 @@ def send_mail_on_exit(
     skip_ctrlc: bool = True,
     **mail_kwargs,
 ) -> None:
-    """
+    r"""
     Send an email with content depending on how the system exited.
 
     This function is best used by registering it with `atexit`. Calls :py:func:`send_mail`.
@@ -173,23 +178,22 @@ def send_mail_on_exit(
     Parameters
     ----------
     subject : str, optional
-        Email subject. Will be appended by "Success", "No errors" or "Failure" depending
-        on how the system exits.
+        Email subject. Will be appended by "Success", "No errors" or "Failure" depending on how the system exits.
     msg_ok : str, optional
         Content of the email if the system exists successfully.
     msg_err : str, optional
         Content of the email id the system exists with a non-zero code or with an error.
         The message will be appended by the exit code or with the error traceback.
-    on_error_only : boolean
+    on_error_only : bool
         Whether to only send an email on a non-zero/error exit.
-    skip_ctrlc : boolean
+    skip_ctrlc : bool
         If True (default), exiting with a KeyboardInterrupt will not send an email.
-    mail_kwargs
+    **mail_kwargs : dict
         Other arguments passed to :py:func:`send_mail`.
         The `to` argument is necessary for this function to work.
 
-    Example
-    -------
+    Examples
+    --------
     Send an eamil titled "Woups" upon non-successful program exit. We assume the `to`
     field was given in the config.
 
@@ -224,12 +228,12 @@ class measure_time:
     Parameters
     ----------
     name : str, optional
-      A name to give to the block being timed, for meaningful logging.
-    cpu : boolean
-      If True, the CPU time is also measured and logged.
+        A name to give to the block being timed, for meaningful logging.
+    cpu : bool
+        If True, the CPU time is also measured and logged.
     logger : logging.Logger, optional
-      The logger object to use when sending Info messages with the measured time.
-      Defaults to a logger from this module.
+        The logger object to use when sending Info messages with the measured time.
+        Defaults to a logger from this module.
     """
 
     def __init__(
@@ -262,7 +266,18 @@ class measure_time:
 
 # FIXME: This should be written as "TimeoutError"
 class TimeoutException(Exception):  # noqa: N818
-    """An exception raised with a timeout occurs."""
+    r"""
+    An exception raised with a timeout occurs.
+
+    Parameters
+    ----------
+    seconds : int
+        Timeout length n seconds.
+    task : str
+        Task attempted.
+    **kwargs : dict
+        Additional keyword arguments.
+    """
 
     def __init__(self, seconds: int, task: str = "", **kwargs):
         self.msg = f"Task {task} timed out after {seconds} seconds"
@@ -280,10 +295,10 @@ def timeout(seconds: int, task: str = ""):
     Parameters
     ----------
     seconds : int
-      Number of seconds after which the context exits with a TimeoutException.
-      If None or negative, no timeout is set and this context does nothing.
+        Number of seconds after which the context exits with a TimeoutException.
+        If None or negative, no timeout is set and this context does nothing.
     task : str, optional
-      A name to give to the task, allowing a more meaningful exception.
+        A name to give to the task, allowing a more meaningful exception.
     """
     if seconds is None or seconds <= 0:
         yield
@@ -320,14 +335,14 @@ def skippable(seconds: int = 2, task: str = "", logger: logging.Logger | None = 
 
     Parameters
     ----------
-    seconds: int
-      Number of seconds to wait for a second CTRL-C.
+    seconds : int
+        Number of seconds to wait for a second CTRL-C.
     task : str
-      A name for the skippable task, to have an explicit script.
+        A name for the skippable task, to have an explicit script.
     logger : logging.Logger, optional
-      The logger to use when printing the messages. The interruption signal is
-      notified with ERROR, while the skipping is notified with INFO.
-      If not given (default), a brutal print is used.
+        The logger to use when printing the messages.
+        The interruption signal is notified with ERROR, while the skipping is notified with INFO.
+        If not given (default), a brutal print is used.
     """
     if logger:
         err = logger.error
@@ -358,23 +373,23 @@ def save_and_update(
 
     Parameters
     ----------
-    ds: xr.Dataset
+    ds : xr.Dataset
         Dataset to save.
-    pcat: ProjectCatalog
+    pcat : ProjectCatalog
         Catalog to update after saving the dataset.
-    path: str or os.PathLike, optional
+    path : str or os.PathLike, optional
         Path where to save the dataset.
         If the string contains variables in curly bracket. They will be filled by catalog attributes.
         If None, the `catutils.build_path` function will be used to create a path.
-    file_format: {'nc', 'zarr'}
+    file_format : {'nc', 'zarr'}
         Format of the file.
         If None, look for the following in order: build_path_kwargs['format'], a suffix in path, ds.attrs['cat:format'].
         If nothing is found, it will default to zarr.
-    build_path_kwargs: dict, optional
+    build_path_kwargs : dict, optional
         Arguments to pass to `build_path`.
-    save_kwargs: dict, optional
+    save_kwargs : dict, optional
         Arguments to pass to `save_to_netcdf` or `save_to_zarr`.
-    update_kwargs: dict, optional
+    update_kwargs : dict, optional
         Arguments to pass to `update_from_ds`.
     """
     build_path_kwargs = build_path_kwargs or {}
@@ -433,9 +448,9 @@ def move_and_delete(
     Parameters
     ----------
     moving : list of lists of str or os.PathLike
-        list of lists of path of files to move, following the format: [[source 1, destination1], [source 2, destination2],...]
+        List of lists of path of files to move, following the format: [[source 1, destination1], [source 2, destination2],...].
     pcat : ProjectCatalog
-        Catalog to update with new destinations
+        Catalog to update with new destinations.
     deleting : list of str or os.PathLike or int, optional
         List of directories to be deleted, including all contents, and recreated empty. e.g. The working directory of a workflow.
     copy : bool, optional

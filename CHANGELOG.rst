@@ -4,12 +4,23 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors: Pascal Bourgault (:user:`aulemahal`).
+Contributors: Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Performance enhancement of ``xs.subset_warminglevels`` when multiple realizations and/or multiple warming levels are requested. The change reduces the dask complexity of the function and adds support for subsetting timeseries with any frequencies. The function still can't do vectorized subsetting on sub-monthly timeseries with non-uniform calendars. (:pull:`736`).
-   + Also added a ``min_periods`` argument to allow subsetting periods shorter than the ``window``.
+    * Also added a ``min_periods`` argument to allow subsetting periods shorter than the ``window``.
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* A handful of previously marked-deprecated functions have been removed. Their replacements are as follows (:pull:`737`):
+    * ``xscen.utils.publish_release_notes`` -> ``xscen.testing.publish_release_notes``
+    * ``xscen.utils.show_versions`` -> ``xscen.testing.show_versions``
+    * ``xscen.regrid.create_bounds_rotated_pole`` -> ``xscen.regrid.create_bounds_gridmapping``
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Docstrings for all functions and classes now adhere to `numpy`-docstring standards. `numpydoc-validate` is now enforced for all docstrings via linting checks. (:pull:`737`).
 
 .. _changes_0.15.0:
 

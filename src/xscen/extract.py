@@ -69,10 +69,7 @@ def extract_dataset(  # noqa: C901
     mask: bool | xr.Dataset | xr.DataArray = False,
 ) -> dict:
     """
-    Take one element of the output of `search_data_catalogs` and returns a dataset,
-    performing conversions and resampling as needed.
-
-    Nothing is written to disk within this function.
+    Take one element of the output of `search_data_catalogs` and returns a dataset.
 
     Parameters
     ----------
@@ -123,7 +120,9 @@ def extract_dataset(  # noqa: C901
 
     See Also
     --------
-    intake_esm.core.esm_datastore.to_dataset_dict, xarray.open_dataset, xarray.combine_by_coords
+    intake_esm.core.esm_datastore.to_dataset_dict: Method to open a catalog as a dictionary of xarray Datasets.
+    xarray.open_dataset: Function to open a file as an xarray Dataset.
+    xarray.combine_by_coords: Function to combine multiple xarray Datasets by their coordinates.
     """
     resample_methods = resample_methods or {}
 
@@ -149,7 +148,7 @@ def extract_dataset(  # noqa: C901
     # Default arguments to send xarray
     xr_kwargs = _xarray_defaults(xr_open_kwargs=xr_open_kwargs or {}, xr_combine_kwargs=xr_combine_kwargs or {})
 
-    def new_preprocess(ds):
+    def _new_preprocess(ds):
         # existing preprocess first
         if preprocess:
             ds = preprocess(ds)
@@ -161,7 +160,7 @@ def extract_dataset(  # noqa: C901
 
     # Open the catalog
     ds_dict = catalog.to_dataset_dict(
-        preprocess=new_preprocess,
+        preprocess=_new_preprocess,
         # Only print a progress bar when it is minimally useful
         progressbar=(len(catalog.keys()) > 1),
         **xr_kwargs,
@@ -314,7 +313,7 @@ def resample(  # noqa: C901
         The resampling method. If None (default), it is guessed from the variable name and frequency,
         using the mapping in CVs/resampling_methods.json. If the variable is not found there,
         "mean" is used by default.
-    missing: {'mask', 'drop'} or dict, optional
+    missing : {'mask', 'drop'} or dict, optional
         If 'mask' or 'drop', target periods that would have been computed from fewer timesteps than expected
         are masked or dropped, using a threshold of 5% of missing data.
         E.g. the first season of a `target_frequency` of "QS-DEC" will be masked or dropped if data starts in January.
@@ -325,7 +324,7 @@ def resample(  # noqa: C901
     Returns
     -------
     xr.DataArray
-        Resampled variable
+        Resampled variable.
     """
     var_name = da.name
 
@@ -516,7 +515,7 @@ def search_data_catalogs(  # noqa: C901
     exclusions : dict, optional
         Same as other_search_criteria, but for eliminating results.
         Any result that matches any of the exclusions will be removed.
-    match_hist_and_fut: bool
+    match_hist_and_fut : bool
         If True, historical and future simulations will be combined into the same line,
         and search results lacking one of them will be rejected.
     periods : list of str or list of lists of str, optional
@@ -534,7 +533,7 @@ def search_data_catalogs(  # noqa: C901
     conversion_yaml : str, optional
         Path to a YAML file that defines the possible conversions (used alongside 'allow_conversion'=True).
         This file should follow the xclim conventions for building a virtual module.
-        If None, the "derived variable registry" will be defined by the file in "xscen/xclim_modules/conversions.yml"
+        If None, the "derived variable registry" will be defined by the file in "xscen/xclim_modules/conversions.yml".
     restrict_resolution : str, optional
         Used to restrict the results to the finest/coarsest resolution available for a given simulation.
         ['finest', 'coarsest'].
@@ -552,12 +551,6 @@ def search_data_catalogs(  # noqa: C901
         and only datasets that reach the warming level will be kept.
         This can be combined with other arguments of the function, for example {'wl': 1.5, 'window': 30}.
 
-    Notes
-    -----
-    - The "other_search_criteria" and "exclusions" arguments accept wildcard (*) and regular expressions.
-    - Frequency can be wildcarded with 'NA' in the `variables_and_freqs` dict.
-    - Variable names cannot be wildcarded, they must be CMIP6-standard.
-
     Returns
     -------
     dict
@@ -570,7 +563,13 @@ def search_data_catalogs(  # noqa: C901
 
     See Also
     --------
-    intake_esm.core.esm_datastore.search
+    intake_esm.core.esm_datastore.search: Search function of intake-esm.
+
+    Notes
+    -----
+    - The "other_search_criteria" and "exclusions" arguments accept wildcard (*) and regular expressions.
+    - Frequency can be wildcarded with 'NA' in the `variables_and_freqs` dict.
+    - Variable names cannot be wildcarded, they must be CMIP6-standard.
     """
     # Cast single items to a list
     if isinstance(data_catalogs, str | os.PathLike | DataCatalog):
@@ -781,21 +780,20 @@ def search_data_catalogs(  # noqa: C901
 
 @parse_config
 def get_warming_level(*args, **kwargs) -> xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list:
-    """
+    r"""
     Deprecated. Use get_period_from_warming_level instead.
 
     Parameters
     ----------
-    args: list
-        Arguments to pass to get_period_from_warming_level
-    kwargs: dict
-        Keyword arguments to pass to get_period_from_warming_level
+    *args : list
+        Arguments to pass to get_period_from_warming_level.
+    **kwargs : dict
+        Keyword arguments to pass to get_period_from_warming_level.
 
     Returns
     -------
     xr.Dataset or xr.DataArray or dict or list or str
-        Output of get_period_from_warming_level
-
+        Output of get_period_from_warming_level.
     """
     kwargs = kwargs.copy()
     kwargs["return_central_year"] = not kwargs.get("return_horizon", True)
@@ -820,8 +818,7 @@ def get_period_from_warming_level(  # noqa: C901
     return_central_year: bool = False,
 ) -> xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list:
     """
-    Use the IPCC Atlas method to return the window of time
-    over which the requested level of global warming is first reached.
+    Find the period(s) when a given warming level is reached, using the IPCC Atlas method.
 
     Parameters
     ----------
@@ -852,9 +849,9 @@ def get_period_from_warming_level(  # noqa: C901
        If None, it will default to data/IPCC_annual_global_tas.nc which was built from
        the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
        and extra data for missing CMIP6 models and pilot models of CRCM5 and ClimEx.
-    return_central_year: bool
+    return_central_year : bool
         If True, the output will be a string representing the middle of the period, using IPCC conventions in the case of an even window (y-9, y+10).
-        If False (default), the output will be a list following the format ['start_yr', 'end_yr']
+        If False (default), the output will be a list following the format ['start_yr', 'end_yr'].
 
     Returns
     -------
@@ -1121,8 +1118,8 @@ def subset_warming_level(
     **kwargs,
 ) -> xr.Dataset | None:
     r"""
-    Subsets the input dataset with only the window of time over which the requested level of global warming
-    is first reached, using the IPCC Atlas method.
+    Subset the input dataset based on the requested warming level(s), using the IPCC Atlas method.
+
     A warming level is considered reached only if at least `min_periods` years are available in the dataset.
 
     Parameters
@@ -1139,11 +1136,11 @@ def subset_warming_level(
        e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
        Multiple levels can be passed, in which case using "{wl}" in  `to_level` and `wl_dim` is not recommended.
        Multiple levels are currently only implemented for annual data.
-    to_level :
+    to_level : str, optional
        The processing level to assign to the output.
        Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
        `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
-    wl_dim : str or boolean, optional
+    wl_dim : str or bool, optional
        The value to use to fill the new `warminglevel` dimension.
        Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
        `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
@@ -1154,7 +1151,7 @@ def subset_warming_level(
        If fewer years are available, `nan` is returned. This only concerns the subsetting, the full window
        must still exist in the global mean temperature dataset for the given simulation.
        Defaults to the same as `window`.
-    \*\*kwargs :
+    **kwargs
         Instructions on how to search for warming levels, passed to :py:func:`get_period_from_warming_level`.
 
     Returns

@@ -71,7 +71,7 @@ install-tox: ## install base dependencies needed for running tox
 lint: install-lint ## check style
 	python -m ruff check src/xscen tests
 	python -m flake8 --config=.flake8 src/xscen tests
-	# python -m numpydoc lint src/xscen/**.py # FIXME: disabled until the codebase is fully numpydoc compliant
+	python -m numpydoc lint src/xscen/**.py
 	python -m vulture src/xscen tests
 	codespell src/xscen tests docs
 	python -m deptry src
