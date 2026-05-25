@@ -88,7 +88,7 @@ class ConfigDict(dict):
         Parameters
         ----------
         key : str
-            Key.
+            Key. Nested dictionaries accessed by dot-separated names.
         value : Any
             Value.
         """
@@ -108,7 +108,7 @@ class ConfigDict(dict):
         Parameters
         ----------
         pairs : tuple[str, str]
-            Tuples of (str, str).
+            Tuples of key and values.
         """
         for key, valstr in pairs:
             try:
@@ -250,17 +250,17 @@ def load_config(
 
 def parse_config(func_or_cls: Callable) -> Callable:
     """
-    Parse configuration from object.
+    Allow changing keyword argument defaults using the global configuration.
 
     Parameters
     ----------
     func_or_cls : Callable
-        Function or class.
+        Function or class. For classes, the ``__init__`` method is modified.
 
     Returns
     -------
     Callable
-        Configuration.
+        The original object, but with defaults dependent on the global configuration.
     """
     module = ".".join(func_or_cls.__module__.split(".")[1:])
 
@@ -318,7 +318,7 @@ def get_configurable() -> dict[str, Any]:
     Returns
     -------
     dict
-        Dictionary of configurations.
+        Dictionary of configurable functions and classes.
     """
     import xscen as xs
 

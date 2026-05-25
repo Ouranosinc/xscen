@@ -282,8 +282,7 @@ class DataCatalog(intake_esm.esm_datastore):
             return uni[columns]
         return uni
 
-    # FIXME: What are the type expectations here?
-    def iter_unique(self, *columns: str) -> Generator[Any, Any]:
+    def iter_unique(self, *columns: str) -> Generator[Sequence[str], DataCatalog]:
         r"""
         Iterate over sub-catalogs for each group of unique values for all specified columns.
 
@@ -297,10 +296,10 @@ class DataCatalog(intake_esm.esm_datastore):
 
         Yields
         ------
-        Any
-            Values.
-        Any
-            Sim.
+        Sequence of str
+            Values of the specified columns for the unique sub-catalog.
+        DataCatalog
+            Catalog corresponding to a set of unique values in the specified columns.
         """
         for values in itertools.product(*self.unique(columns)):
             sim = self.search(**dict(zip(columns, values, strict=False)))
