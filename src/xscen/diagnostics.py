@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import xclim as xc
-from xclim.core import dataflags, ValidationError
+from xclim.core import ValidationError, dataflags
 from xclim.core.indicator import Indicator
 
 from .config import parse_config
