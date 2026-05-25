@@ -63,7 +63,7 @@ def load_xclim_module(filename: str | os.PathLike, reload: bool = False) -> Modu
     return xc.build_indicator_module_from_yaml(filename)
 
 
-def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str):
+def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str) -> tuple[list[str], str]:
     """
     Return the variables names and resampling frequency of a given indicator.
 
@@ -168,7 +168,7 @@ def compute_indicators(  # noqa: C901
     in_freq = xr.infer_freq(ds.time) if "time" in ds.dims else "fx"
     dss_rechunked = {}
 
-    out_dict = dict()
+    out_dict = {}
     for i, ind in enumerate(indicators, 1):
         if isinstance(ind, tuple):
             iden, ind = ind

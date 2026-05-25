@@ -308,9 +308,9 @@ def subset(
 
     See Also
     --------
-    clisops.core.subset.subset_gridpoint: Used for the 'gridpoint' method.
-    clisops.core.subset.subset_bbox: Used for the 'bbox' method.
-    clisops.core.subset.subset_shape: Used for the 'shape' method.
+    clisops.core.subset.subset_gridpoint : Used for the 'gridpoint' method.
+    clisops.core.subset.subset_bbox : Used for the 'bbox' method.
+    clisops.core.subset.subset_shape : Used for the 'shape' method.
     """
     if cl is None and method in ["gridpoint", "bbox", "shape"]:
         raise ImportError("The clisops package is required for the 'gridpoint', 'bbox' and 'shape' methods.")

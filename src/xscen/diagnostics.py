@@ -101,7 +101,6 @@ def health_checks(  # noqa: C901
         and the values being the arguments to pass to the data_flags.
         If `None` is passed instead of a dictionary, then xclim's default flags for the given variable are run.
         See :py:data:`xclim.core.utils.VARIABLES`.
-        See also :py:func:`xclim.core.dataflags.data_flags` for the list of possible flags.
     flags_kwargs : dict, optional
         Additional keyword arguments to pass to the data_flags ("dims" and "freq").
     return_flags : bool
@@ -115,6 +114,10 @@ def health_checks(  # noqa: C901
     -------
     xr.Dataset, optional
         Dataset containing the flags if return_flags is True & raise_on is False for the "flags" check.
+
+    See Also
+    --------
+    xclim.core.dataflags.data_flags : The list of possible flags that can be passed to `flags`.
     """
     if isinstance(ds, xr.DataArray):
         ds = ds.to_dataset()

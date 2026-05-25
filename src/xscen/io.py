@@ -387,7 +387,7 @@ def save_to_netcdf(
 
     See Also
     --------
-    xarray.Dataset.to_netcdf: The xarray function used to save the dataset.
+    xarray.Dataset.to_netcdf : The xarray function used to save the dataset.
     """
     if rechunk:
         ds = rechunk_for_saving(ds, rechunk)
@@ -504,7 +504,7 @@ def save_to_zarr(  # noqa: C901
 
     See Also
     --------
-    xarray.Dataset.to_zarr: The xarray function used to save the dataset.
+    xarray.Dataset.to_zarr : The xarray function used to save the dataset.
     """
     # to address this issue https://github.com/pydata/xarray/issues/3476
     for v in list(ds.coords.keys()):
@@ -879,7 +879,7 @@ def save_to_table(  # noqa: C901
         A table of content to add as the first sheet. Only valid if the output format is excel.
         If True, :py:func:`make_toc` is used to generate the toc.
         The sheet name of the toc can be given through the "name" attribute of the DataFrame, otherwise "Content" is used.
-    **kwargs :
+    **kwargs : dict
         Other arguments passed to the pandas function.
         If the output format is excel, kwargs to :py:class:`pandas.ExcelWriter` can be given here as well.
     """
@@ -1010,7 +1010,7 @@ def rechunk(
 
     See Also
     --------
-    rechunker.rechunk: Function from the rechunker library used to perform the rechunking.
+    rechunker.rechunk : Function from the rechunker library used to perform the rechunking.
     """
     if Path(path_out).is_dir() and overwrite:
         sh.rmtree(path_out)
@@ -1128,7 +1128,7 @@ def save_sparse(
 
     See Also
     --------
-    load_sparse: Load a sparse array that was saved with :py:func:`~xscen.io.save_sparse`.
+    load_sparse : Load a sparse array that was saved with :py:func:`~xscen.io.save_sparse`.
     """
     arr = da.data
     ds = xr.Dataset(

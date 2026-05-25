@@ -73,12 +73,12 @@ def ensemble_stats(  # noqa: C901
 
     See Also
     --------
-    xclim.ensembles._base.create_ensemble: Concatenate datasets along a new 'realization' dimension.
-    xclim.ensembles._base.ensemble_percentiles: Calculate percentiles along the 'realization' dimension.
-    xclim.ensembles._base.ensemble_mean_std_max_min: Calculate mean, std, max, and min along the 'realization' dimension.
-    xclim.ensembles._robustness.robustness_fractions: Calculate robustness metrics.
-    xclim.ensembles._robustness.robustness_categories: Categorize the robustness of changes.
-    xclim.ensembles._robustness.robustness_coefficient: Calculate the robustness coefficient.
+    xclim.ensembles._base.create_ensemble : Concatenate datasets along a new 'realization' dimension.
+    xclim.ensembles._base.ensemble_percentiles : Calculate percentiles along the 'realization' dimension.
+    xclim.ensembles._base.ensemble_mean_std_max_min : Calculate mean, std, max, and min along the 'realization' dimension.
+    xclim.ensembles._robustness.robustness_fractions : Calculate robustness metrics.
+    xclim.ensembles._robustness.robustness_categories : Categorize the robustness of changes.
+    xclim.ensembles._robustness.robustness_coefficient : Calculate the robustness coefficient.
 
     Notes
     -----
@@ -231,7 +231,7 @@ def generate_weights(  # noqa: C901
     independence_level : str
         'model': Weights using the method '1 model - 1 Vote',
         where every unique combination of 'source' and 'driving_model' is considered a model.
-        'GCM': Weights using the method '1 GCM - 1 Vote'é
+        'GCM': Weights using the method '1 GCM - 1 Vote'.
         'institution': Weights using the method '1 institution - 1 Vote'.
     balance_experiments : bool
         If True, each experiment will be given a total weight of 1
@@ -396,7 +396,7 @@ def generate_weights(  # noqa: C901
             n_realizations = len(realizations)
         else:
             n_realizations = xr.zeros_like(datasets[list(keys)[0]][v_for_skipna])
-            r_models = dict()
+            r_models = {}
             for r in realizations:
                 r_models[r] = [k for k in info.keys() if (all([info[k][s] == sim[s] for s in realization_struct]) and (info[k]["member-exp"] == r))]
                 n_realizations = n_realizations + (
@@ -416,7 +416,7 @@ def generate_weights(  # noqa: C901
                 n_institutions = len(institution)
             else:
                 n_institutions = xr.zeros_like(datasets[list(keys)[0]][v_for_skipna])
-                i_models = dict()
+                i_models = {}
                 for ii in institution:
                     i_models[ii] = [
                         k for k in info.keys() if (all([info[k][s] == sim[s] for s in institution_struct]) and (info[k]["driving_model"] == ii))
@@ -674,8 +674,7 @@ def build_partition_data(
     From a list or dictionary of datasets, create a single dataset with
     `partition_dim` dimensions (and time) to pass to one of the xclim partition functions
     (https://xclim.readthedocs.io/en/stable/api.html#uncertainty-partitioning).
-    If the inputs have different grids,
-    they have to be subsetted and/or regridded to a common grid/point.
+    If the inputs have different grids, they have to be subsetted and/or regridded to a common grid/point.
 
     Parameters
     ----------
@@ -713,7 +712,7 @@ def build_partition_data(
 
     See Also
     --------
-    xclim.ensembles: Module with functions to compute ensemble statistics and reduce ensembles using clustering algorithms.
+    xclim.ensembles : Module with functions to compute ensemble statistics and reduce ensembles using clustering algorithms.
     """
     if partition_dim is None:
         partition_dim = ["realization", "experiment", "bias_adjust_project"]

@@ -817,8 +817,8 @@ def change_units(ds: xr.Dataset, variables_and_units: dict) -> xr.Dataset:
 
     See Also
     --------
-    xclim.core.units.convert_units_to: Convert units.
-    xclim.core.units.rate2amount: Convert a rate to an amount.
+    xclim.core.units.convert_units_to : Convert units.
+    xclim.core.units.rate2amount : Convert a rate to an amount.
     """
     with xr.set_options(keep_attrs=True):
         for v in variables_and_units:

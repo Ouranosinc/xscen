@@ -86,8 +86,8 @@ def regrid_dataset(  # noqa: C901
 
     See Also
     --------
-    xesmf.regridder: Used to perform regridding operations.
-    xesmf.util.cf_grid_2d: Used to create grids that follow CF conventions.
+    xesmf.regridde : Used to perform regridding operations.
+    xesmf.util.cf_grid_2d : Used to create grids that follow CF conventions.
 
     Notes
     -----
