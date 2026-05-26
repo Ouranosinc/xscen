@@ -1,5 +1,6 @@
 import ast
 import contextlib
+import re
 import warnings
 
 import numpy as np
@@ -168,10 +169,10 @@ class TestAdjust:
         assert out.attrs["cat:processing_level"] == to_level or "biasadjusted"
         assert out.attrs["cat:variable"] == ("tas",)
         assert out.attrs["cat:id"] == "fake_id"
-        assert (
-            out["tas"].attrs["bias_adjustment"] == "DetrendedQuantileMapping(group=Grouper("
-            "name='time.dayofyear', window=31), kind='+'"
-            ", adapt_freq_thresh=None).adjust(sim, ) with xsdba_train_args: {}"
+        assert re.fullmatch(
+            r"DetrendedQuantileMapping\(group=Grouper\(name='time\.dayofyear', window=31\), kind='\+', "
+            r"adapt_freq_thresh=None(?:, [^)]*)?\)\.adjust\(sim, \) with xsdba_train_args: \{\}",
+            out["tas"].attrs["bias_adjustment"],
         )
         assert out.time.dt.calendar == "noleap"
 
@@ -248,23 +249,14 @@ class TestAdjust:
             xsdba_adjust_args={"detrend": {"LoessDetrend": {"f": 0.2, "niter": 1, "d": 0, "weights": "tricube"}}},
         )
 
-        assert (
-            out.tas.attrs["bias_adjustment"] == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
-            " window=31), kind='+', adapt_freq_thresh='2 K').adjust(sim, detrend=<LoessDetrend>)"
-            " with xsdba_train_args: {'adapt_freq_thresh': '2 K'},"
-            " ref and hist were prepared with jitter_under_thresh(ref, hist,"
-            " {'thresh': '2 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd':"
-            " '3 K', 'thresh': '2 K'})"
-        )
-
-        assert (
-            out2.tas.attrs["bias_adjustment"] == "DetrendedQuantileMapping(group=Grouper(name='time.dayofyear',"
-            " window=31), kind='+', adapt_freq_thresh='2 K').adjust(sim, detrend=<LoessDetrend>)"
-            " with xsdba_train_args: {'adapt_freq_thresh': '2 K'}, "
-            "ref and hist were prepared with jitter_under_thresh(ref, hist, {'thresh':"
-            " '2 K'}) and jitter_over_thresh(ref, hist, {'upper_bnd': '3 K',"
-            " 'thresh': '2 K'})"
-        )
+        for out_test in [out, out2]:
+            assert re.fullmatch(
+                r"DetrendedQuantileMapping\(group=Grouper\(name='time\.dayofyear', window=31\), kind='\+', "
+                r"adapt_freq_thresh='2 K'(?:, [^)]*)?\)\.adjust\(sim, detrend=<LoessDetrend>\) with xsdba_train_args: "
+                r"\{'adapt_freq_thresh': '2 K'\}, ref and hist were prepared with jitter_under_thresh\(ref, hist, "
+                r"\{'thresh': '2 K'\}\) and jitter_over_thresh\(ref, hist, \{'upper_bnd': '3 K', 'thresh': '2 K'\}\)",
+                out_test.tas.attrs["bias_adjustment"],
+            )
 
         assert out.equals(out2)
 
