@@ -134,8 +134,8 @@ def climatological_op(  # noqa: C901
         If True, the output will have 'horizon' and the frequency as 'month', 'season' or 'year' as
         dimensions and coordinates. The 'time' coordinate will be unstacked to horizon and frequency dimensions.
         Horizons originate from periods and/or windows and their stride in the rolling operation.
-    **unstack_kwargs : dict
-        Other arguments to pass to `py:func:~xscen.utils.unstack_dates`.
+    \*\*unstack_kwargs : dict
+        Other arguments to pass to `:py:func:~xscen.utils.unstack_dates`.
 
     Returns
     -------
