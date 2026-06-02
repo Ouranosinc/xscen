@@ -14,10 +14,9 @@ Changelog
     Fixes
     ^^^^^
     * No change.
-
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors: Pascal Bourgault (:user:`aulemahal`)
+Contributors: Pascal Bourgault (:user:`aulemahal`).
 
 Fixes
 ^^^^^
