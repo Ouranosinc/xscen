@@ -26,7 +26,7 @@ A reminder for the **maintainers** on how to deploy. This section is only releva
 
     .. code-block:: console
 
-        git tag v0.2.0
+        git tag -s v0.2.0 -m "Release version 0.2.0"
         git push --tags
 
    This will trigger a GitHub workflow to build the package and upload it to TestPyPI. At the same time, the GitHub workflow will create a draft release on GitHub. Assuming that the workflow passes, the final release can then be published on GitHub by finalizing the draft release.
