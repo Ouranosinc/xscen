@@ -2,18 +2,13 @@
 Changelog
 =========
 
-..
-    `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-    ------------------------------------------------------------
-    Contributors:
+`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
+------------------------------------------------------------
+Contributors: Pascal Bourgault (:user:`aulemahal`).
 
-    Changes
-    ^^^^^^^
-    * No change.
-
-    Fixes
-    ^^^^^
-    * No change.
+Bug fixes
+^^^^^^^^^
+* Rewrite the way attributes are coerced in ``save_to_zarr`` and ``save_to_netcdf`` to fix issues with numpy native dtypes. Sequences are always re-written as comma-separated lists (strings). (:pull:`743`).
 
 .. _changes_0.15.1:
 
