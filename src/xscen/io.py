@@ -360,6 +360,8 @@ def save_to_netcdf(
     """
     Save a Dataset to NetCDF, rechunking or compressing if requested.
 
+    Attributes are coerced to built-in types before writing, sequences are written as comma-separated lists.
+
     Parameters
     ----------
     ds : xr.Dataset
@@ -449,6 +451,7 @@ def save_to_zarr(  # noqa: C901
     Save a Dataset to Zarr format, rechunking and compressing if requested.
 
     According to mode, removes variables that we don't want to re-compute in ds.
+    Attributes are coerced to built-in types before writing, sequences are written as comma-separated lists.
 
     Parameters
     ----------
