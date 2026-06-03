@@ -24,14 +24,7 @@ jobs:
         uses: step-security/harden-runner@9ca718d3bf646d6534007c269a635b3e54cadf99 # v2.19.2
         with:
           disable-sudo: true
-          egress-policy: block
-          allowed-endpoints: >
-            files.pythonhosted.org:443
-            fulcio.sigstore.dev:443
-            github.com:443
-            pypi.org:443
-            ruf-repo-cdn.sigstore.dev:443
-            upload.pypi.org:443
+          egress-policy: audit
 
       - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2

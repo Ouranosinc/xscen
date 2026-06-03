@@ -37,6 +37,7 @@ docs = [
   # Documentation and example support
   "nbsphinx >=0.9.8",
   "sphinx >=8.2.0",
+  "sphinx-autobuild >=2024.4.16",
   "sphinx-autodoc-typehints >=3.1.0",
   "sphinx-codeautolink >=0.16.2",
   "sphinx-copybutton >=0.5.2",
@@ -156,6 +157,7 @@ commit = true
 commit_args = "--no-verify"
 tag = false
 tag_name = "v{new_version}"
+sign_tags = true
 allow_dirty = true
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(\\-(?P<release>[a-z]+)(\\.(?P<build>\\d+)))?"
 serialize = [
@@ -229,6 +231,9 @@ omit = ["docs/notebooks/*.ipynb", "tests/*.py"]
 relative_files = true
 source = ["xscen"]
 
+[tool.cruft]
+skip = []
+
 [tool.deptry]
 ignore_notebooks = true
 
@@ -247,6 +252,7 @@ include = [
   ".zenodo.json",
   "AUTHORS.rst",
   "CHANGELOG.rst",
+  "CITATION.cff",
   "CODE_OF_CONDUCT.md",
   "CONTRIBUTING.rst",
   "LICENSE",
@@ -264,6 +270,7 @@ include = [
   "docs/notebooks/samples/*.json",
   "docs/notebooks/samples/*.yml",
   "docs/notebooks/samples/tutorial/**/*.nc",
+  "pyproject.toml",
   "requirements_upstream.txt",
   "src/xscen/**/*.py",
   "src/xscen/**/*.yml",
@@ -282,12 +289,14 @@ exclude = [
   ".cruft.json",
   ".editorconfig",
   ".flake8",
+  ".github",
   ".gitignore",
   ".pre-commit-config.yaml",
   ".readthedocs.yml",
   ".secrets.baseline",
   ".yamllint.yaml",
   ".zizmor.yml",
+  "CI/requirements_ci.*",
   "docs/_build",
   "docs/apidoc/modules.rst",
   "docs/apidoc/xscen*.rst",

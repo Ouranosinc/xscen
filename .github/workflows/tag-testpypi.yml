@@ -57,13 +57,6 @@ jobs:
         with:
           disable-sudo: true
           egress-policy: audit
-          allowed-endpoints: >
-            files.pythonhosted.org:443
-            fulcio.sigstore.dev:443
-            github.com:443
-            pypi.org:443
-            ruf-repo-cdn.sigstore.dev:443
-            test.pypi.org:443
 
       - name: Checkout Repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
