@@ -9,6 +9,11 @@ Contributors: Pascal Bourgault (:user:`aulemahal`).
 Bug fixes
 ^^^^^^^^^
 * Rewrite the way attributes are coerced in ``save_to_zarr`` and ``save_to_netcdf`` to fix issues with numpy native dtypes. Sequences are always re-written as comma-separated lists (strings). (:pull:`743`).
+* ``xs.spatial.subset`` with ``method='gridpoint'`` now works with ``stack_drop_nans`` outputs. (:pull:`745`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* ``xs.spatial.get_crs`` now works with any DataArray. (:pull:`745`).
 
 .. _changes_0.15.1:
 
