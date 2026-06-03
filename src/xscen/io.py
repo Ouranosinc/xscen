@@ -285,10 +285,15 @@ def clean_incomplete(
 def _coerce_attrs(attrs):
     """Ensure no funky objects in attrs."""
     for k in list(attrs.keys()):
-        if not (
-            isinstance(attrs[k], str | float | int | np.ndarray) or isinstance(attrs[k], tuple | list) and isinstance(attrs[k][0], str | float | int)
-        ):
+        # We defer to numpy's casting mechanism.
+        # If it's a type understood by numpy, all right. If not, cast as string
+        # If it's a sequence, write as comma separated list
+        val = np.atleast_1d(attrs[k])
+        if val.size == 1 and val.dtype == "O":
+            # single non-normal element
             attrs[k] = str(attrs[k])
+        elif val.size > 1:
+            attrs[k] = ", ".join(map(str, attrs[k]))
 
 
 def _np_bitround(array: xr.DataArray, keepbits: int):
@@ -354,6 +359,8 @@ def save_to_netcdf(
 ):
     """
     Save a Dataset to NetCDF, rechunking or compressing if requested.
+
+    Attributes are coerced to built-in types before writing, sequences are written as comma-separated lists.
 
     Parameters
     ----------
@@ -444,6 +451,7 @@ def save_to_zarr(  # noqa: C901
     Save a Dataset to Zarr format, rechunking and compressing if requested.
 
     According to mode, removes variables that we don't want to re-compute in ds.
+    Attributes are coerced to built-in types before writing, sequences are written as comma-separated lists.
 
     Parameters
     ----------

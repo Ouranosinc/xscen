@@ -28,9 +28,12 @@ Acknowledgments
     :target: https://www.ouranos.ca/en
     :align: center
 
+Navigation
+==========
+
 .. toctree::
     :maxdepth: 2
-    :caption: Contents:
+    :caption: Table of Contents
 
     readme
     installation

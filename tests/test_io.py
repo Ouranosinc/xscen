@@ -632,6 +632,37 @@ class TestSaveToZarr:
         assert (Path(tmpdir) / "test.zarr.zip").exists()
         assert not (Path(tmpdir) / "test1.zarr").exists()
 
+    def test_coerce_attrs(self, tmpdir):
+
+        class CustomObject:
+            pass
+
+        attrs = {"anNPint": np.int32(42), "adict": {"key": "value"}, "a_custom": CustomObject(), "amixedlist": [1, "2", np.uint16(3)]}
+        ds = xr.Dataset({"avar": 42}, attrs=attrs)
+        xs.save_to_zarr(ds, tmpdir / "test.zarr")
+
+        ds2 = xr.open_zarr(tmpdir / "test.zarr")
+        assert ds2.attrs["anNPint"] == 42
+        assert isinstance(ds2.attrs["adict"], str)
+        assert isinstance(ds2.attrs["a_custom"], str)
+        assert isinstance(ds2.attrs["amixedlist"], str)
+
+
+def test_coerce_attrs_netcdf(tmpdir):
+
+    class CustomObject:
+        pass
+
+    attrs = {"anNPint": np.int32(42), "adict": {"key": "value"}, "a_custom": CustomObject(), "amixedlist": [1, "2", np.uint16(3)]}
+    ds = xr.Dataset({"avar": 42}, attrs=attrs)
+    xs.save_to_netcdf(ds, tmpdir / "test.nc")
+
+    ds2 = xr.open_dataset(tmpdir / "test.nc")
+    assert ds2.attrs["anNPint"] == 42
+    assert isinstance(ds2.attrs["adict"], str)
+    assert isinstance(ds2.attrs["a_custom"], str)
+    assert isinstance(ds2.attrs["amixedlist"], str)
+
 
 @pytest.mark.parametrize("engine", ["netcdf", "zarr"])
 def test_savefuncs_normal(tmpdir, engine):

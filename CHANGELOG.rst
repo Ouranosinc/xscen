@@ -2,18 +2,30 @@
 Changelog
 =========
 
-..
-    `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-    ------------------------------------------------------------
-    Contributors:
+`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
+------------------------------------------------------------
+Contributors: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`).
 
-    Changes
-    ^^^^^^^
-    * No change.
+Bug fixes
+^^^^^^^^^
+* Rewrite the way attributes are coerced in ``save_to_zarr`` and ``save_to_netcdf`` to fix issues with numpy native dtypes. Sequences are always re-written as comma-separated lists (strings). (:pull:`743`).
+* ``xs.spatial.subset`` with ``method='gridpoint'`` now works with ``stack_drop_nans`` outputs. (:pull:`745`).
 
-    Fixes
-    ^^^^^
-    * No change.
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* ``xs.spatial.get_crs`` now works with any DataArray. (:pull:`745`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* `xscen` now has guidance documents on acceptable usages of AI and the expected methods of AI usage disclosure. See the documentation for more details. (:pull:`746`).
+* Fast-forwarded the cookiecutter with the latest changes. (:pull:`746`):
+    * Adjusted the permissions for some workflows to address security issues.
+    * Added the new "standard" AI disclosure guidance for code contributions.
+    * Updated the ReadTheDocs configuration to use newer OS and conda images.
+    * Modified ``make servedocs`` to use `sphinx-autobuild` (``make livehtml``).
+    * Added guidance for maintainers on git commit signing and immutable releases.
+    * Adjusted the source distribution inclusion/exclusion list.
+    * Set `bump-my-version` to sign tags by default.
 
 .. _changes_0.15.1:
 

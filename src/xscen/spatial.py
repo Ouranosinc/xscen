@@ -397,6 +397,8 @@ def _subset_gridpoint(
         and crs is not None  # the actual crs of the data is known
         and "X" in ds.cf.axes
         and "Y" in ds.cf.axes  # the coords (in the actual crs) are known
+        and ds.cf["X"].name in ds.indexes  # for the loc case
+        and ds.cf["Y"].name in ds.indexes  # the coords are indexable (required for nearest-sel)
         and (lon.size * ds.cf["Y"].size * ds.cf["X"].size) > 1000  # the work to do is relatively large
     ):
         # Fast-track : use xarray's nearest-sel on 1D coordinate by converting the request to the actual CRS
@@ -642,15 +644,20 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
     Parameters
     ----------
     gridmap : xr.Dataset or xr.DataArray
-      Either a dataset that has a grid mapping variable or that grid mapping variable directly.
+      Either a dataset or dataraay that has a grid mapping variable or that grid mapping variable directly.
 
     Returns
     -------
     cartopy.crs.Projection
       The cartopy crs. Only RotatedPole and ObliqueMercator are supported.
     """
-    if isinstance(gridmap, xr.Dataset):
-        gridmap_name = get_grid_mapping(gridmap)
+    # if not passing the grid mapping var itself, we need to get it
+    if "grid_mapping_name" not in gridmap.attrs:
+        if isinstance(gridmap, xr.Dataset):
+            gridmap_name = get_grid_mapping(gridmap)
+        else:  # DataArray
+            gridmap_name = gridmap.attrs["grid_mapping"]
+
         if gridmap_name == "" and (
             "longitude" in gridmap.cf
             and "X" in gridmap.cf
