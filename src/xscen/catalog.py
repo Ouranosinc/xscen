@@ -130,6 +130,7 @@ csv_kwargs = {
         "variable": _parse_list_of_strings,
         "xrfreq": ensure_new_xrfreq,
     },
+    "low_memory": False,
 }
 """Kwargs to pass to `pd.read_csv` when opening an official Ouranos catalog."""
 
