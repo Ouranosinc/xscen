@@ -10,6 +10,7 @@ Bug fixes
 ^^^^^^^^^
 * Rewrite the way attributes are coerced in ``save_to_zarr`` and ``save_to_netcdf`` to fix issues with numpy native dtypes. Sequences are always re-written as comma-separated lists (strings). (:pull:`743`).
 * ``xs.spatial.subset`` with ``method='gridpoint'`` now works with ``stack_drop_nans`` outputs. (:pull:`745`).
+* Turn off memory management when reading catalog's csv to support large catalogs with sparsely populated categorical columns. (:pull:`747`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
