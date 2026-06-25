@@ -1,6 +1,7 @@
 import datetime
 from pathlib import Path
 
+import dask
 import numpy as np
 import pandas as pd
 import pytest
@@ -597,12 +598,12 @@ class TestSaveToZarr:
         xs.save_to_zarr(ds1, Path(tmpdir) / "test.zarr.zip")
 
         assert (Path(tmpdir) / "test.zarr.zip").exists()
-        assert (Path(tmpdir) / "test.zarr").exists()
+        assert not (Path(tmpdir) / "test.zarr").exists()
 
-        xs.save_to_zarr(ds1, Path(tmpdir) / "test2.zarr.zip", zip_kwargs={"delete": True})
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test2.zarr.zip", zip_kwargs={"delete": False})
 
         assert (Path(tmpdir) / "test2.zarr.zip").exists()
-        assert not (Path(tmpdir) / "test2.zarr").exists()
+        assert (Path(tmpdir) / "test2.zarr").exists()
 
         xs.save_to_zarr(ds1, Path(tmpdir) / "test3.zarr", zip_kwargs={"zipfile": Path(tmpdir) / "test4.zarr.zip"})
 
@@ -618,6 +619,11 @@ class TestSaveToZarr:
 
         assert (Path(tmpdir) / Path(tmpdir) / "test6.zarr.zip").exists()
         assert (Path(tmpdir) / "test7.zarr").exists()
+
+        task = xs.save_to_zarr(ds1, Path(tmpdir) / "test8.zarr.zip", compute=False)
+        dask.compute(task)
+        assert (Path(tmpdir) / "test8.zarr.zip").exists()
+        assert not (Path(tmpdir) / "test8.zarr").exists()
 
     def test_zarr_zip_warn(self, tmpdir):
         ds1 = timeseries(

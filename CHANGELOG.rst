@@ -15,6 +15,11 @@ Bug fixes
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * ``xs.spatial.get_crs`` now works with any DataArray. (:pull:`745`).
+* ``xs.io.save_to_zarr`` now supports writing to a zipped zarr when ``compute=False``. (:pull:`748`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* When passed a ``.zarr.zip`` path, ``xs.io.save_to_zarr`` will now delete the intermediate zarr folder by default if ``zip_zarrdir`` is not given. This can always be overridden by passing ``zip_kwargs={'delete': False}``. (:pull:`748`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^

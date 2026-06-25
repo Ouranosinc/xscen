@@ -12,6 +12,7 @@ from inspect import signature
 from pathlib import Path
 from zipfile import ZipFile
 
+import dask
 import h5py
 import netCDF4
 import numpy as np
@@ -497,13 +498,15 @@ def save_to_zarr(  # noqa: C901
         then zipped to `filename`. For the initial zarr, if the zip_zarrdir ends in .zarr, it is used as is. If it
         does not end in .zarr, the name of `filename` is used inside this dir.
         If given, but `filename` does not end with .zip, this is ignored.
-        If not given and filename ends in zip, the initial zarr is saved directly to `filename` without .zip suffix, then zip to `filename`.
+        If not given and filename ends in zip, the initial zarr is saved directly to `filename` without .zip suffix,
+        then zip to `filename`, the first zarr is then deleted.
         It is possible to pass a path with environment variables like ${SLURM_TMPDIR} to ``zip_zarrdir``.
     zip_kwargs : dict, optional
         If given and `filename` ends in zip, the saved zarr directory is zipped using ``xs.io.zip_directory(**zip_kwargs)``.
         If `zipfile` arg is given, it is ignored. The `zipfile` is always set to `filename`.
         If given but `filename` does not end with .zip, this is ignored.
-        Tip: Pass `delete=True` here to erase the temporary zarr file.
+        If `filename` ends with .zip and `zip_zarrdir is not given, `zip_kwargs['delete']` defaults to True.
+        Otherwise, Pass `delete=True` here to erase the temporary zarr file.
 
     Returns
     -------
@@ -538,6 +541,7 @@ def save_to_zarr(  # noqa: C901
             # expand var allows to pass ${SLURM_TMPDIR} or similar
             path = Path(os.path.expandvars(zip_zarrdir)) / path.with_suffix("").name
         else:
+            zip_kwargs.setdefault("delete", True)
             path = Path(path.with_suffix(""))
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -635,8 +639,11 @@ def save_to_zarr(  # noqa: C901
             raise
 
     if Path(filename).suffix == ".zip":
-        zip_directory(path, **zip_kwargs)
-        z = None
+        if compute:
+            zip_directory(path, **zip_kwargs)
+            z = None
+        else:
+            z = then_zip(z, path, **zip_kwargs)
     return z
 
 
@@ -1113,6 +1120,26 @@ def unzip_directory(zipfile: str | os.PathLike, root: str | os.PathLike):
 
     with ZipFile(zipfile, "r") as zf:
         zf.extractall(root)
+
+
+@dask.delayed(name="zip")
+def then_zip(comp, root, zipfile=None, **zip_kwargs):  # noqa: F841
+    """
+    Zip a zarr directory after computation.
+
+    Parameters
+    ----------
+    comp : dask.Delayed
+        Dask object representing the lazy `to_zarr` call.
+    root : path
+        The directory with the content to archive, should be a .zarr directory.
+    zipfile : path
+        The zip file to create. If omitted, defaults to `root` with a .zip suffix.
+    **zip_kwargs : dict
+        Any other arguments to pass to :py:func:`zip_directory`.
+    """
+    # TODO: can we extract information from `comp` ?
+    zip_directory(root, zipfile or Path(root).with_suffix(".zarr.zip"), **zip_kwargs)
 
 
 # TODO: Implement as CF compression-by-gathering in cf-xarray instead
