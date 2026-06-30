@@ -130,6 +130,10 @@ jobs:
         env:
           ESMF_VERSION: ${{ matrix.esmf-version }}
           XCLIM_VERSION: ${{ matrix.xclim-version }}
+      - name: Trust Coveralls Homebrew tap # Homebrew v6.0 requirement; Remove when coverallsapp/github-action >2.3.7
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew trust coverallsapp/coveralls
       - name: Report Coverage
         uses: coverallsapp/github-action@648a8eb78e6d50909eff900e4ec85cab4524a45b # v2.3.6
         with:
