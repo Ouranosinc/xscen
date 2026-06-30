@@ -77,6 +77,8 @@ COLUMNS = [
 ]
 """Official column names."""
 
+_NONSTR_COLUMNS = ["date_start", "date_end", "variable"]
+
 ID_COLUMNS = [
     "bias_adjust_project",
     "bias_adjust_reference",
@@ -118,6 +120,7 @@ csv_kwargs = {
     "schema_overrides": {
         "date_start": pl.Datetime(time_unit="ms"),
         "date_end": pl.Datetime(time_unit="ms"),
+        **{col: pl.String() for col in set(COLUMNS) - set(_NONSTR_COLUMNS)},
     },
     "try_parse_dates": True,
 }

@@ -37,9 +37,9 @@ from . import (
     spatial,
     testing,
     utils,
-    zarrzip,
 )
 
+# zarrzip,
 # Import top-level functions
 from .aggregate import *
 from .biasadjust import *
