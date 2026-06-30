@@ -19,12 +19,12 @@ A reminder for the **maintainers** on how to deploy. This section is only releva
 For creating tags and releases, we **strongly recommend** enabling the "release immutability" option in the repository settings. This prevents _tags_ and _releases_ from being modified of GitHub after they have been published.
 
 #. Create a new branch from `main` (e.g. `release-0.2.0`).
-#. Update the `CHANGELOG.rst` file to change the `Unreleased` section to the current date.
 #. Bump the version in your branch to the next version (e.g. `v0.1.0 -> v0.2.0`):
 
     .. code-block:: console
 
-        bump-my-version bump minor # In most cases, we will be releasing a minor version
+        # For a minor version, bump the minor. For a patch only, do the "bump release".
+        bump-my-version bump minor
         bump-my-version bump release # This will update the version strings to drop the `dev` suffix
         git push
 
