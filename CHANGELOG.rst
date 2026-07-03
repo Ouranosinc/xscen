@@ -8,10 +8,19 @@ Contributors: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Z
 
 Bug fixes
 ^^^^^^^^^
+* ``xs.spatial.get_crs`` now warns when it applies its default spherical-Earth assumption because the grid mapping carries no shape-of-the-Earth information, instead of doing so silently. (:issue:`756`, :pull:`757`).
+
+.. _changes_0.15.2:
+
+`v0.15.2 <https://github.com/Ouranosinc/xscen/tree/0.15.2>`_ (2026-06-30)
+-------------------------------------------------------------------------
+Contributors: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`).
+
+Bug fixes
+^^^^^^^^^
 * Rewrite the way attributes are coerced in ``save_to_zarr`` and ``save_to_netcdf`` to fix issues with numpy native dtypes. Sequences are always re-written as comma-separated lists (strings). (:pull:`743`).
 * ``xs.spatial.subset`` with ``method='gridpoint'`` now works with ``stack_drop_nans`` outputs. (:pull:`745`).
 * Turn off memory management when reading catalog's csv to support large catalogs with sparsely populated categorical columns. (:pull:`747`).
-* ``xs.spatial.get_crs`` now warns when it applies its default spherical-Earth assumption because the grid mapping carries no shape-of-the-Earth information, instead of doing so silently. (:issue:`756`, :pull:`757`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
