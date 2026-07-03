@@ -692,9 +692,7 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
         "reference_ellipsoid_name",
         "horizontal_datum_name",
     )
-    if cf_params.get("grid_mapping_name") != "latitude_longitude" and not any(
-        cf_params.get(k) is not None for k in earth_shape_params
-    ):
+    if cf_params.get("grid_mapping_name") != "latitude_longitude" and not any(cf_params.get(k) is not None for k in earth_shape_params):
         warnings.warn(
             "No shape-of-the-Earth information (e.g. 'earth_radius', 'semi_major_axis' or "
             "'reference_ellipsoid_name') was found in the grid mapping. Assuming a spherical Earth "
@@ -751,10 +749,7 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
         try:
             crs = cartopy.crs.Projection(CRS.from_cf(cf_params))
         except Exception as err:  # noqa: BLE001
-            raise NotImplementedError(
-                f"Grid mapping '{cf_params['grid_mapping_name']}' could not be converted to a "
-                "projection by pyproj."
-            ) from err
+            raise NotImplementedError(f"Grid mapping '{cf_params['grid_mapping_name']}' could not be converted to a projection by pyproj.") from err
         # Keep the globe consistent with the other branches so callers that pair the projection
         # with a PlateCarree instance (via ``crs.globe``) behave as expected.
         crs.globe = globe
