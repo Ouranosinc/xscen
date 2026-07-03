@@ -151,6 +151,7 @@ def datablock_3d(
                     "scale_factor_at_projection_origin": 1.0,
                     "false_easting": 0.0,
                     "false_northing": 0.0,
+                    "earth_radius": 6370997,
                 },
             )
             da.attrs["grid_mapping"] = "oblique_mercator"

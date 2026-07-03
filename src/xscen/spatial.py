@@ -649,7 +649,12 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
     Returns
     -------
     cartopy.crs.Projection
-      The cartopy crs. Only RotatedPole and ObliqueMercator are supported.
+      The cartopy CRS. The ``latitude_longitude``, ``rotated_latitude_longitude``,
+      ``oblique_mercator`` and ``lambert_conformal_conic`` grid mappings are translated to
+      dedicated cartopy projections. Any other CF grid mapping understood by ``pyproj``
+      (e.g. ``polar_stereographic``, ``transverse_mercator``, ``albers_conical_equal_area``,
+      ``mercator``, ``stereographic`` or ``sinusoidal``) is supported through a generic
+      :py:class:`cartopy.crs.Projection` fallback.
     """
     # if not passing the grid mapping var itself, we need to get it
     if "grid_mapping_name" not in gridmap.attrs:
@@ -676,7 +681,29 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
     # RotPole is a spherical-only projection, so having a WGS84 ellipse makes it confusing
     # Moreover, climate models usually use spherical models of the earth, so we use a spherical globe by default
     # This is different from cartopy, especially with PROJ >= 9.8
-    # 6370997 m is the conventional of the Earth as a sphere
+    # 6370997 m is the conventional radius of the Earth as a sphere.
+    # This default is only appropriate for spherical-Earth data (as most climate models are). When the
+    # grid mapping carries no shape-of-the-Earth information, warn so the assumption is never silent.
+    earth_shape_params = (
+        "earth_radius",
+        "semi_major_axis",
+        "semi_minor_axis",
+        "inverse_flattening",
+        "reference_ellipsoid_name",
+        "horizontal_datum_name",
+    )
+    if cf_params.get("grid_mapping_name") != "latitude_longitude" and not any(
+        cf_params.get(k) is not None for k in earth_shape_params
+    ):
+        warnings.warn(
+            "No shape-of-the-Earth information (e.g. 'earth_radius', 'semi_major_axis' or "
+            "'reference_ellipsoid_name') was found in the grid mapping. Assuming a spherical Earth "
+            "with a radius of 6370997 m, following the usual convention for climate models. If the "
+            "data is actually defined on an ellipsoid (e.g. WGS84), specify it explicitly in the grid "
+            "mapping to avoid horizontal positioning errors of up to ~20 km.",
+            UserWarning,
+            stacklevel=2,
+        )
     globe = cartopy.crs.Globe(
         datum=cf_params.get("horizontal_datum_name"),
         ellipse=cf_params.get("reference_ellipsoid_name", "sphere"),
@@ -716,7 +743,21 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
             globe=globe,
         )
     else:
-        raise NotImplementedError(f"Grid mapping {cf_params['grid_mapping_name']} not implemented.")
+        # General fallback for any other grid mapping: build the projection from the CF attributes
+        # with pyproj (which understands the full CF grid mapping vocabulary) and wrap the result in
+        # a cartopy projection. This adds support for grid mappings such as 'polar_stereographic',
+        # 'transverse_mercator', 'albers_conical_equal_area', 'mercator', 'stereographic' or
+        # 'sinusoidal' without needing an explicit, hand-written translation for each one.
+        try:
+            crs = cartopy.crs.Projection(CRS.from_cf(cf_params))
+        except Exception as err:  # noqa: BLE001
+            raise NotImplementedError(
+                f"Grid mapping '{cf_params['grid_mapping_name']}' could not be converted to a "
+                "projection by pyproj."
+            ) from err
+        # Keep the globe consistent with the other branches so callers that pair the projection
+        # with a PlateCarree instance (via ``crs.globe``) behave as expected.
+        crs.globe = globe
     return crs
 
 

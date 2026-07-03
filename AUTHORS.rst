@@ -27,3 +27,4 @@ Contributors
 * Éric Dupuis <dupuis.eric@ouranos.ca> `@coxipi <https://github.com/coxipi>`_
 * Artem Buyalo <artbuy1@ouranos.ca> `@ArtemBuyalo <https://github.com/ArtemBuyalo>`_
 * Asli Bese <bese.asli@ouranos.ca> `@aslibese <https://github.com/aslibese>`_
+* Martin Guthrie <martinguku37@gmail.com> `@martinguthrie93 <https://github.com/martinguthrie93>`_

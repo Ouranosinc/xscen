@@ -1,3 +1,5 @@
+import warnings
+
 import cartopy.crs as ccrs
 import dask.array
 import geopandas as gpd
@@ -6,6 +8,7 @@ import pytest
 import shapely as shp
 import xarray as xr
 import xclim as xc
+from pyproj.crs import CRS
 from shapely.geometry import Polygon
 
 import xscen as xs
@@ -612,3 +615,78 @@ def test_get_crs():
     # dataArray of gridmap directly
     crs_guess = xs.spatial.get_crs(ds.rotated_pole)
     assert crs_guess == rotated_pole
+
+
+@pytest.mark.parametrize(
+    "cf_params",
+    [
+        {
+            "grid_mapping_name": "polar_stereographic",
+            "straight_vertical_longitude_from_pole": -45.0,
+            "latitude_of_projection_origin": 90.0,
+            "standard_parallel": 70.0,
+            "false_easting": 0.0,
+            "false_northing": 0.0,
+            "earth_radius": 6370997.0,
+        },
+        {
+            "grid_mapping_name": "transverse_mercator",
+            "longitude_of_central_meridian": -100.0,
+            "latitude_of_projection_origin": 0.0,
+            "scale_factor_at_central_meridian": 0.9996,
+            "false_easting": 500000.0,
+            "false_northing": 0.0,
+            "semi_major_axis": 6378137.0,
+            "inverse_flattening": 298.257223563,
+        },
+        {
+            "grid_mapping_name": "albers_conical_equal_area",
+            "standard_parallel": [29.5, 45.5],
+            "longitude_of_central_meridian": -96.0,
+            "latitude_of_projection_origin": 23.0,
+            "false_easting": 0.0,
+            "false_northing": 0.0,
+            "earth_radius": 6370997.0,
+        },
+    ],
+)
+def test_get_crs_pyproj_fallback(cf_params):
+    # Grid mappings without a hard-coded translation must now go through the generic
+    # pyproj-based fallback instead of raising NotImplementedError.
+    gridmap = xr.DataArray(attrs=cf_params)
+    crs = xs.spatial.get_crs(gridmap)
+
+    assert isinstance(crs, ccrs.Projection)
+    # The projection must be equivalent to the one pyproj builds from the same attributes.
+    assert crs == ccrs.Projection(CRS.from_cf(cf_params))
+    # The globe must still be exposed for callers that pair the projection with PlateCarree.
+    assert crs.globe is not None
+
+
+def test_get_crs_unknown_grid_mapping():
+    gridmap = xr.DataArray(attrs={"grid_mapping_name": "not_a_real_grid_mapping", "earth_radius": 6370997.0})
+    with pytest.raises(NotImplementedError):
+        xs.spatial.get_crs(gridmap)
+
+
+def test_get_crs_spherical_earth_warning():
+    # A grid mapping without any shape-of-the-Earth information triggers a warning so that
+    # the (implicit) spherical Earth assumption is never silent.
+    gridmap_no_shape = xr.DataArray(
+        attrs={
+            "grid_mapping_name": "rotated_latitude_longitude",
+            "grid_north_pole_latitude": 42.5,
+            "grid_north_pole_longitude": 83.0,
+            "north_pole_grid_longitude": 0.0,
+        }
+    )
+    with pytest.warns(UserWarning, match="spherical Earth"):
+        xs.spatial.get_crs(gridmap_no_shape)
+
+    # Providing an explicit earth_radius silences that warning.
+    gridmap_with_shape = gridmap_no_shape.copy()
+    gridmap_with_shape.attrs["earth_radius"] = 6370997.0
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        xs.spatial.get_crs(gridmap_with_shape)
+    assert not any("spherical Earth" in str(w.message) for w in record)

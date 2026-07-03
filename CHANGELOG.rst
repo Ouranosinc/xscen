@@ -4,18 +4,20 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`).
+Contributors: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`), Martin Guthrie (:user:`martinguthrie93`).
 
 Bug fixes
 ^^^^^^^^^
 * Rewrite the way attributes are coerced in ``save_to_zarr`` and ``save_to_netcdf`` to fix issues with numpy native dtypes. Sequences are always re-written as comma-separated lists (strings). (:pull:`743`).
 * ``xs.spatial.subset`` with ``method='gridpoint'`` now works with ``stack_drop_nans`` outputs. (:pull:`745`).
 * Turn off memory management when reading catalog's csv to support large catalogs with sparsely populated categorical columns. (:pull:`747`).
+* ``xs.spatial.get_crs`` now warns when it applies its default spherical-Earth assumption because the grid mapping carries no shape-of-the-Earth information, instead of doing so silently. (:issue:`756`, :pull:`757`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * ``xs.spatial.get_crs`` now works with any DataArray. (:pull:`745`).
 * ``xs.io.save_to_zarr`` now supports writing to a zipped zarr when ``compute=False``. (:pull:`748`).
+* ``xs.spatial.get_crs`` now supports any CF grid mapping understood by ``pyproj`` (e.g. ``polar_stereographic``, ``transverse_mercator``, ``albers_conical_equal_area``, ``mercator``, ``stereographic``, ``sinusoidal``) through a generic ``cartopy.crs.Projection`` fallback, instead of raising ``NotImplementedError``. (:issue:`756`, :pull:`757`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
