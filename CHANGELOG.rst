@@ -24,9 +24,9 @@ Bug fixes
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* ``xs.spatial.get_crs`` now supports coordinate transforms for additional CF grid mappings (e.g. ``polar_stereographic``, ``transverse_mercator``, ``albers_conical_equal_area``, ``mercator``, ``stereographic``, ``sinusoidal``) through a generic ``cartopy.crs.Projection`` fallback, instead of raising ``NotImplementedError``. A warning is issued because this wrapper may not support cartopy map plotting; see SciTools/cartopy#2548 for full projection support. (:issue:`756`, :pull:`757`).
 * ``xs.spatial.get_crs`` now works with any DataArray. (:pull:`745`).
 * ``xs.io.save_to_zarr`` now supports writing to a zipped zarr when ``compute=False``. (:pull:`748`).
-* ``xs.spatial.get_crs`` now supports any CF grid mapping understood by ``pyproj`` (e.g. ``polar_stereographic``, ``transverse_mercator``, ``albers_conical_equal_area``, ``mercator``, ``stereographic``, ``sinusoidal``) through a generic ``cartopy.crs.Projection`` fallback, instead of raising ``NotImplementedError``. (:issue:`756`, :pull:`757`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^

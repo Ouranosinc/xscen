@@ -654,7 +654,8 @@ def test_get_crs_pyproj_fallback(cf_params):
     # Grid mappings without a hard-coded translation must now go through the generic
     # pyproj-based fallback instead of raising NotImplementedError.
     gridmap = xr.DataArray(attrs=cf_params)
-    crs = xs.spatial.get_crs(gridmap)
+    with pytest.warns(UserWarning, match="generic cartopy.crs.Projection wrapper"):
+        crs = xs.spatial.get_crs(gridmap)
 
     assert isinstance(crs, ccrs.Projection)
     # The projection must be equivalent to the one pyproj builds from the same attributes.

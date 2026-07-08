@@ -653,8 +653,12 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
       ``oblique_mercator`` and ``lambert_conformal_conic`` grid mappings are translated to
       dedicated cartopy projections. Any other CF grid mapping understood by ``pyproj``
       (e.g. ``polar_stereographic``, ``transverse_mercator``, ``albers_conical_equal_area``,
-      ``mercator``, ``stereographic`` or ``sinusoidal``) is supported through a generic
-      :py:class:`cartopy.crs.Projection` fallback.
+      ``mercator``, ``stereographic`` or ``sinusoidal``) may be resolved through a generic
+      :py:class:`cartopy.crs.Projection` fallback. That fallback supports coordinate transforms
+      (e.g. :py:meth:`cartopy.crs.CRS.transform_points`) but may not work for cartopy/matplotlib
+      map plotting because the resulting projection lacks domain bounds. In that case, use a
+      dedicated cartopy projection class or ``cartopy.crs.from_cf`` once available
+      (SciTools/cartopy#2548).
     """
     # if not passing the grid mapping var itself, we need to get it
     if "grid_mapping_name" not in gridmap.attrs:
@@ -741,15 +745,23 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
             globe=globe,
         )
     else:
-        # General fallback for any other grid mapping: build the projection from the CF attributes
-        # with pyproj (which understands the full CF grid mapping vocabulary) and wrap the result in
-        # a cartopy projection. This adds support for grid mappings such as 'polar_stereographic',
-        # 'transverse_mercator', 'albers_conical_equal_area', 'mercator', 'stereographic' or
-        # 'sinusoidal' without needing an explicit, hand-written translation for each one.
+        # Generic fallback: pyproj understands the full CF grid mapping vocabulary, but wrapping
+        # the result in cartopy.crs.Projection only yields a bare projection (no bounds/boundary).
+        # That is enough for coordinate transforms inside xscen, but not for cartopy map plotting.
         try:
             crs = cartopy.crs.Projection(CRS.from_cf(cf_params))
         except Exception as err:  # noqa: BLE001
             raise NotImplementedError(f"Grid mapping '{cf_params['grid_mapping_name']}' could not be converted to a projection by pyproj.") from err
+        warnings.warn(
+            f"Grid mapping '{cf_params['grid_mapping_name']}' was resolved through a generic "
+            "cartopy.crs.Projection wrapper built from pyproj. This supports coordinate "
+            "transforms (e.g. transform_points) but may not work for cartopy/matplotlib map "
+            "plotting because the resulting projection lacks domain bounds. For full plotting "
+            "support, use a dedicated cartopy projection class or cartopy.crs.from_cf once "
+            "available (SciTools/cartopy#2548).",
+            UserWarning,
+            stacklevel=2,
+        )
         # Keep the globe consistent with the other branches so callers that pair the projection
         # with a PlateCarree instance (via ``crs.globe``) behave as expected.
         crs.globe = globe
