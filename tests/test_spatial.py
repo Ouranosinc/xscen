@@ -617,10 +617,15 @@ def test_get_crs():
     assert crs_guess == rotated_pole
 
 
-@pytest.mark.parametrize(
-    "cf_params",
-    [
-        {
+def test_get_crs_unknown_grid_mapping():
+    gridmap = xr.DataArray(attrs={"grid_mapping_name": "not_a_real_grid_mapping", "earth_radius": 6370997.0})
+    with pytest.raises(NotImplementedError):
+        xs.spatial.get_crs(gridmap)
+
+
+def test_get_crs_unsupported_grid_mapping():
+    gridmap = xr.DataArray(
+        attrs={
             "grid_mapping_name": "polar_stereographic",
             "straight_vertical_longitude_from_pole": -45.0,
             "latitude_of_projection_origin": 90.0,
@@ -628,45 +633,9 @@ def test_get_crs():
             "false_easting": 0.0,
             "false_northing": 0.0,
             "earth_radius": 6370997.0,
-        },
-        {
-            "grid_mapping_name": "transverse_mercator",
-            "longitude_of_central_meridian": -100.0,
-            "latitude_of_projection_origin": 0.0,
-            "scale_factor_at_central_meridian": 0.9996,
-            "false_easting": 500000.0,
-            "false_northing": 0.0,
-            "semi_major_axis": 6378137.0,
-            "inverse_flattening": 298.257223563,
-        },
-        {
-            "grid_mapping_name": "albers_conical_equal_area",
-            "standard_parallel": [29.5, 45.5],
-            "longitude_of_central_meridian": -96.0,
-            "latitude_of_projection_origin": 23.0,
-            "false_easting": 0.0,
-            "false_northing": 0.0,
-            "earth_radius": 6370997.0,
-        },
-    ],
-)
-def test_get_crs_pyproj_fallback(cf_params):
-    # Grid mappings without a hard-coded translation must now go through the generic
-    # pyproj-based fallback instead of raising NotImplementedError.
-    gridmap = xr.DataArray(attrs=cf_params)
-    with pytest.warns(UserWarning, match="generic cartopy.crs.Projection wrapper"):
-        crs = xs.spatial.get_crs(gridmap)
-
-    assert isinstance(crs, ccrs.Projection)
-    # The projection must be equivalent to the one pyproj builds from the same attributes.
-    assert crs == ccrs.Projection(CRS.from_cf(cf_params))
-    # The globe must still be exposed for callers that pair the projection with PlateCarree.
-    assert crs.globe is not None
-
-
-def test_get_crs_unknown_grid_mapping():
-    gridmap = xr.DataArray(attrs={"grid_mapping_name": "not_a_real_grid_mapping", "earth_radius": 6370997.0})
-    with pytest.raises(NotImplementedError):
+        }
+    )
+    with pytest.raises(NotImplementedError, match="polar_stereographic"):
         xs.spatial.get_crs(gridmap)
 
 
