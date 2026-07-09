@@ -8,7 +8,6 @@ import pytest
 import shapely as shp
 import xarray as xr
 import xclim as xc
-from pyproj.crs import CRS
 from shapely.geometry import Polygon
 
 import xscen as xs
