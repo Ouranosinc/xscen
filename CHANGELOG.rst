@@ -2,18 +2,13 @@
 Changelog
 =========
 
-..
-    `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-    ------------------------------------------------------------
-    Contributors:
+`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
+------------------------------------------------------------
+Contributors:  Juliette Lavoie (:user:`juliettelavoie`).
 
-    Changes
-    ^^^^^^^
-    * No change.
-
-    Fixes
-    ^^^^^
-    * No change.
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Add CanESM5-1 to IPCC_annual_global_tas.nc. (:pull:`761`).
 
 .. _changes_0.15.2:
 
