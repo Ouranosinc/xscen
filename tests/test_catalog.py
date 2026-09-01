@@ -247,5 +247,8 @@ def test_stack_unstack(samplecat_multivar):
 
     xr.testing.assert_identical(ds1, ds2)
 
+    ds3 = cat.search(variable="tasmax").to_dataset(create_ensemble_on=["institution", "source"])
+    assert "tasmin" not in ds3.data_vars
+
     cat.stack()
     assert "variable" in cat.esmcat.columns_with_iterables
