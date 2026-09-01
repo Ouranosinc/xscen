@@ -621,6 +621,59 @@ class DataCatalog(intake_esm.esm_datastore):
         data = data.drop(columns=["new_path"])
         return self.__class__({"esmcat": self.esmcat.model_dump(), "df": data})
 
+    def unstack(self, col="variable"):
+        """
+        For catalogs where 'col' is an iterable, creates multiple entries for each of the iterable elements.
+
+        Useful for splitting variable columns before filtering. The resulting catalog might not work correctly
+        with dataset creation, in which case :py:meth:`stack` should be called first.
+
+        Parameters
+        ----------
+        col : str
+            Name of the column to "unstack". Raises an error is the column is not iterable.
+        """
+        if col not in self.esmcat.columns_with_iterables:
+            raise ValueError(f"Can't unstack catalog along column '{col}' because it is not an iterable.")
+
+        def _unstack(irow):
+            i, row = irow
+            for vv in row.variable:
+                r = deepcopy(row)
+                r["variable"] = vv
+                yield r.to_frame().T
+
+        new = pd.concat(itertools.chain.from_iterable(map(_unstack, self.df.iterrows()))).reset_index(drop=True)
+        self.esmcat._df = new
+
+    def stack(self, col="variable"):
+        """
+        Group together all entries where only column "col" is changing by making it a tuple.
+
+        This is meant to be called after :py:meth:`unstack` to go back to a standard catalog.
+
+        Parameters
+        ----------
+        col : str
+            Name of the column to "stack". Raises an error is the column is already iterable.
+        """
+        if col in self.esmcat.columns_with_iterables:
+            raise ValueError(f"Can't stack catalog on column '{col}' because it is already an iterable.")
+
+        def _stack(grp):
+            r = deepcopy(grp.iloc[0])
+            r["variable"] = tuple(grp.variable.values)
+            return r.to_frame().T
+
+        grp_cols = list(set(self.df.columns) - {col})
+        new = (
+            self.df.groupby(grp_cols, dropna=False)  # groupby by everything except col
+            .apply(_stack)  # create single entry df with tuple for col
+            .droplevel(-1)  # old index is now last level of multiindex, drop it
+            .reset_index()  # put back all index levels as columns
+        )
+        self.esmcat._df = new
+
 
 class ProjectCatalog(DataCatalog):
     r"""

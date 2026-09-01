@@ -2,7 +2,9 @@
 import shutil
 from pathlib import Path
 
+import numpy as np
 import pytest
+import xarray as xr
 
 import xscen as xs
 from xscen.testing import datablock_3d as _datablock_3d
@@ -85,3 +87,31 @@ def datablock_3d():
     xscen.testing.datablock_3d : For create a generic timeseries objects.
     """
     return _datablock_3d
+
+
+@pytest.fixture(scope="session")
+def samplecat_multivar(request, tmp_path_factory):
+    """Generate two datasets with multiple variables and returns a catalog of them."""
+    ds = xr.merge(
+        (
+            _datablock_3d(np.random.rand(24, 5, 5), "tasmax", "rlon", 0, "rlat", 0, freq="MS", as_dataset=True),
+            _datablock_3d(np.random.rand(24, 5, 5), "tasmin", "rlon", 0, "rlat", 0, freq="MS", as_dataset=True),
+        ),
+        compat="no_conflicts",
+    )
+    tmp_path = tmp_path_factory.mktemp("KPOP_data")
+    ds.to_netcdf(tmp_path / "Huntrix_Rumi.nc")
+    ds.to_netcdf(tmp_path / "Saja-Boys_Jinu.nc")
+    df = xs.parse_directory(
+        directories=[tmp_path],
+        patterns=["{institution}_{source}.nc"],
+        homogenous_info={
+            "mip_era": "CMIPK",
+            "type": "simulation",
+            "processing_level": "rad",
+            "activity": "POP",
+            "experiment": "idol",
+        },
+        read_from_file=True,
+    )
+    return xs.DataCatalog({"esmcat": xs.catalog.esm_col_data, "df": df})

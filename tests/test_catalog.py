@@ -234,3 +234,18 @@ def test_project_catalog_create_fails(tmpdir):
             f"{root}/test.json",
             create=True,
         )
+
+
+def test_stack_unstack(samplecat_multivar):
+    cat = samplecat_multivar
+    ds1 = cat.to_dataset(create_ensemble_on=["institution", "source"])
+    assert "variable" in cat.esmcat.columns_with_iterables
+
+    cat.unstack()
+    ds2 = cat.to_dataset(create_ensemble_on=["institution", "source"])
+    assert "variable" not in cat.esmcat.columns_with_iterables
+
+    xr.testing.assert_identical(ds1, ds2)
+
+    cat.stack()
+    assert "variable" in cat.esmcat.columns_with_iterables

@@ -656,6 +656,11 @@ def search_data_catalogs(  # noqa: C901
     if len(catalog) > 0:
         for (sim_id,), scat in catalog.iter_unique("id"):
             # Find all the entries that match search parameters
+            was_stacked = False
+            if "variable" in scat.esmcat.columns_with_iterables:
+                scat.unstack("variable")
+                was_stacked = True
+
             varcats = []
             for var_id, xrfreqs in variables_and_freqs.items():
                 if isinstance(xrfreqs, str):
@@ -752,7 +757,10 @@ def search_data_catalogs(  # noqa: C901
                         break
                     if "timedelta" in varcat.df.columns:
                         varcat.df.drop(columns=["timedelta"], inplace=True)
+
                     varcat._requested_variable_freqs = [xrfreq]
+                    if was_stacked and "variable" not in varcat.esmcat.columns_with_iterables:
+                        varcat.stack("variable")
                     varcats.append(varcat)
 
                 else:
