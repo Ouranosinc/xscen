@@ -148,6 +148,29 @@ def test_search_period():
     assert scat.df.date_start.max() <= pd.Timestamp("2015-01-01 00:00:00")
 
 
+def test_search_variable():
+    # Test that _requested_variables and similar fields are set.
+    cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json")
+    scat = cat.search(variable="tasmax")
+    assert scat._requested_variables == ["tasmax"]
+    assert scat._requested_variables_true == ["tasmax"]
+    assert scat._dependent_variables == []
+
+    scat = cat.search(variable=["tasmax", "tasmin"])
+    assert scat._requested_variables == ["tasmax", "tasmin"]
+    assert scat._requested_variables_true == ["tasmax", "tasmin"]
+    assert scat._dependent_variables == []
+
+    reg = xs.indicators.registry_from_module(
+        xs.indicators.load_xclim_module(notebooks.parent.parent / "src" / "xscen" / "xclim_modules" / "conversions")
+    )
+    cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json", registry=reg)
+    scat = cat.search(variable="tas")
+    assert scat._requested_variables == ["tasmax", "tasmin", "tas"]
+    assert scat._requested_variables_true == ["tas"]
+    assert scat._dependent_variables == ["tasmax", "tasmin"]
+
+
 def test_search_nothing():
     cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json")
 

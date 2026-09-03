@@ -697,19 +697,12 @@ def search_data_catalogs(  # noqa: C901
                                 )
                                 for i in {"member", "experiment", "id"}.intersection(varcat.df.columns):
                                     varcat.df.loc[:, i] = scat.df[i].iloc[0]
-
-                        # TODO: Temporary fix until this is changed in intake_esm
-                        varcat._requested_variables_true = [var_id]
-                        varcat._dependent_variables = list(set(varcat._requested_variables).difference(varcat._requested_variables_true))
                     else:
                         # TODO: Add support for DerivedVariables that themselves require DerivedVariables
                         # TODO: Add support for DerivedVariables that exist on different frequencies (e.g. 1hr 'pr' & 3hr 'tas')
                         varcat = scat.search(variable=var_id, require_all_on=["id", "xrfreq"])
                         msg = f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
                         logger.debug(msg)
-                        # TODO: Temporary fix until this is changed in intake_esm
-                        varcat._requested_variables_true = [var_id]
-                        varcat._dependent_variables = list(set(varcat._requested_variables).difference(varcat._requested_variables_true))
 
                         # We want to match lines with the correct freq,
                         # IF allow_resampling is True and xrfreq translates to a timedelta,
