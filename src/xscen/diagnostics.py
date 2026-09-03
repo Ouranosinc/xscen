@@ -355,7 +355,7 @@ def properties_and_measures(  # noqa: C901
     --------
     xsdba.properties : Properties module, extending from `xclim`.
     xsdba.measures : Measures modules, extending from `xclim`.
-    xclim.core.indicator.build_indicator_module_from_yaml : YAML indicator constructor function of `xclim`.
+    xclim.IndicatorCollection.from_yaml : YAML indicator constructor function of `xclim`.
     """
     if isinstance(properties, str | Path):
         logger.debug("Loading properties module.")

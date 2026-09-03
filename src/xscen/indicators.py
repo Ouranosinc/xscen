@@ -92,7 +92,7 @@ def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str) -> tup
         frq = ind.injected_parameters["freq"] if "freq" in ind.injected_parameters else ind.parameters["freq"].default
     if frq == "YS":
         frq = "YS-JAN"
-    var_names = [cfa["var_name"] for cfa in ind.cf_attrs]
+    var_names = [cfa.var_name for cfa in ind.attrs]
     return var_names, frq
 
 
@@ -147,7 +147,7 @@ def compute_indicators(  # noqa: C901
     See Also
     --------
     xclim.indicators : Indicators module of xclim.
-    xclim.core.indicator.build_indicator_module_from_yaml : YAML indicator constructor function of xclim.
+    xclim.IndicatorCollection.from_yaml : YAML indicator constructor function of xclim.
     """
     if isinstance(indicators, str | os.PathLike):
         logger.debug("Loading indicator module.")
@@ -291,8 +291,8 @@ def registry_from_module(
     dvr = registry or DerivedVariableRegistry()
     for _name, ind in module.iter_indicators():
         query = {variable_column: [p.default for p in ind.parameters.values() if p.kind == 0]}
-        for i, attrs in enumerate(ind.cf_attrs):
-            dvr.register(variable=attrs["var_name"], query=query)(_derived_func(ind, i))
+        for i, attrs in enumerate(ind.attrs):
+            dvr.register(variable=attrs.var_name, query=query)(_derived_func(ind, i))
     return dvr
 
 
@@ -339,7 +339,7 @@ def select_inds_for_avail_vars(
     See Also
     --------
     xclim.indicators : Indicators module of xclim.
-    xclim.core.indicator.build_indicator_module_from_yaml : YAML indicator constructor function of xclim.
+    xclim.IndicatorCollection.from_yaml : YAML indicator constructor function of xclim.
     """
     # Transform the 'indicators' input into a list of tuples (name, indicator)
     is_list_of_tuples = isinstance(indicators, list) and all(isinstance(i, tuple) for i in indicators)

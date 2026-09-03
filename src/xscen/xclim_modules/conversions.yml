@@ -9,45 +9,51 @@ doc: |
 realm: atmos
 base: Indicator
 indicators:
-  wind_speed_from_vector:
-    base: wind_speed_from_vector
-  wind_vector_from_speed:
-    base: wind_vector_from_speed
+  # wind_speed_from_vector: #TODO: i dont know why this fails
+  #   base: wind_speed_from_vector
+  #   attrs:
+  #     - var_name: "sfcWind" #TODO: verify this , not sure why it is needed and if name are ok
+  #     - var_name:  "sfcWindfromdir" # TODO: here too
+  # wind_vector_from_speed:
+  #   base: wind_vector_from_speed
+  #   attrs:
+  #     - var_name: "uas" #TODO: verify this , not sure why it is needed and if name are ok
+  #     - var_name:  "vas" # TODO: here too
   tas_midpoint:
     compute: tas_midpoint
-    cf_attrs:
+    attrs:
       - var_name: tas
   relative_humidity_from_dewpoint:
     base: hurs_fromdewpoint
     parameters:
       method: buck81
       invalid_values: clip
-    cf_attrs:
+    attrs:
       - var_name: hurs
   specific_humidity:
     base: huss
     parameters:
       method: tetens30
       ice_thresh: 0 degC
-    cf_attrs:
+    attrs:
       - var_name: huss
   snowfall_approximation:
     base: prsn
     parameters:
       method: binary
       thresh: 0 degC
-    cf_attrs:
+    attrs:
       - var_name: prsn
   rain_approximation:
     base: prlp
     parameters:
       method: binary
       thresh: 0 degC
-    cf_attrs:
+    attrs:
       - var_name: prlp
   precipitation:
     compute: precipitation
-    cf_attrs:
+    attrs:
       standard_name: precipitation_flux
       var_name: pr
       description: Precipitation of all phases as the sum of solid and liquid precipitation.
@@ -62,12 +68,12 @@ indicators:
         kind: 0
       tasmax:
         kind: 0
-    cf_attrs:
+    attrs:
       - var_name: evspsblpot
   dtr:
     src_freq: D
     compute: dtr_from_minmax
-    cf_attrs:
+    attrs:
       units: K
       description: Daily temperature range.
       cell_methods: "time: range within days"
@@ -76,7 +82,7 @@ indicators:
   tasmin_from_dtr:
     src_freq: D
     compute: tasmin_from_dtr
-    cf_attrs:
+    attrs:
       units: K
       standard_name: air_temperature
       description: Daily minimal temperature as computed from tasmax and dtr
@@ -85,7 +91,7 @@ indicators:
   tasmax_from_dtr:
     src_freq: D
     compute: tasmax_from_dtr
-    cf_attrs:
+    attrs:
       units: K
       standard_name: air_temperature
       description: Daily maximal temperature as computed from tasmin and dtr
@@ -93,7 +99,7 @@ indicators:
       var_name: tasmax
   orog_from_z:
     compute: orog_from_z
-    cf_attrs:
+    attrs:
       units: m
       standard_name: surface_altitude
       description: Surface altitude derived from geopotential height.

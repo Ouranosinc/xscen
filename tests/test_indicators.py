@@ -67,10 +67,9 @@ class TestComputeIndicators:
             assert len(ind_dict["YS-JAN"].time) == 8
 
     def test_qs_dec(self):
-        indicator = xclim.core.indicator.Indicator.from_dict(
-            data={"base": "tg_min", "parameters": {"freq": "QS-DEC"}},
+        indicator = xclim.atmos.tg_min.__class__(
             identifier="tg_min_qs",
-            module="tests",
+            parameters=dict(freq="QS-DEC"),
         )
         ind_dict = xs.compute_indicators(self.ds, indicators=[("tg_min_qs", indicator)])
         assert "QS-DEC" in ind_dict["QS-DEC"].attrs["cat:xrfreq"]
@@ -107,10 +106,9 @@ class TestComputeIndicators:
 
     @pytest.mark.parametrize("restrict_years", [True, False])
     def test_as_jul(self, restrict_years):
-        indicator = xclim.core.indicator.Indicator.from_dict(
-            data={"base": "freezing_degree_days", "parameters": {"freq": "YS-JUL"}},
+        indicator = xclim.atmos.freezing_degree_days.__class__(
             identifier="degree_days_below_0_annual_start_july",
-            module="tests",
+            parameters=dict(freq="YS-JUL"),  # We inject the freq arg.
         )
         ind_dict = xs.compute_indicators(
             self.ds,
@@ -148,20 +146,18 @@ class TestComputeIndicators:
             as_dataset=True,
         )
         indicators = [
-            xclim.core.indicator.Indicator.from_dict(
-                data={"base": "tg_min", "parameters": {"freq": "QS-DEC"}},
+            xclim.atmos.tg_min.__class__(
                 identifier="tg_min_qs",
-                module="tests",
+                parameters=dict(freq="QS-DEC"),
             ),
-            xclim.core.indicator.Indicator.from_dict(
-                data={"base": "days_over_precip_thresh", "parameters": {"freq": "MS"}},
+            xclim.atmos.days_over_precip_thresh.__class__(
                 identifier="precip_average_ms",
-                module="tests",
+                parameters=dict(freq="MS"),
             ),
         ]
 
         # indicators as different types
-        module = xclim.core.indicator.build_indicator_module("indicators", {i.base: i for i in indicators}, reload=True)
+        module = xclim.IndicatorCollection.from_yaml("indicators", {i.base: i for i in indicators}, reload=True)
         if indicator_iter == "list":
             inds_for_avail_vars = xs.indicators.select_inds_for_avail_vars(ds=ds, indicators=indicators)
         elif indicator_iter == "tuples":
@@ -187,7 +183,7 @@ class TestComputeIndicators:
     ],
 )
 def test_get_indicator_outputs(ind, expvars, expfrq):
-    ind = xclim.core.indicator.registry[ind.upper()].get_instance()
+    ind = xclim.core.indicator.registry[ind.upper()]
     outvars, outfrq = xs.indicators.get_indicator_outputs(ind, "D")
     assert outvars == expvars
     assert outfrq == expfrq
