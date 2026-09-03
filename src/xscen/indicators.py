@@ -60,7 +60,7 @@ def load_xclim_module(filename: str | os.PathLike, reload: bool = False) -> Modu
         if hasattr(xc.indicators, name):
             return getattr(xc.indicators, name)
 
-    return xc.build_indicator_module_from_yaml(filename)
+    return xc.IndicatorCollection.from_yaml(filename)
 
 
 def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str) -> tuple[list[str], str]:
