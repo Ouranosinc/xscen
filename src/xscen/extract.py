@@ -656,6 +656,11 @@ def search_data_catalogs(  # noqa: C901
     if len(catalog) > 0:
         for (sim_id,), scat in catalog.iter_unique("id"):
             # Find all the entries that match search parameters
+            was_stacked = False
+            if "variable" in scat.esmcat.columns_with_iterables:
+                scat.unstack("variable")
+                was_stacked = True
+
             varcats = []
             for var_id, xrfreqs in variables_and_freqs.items():
                 if isinstance(xrfreqs, str):
@@ -692,19 +697,12 @@ def search_data_catalogs(  # noqa: C901
                                 )
                                 for i in {"member", "experiment", "id"}.intersection(varcat.df.columns):
                                     varcat.df.loc[:, i] = scat.df[i].iloc[0]
-
-                        # TODO: Temporary fix until this is changed in intake_esm
-                        varcat._requested_variables_true = [var_id]
-                        varcat._dependent_variables = list(set(varcat._requested_variables).difference(varcat._requested_variables_true))
                     else:
                         # TODO: Add support for DerivedVariables that themselves require DerivedVariables
                         # TODO: Add support for DerivedVariables that exist on different frequencies (e.g. 1hr 'pr' & 3hr 'tas')
                         varcat = scat.search(variable=var_id, require_all_on=["id", "xrfreq"])
                         msg = f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
                         logger.debug(msg)
-                        # TODO: Temporary fix until this is changed in intake_esm
-                        varcat._requested_variables_true = [var_id]
-                        varcat._dependent_variables = list(set(varcat._requested_variables).difference(varcat._requested_variables_true))
 
                         # We want to match lines with the correct freq,
                         # IF allow_resampling is True and xrfreq translates to a timedelta,
@@ -752,7 +750,10 @@ def search_data_catalogs(  # noqa: C901
                         break
                     if "timedelta" in varcat.df.columns:
                         varcat.df.drop(columns=["timedelta"], inplace=True)
+
                     varcat._requested_variable_freqs = [xrfreq]
+                    if was_stacked and "variable" not in varcat.esmcat.columns_with_iterables:
+                        varcat.stack("variable")
                     varcats.append(varcat)
 
                 else:

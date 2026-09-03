@@ -1,7 +1,6 @@
 """Catalog objects and related tools."""
 
 import ast
-import itertools
 import json
 import logging
 import os
@@ -10,6 +9,7 @@ import shutil as sh
 from collections.abc import Generator, Mapping, Sequence
 from copy import deepcopy
 from functools import reduce
+from itertools import chain, product
 from operator import or_
 from pathlib import Path
 from typing import Any
@@ -302,7 +302,7 @@ class DataCatalog(intake_esm.esm_datastore):
         DataCatalog
             Catalog corresponding to a set of unique values in the specified columns.
         """
-        for values in itertools.product(*self.unique(columns)):
+        for values in product(*self.unique(columns)):
             sim = self.search(**dict(zip(columns, values, strict=False)))
             if sim:  # So we never yield empty catalogs
                 yield values, sim
@@ -330,8 +330,22 @@ class DataCatalog(intake_esm.esm_datastore):
             cat = super().search(**columns)
         else:
             cat = self.__class__({"esmcat": self.esmcat.model_dump(), "df": self.esmcat._df})
+
         if periods is not False:
             cat.esmcat._df = subset_file_coverage(cat.esmcat._df, periods=periods, coverage=0, duplicates_ok=True)
+
+        variables = columns.get(self.esmcat.aggregation_control.variable_column_name)
+        if variables:
+            if isinstance(variables, str):
+                variables = [variables]
+            # TODO: Fix all this in intake-esm
+            # _requested_variables not created when the catalog has non-iterable variable col, but we still need it
+            # Here we generalize the behaviour so the 3 fields are _always_ created.
+            all_deps = [dv.query["variable"] for dv in cat.derivedcat.values()]
+            deps = set(chain.from_iterable(all_deps))
+            cat._dependent_variables = list(deps)
+            cat._requested_variables = list(set(variables) | deps)
+            cat._requested_variables_true = variables
         return cat
 
     def drop_duplicates(self, columns: list[str] | None = None):
@@ -620,6 +634,59 @@ class DataCatalog(intake_esm.esm_datastore):
         data["path"] = data["new_path"]
         data = data.drop(columns=["new_path"])
         return self.__class__({"esmcat": self.esmcat.model_dump(), "df": data})
+
+    def unstack(self, col="variable"):
+        """
+        For catalogs where 'col' is an iterable, creates multiple entries for each of the iterable elements.
+
+        Useful for splitting variable columns before filtering. The resulting catalog might not work correctly
+        with dataset creation, in which case :py:meth:`stack` should be called first.
+
+        Parameters
+        ----------
+        col : str
+            Name of the column to "unstack". Raises an error is the column is not iterable.
+        """
+        if col not in self.esmcat.columns_with_iterables:
+            raise ValueError(f"Can't unstack catalog along column '{col}' because it is not an iterable.")
+
+        def _unstack(irow):
+            i, row = irow
+            for vv in row.variable:
+                r = deepcopy(row)
+                r["variable"] = vv
+                yield r.to_frame().T
+
+        new = pd.concat(chain.from_iterable(map(_unstack, self.df.iterrows()))).reset_index(drop=True)
+        self.esmcat._df = new
+
+    def stack(self, col="variable"):
+        """
+        Group together all entries where only column "col" is changing by making it a tuple.
+
+        This is meant to be called after :py:meth:`unstack` to go back to a standard catalog.
+
+        Parameters
+        ----------
+        col : str
+            Name of the column to "stack". Raises an error is the column is already iterable.
+        """
+        if col in self.esmcat.columns_with_iterables:
+            raise ValueError(f"Can't stack catalog on column '{col}' because it is already an iterable.")
+
+        def _stack(grp):
+            r = deepcopy(grp.iloc[0])
+            r["variable"] = tuple(grp.variable.values)
+            return r.to_frame().T
+
+        grp_cols = list(set(self.df.columns) - {col})
+        new = (
+            self.df.groupby(grp_cols, dropna=False)  # groupby by everything except col
+            .apply(_stack)  # create single entry df with tuple for col
+            .droplevel(-1)  # old index is now last level of multiindex, drop it
+            .reset_index()  # put back all index levels as columns
+        )
+        self.esmcat._df = new
 
 
 class ProjectCatalog(DataCatalog):
@@ -971,13 +1038,13 @@ def concat_data_catalogs(*dcs) -> DataCatalog:
     dvr = intake_esm.DerivedVariableRegistry()
     dvr._registry.update(registry)
     newcat = DataCatalog({"esmcat": dcs[0].esmcat.model_dump(), "df": df}, registry=dvr)
-    newcat._requested_variables = requested_variables
+    newcat._requested_variables = list(set(requested_variables))
     if requested_variables_true:
-        newcat._requested_variables_true = requested_variables_true
+        newcat._requested_variables_true = list(set(requested_variables_true))
     if dependent_variables:
-        newcat._dependent_variables = dependent_variables
+        newcat._dependent_variables = list(set(dependent_variables))
     if requested_variable_freqs:
-        newcat._requested_variable_freqs = requested_variable_freqs
+        newcat._requested_variable_freqs = list(set(requested_variable_freqs))
     return newcat
 
 

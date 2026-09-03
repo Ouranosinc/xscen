@@ -148,6 +148,29 @@ def test_search_period():
     assert scat.df.date_start.max() <= pd.Timestamp("2015-01-01 00:00:00")
 
 
+def test_search_variable():
+    # Test that _requested_variables and similar fields are set.
+    cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json")
+    scat = cat.search(variable="tasmax")
+    assert scat._requested_variables == ["tasmax"]
+    assert scat._requested_variables_true == ["tasmax"]
+    assert scat._dependent_variables == []
+
+    scat = cat.search(variable=["tasmax", "tasmin"])
+    assert scat._requested_variables == ["tasmax", "tasmin"]
+    assert scat._requested_variables_true == ["tasmax", "tasmin"]
+    assert scat._dependent_variables == []
+
+    reg = xs.indicators.registry_from_module(
+        xs.indicators.load_xclim_module(notebooks.parent.parent / "src" / "xscen" / "xclim_modules" / "conversions")
+    )
+    cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json", registry=reg)
+    scat = cat.search(variable="tas")
+    assert scat._requested_variables == ["tasmax", "tasmin", "tas"]
+    assert scat._requested_variables_true == ["tas"]
+    assert scat._dependent_variables == ["tasmax", "tasmin"]
+
+
 def test_search_nothing():
     cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json")
 
@@ -234,3 +257,21 @@ def test_project_catalog_create_fails(tmpdir):
             f"{root}/test.json",
             create=True,
         )
+
+
+def test_stack_unstack(samplecat_multivar):
+    cat = samplecat_multivar
+    ds1 = cat.to_dataset(create_ensemble_on=["institution", "source"])
+    assert "variable" in cat.esmcat.columns_with_iterables
+
+    cat.unstack()
+    ds2 = cat.to_dataset(create_ensemble_on=["institution", "source"])
+    assert "variable" not in cat.esmcat.columns_with_iterables
+
+    xr.testing.assert_identical(ds1, ds2)
+
+    ds3 = cat.search(variable="tasmax").to_dataset(create_ensemble_on=["institution", "source"])
+    assert "tasmin" not in ds3.data_vars
+
+    cat.stack()
+    assert "variable" in cat.esmcat.columns_with_iterables
