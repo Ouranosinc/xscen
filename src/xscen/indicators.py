@@ -23,12 +23,12 @@ from .utils import CV, rechunk_for_resample, standardize_periods
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["compute_indicators", "load_xclim_module", "registry_from_module"]
+__all__ = ["compute_indicators", "load_xclim_collection", "registry_from_module"]
 
 
-def load_xclim_module(filename: str | os.PathLike, reload: bool = False) -> ModuleType:
+def load_xclim_collection(filename: str | os.PathLike, reload: bool = False) -> xc.IndicatorCollection:
     """
-    Return the xclim module described by the yaml file (or group of yaml, jsons and py).
+    Return the xclim collection described by the yaml file (or group of yaml, jsons and py).
 
     Parameters
     ----------
@@ -39,8 +39,8 @@ def load_xclim_module(filename: str | os.PathLike, reload: bool = False) -> Modu
 
     Returns
     -------
-    ModuleType
-        The xclim module.
+    xc.IndicatorCollection
+        The xclim collection.
     """
     if not reload:
         # Same code as in xclim to get the module name.
@@ -56,6 +56,9 @@ def load_xclim_module(filename: str | os.PathLike, reload: bool = False) -> Modu
         with ymlpath.open() as f:
             yml = safe_load(f)
 
+        # TODO: we need to change something here but I am not sure what,
+        # module is not longer a module of xclim.indicators
+        #  reload False is not working
         name = yml.get("module", filepath.stem)
         if hasattr(xc.indicators, name):
             return getattr(xc.indicators, name)
@@ -151,7 +154,7 @@ def compute_indicators(  # noqa: C901
     """
     if isinstance(indicators, str | os.PathLike):
         logger.debug("Loading indicator module.")
-        module = load_xclim_module(indicators)
+        module = load_xclim_collection(indicators)
         indicators = module.iter_indicators()
     elif hasattr(indicators, "iter_indicators"):
         indicators = indicators.iter_indicators()
@@ -316,8 +319,8 @@ def _derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
 
 def select_inds_for_avail_vars(
     ds: xr.Dataset,
-    indicators: (str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType),
-) -> ModuleType:
+    indicators: (str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | xc.IndicatorCollection | dict),
+) -> xc.IndicatorCollection:
     """
     Filter the indicators for which the necessary variables are available.
 
@@ -333,7 +336,7 @@ def select_inds_for_avail_vars(
 
     Returns
     -------
-    ModuleType
+    xclim.IndicatorCollection
         An indicator module of 'length' ∈ [0, n].
 
     See Also
@@ -345,17 +348,21 @@ def select_inds_for_avail_vars(
     is_list_of_tuples = isinstance(indicators, list) and all(isinstance(i, tuple) for i in indicators)
     if isinstance(indicators, str | os.PathLike):
         logger.debug("Loading indicator module.")
-        indicators = load_xclim_module(indicators, reload=True)
+        indicators = load_xclim_collection(indicators, reload=True)
     if hasattr(indicators, "iter_indicators"):
         indicators = [(name, ind) for name, ind in indicators.iter_indicators()]
+    elif isinstance(indicators, dict):
+        indicators = [(name, ind) for name, ind in indicators.items()]
     elif isinstance(indicators, list | tuple) and not is_list_of_tuples:
-        indicators = [(ind.base, ind) for ind in indicators]
+        # TODO: not really sure what base was ? is identifier the correct new thing to call here ?
+        indicators = [(ind.identifier, ind) for ind in indicators]
 
+    # TODO: je ne comprends pas le fixme?
     # FIXME: Remove if-else when updating minimum xclim version to 0.53
     XCVARS = xc.core.VARIABLES if hasattr(xc.core, "VARIABLES") else xc.core.utils.VARIABLES
     available_vars = {var for var in ds.data_vars if var in XCVARS.keys()}
-    available_inds = [(name, ind) for var in available_vars for name, ind in indicators if var in ind.parameters.keys()]
-    return xc.core.indicator.build_indicator_module("inds_for_avail_vars", available_inds, reload=True)
+    available_inds = {name: ind for var in available_vars for name, ind in indicators if var in ind.parameters.keys()}
+    return xc.IndicatorCollection(available_inds, name="inds_for_avail_vars")
 
 
 def _wrap_month(m):

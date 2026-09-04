@@ -5,6 +5,7 @@ doc: |
 
   This module provides indicators generating base variables
   from other base variables. All indicators are non-resampling.
+#TODO: not sure what needs to be changed to convert here ?
 # FIXME: Change to "convert" when we pin xclim  >= 0.58
 realm: atmos
 base: Indicator
