@@ -23,7 +23,7 @@ from .utils import CV, rechunk_for_resample, standardize_periods
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["compute_indicators", "load_xclim_collection", "registry_from_module"]
+__all__ = ["compute_indicators", "load_xclim_collection", "registry_from_collection"]
 
 
 def load_xclim_collection(filename: str | os.PathLike, reload: bool = False) -> xc.IndicatorCollection:
@@ -264,18 +264,18 @@ def compute_indicators(  # noqa: C901
     return out_dict
 
 
-def registry_from_module(
-    module: ModuleType,
+def registry_from_collection(
+    collection: xc.IndicatorCollection,
     registry: DerivedVariableRegistry | None = None,
     variable_column: str = "variable",
 ) -> DerivedVariableRegistry:
     """
-    Convert a xclim virtual indicators module to an intake_esm Derived Variable Registry.
+    Convert a xclim virtual indicators collection to an intake_esm Derived Variable Registry.
 
     Parameters
     ----------
-    module : ModuleType
-        A module of xclim.
+    collection : xc.IndicatorCollection
+        A collection of xclim.
     registry : DerivedVariableRegistry, optional
         If given, this registry is extended, instead of creating a new one.
     variable_column : str
@@ -292,7 +292,7 @@ def registry_from_module(
         given their defaults.
     """
     dvr = registry or DerivedVariableRegistry()
-    for _name, ind in module.iter_indicators():
+    for _name, ind in collection.iter_indicators():
         query = {variable_column: [p.default for p in ind.parameters.values() if p.kind == 0]}
         for i, attrs in enumerate(ind.attrs):
             dvr.register(variable=attrs.var_name, query=query)(_derived_func(ind, i))

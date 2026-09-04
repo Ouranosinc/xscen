@@ -33,7 +33,7 @@ from .catalog import (
 )
 from .catutils import parse_from_ds
 from .config import parse_config
-from .indicators import load_xclim_collection, registry_from_module
+from .indicators import load_xclim_collection, registry_from_collection
 from .spatial import Region, subset
 from .utils import CV, _xarray_defaults, get_cat_attrs, natural_sort, standardize_periods, xrfreq_to_timedelta
 from .utils import ensure_correct_time as _ensure_correct_time
@@ -588,8 +588,8 @@ def search_data_catalogs(  # noqa: C901
     if allow_conversion:
         if conversion_yaml is None:
             conversion_yaml = Path(__file__).parent / "xclim_modules" / "conversions"
-        cat_kwargs = {"registry": registry_from_module(load_xclim_collection(conversion_yaml))}
-
+        print(load_xclim_collection(conversion_yaml))
+        cat_kwargs = {"registry": registry_from_collection(load_xclim_collection(conversion_yaml))}
     # Prepare a unique catalog to search from, with the DerivedCat added if required
     dfs = [
         dc.df.astype({col: dc.df[col].dtype.categories.dtype for col in dc.df.columns if isinstance(dc.df.dtypes[col], pd.CategoricalDtype)})
