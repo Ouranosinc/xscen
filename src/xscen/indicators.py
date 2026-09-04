@@ -57,7 +57,7 @@ def load_xclim_collection(filename: str | os.PathLike, reload: bool = False) -> 
             yml = safe_load(f)
 
         # TODO: we need to change something here but I am not sure what,
-        # module is not longer a module of xclim.indicators
+        # module aren't a thing so I am unsure what to do here
         #  reload False is not working
         name = yml.get("module", filepath.stem)
         if hasattr(xc.indicators, name):
