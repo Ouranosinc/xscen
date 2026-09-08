@@ -128,20 +128,19 @@ dependencies = [
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0",
   "xclim >=0.56,<0.62; python_version <3.11",
-  "xclim >=0.56; python_version >=3.11",
+  "xclim >=0.56",
   "xsdba >=0.4.0",
   "zarr >=2.13,<3.0"
 ]
 
 [project.optional-dependencies]
-extras = [
-  "nc-time-axis >=1.3.1",
-  "xscen[xesmf]"
+nc-time-axis = [
+  "nc-time-axis >=1.3.1"
 ]
 xesmf = [
   "xesmf >=0.7, !=0.8.8" # FIXME: 0.8.8 creates segfaults on ReadTheDocs.
 ]
-all = ["xscen[extras]", "xscen[xesmf]"]
+all = ["xscen[nc-time-axis]", "xscen[xesmf]"]
 
 [project.urls]
 "Homepage" = "https://xscen.readthedocs.io/"
@@ -237,6 +236,8 @@ skip = []
 
 [tool.deptry]
 ignore_notebooks = true
+known_first_party = ["xscen"]
+optional_dependencies_dev_groups = ["all"]
 
 [tool.deptry.package_module_name_map]
 "netcdf4" = "netCDF4"
@@ -246,7 +247,6 @@ ignore_notebooks = true
 
 [tool.deptry.per_rule_ignores]
 DEP002 = ["fastprogress", "h5netcdf", "nc-time-axis", "openpyxl", "pyarrow", "pydantic"]
-DEP004 = ["xscen"]
 
 [tool.flit.sdist]
 include = [
