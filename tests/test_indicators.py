@@ -13,20 +13,19 @@ class TestComputeIndicators:
     yaml_file = notebooks / "samples" / "indicators.yml"
     ds = timeseries(np.ones(365 * 3), variable="tas", start="2001-01-01", freq="D", as_dataset=True)
 
-    @pytest.mark.parametrize("reload", [True, False])
-    def test_reload_module(self, reload):
-        module = xs.indicators.load_xclim_collection(self.yaml_file)
+    def test_reload_warning(self):
+        module = xclim.IndicatorCollection.from_yaml(self.yaml_file)
         assert all(hasattr(module, ind) for ind in ["growing_degree_days", "tg_min"])
 
         # Record warnings without failing the test if no warnings are raised.
         with warnings.catch_warnings(record=True) as record:
             warnings.simplefilter("always")
-            xs.indicators.load_xclim_collection(notebooks / "samples" / "indicators", reload=reload)
-        assert len([r for r in record if "already exists and will be overwritten." in str(r.message)]) == (2 if reload else 0)
+            xclim.IndicatorCollection.from_yaml(notebooks / "samples" / "indicators")
+        assert len([r for r in record if "already exists and will be overwritten." in str(r.message)]) == 2
 
     @pytest.mark.parametrize("input", ["module", "iter"])
     def test_input_types(self, input):
-        module = xs.indicators.load_xclim_collection(self.yaml_file)
+        module = xclim.IndicatorCollection.from_yaml(self.yaml_file)
         ind_dict1 = xs.compute_indicators(
             self.ds,
             indicators=module if input == "module" else module.iter_indicators(),
@@ -50,7 +49,7 @@ class TestComputeIndicators:
         ds = timeseries(values, variable="tas", start="2001-01-01", freq="D", as_dataset=True)
         ds["da"] = ds.tas
 
-        module = xs.indicators.load_xclim_collection(self.yaml_file)
+        module = xclim.IndicatorCollection.from_yaml(self.yaml_file)
         ind_dict = xs.compute_indicators(
             ds,
             indicators=[("fit", xclim.indicators.generic.fit)] + [x for x in module.iter_indicators()],

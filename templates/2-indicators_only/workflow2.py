@@ -5,12 +5,13 @@ import logging
 from argparse import ArgumentParser
 
 import dask
+import xclim as xc
 from dask.distributed import Client
 
 from xscen.catalog import ProjectCatalog
 from xscen.config import CONFIG, load_config
 from xscen.extract import extract_dataset, search_data_catalogs
-from xscen.indicators import compute_indicators, load_xclim_collection
+from xscen.indicators import compute_indicators
 from xscen.io import save_to_zarr
 from xscen.scripting import send_mail_on_exit
 from xscen.utils import get_cat_attrs
@@ -35,7 +36,7 @@ if __name__ == "__main__":
 
     logger.info("Reading catalog and indicators.")
     pcat = ProjectCatalog(CONFIG["main"]["catalog"], project={"id": "test2"}, create=True)
-    mod = load_xclim_collection(CONFIG["indicators"]["module"])
+    mod = xc.IndicatorCollection.from_yaml(CONFIG["indicators"]["module"])
 
     # All arguments passed in the config
     cat = search_data_catalogs()

@@ -4,7 +4,6 @@ import logging
 import os
 from collections.abc import Sequence
 from functools import partial
-from pathlib import Path
 from types import ModuleType
 
 import pandas as pd
@@ -13,7 +12,6 @@ import xclim as xc
 from intake_esm import DerivedVariableRegistry
 from xclim.core.calendar import construct_offset, parse_offset
 from xclim.core.indicator import Indicator
-from yaml import safe_load
 
 from xscen.config import parse_config
 
@@ -23,47 +21,7 @@ from .utils import CV, rechunk_for_resample, standardize_periods
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["compute_indicators", "load_xclim_collection", "registry_from_collection"]
-
-
-def load_xclim_collection(filename: str | os.PathLike, reload: bool = False) -> xc.IndicatorCollection:
-    """
-    Return the xclim collection described by the yaml file (or group of yaml, jsons and py).
-
-    Parameters
-    ----------
-    filename : str or os.PathLike
-        The filepath to the yaml file of the module or to the stem of yaml, jsons and py files.
-    reload : bool
-        If False (default) and the module already exists in `xclim.indicators`, it is not re-build.
-
-    Returns
-    -------
-    xc.IndicatorCollection
-        The xclim collection.
-    """
-    if not reload:
-        # Same code as in xclim to get the module name.
-        filepath = Path(filename)
-
-        if not filepath.suffix:
-            # A stem was passed, try to load files
-            ymlpath = filepath.with_suffix(".yml")
-        else:
-            ymlpath = filepath
-
-        # Read YAML file
-        with ymlpath.open() as f:
-            yml = safe_load(f)
-
-        # TODO: we need to change something here but I am not sure what,
-        # module aren't a thing so I am unsure what to do here
-        #  reload False is not working
-        name = yml.get("module", filepath.stem)
-        if hasattr(xc.indicators, name):
-            return getattr(xc.indicators, name)
-
-    return xc.IndicatorCollection.from_yaml(filename)
+__all__ = ["compute_indicators", "registry_from_collection"]
 
 
 def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str) -> tuple[list[str], str]:
@@ -154,7 +112,7 @@ def compute_indicators(  # noqa: C901
     """
     if isinstance(indicators, str | os.PathLike):
         logger.debug("Loading indicator module.")
-        module = load_xclim_collection(indicators)
+        module = xc.IndicatorCollection.from_yaml(indicators)
         indicators = module.iter_indicators()
     elif hasattr(indicators, "iter_indicators"):
         indicators = indicators.iter_indicators()
@@ -348,7 +306,7 @@ def select_inds_for_avail_vars(
     is_list_of_tuples = isinstance(indicators, list) and all(isinstance(i, tuple) for i in indicators)
     if isinstance(indicators, str | os.PathLike):
         logger.debug("Loading indicator module.")
-        indicators = load_xclim_collection(indicators, reload=True)
+        indicators = xc.IndicatorCollection.from_yaml(indicators)
     if hasattr(indicators, "iter_indicators"):
         indicators = [(name, ind) for name, ind in indicators.iter_indicators()]
     elif isinstance(indicators, dict):

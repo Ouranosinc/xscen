@@ -17,7 +17,6 @@ from xclim.core import ValidationError, dataflags
 from xclim.core.indicator import Indicator
 
 from .config import parse_config
-from .indicators import load_xclim_collection
 from .utils import (
     add_attr,
     change_units,
@@ -359,7 +358,7 @@ def properties_and_measures(  # noqa: C901
     """
     if isinstance(properties, str | Path):
         logger.debug("Loading properties module.")
-        module = load_xclim_collection(properties)
+        module = xc.IndicatorCollection.from_yaml(properties)
         properties = module.iter_indicators()
     elif hasattr(properties, "iter_indicators"):
         properties = properties.iter_indicators()

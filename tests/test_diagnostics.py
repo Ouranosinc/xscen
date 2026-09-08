@@ -293,7 +293,7 @@ class TestPropertiesMeasures:
 
     @pytest.mark.parametrize("input", ["module", "iter"])
     def test_input_types(self, input):
-        module = xs.indicators.load_xclim_collection(self.yaml_file)
+        module = xc.IndicatorCollection.from_yaml(self.yaml_file)
         p1, m1 = xs.properties_and_measures(
             self.ds,
             properties=module if input == "module" else module.iter_indicators(),
