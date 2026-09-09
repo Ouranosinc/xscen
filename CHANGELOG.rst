@@ -4,11 +4,24 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors:  Juliette Lavoie (:user:`juliettelavoie`).
+Contributors:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add CanESM5-1 to IPCC_annual_global_tas.nc. (:pull:`761`).
+
+Bug fixes
+^^^^^^^^^
+* Fixed how IPCC_annual_global_tas.nc is loaded to prevent kernel crashes in edge cases. (:issue:`769`, :pull:`770`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* N/A.
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* N/A.
+
 
 .. _changes_0.15.2:
 
