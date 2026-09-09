@@ -870,7 +870,7 @@ def get_period_from_warming_level(  # noqa: C901
     info_models = _wl_prep_infomodels(realization, ignore_member, FIELDS)
 
     # open nc
-    tas = xr.open_dataset(tas_src).tas
+    tas = xr.open_dataset(tas_src).tas.load()
     if np.isscalar(wl):
         wl = np.array([wl])
 
@@ -993,7 +993,7 @@ def get_warming_level_from_period(
     info_models = _wl_prep_infomodels(realization, ignore_member, FIELDS)
 
     # open nc
-    tas = xr.open_dataset(tas_src).tas
+    tas = xr.open_dataset(tas_src).tas.load()
 
     def _get_warming_level(model):
         tas_sel = _wl_find_column(tas, model)
