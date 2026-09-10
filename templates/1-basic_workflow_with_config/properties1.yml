@@ -6,7 +6,7 @@ realm: generic
 indicators:
   quantile_02-tasmin:
     base: xsdba.properties.quantile # Properties do not have an identifier, so the full path must be specified.
-    cf_attrs:
+    attrs:
       long_name: 2nd quantile of the minimum temperature
     input:
       da: tasmin # Since properties are generic, the input name must be specified.
@@ -15,7 +15,7 @@ indicators:
       group: time.season
   maximum_length_of_warm_spell:
     base: xsdba.properties.spell_length_distribution
-    cf_attrs:
+    attrs:
       # You can specify the attributes of the output DataArray here, but xclim will also try to infer them from the parameters.
       long_name: Maximum spell length distribution when the maximum temperature is larger or equal to the 90th quantile.
     input:
@@ -27,7 +27,7 @@ indicators:
       stat: max
   mean-pr:
     base: xsdba.properties.mean
-    cf_attrs:
+    attrs:
       long_name: Mean precipitation
     input:
       da: pr

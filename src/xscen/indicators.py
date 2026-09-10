@@ -4,7 +4,6 @@ import logging
 import os
 from collections.abc import Sequence
 from functools import partial
-from pathlib import Path
 from types import ModuleType
 
 import pandas as pd
@@ -13,7 +12,6 @@ import xclim as xc
 from intake_esm import DerivedVariableRegistry
 from xclim.core.calendar import construct_offset, parse_offset
 from xclim.core.indicator import Indicator
-from yaml import safe_load
 
 from xscen.config import parse_config
 
@@ -23,44 +21,7 @@ from .utils import CV, rechunk_for_resample, standardize_periods
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["compute_indicators", "load_xclim_module", "registry_from_module"]
-
-
-def load_xclim_module(filename: str | os.PathLike, reload: bool = False) -> ModuleType:
-    """
-    Return the xclim module described by the yaml file (or group of yaml, jsons and py).
-
-    Parameters
-    ----------
-    filename : str or os.PathLike
-        The filepath to the yaml file of the module or to the stem of yaml, jsons and py files.
-    reload : bool
-        If False (default) and the module already exists in `xclim.indicators`, it is not re-build.
-
-    Returns
-    -------
-    ModuleType
-        The xclim module.
-    """
-    if not reload:
-        # Same code as in xclim to get the module name.
-        filepath = Path(filename)
-
-        if not filepath.suffix:
-            # A stem was passed, try to load files
-            ymlpath = filepath.with_suffix(".yml")
-        else:
-            ymlpath = filepath
-
-        # Read YAML file
-        with ymlpath.open() as f:
-            yml = safe_load(f)
-
-        name = yml.get("module", filepath.stem)
-        if hasattr(xc.indicators, name):
-            return getattr(xc.indicators, name)
-
-    return xc.build_indicator_module_from_yaml(filename)
+__all__ = ["compute_indicators", "registry_from_collection"]
 
 
 def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str) -> tuple[list[str], str]:
@@ -92,7 +53,7 @@ def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str) -> tup
         frq = ind.injected_parameters["freq"] if "freq" in ind.injected_parameters else ind.parameters["freq"].default
     if frq == "YS":
         frq = "YS-JAN"
-    var_names = [cfa["var_name"] for cfa in ind.cf_attrs]
+    var_names = [cfa.var_name for cfa in ind.attrs]
     return var_names, frq
 
 
@@ -147,11 +108,11 @@ def compute_indicators(  # noqa: C901
     See Also
     --------
     xclim.indicators : Indicators module of xclim.
-    xclim.core.indicator.build_indicator_module_from_yaml : YAML indicator constructor function of xclim.
+    xclim.IndicatorCollection.from_yaml : YAML indicator constructor function of xclim.
     """
     if isinstance(indicators, str | os.PathLike):
         logger.debug("Loading indicator module.")
-        module = load_xclim_module(indicators)
+        module = xc.IndicatorCollection.from_yaml(indicators)
         indicators = module.iter_indicators()
     elif hasattr(indicators, "iter_indicators"):
         indicators = indicators.iter_indicators()
@@ -261,18 +222,18 @@ def compute_indicators(  # noqa: C901
     return out_dict
 
 
-def registry_from_module(
-    module: ModuleType,
+def registry_from_collection(
+    collection: xc.IndicatorCollection,
     registry: DerivedVariableRegistry | None = None,
     variable_column: str = "variable",
 ) -> DerivedVariableRegistry:
     """
-    Convert a xclim virtual indicators module to an intake_esm Derived Variable Registry.
+    Convert a xclim virtual indicators collection to an intake_esm Derived Variable Registry.
 
     Parameters
     ----------
-    module : ModuleType
-        A module of xclim.
+    collection : xc.IndicatorCollection
+        A collection of xclim.
     registry : DerivedVariableRegistry, optional
         If given, this registry is extended, instead of creating a new one.
     variable_column : str
@@ -289,10 +250,10 @@ def registry_from_module(
         given their defaults.
     """
     dvr = registry or DerivedVariableRegistry()
-    for _name, ind in module.iter_indicators():
+    for _name, ind in collection.iter_indicators():
         query = {variable_column: [p.default for p in ind.parameters.values() if p.kind == 0]}
-        for i, attrs in enumerate(ind.cf_attrs):
-            dvr.register(variable=attrs["var_name"], query=query)(_derived_func(ind, i))
+        for i, attrs in enumerate(ind.attrs):
+            dvr.register(variable=attrs.var_name, query=query)(_derived_func(ind, i))
     return dvr
 
 
@@ -316,8 +277,8 @@ def _derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
 
 def select_inds_for_avail_vars(
     ds: xr.Dataset,
-    indicators: (str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType),
-) -> ModuleType:
+    indicators: (str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | xc.IndicatorCollection | dict),
+) -> xc.IndicatorCollection:
     """
     Filter the indicators for which the necessary variables are available.
 
@@ -333,29 +294,33 @@ def select_inds_for_avail_vars(
 
     Returns
     -------
-    ModuleType
+    xclim.IndicatorCollection
         An indicator module of 'length' ∈ [0, n].
 
     See Also
     --------
     xclim.indicators : Indicators module of xclim.
-    xclim.core.indicator.build_indicator_module_from_yaml : YAML indicator constructor function of xclim.
+    xclim.IndicatorCollection.from_yaml : YAML indicator constructor function of xclim.
     """
     # Transform the 'indicators' input into a list of tuples (name, indicator)
     is_list_of_tuples = isinstance(indicators, list) and all(isinstance(i, tuple) for i in indicators)
     if isinstance(indicators, str | os.PathLike):
         logger.debug("Loading indicator module.")
-        indicators = load_xclim_module(indicators, reload=True)
+        indicators = xc.IndicatorCollection.from_yaml(indicators)
     if hasattr(indicators, "iter_indicators"):
         indicators = [(name, ind) for name, ind in indicators.iter_indicators()]
+    elif isinstance(indicators, dict):
+        indicators = [(name, ind) for name, ind in indicators.items()]
     elif isinstance(indicators, list | tuple) and not is_list_of_tuples:
-        indicators = [(ind.base, ind) for ind in indicators]
+        # TODO: not really sure what base was ? is identifier the correct new thing to call here ?
+        indicators = [(ind.identifier, ind) for ind in indicators]
 
+    # TODO: je ne comprends pas le fixme?
     # FIXME: Remove if-else when updating minimum xclim version to 0.53
     XCVARS = xc.core.VARIABLES if hasattr(xc.core, "VARIABLES") else xc.core.utils.VARIABLES
     available_vars = {var for var in ds.data_vars if var in XCVARS.keys()}
-    available_inds = [(name, ind) for var in available_vars for name, ind in indicators if var in ind.parameters.keys()]
-    return xc.core.indicator.build_indicator_module("inds_for_avail_vars", available_inds, reload=True)
+    available_inds = {name: ind for var in available_vars for name, ind in indicators if var in ind.parameters.keys()}
+    return xc.IndicatorCollection(available_inds, name="inds_for_avail_vars")
 
 
 def _wrap_month(m):

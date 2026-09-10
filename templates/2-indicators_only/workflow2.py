@@ -5,12 +5,13 @@ import logging
 from argparse import ArgumentParser
 
 import dask
+import xclim as xc
 from dask.distributed import Client
 
 from xscen.catalog import ProjectCatalog
 from xscen.config import CONFIG, load_config
 from xscen.extract import extract_dataset, search_data_catalogs
-from xscen.indicators import compute_indicators, load_xclim_module
+from xscen.indicators import compute_indicators
 from xscen.io import save_to_zarr
 from xscen.scripting import send_mail_on_exit
 from xscen.utils import get_cat_attrs
@@ -34,8 +35,8 @@ if __name__ == "__main__":
     atexit.register(send_mail_on_exit)
 
     logger.info("Reading catalog and indicators.")
-    pcat = ProjectCatalog(CONFIG["main"]["catalog"], create=True)
-    mod = load_xclim_module(CONFIG["indicators"]["module"])
+    pcat = ProjectCatalog(CONFIG["main"]["catalog"], project={"id": "test2"}, create=True)
+    mod = xc.IndicatorCollection.from_yaml(CONFIG["indicators"]["module"])
 
     # All arguments passed in the config
     cat = search_data_catalogs()
@@ -46,7 +47,7 @@ if __name__ == "__main__":
         for name, ind in mod.iter_indicators():
             # Get the frequency and variable names to check if they are already computed
             outfreq = ind.injected_parameters["freq"].replace("YS", "AS-JAN")
-            outnames = [cfatt["var_name"] for cfatt in ind.cf_attrs]
+            outnames = [cfatt.var_name for cfatt in ind.attrs]
             if not pcat.exists_in_cat(
                 id=dsid,
                 variable=outnames,
@@ -64,5 +65,5 @@ if __name__ == "__main__":
 
         for outds in outd.values():
             outpath = CONFIG["main"]["outfilename"].format(**get_cat_attrs(outds))
-            save_to_zarr(outds, outpath)
+            save_to_zarr(outds, outpath, rechunk={"time": -1, "lat": 10, "lon": 10})
             pcat.update_from_ds(outds, path=outpath)

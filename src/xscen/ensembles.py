@@ -3,12 +3,15 @@
 import inspect
 import logging
 import os
+import re
 import warnings
+from collections import defaultdict
 from copy import deepcopy
 from itertools import chain, groupby
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 from xclim import ensembles
 
@@ -815,3 +818,69 @@ def reduce_ensemble(
     selected = data.realization.isel(realization=selected)
 
     return selected, clusters, fig_data
+
+
+def unstack_ensemble_member(ens: xr.DataArray):
+    """
+    Split the "realization" dimension into "realization" and "member" dimensions.
+
+    Each realization label is expected to contain an ensemble-member identifier
+    of the form ``rXiYpZfW`` (e.g. "r1i1p1f1"). This identifier is stripped out
+    to form a new "sub_id" (the rest of the label), which becomes the new
+    "realization" coordinate.
+
+    The actual label text is discarded and replaced with a "member" index: for each
+    sub_id, its occurrences are numbered 0, 1, 2, ... in order of appearance,
+    regardless of what the original rXiYpZfW values were.
+
+    Parameters
+    ----------
+    ens : xr.DataArray
+        An array with a "realization" dimension whose coordinate values are
+        strings, each containing exactly one ``_rXiYpZfW_`` pattern.
+        This can be created with py:func:`xclim.ensembles.create_ensemble`.
+
+    Returns
+    -------
+    xr.DataArray
+        The input array with the "realization" dimension replaced by two
+        dimensions: "realization" (the sub_id, i.e. the original label with the
+        rXiYpZfW pattern removed) and "member" (an integer position, starting at 0,
+        counting occurrences of each sub_id).
+
+    Examples
+    --------
+    Given realization labels::
+
+        ["MIROC6_r1i1p1f1_hist", "MIROC6_r2i1p1f1_hist", "CanESM5_r1i1p2f1_hist"]
+
+    the result has realization coordinates ``["MIROC6_hist", "CanESM5_hist"]`` and
+    member coordinates ``[0, 1]``.
+    """
+    if "realization" not in ens.dims:
+        raise ValueError("Input array must have a 'realization' dimension.")
+
+    pattern = re.compile(r"_(r\d+i\d+p\d+(?:f\d+)?)_?")  # rXiYpZ or rXiYpZfW, optional trailing underscore
+
+    sub_ids = []
+    for r in ens["realization"].values.astype(str):
+        m = pattern.search(r)
+        if not m:
+            raise ValueError(f"No _rXiYpZfW_ pattern found in '{r}'")
+        sub_id = r[: m.start()] + "_" + r[m.end() :]  # everything except the matched block
+        sub_ids.append(sub_id)
+
+    # count occurrences of each sub_id, in order of appearance
+    counters = defaultdict(int)
+    numbers = []
+    for s in sub_ids:
+        numbers.append(counters[s])
+        counters[s] += 1
+
+    midx = pd.MultiIndex.from_arrays([sub_ids, numbers], names=["sub_id", "member"])
+    ens = ens.assign_coords({"realization": midx}).unstack("realization")
+    ens = ens.rename({"sub_id": "realization"})
+    n_members = [counters[s] for s in ens["realization"].values]
+    ens = ens.assign_coords(n_dim2=("realization", n_members))
+    ens["n_dim2"].attrs["long_name"] = "Number of members for each realization"
+    return ens

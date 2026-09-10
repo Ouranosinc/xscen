@@ -1,6 +1,6 @@
 envlist = [
   "lint",
-  {product = [{prefix = "py3.", start = 10, stop = 14}]},
+  {product = [{prefix = "py3.", start = 11, stop = 14}]},
   "docs"
 ]
 skip_missing_interpreters = true
@@ -29,6 +29,7 @@ commands_post = []
 description = "Run code quality compliance tests and French translation verifications under {basepython}"
 labels = ["lint"]
 skip_install = true
+deps = []
 dependency_groups = ["lint"]
 commands = [
   ["make", "lint"],
@@ -45,7 +46,8 @@ download = true
 dependency_groups = ["test"]
 deps = [
   {replace = "if", condition = "env.ESMF_VERSION", then = ["git+https://github.com/esmf-org/esmf.git@v{env:ESMF_VERSION}#subdirectory=src/addon/esmpy"], extend = true},
-  {replace = "if", condition = "env.XCLIM_VERSION", then = ["xclim=={env:XCLIM_VERSION}"], extend = true}
+  {replace = "if", condition = "env.XCLIM_VERSION", then = ["xclim=={env:XCLIM_VERSION}"], extend = true},
+  {replace = "if", condition = "env.XCLIM_UPSTREAM", then = ["xclim @ git+https://github.com/Ouranosinc/xclim.git@{env:XCLIM_UPSTREAM}"], extend = true}
 ]
 install_command = ["python", "-m", "pip", "install", "--no-user", "{opts}", "{packages}"]
 commands_pre = [["pip", "list"], ["pip", "check"]]
@@ -57,7 +59,6 @@ commands_post = [
 ]
 
 [gh.python]
-"3.10" = ["py3.10"]
 "3.11" = ["py3.11"]
 "3.12" = ["py3.12"]
 "3.13" = ["py3.13"]
