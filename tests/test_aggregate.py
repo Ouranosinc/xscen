@@ -251,12 +251,12 @@ class TestProduceHorizon:
         ds["da"] = ds["tas"]
 
         indicator_qs = xclim.atmos.tg_min.__class__(
-            identifier="tg_min_qs",
+            var_name="tg_min_qs",
             parameters=dict(freq="QS-DEC"),
         )
 
         indicator_ms = xclim.atmos.tg_min.__class__(
-            identifier="tg_min_ms",
+            var_name="tg_min_ms",
             parameters=dict(freq="MS"),
         )
 
@@ -269,8 +269,6 @@ class TestProduceHorizon:
 
         out = xs.produce_horizon(ds, indicators=indicators)
         assert len(out.horizon) == 1
-        # TODO: this test fails
-        # out only has tg_min as a var. is this what we want ?
         assert all(v in out for v in ["params", "tg_min", "tg_min_qs", "tg_min_ms"])
         np.testing.assert_array_equal(out["season"], ["MAM", "JJA", "SON", "DJF"])
         np.testing.assert_array_equal(
