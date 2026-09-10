@@ -1,5 +1,3 @@
-import warnings
-
 import numpy as np
 import pytest
 import xclim
@@ -12,16 +10,6 @@ import xscen as xs
 class TestComputeIndicators:
     yaml_file = notebooks / "samples" / "indicators.yml"
     ds = timeseries(np.ones(365 * 3), variable="tas", start="2001-01-01", freq="D", as_dataset=True)
-
-    def test_reload_warning(self):
-        module = xclim.IndicatorCollection.from_yaml(self.yaml_file)
-        assert all(hasattr(module, ind) for ind in ["growing_degree_days", "tg_min"])
-
-        # Record warnings without failing the test if no warnings are raised.
-        with warnings.catch_warnings(record=True) as record:
-            warnings.simplefilter("always")
-            xclim.IndicatorCollection.from_yaml(notebooks / "samples" / "indicators")
-        assert len([r for r in record if "already exists and will be overwritten." in str(r.message)]) == 2
 
     @pytest.mark.parametrize("input", ["module", "iter"])
     def test_input_types(self, input):

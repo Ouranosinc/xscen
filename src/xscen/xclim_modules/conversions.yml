@@ -10,16 +10,10 @@ doc: |
 realm: atmos
 base: Indicator
 indicators:
-  wind_speed_from_vector: #TODO: i dont know why this fails
+  wind_speed_from_vector:
     base: wind_speed_from_vector
-    attrs:
-      - var_name: "sfcWind"
-      - var_name:  "sfcWindfromdir"
   wind_vector_from_speed:
     base: wind_vector_from_speed
-    attrs:
-      - var_name: "uas"
-      - var_name:  "vas"
   tas_midpoint:
     compute: tas_midpoint
     attrs:

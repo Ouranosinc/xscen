@@ -239,8 +239,8 @@ class TestEnsembleStats:
         ]
         ens2 = xs.ensembles.unstack_ensemble_member(ens)
 
-        assert ens2.dims == {"subid": 2, "member": 2, "time": 4}
-        assert ens2.subid.values.tolist() == [
+        assert ens2.dims == {"realization": 2, "member": 2, "time": 4}
+        assert ens2.realization.values.tolist() == [
             "ESPO_CaSR_CMIP6_ScenarioMIP_CCCma_CanESM5_ssp370_NAM",
             "ESPO_CaSR_CMIP6_ScenarioMIP_CSIRO-ARCCSS_ACCESS-CM2_ssp370_NAM",
         ]

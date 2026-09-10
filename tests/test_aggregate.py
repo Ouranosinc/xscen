@@ -269,6 +269,8 @@ class TestProduceHorizon:
 
         out = xs.produce_horizon(ds, indicators=indicators)
         assert len(out.horizon) == 1
+        # TODO: this test fails
+        # out only has tg_min as a var. is this what we want ?
         assert all(v in out for v in ["params", "tg_min", "tg_min_qs", "tg_min_ms"])
         np.testing.assert_array_equal(out["season"], ["MAM", "JJA", "SON", "DJF"])
         np.testing.assert_array_equal(
