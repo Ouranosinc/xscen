@@ -9,6 +9,9 @@ Contributors:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add CanESM5-1 to IPCC_annual_global_tas.nc. (:pull:`761`).
+* Fix to work with xclim 1.0 (:pull:`764`).
+* Add ``xs.ensembles.unstack_ensembles`` function. (:pull:`764`).
+* Make ``change_attr_prefix`` argument of ``xs.utils.clean_up`` accept an empty string. (:pull:`764`, :issue:`771`).
 
 Bug fixes
 ^^^^^^^^^
