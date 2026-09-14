@@ -14,15 +14,10 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import xclim as xc
+import xclim.indicators.convert as convert
 from intake_esm.derived import DerivedVariableRegistry
 from scipy.interpolate import interp1d
 from xclim.core.calendar import compare_offsets
-
-
-try:
-    import xclim.indicators.convert as convert
-except ImportError:  # FIXME: Remove when we pin xclim >= 0.58
-    import xclim.indicators.atmos as convert
 
 from .catalog import (
     ID_COLUMNS,
