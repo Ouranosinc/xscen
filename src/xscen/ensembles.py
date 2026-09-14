@@ -881,6 +881,6 @@ def unstack_ensemble_member(ens: xr.DataArray):
     ens = ens.assign_coords({"realization": midx}).unstack("realization")
     ens = ens.rename({"sub_id": "realization"})
     n_members = [counters[s] for s in ens["realization"].values]
-    ens = ens.assign_coords(n_dim2=("realization", n_members))
-    ens["n_dim2"].attrs["long_name"] = "Number of members for each realization"
+    ens = ens.assign_coords(n_pool=("realization", n_members))
+    ens["n_pool"].attrs["long_name"] = "Number of members to pool for each realization"
     return ens

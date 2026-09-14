@@ -312,12 +312,9 @@ def select_inds_for_avail_vars(
     elif isinstance(indicators, dict):
         indicators = [(name, ind) for name, ind in indicators.items()]
     elif isinstance(indicators, list | tuple) and not is_list_of_tuples:
-        # TODO: not really sure what base was ? is identifier the correct new thing to call here ?
         indicators = [(ind.identifier, ind) for ind in indicators]
 
-    # TODO: je ne comprends pas le fixme?
-    # FIXME: Remove if-else when updating minimum xclim version to 0.53
-    XCVARS = xc.core.VARIABLES if hasattr(xc.core, "VARIABLES") else xc.core.utils.VARIABLES
+    XCVARS = xc.core.VARIABLES
     available_vars = {var for var in ds.data_vars if var in XCVARS.keys()}
     available_inds = {name: ind for var in available_vars for name, ind in indicators if var in ind.parameters.keys()}
     return xc.IndicatorCollection(available_inds, name="inds_for_avail_vars")
