@@ -168,7 +168,7 @@ class TestAdjust:
         assert out.attrs["cat:variable"] == ("tas",)
         assert out.attrs["cat:id"] == "fake_id"
         assert re.fullmatch(
-            r"DetrendedQuantileMapping\(group=Grouper\(name='time\.dayofyear', window=31\), kind='\+', "
+            r"DetrendedQuantileMapping\(group=Grouper\(name='time\.dayofyear', window=31, freq='D'\), kind='\+', "
             r"adapt_freq_thresh=None(?:, [^)]*)?\)\.adjust\(sim, \) with xsdba_train_args: \{\}",
             out["tas"].attrs["bias_adjustment"],
         )
@@ -249,7 +249,7 @@ class TestAdjust:
 
         for out_test in [out, out2]:
             assert re.fullmatch(
-                r"DetrendedQuantileMapping\(group=Grouper\(name='time\.dayofyear', window=31\), kind='\+', "
+                r"DetrendedQuantileMapping\(group=Grouper\(name='time\.dayofyear', window=31, freq='D'\), kind='\+', "
                 r"adapt_freq_thresh='2 K'(?:, [^)]*)?\)\.adjust\(sim, detrend=<LoessDetrend>\) with xsdba_train_args: "
                 r"\{'adapt_freq_thresh': '2 K'\}, ref and hist were prepared with jitter_under_thresh\(ref, hist, "
                 r"\{'thresh': '2 K'\}\) and jitter_over_thresh\(ref, hist, \{'upper_bnd': '3 K', 'thresh': '2 K'\}\)",

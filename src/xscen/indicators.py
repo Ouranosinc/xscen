@@ -53,7 +53,7 @@ def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str) -> tup
         frq = ind.injected_parameters["freq"] if "freq" in ind.injected_parameters else ind.parameters["freq"].default
     if frq == "YS":
         frq = "YS-JAN"
-    var_names = [cfa.var_name for cfa in ind.attrs]
+    var_names = [cfa.var_name for cfa in ind.outputs]
     return var_names, frq
 
 
@@ -164,8 +164,6 @@ def compute_indicators(  # noqa: C901
             if isinstance(out, tuple):
                 out = xr.merge(out)
                 out.attrs = {}
-            else:
-                out = out.to_dataset()
 
         else:
             # Multiple time periods to concatenate
@@ -183,8 +181,6 @@ def compute_indicators(  # noqa: C901
                 if isinstance(tmp, tuple):
                     tmp = xr.merge(tmp)
                     tmp.attrs = {}
-                else:
-                    tmp = tmp.to_dataset()
 
                 # In order to concatenate time periods, the indicator still needs a time dimension
                 if freq == "fx":
@@ -252,8 +248,8 @@ def registry_from_collection(
     dvr = registry or DerivedVariableRegistry()
     for _name, ind in collection.iter_indicators():
         query = {variable_column: [p.default for p in ind.parameters.values() if p.kind == 0]}
-        for i, attrs in enumerate(ind.attrs):
-            dvr.register(variable=attrs.var_name, query=query)(_derived_func(ind, i))
+        for i, output in enumerate(ind.outputs):
+            dvr.register(variable=output.var_name, query=query)(_derived_func(ind, i))
     return dvr
 
 

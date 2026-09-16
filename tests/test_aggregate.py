@@ -322,6 +322,8 @@ class TestProduceHorizon:
         assert len(out.horizon) == 1
         np.testing.assert_array_equal(out.horizon, ["1982-1988"])
 
+    # TODO: when running test alone it works, but when running test with all
+    # TestProduceHorizon it fails, looks like the out has variable tg_min_ms ???
     def test_op(self):
         ds = self.ds.copy()
         ds.tas.loc["1995-01-01":"1995-12-31"] = 2

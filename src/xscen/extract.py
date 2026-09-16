@@ -391,9 +391,11 @@ def resample(  # noqa: C901
         if all(v in ds for v in ["uas", "vas"]):
             uas, vas = ds.uas, ds.vas
         else:
-            uas, vas = convert.wind_vector_from_speed(ds.sfcWind, ds.sfcWindfromdir)
+            out = convert.wind_vector_from_speed(ds.sfcWind, ds.sfcWindfromdir)
+            uas = out["uas"]
+            vas = out["vas"]
         if "sfcWind" not in ds:
-            ds["sfcWind"], _ = convert.wind_speed_from_vector(uas=ds["uas"], vas=ds["vas"])
+            ds["sfcWind"] = convert.wind_speed_from_vector(uas=ds["uas"], vas=ds["vas"])["sfcWind"]
 
         # Resample first to find the average wind speed and components
         if weights is not None:
