@@ -240,7 +240,7 @@ def health_checks(  # noqa: C901
         inferred_freq = xr.infer_freq(ds.time)
         if inferred_freq is None:
             _error("The timesteps are irregular or cannot be inferred by xarray.", "freq")
-        elif freq.replace("YS", "YS-JAN") != inferred_freq:
+        elif freq != inferred_freq:
             _error(f"The frequency is not '{freq}'. Received '{inferred_freq}'.", "freq")
 
     if missing is not None:
@@ -257,7 +257,7 @@ def health_checks(  # noqa: C901
             elif isinstance(missing, list):
                 missing = {m: {} for m in missing}
             for method, kwargs in missing.items():
-                kwargs.setdefault("freq", "YS")
+                kwargs.setdefault("freq", "YS-JAN")
                 for v in ds.data_vars:
                     if "time" in ds[v].dims:
                         ms = getattr(xc.core.missing, method)(ds[v], **kwargs)
