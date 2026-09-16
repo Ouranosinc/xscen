@@ -250,15 +250,14 @@ class TestProduceHorizon:
         ds["tas"].values = ds["time"].dt.month
         ds["da"] = ds["tas"]
 
-        indicator_qs = xclim.core.indicator.Indicator.from_dict(
-            data={"base": "tg_min", "parameters": {"freq": "QS-DEC"}},
-            identifier="tg_min_qs",
-            module="tests",
+        indicator_qs = xclim.atmos.tg_min.__class__(
+            var_name="tg_min_qs",
+            parameters=dict(freq="QS-DEC"),
         )
-        indicator_ms = xclim.core.indicator.Indicator.from_dict(
-            data={"base": "tg_min", "parameters": {"freq": "MS"}},
-            identifier="tg_min_ms",
-            module="tests",
+
+        indicator_ms = xclim.atmos.tg_min.__class__(
+            var_name="tg_min_ms",
+            parameters=dict(freq="MS"),
         )
 
         indicators = [
@@ -323,6 +322,8 @@ class TestProduceHorizon:
         assert len(out.horizon) == 1
         np.testing.assert_array_equal(out.horizon, ["1982-1988"])
 
+    # TODO: when running test alone it works, but when running test with all
+    # TestProduceHorizon it fails, looks like the out has variable tg_min_ms ???
     def test_op(self):
         ds = self.ds.copy()
         ds.tas.loc["1995-01-01":"1995-12-31"] = 2
