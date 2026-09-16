@@ -245,7 +245,7 @@ def health_checks(  # noqa: C901
 
     if missing is not None:
         inferred_freq = xr.infer_freq(ds.time)
-        if inferred_freq not in ["M", "MS", "D", "H"]:
+        if not isinstance(inferred_freq, str) or not inferred_freq.startswith(("YS", "YE", "ME", "MS", "D", "H")):
             warnings.warn(
                 f"Frequency {inferred_freq} is not supported for missing data checks. That check will be skipped.",
                 UserWarning,
