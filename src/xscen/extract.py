@@ -39,6 +39,8 @@ from .utils import CV, _xarray_defaults, get_cat_attrs, natural_sort, standardiz
 from .utils import ensure_correct_time as _ensure_correct_time
 
 
+FIELDS = ["mip_era", "source", "experiment", "member"]
+
 logger = logging.getLogger(__name__)
 
 
@@ -814,6 +816,7 @@ def get_period_from_warming_level(  # noqa: C901
     window: int = 20,
     tas_baseline_period: Sequence[str] | None = None,
     ignore_member: bool = False,
+    realization_fields: Sequence[str] | None = None,
     tas_src: str | os.PathLike | None = None,
     return_central_year: bool = False,
 ) -> xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list:
@@ -843,6 +846,8 @@ def get_period_from_warming_level(  # noqa: C901
        [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
     ignore_member : bool
        Decides whether to ignore the member when searching for the model run in tas_csv.
+    realization_fields : sequence of str
+       If ``realization`` contains strings, this gives the sequence of underscore-separated fields. See :py:func:`get_models_info`.
     tas_src : str, optional
        Path to a netCDF of annual global mean temperature (tas) with an annual "time" dimension
        and a "simulation" dimension with the following coordinates: "mip_era", "source", "experiment" and "member".
@@ -866,8 +871,8 @@ def get_period_from_warming_level(  # noqa: C901
     if (window % 2) not in {0, 1}:
         raise ValueError(f"window should be an integer, received {type(window)}")
 
-    FIELDS = ["mip_era", "source", "experiment", "member"]
-    info_models = _wl_prep_infomodels(realization, ignore_member, FIELDS)
+    fields = FIELDS if not ignore_member else FIELDS[:-1]
+    info_models = get_models_info(realization, fields, realization_fields=realization_fields, rcm_source="driver")
 
     # open nc
     tas = xr.open_dataset(tas_src).tas.load()
@@ -947,6 +952,7 @@ def get_warming_level_from_period(
     *,
     tas_baseline_period: Sequence[str] | None = None,
     ignore_member: bool = False,
+    realization_fields: Sequence[str] | None = None,
     tas_src: str | os.PathLike | None = None,
 ) -> xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | float | list:
     """
@@ -966,12 +972,16 @@ def get_warming_level_from_period(
        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
        Additionally, it can be "obs-IPCC-AR6" to get the exact same observational ensemble as used in the IPCC AR6 WG1 Chap1, Figure 1.12,
        or "obs-IPCC-updated" to get the same ensemble but with updated sources.
+    realization_fields : sequence of str
+        If realization contains strings, this lists the
     period : list of str
        [start, end] of the period for which to compute the warming level.
     tas_baseline_period : list, optional
        [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
     ignore_member : bool
        Decides whether to ignore the member when searching for the model run in tas_csv.
+    realization_fields : sequence of str
+       If ``realization`` contains strings, this gives the sequence of underscore-separated fields. See :py:func:`get_models_info`.
     tas_src : str, optional
        Path to a netCDF of annual global mean temperature (tas) with an annual "time" dimension
        and a "simulation" dimension with the following coordinates: "mip_era", "source", "experiment" and "member".
@@ -989,8 +999,8 @@ def get_warming_level_from_period(
     tas_baseline_period = standardize_periods(tas_baseline_period or ["1850", "1900"], multiple=False)
     period = standardize_periods(period, multiple=False)
 
-    FIELDS = ["mip_era", "source", "experiment", "member"]
-    info_models = _wl_prep_infomodels(realization, ignore_member, FIELDS)
+    fields = FIELDS if not ignore_member else FIELDS[:-1]
+    info_models = get_models_info(realization, realizaton_fields=realization_fields, rcm_source="driver")
 
     # open nc
     tas = xr.open_dataset(tas_src).tas.load()
@@ -1023,16 +1033,81 @@ def get_warming_level_from_period(
     return out
 
 
-def _wl_prep_infomodels(realization, ignore_member, fields):
-    obs_cnst = {"experiment": "obs", "mip_era": "obs", "member": ""}
-    if isinstance(realization, str):
-        if realization == "obs-IPCC-AR6":
-            return [{"source": src} | obs_cnst for src in ["Berkeley-LowRes", "HadCRUT5", "Kadow2020", "NOAAGlobalTempv5"]]
-        if realization == "obs-IPCC-updated":
-            return [{"source": src} | obs_cnst for src in ["Berkeley-HighRes", "HadCRUT5", "Kadow2026", "NOAAGlobalTempv6"]]
+def get_models_info(realization, fields, rcm_source=None, realization_fields=None):
+    """
+    Extract information about models and members from an ensemble.
 
-    if isinstance(realization, xr.Dataset | str | dict | pd.Series):
+    This function is meant to be used when search global warming levels or when generating weights for ensemble reduction.
+
+    Parameters
+    ----------
+    realization : xr.Dataset, xr.DataArray, dict, str, Series or sequence of those
+        Models to get info for. Needs the four fields mip_era, source, experiment, member, and optionally driving_model,
+        as a dict, in a Dataset's attributes or as underscore-separated strings.
+        If ``fields`` is not given, strings should include the fields : mip_era, source, experiment and member.
+        Lists of dicts, strings or Datasets are also accepted, in which case the output will be a sequence of dicts.
+        Regex wildcards (.*) are accepted, but may lead to unexpected results.
+        Datasets should include the catalogue attributes (starting by "cat:") required to create such a string:
+        'cat:mip_era', 'cat:experiment', 'cat:member', 'cat:source', and 'cat:driving_model' for regional models.
+        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
+        Additionally, it can be "obs-IPCC-AR6" to get the exact same observational ensemble as used in the IPCC AR6 WG1 Chap1, Figure 1.12,
+        or "obs-IPCC-updated" to get the same ensemble but with updated sources.
+    fields: list of str or None
+        The list of fields to get for each realization. For example, normal warming level search would need ``["mip_era", "source", "experiment", "member"]``.
+        When ``rcm_source`` is not None, this can't contain fields starting with ``driving_``.
+        This list can only contain values from :py:data:`xscen.catalog.COLUMNS`.
+        If None, all parsed fields are given back.
+    rcm_source : {'driver', 'merge', None}
+        If 'driver', the `source` field is filled with the `driving_model` for RCMs, useful for global warming level search.
+        If 'merge', the `source`field is filled with the concatenation of `source` and `driving_model`, useful for ensemble weights using the "model" method.
+        If None (default), nothing special is done.
+    realization_fields : list of str, optional
+        When `realization` is a string or a list of strings, this gives the order in which the fields are concatenated.
+        RCM and GCM mixtures are supported by trying to split along the fields excluding those beginning by `driving_`.
+        This defaults to ``["mip_era", "source", "experiment", "member"]``.
+        Only values from :py:data:`xscen.catalog.COLUMNS` will work here. Must be a superset of ``fields``.
+
+    Returns
+    -------
+    list of dict
+        A list of dictionaries with the fields requested.
+        If realization was a sequence, this is of the same length.
+        If realization was one of "obs-IPCC-AR6", "obs-IPCC-AR6", this has length 4.
+        Otherwise, it has length 1.
+
+    See Also
+    --------
+    xscen.extract.get_period_from_warming_level : Function using this helper to get GWL information.
+    xscen.extract.get_warming_level_from_period : Function using this helper to get GWL information.
+    xscen.ensemble.generate_weights : Function using this helper to get ensemble reduction weights.
+    """
+    if isinstance(realization, str):
+        obs_cnst = {"experiment": "obs", "mip_era": "obs"}
+        obs_def_fields = ["mip_era", "institution", "source", "institution"]
+        if realization == "obs-IPCC-AR6":
+            data = [
+                {"source": "Berkeley-LowRes", "institution": "Berkeley-Earth"},
+                {"source": "HadCRUT5", "institution": "MOHC"},
+                {"source": "Kadow2020", "institution": "DKRZ"},
+                {"source": "NOAAGlobalTempv5", "institution": "NOAA-NCEI"},
+            ]
+            return [{f: (dat | obs_cnst).get(f, "") for f in (fields or obs_def_fields)} for dat in data]
+        if realization == "obs-IPCC-updated":
+            data = [
+                {"source": "Berkeley-HighRes", "institution": "Berkeley-Earth"},
+                {"source": "HadCRUT5", "institution": "MOHC"},
+                {"source": "Kadow2026", "institution": "DKRZ"},
+                {"source": "NOAAGlobalTempv6", "institution": "NOAA-NCEI"},
+            ]
+            return [{f: (dat | obs_cnst).get(f, "") for f in (fields or obs_def_fields)} for dat in data]
+
+    if isinstance(realization, xr.Dataset | str | pd.Series):
         reals = [realization]
+    elif isinstance(realization, dict):
+        if isinstance(next(iter(realization.values())), xr.Dataset):
+            reals = realization.values()
+        else:
+            reals = [realization]
     elif isinstance(realization, pd.DataFrame):
         reals = (row for i, row in realization.iterrows())
     elif isinstance(realization, xr.DataArray):
@@ -1048,41 +1123,41 @@ def _wl_prep_infomodels(realization, ignore_member, fields):
     for real in reals:
         info = {}
         if isinstance(real, xr.Dataset):
-            attrs = get_cat_attrs(real)
-            # get info on ds
-            if not _is_valid(attrs.get("driving_model")):
-                info["source"] = attrs["source"]
-            else:
-                info["source"] = attrs["driving_model"]
-            info["experiment"] = attrs["experiment"]
-            if ignore_member:
-                info["member"] = ".*"
-            elif not _is_valid(attrs.get("driving_member")):
-                info["member"] = attrs["member"]
-            else:
-                info["member"] = attrs["driving_member"]
-            info["mip_era"] = attrs["mip_era"]
+            info = {k: v for k, v in get_cat_attrs(real).items() if _is_valid(v)}
         elif isinstance(real, str):
-            (
-                info["mip_era"],
-                info["source"],
-                info["experiment"],
-                info["member"],
-            ) = real.split("_")
-            if ignore_member:
-                info["member"] = ".*"
+            real_fields = realization_fields or ["mip_era", "source", "experiment", "member"]
+            real_fields_gcm = [f for f in real_fields if not f.startswith("driving_")]
+
+            parts = real.split("_")
+            if len(parts) == len(real_fields):
+                info = dict(zip(real_fields, parts))
+            elif len(parts) == len(real_fields_gcm):
+                info = dict(zip(real_fields_gcm, parts))
+            else:
+                raise ValueError(
+                    f"Realization {real} doesn't have the expected number of underscore-separated fields."
+                    f" Got {len(parts)} instead of {len(real_fields)} or {len(real_fields_gcm)}."
+                )
         # Dict or Series (DataFrame row)
-        elif hasattr(real, "keys") and set(real.keys()).issuperset((set(fields) - {"member"}) if ignore_member else fields):
-            info = real
-            if _is_valid(info.get("driving_model")):
-                info["source"] = info["driving_model"]
-            if ignore_member:
-                info["member"] = ".*"
-            elif _is_valid(info.get("driving_member")):
-                info["member"] = info["driving_member"]
+        elif hasattr(real, "keys"):
+            info = {k: v for k, v in dict(real).items() if _is_valid(v)}
         else:
             raise ValueError(f"'realization' must be a Dataset, dict, string or list. Received {type(real)}.")
-        info_models.append(info)
+
+        if "driving_model" in info:
+            if rcm_source == "driver":
+                info["source"] = info.pop("driving_model")
+                info["member"] = info.pop("driving_member")
+            elif rcm_source == "merge":
+                info["source"] = f"{info['source']}-{info.pop('driving_model')}"
+                info["member"] = f"{info['member']}-{info.pop('driving_member')}"
+
+        # Filter to only keep requested fields
+        try:
+            filtered = {k: info[k] for k in fields}
+        except KeyError as err:
+            raise ValueError(f"Not all requested fields could be found. Missing field {err.args[0]} from element {real}.")
+        info_models.append(filtered)
 
     return info_models
 
@@ -1095,7 +1170,7 @@ def _wl_find_column(tas, model):
         # Maybe it's an RCM, then requested source may contain the institute
         src = xr.apply_ufunc(model["source"].endswith, tas.source, vectorize=True)
     exp = tas.experiment.str.match(model["experiment"] + "$")
-    mem = tas.member.str.match(model["member"] + "$")
+    mem = tas.member.str.match(model.get("member", ".*") + "$")
 
     candidates = mip & src & exp & mem
     if not candidates.any():

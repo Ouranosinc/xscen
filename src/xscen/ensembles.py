@@ -209,7 +209,7 @@ def ensemble_stats(  # noqa: C901
 
 
 def generate_weights(  # noqa: C901
-    datasets: dict | list,
+    realization: dict | list,
     *,
     independence_level: str = "model",
     balance_experiments: bool = False,
@@ -217,17 +217,19 @@ def generate_weights(  # noqa: C901
     skipna: bool = True,
     v_for_skipna: str | None = None,
     standardize: bool = False,
+    realization_fields : Sequence[str] | None = None,
 ) -> xr.DataArray:
     """
     Use realization attributes to automatically generate weights along the 'realization' dimension.
 
     Parameters
     ----------
-    datasets : dict
-        List of Dataset objects that will be included in the ensemble.
-        The datasets should include the necessary attributes to understand their metadata - See 'Notes' below.
-        A dictionary can be passed instead of a list, in which case the keys are used for the 'realization' coordinate.
-        Tip: With a project catalog, you can do: `datasets = pcat.search(**search_dict).to_dataset_dict()`.
+    realization : Sequence of xr.Dataset, xr.DataArray, dict, str pr Series
+        Models. Needs the four fields mip_era, source, experiment, member, and optionally driving_model,
+        as a dict, in a Dataset's attributes or as underscore-separated strings.
+        Datasets should include the catalogue attributes (starting by "cat:") required to create such a string:
+        'cat:mip_era', 'cat:experiment', 'cat:member', 'cat:source', and 'cat:driving_model' for regional models.
+        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'. See :py:func:`xscen.extraction.get_models_info`.
     independence_level : str
         'model': Weights using the method '1 model - 1 Vote',
         where every unique combination of 'source' and 'driving_model' is considered a model.
@@ -248,13 +250,15 @@ def generate_weights(  # noqa: C901
         Example #1: {'source': {'MPI-ESM-1-2-HAM': 0.25, 'MPI-ESM1-2-HR': 0.5}},
         Example #2: {'experiment': {'ssp585': xr.DataArray, 'ssp126': xr.DataArray}, 'institution': {'CCCma': 0.5, 'others': 1}}.
     skipna : bool
-        If True, weights will be computed from attributes only.
+        If True, weights will be computed from metadata only.
         If False, weights will be computed from the number of non-missing values.
-        skipna=False requires either a 'time' or 'horizon' dimension in the datasets.
+        skipna=False requires that `realization` contains Datasets with either a 'time' or 'horizon' dimension.
     v_for_skipna : str, optional
         Variable to use for skipna=False. If None, the first variable in the first dataset is used.
     standardize : bool
         If True, the weights are standardized to sum to 1 (per timestep/horizon, if skipna=False).
+    realization_fields : sequence of str
+        If ``realization`` contains strings, this gives the order of the underscore-separated fields.
 
     Returns
     -------
@@ -271,14 +275,16 @@ def generate_weights(  # noqa: C901
 
     Even when not required, the 'cat:member' and 'cat:experiment' attributes are strongly recommended to ensure the weights are computed correctly.
     """
-    if isinstance(datasets, list):
-        datasets = {i: datasets[i] for i in range(len(datasets))}
-
     if independence_level not in ["model", "GCM", "institution"]:
         raise ValueError(f"'independence_level' should be between 'model', 'GCM', and 'institution', received {independence_level}.")
+
     if skipna is False:
+        if not isinstance(realization, dict):
+            datasets = dict(enumerate(realization))
+
         if v_for_skipna is None:
-            v_for_skipna = list(datasets[list(datasets.keys())[0]].data_vars)[0]
+            dsref = next(iter(datasets.values()))
+            v_for_skipna = next(iter(dsref.data_vars))
             msg = f"Using '{v_for_skipna}' as the variable to check for missing values."
             logger.info(msg)
 
@@ -293,17 +299,7 @@ def generate_weights(  # noqa: C901
                 )
                 datasets[k] = datasets[k].isel({d: 0 for d in other_dims[k]})
 
-    # Use metadata to identify the simulation attributes
-    keys = datasets.keys()
-    defdict = {
-        "experiment": None,
-        "institution": None,
-        "driving_model": None,
-        "source": None,
-        "member": None,
-    }
-
-    info = {key: dict(defdict, **get_cat_attrs(datasets[key])) for key in keys}
+    info = get_models_info(realization,
 
     # Check if there are both RCMs and GCMs in datasets, with attribute_weights set to weight them.
     if attribute_weights and (
