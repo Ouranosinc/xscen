@@ -13,6 +13,7 @@ New features and enhancements
 Bug fixes
 ^^^^^^^^^
 * Fixed how IPCC_annual_global_tas.nc is loaded to prevent kernel crashes in edge cases. (:issue:`769`, :pull:`770`).
+* Fixed old checks for yearly frequency using "YS" in ``xscen.diagnostics.health_checks``. (:pull:`772`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
