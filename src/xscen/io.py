@@ -74,7 +74,7 @@ def get_engine(file: str | os.PathLike) -> str:
     if Path(file).suffix == ".zarr":
         engine = "zarr"
     elif Path(file).suffix == ".zip":
-        engine = "zarrzip"
+        engine = "zarr"
     elif h5py.is_hdf5(file):
         engine = "h5netcdf"
     else:

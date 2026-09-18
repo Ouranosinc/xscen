@@ -21,7 +21,7 @@ def test_get_engine(tmpdir, suffix):
         assert xs.io.get_engine(path) == "zarr"
     elif suffix == ".zarr.zip":
         path = "some/path" + suffix
-        assert xs.io.get_engine(path) == "zarrzip"
+        assert xs.io.get_engine(path) == "zarr"
     else:
         ds = timeseries(
             np.zeros(60),
@@ -744,7 +744,7 @@ def test_zip_zip(tmpdir):
     xs.io.zip_directory(Path(tmpdir) / "test.zarr", Path(tmpdir) / "test.zarr.zip", delete=True)
     assert not (Path(tmpdir) / "test.zarr").exists()
 
-    with xr.open_dataset(Path(tmpdir) / "test.zarr.zip") as ds2:
+    with xr.open_zarr(Path(tmpdir) / "test.zarr.zip") as ds2:
         assert ds2.equals(ds)
 
     xs.io.unzip_directory(Path(tmpdir) / "test.zarr.zip", Path(tmpdir) / "test2.zarr")
@@ -771,7 +771,7 @@ def test_save_load_sparse(tmpdir):
     xr.testing.assert_identical(w1, w2)
 
 
-def test_zarrzip_engine(tmpdir):
+def test_zarrzip_patch(tmpdir):
     ds = timeseries(
         np.zeros(60),
         variable="tas",
@@ -780,4 +780,4 @@ def test_zarrzip_engine(tmpdir):
     ds.to_zarr(Path(tmpdir) / "test.zarr")
     xs.io.zip_directory(Path(tmpdir) / "test.zarr", Path(tmpdir) / "test.zarr.zip")
 
-    xr.open_dataset(Path(tmpdir) / "test.zarr.zip", chunks={}).load()
+    xr.open_zarr(Path(tmpdir) / "test.zarr.zip", chunks={}).load()
