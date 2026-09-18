@@ -1,2 +1,3 @@
 xclim @ git+https://github.com/Ouranosinc/xclim.git@main
 xsdba @ git+https://github.com/Ouranosinc/xsdba.git@main
+intake-esm @ git+https://github.com/intake/intake-esm.git@main

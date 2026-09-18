@@ -1352,7 +1352,7 @@ def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list[str] |
     # "Same hist member" as in "each future realization stems from the same historical member"
 
     df = catalog.df.copy()
-    df["same_hist_member"] = df[sim_id_no_exp].apply(lambda row: "_".join(row.values.astype(str)), axis=1)
+    df["same_hist_member"] = df[sim_id_no_exp].apply(lambda row: "_".join(map(str, row.values)), axis=1)
 
     new_lines = []
     for group in df.same_hist_member.unique():
