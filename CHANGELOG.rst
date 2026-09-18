@@ -4,7 +4,7 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors:  Juliette Lavoie (:user:`juliettelavoie`).
+Contributors:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
 This version drops support for Python 3.10, Zarr 2 and intake-esm < 2025.12.12.
 
@@ -16,6 +16,11 @@ Breaking changes
 ^^^^^^^^^^^^^^^^
 * Upgrade intake-esm to 2025.12.12 which also means now depending on zarr > 3.1 (:issue:`618`, :pull:`636`).
 * Monkey patch zarr to accept zipped zarr transparently.
+
+Bug fixes
+^^^^^^^^^
+* Fixed how IPCC_annual_global_tas.nc is loaded to prevent kernel crashes in edge cases. (:issue:`769`, :pull:`770`).
+* Fixed old checks for yearly frequency using "YS" in ``xscen.diagnostics.health_checks``. (:pull:`772`).
 
 .. _changes_0.15.2:
 
