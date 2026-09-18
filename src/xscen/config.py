@@ -15,7 +15,6 @@ for function ``function`` defined in ``module.py`` of this package, the config w
         function:
             ...kwargs...
 
-
 The :py:func:`load_config` function fills the ``CONFIG`` dict from yaml files.
 It always updates the dictionary, so the latest file read has the highest priority.
 
@@ -50,6 +49,7 @@ import inspect
 import logging.config
 import types
 import warnings
+from collections.abc import Callable
 from copy import deepcopy
 from functools import wraps
 from pathlib import Path
@@ -81,16 +81,35 @@ class ConfigDict(dict):
             return ConfigDict(deepcopy(value))
         return value
 
-    def set(self, key, value):
+    def set(self, key: str, value: Any):
+        """
+        Setter.
+
+        Parameters
+        ----------
+        key : str
+            Key. Nested dictionaries accessed by dot-separated names.
+        value : Any
+            Value.
+        """
         parts = key.split(".")
         d = self
         for part in parts[:-1]:
             d = d.setdefault(part, {})
             if not isinstance(d, collections.abc.Mapping):
-                raise ValueError(f"Key {key} points to an invalid config section ({part} if not a mapping).")
+                msg = f"Key {key} points to an invalid config section ({part} if not a mapping)."
+                raise ValueError(msg)
         d[parts[-1]] = value
 
-    def update_from_list(self, pairs):
+    def update_from_list(self, pairs: tuple[str, str]):
+        """
+        Update from list.
+
+        Parameters
+        ----------
+        pairs : tuple[str, str]
+            Tuples of key and values.
+        """
         for key, valstr in pairs:
             try:
                 val = ast.literal_eval(valstr)
@@ -102,16 +121,28 @@ class ConfigDict(dict):
 CONFIG = ConfigDict()
 
 
-def recursive_update(d, other):
+def recursive_update(d: dict[str, Any], other: dict[str, Any]) -> dict[str, Any]:
     """
     Update a dictionary recursively with another dictionary.
 
     Values that are Mappings are updated recursively as well.
+
+    Parameters
+    ----------
+    d : dict
+        Dictionary to be updated.
+    other : dict
+        Dictionary to update d with.
+
+    Returns
+    -------
+    dict
+        Updated dictionary.
     """
     for k, v in other.items():
-        if isinstance(v, collections.abc.Mapping):
+        if isinstance(v, dict):
             old_v = d.get(k)
-            if isinstance(old_v, collections.abc.Mapping):
+            if isinstance(old_v, dict):
                 d[k] = recursive_update(old_v, v)
             else:
                 d[k] = v
@@ -121,7 +152,19 @@ def recursive_update(d, other):
 
 
 def args_as_str(*args: tuple[Any, ...]) -> tuple[str, ...]:
-    """Return arguments as strings."""
+    """
+    Return arguments as strings.
+
+    Parameters
+    ----------
+    *args : tuple of Any
+        Arguments.
+
+    Returns
+    -------
+    tuple of str
+        Arguments as strings.
+    """
     new_args = []
     for _i, arg in enumerate(*args):
         if isinstance(arg, Path):
@@ -132,7 +175,7 @@ def args_as_str(*args: tuple[Any, ...]) -> tuple[str, ...]:
 
 
 def load_config(
-    *elements,
+    *elements: str,
     reset: bool = False,
     encoding: str | None = None,
     verbose: bool = False,
@@ -151,7 +194,7 @@ def load_config(
 
     Parameters
     ----------
-    elements : str
+    *elements : Sequence of str
         Files or values to add into the config.
         If a directory is passed, all `.yml` files of this directory are added, in alphabetical order.
         If a "key=value" string, "key" is a dotted name and value will be evaluated if possible.
@@ -160,11 +203,11 @@ def load_config(
         If True, erases the current config before loading files.
     encoding : str, optional
         The encoding to use when reading files.
-    verbose: bool
+    verbose : bool
         If True, each element triggers a INFO log line.
 
-    Example
-    -------
+    Examples
+    --------
     .. code-block:: python
 
         load_config("my_config.yml", "config_dir/", "logging.loggers.xscen.level=DEBUG")
@@ -205,7 +248,20 @@ def load_config(
             _setup_external(module, CONFIG.get(module, {}))
 
 
-def parse_config(func_or_cls):  # noqa: D103
+def parse_config(func_or_cls: Callable) -> Callable:
+    """
+    Allow changing keyword argument defaults using the global configuration.
+
+    Parameters
+    ----------
+    func_or_cls : Callable
+        Function or class. For classes, the ``__init__`` method is modified.
+
+    Returns
+    -------
+    Callable
+        The original object, but with defaults dependent on the global configuration.
+    """
     module = ".".join(func_or_cls.__module__.split(".")[1:])
 
     if isinstance(func_or_cls, type):
@@ -255,8 +311,15 @@ def _setup_external(module, config):
                 warnings.simplefilter(action, category=getattr(builtins, category))
 
 
-def get_configurable():
-    """Return a dictionary of all configurable functions and classes of xscen."""
+def get_configurable() -> dict[str, Any]:
+    """
+    Return a dictionary of all configurable functions and classes of xscen.
+
+    Returns
+    -------
+    dict
+        Dictionary of configurable functions and classes.
+    """
     import xscen as xs
 
     configurable = {}

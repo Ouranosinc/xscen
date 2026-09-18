@@ -4,29 +4,104 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Asli Bese (:user:`aslibese`).
+Contributors:  Juliette Lavoie (:user:`juliettelavoie`).
 
 This version drops support for Python 3.10, Zarr 2 and intake-esm < 2025.12.12.
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Add CanESM5-1 to IPCC_annual_global_tas.nc. (:pull:`761`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* Upgrade intake-esm to 2025.12.12 which also means now depending on zarr > 3.1 (:issue:`618`, :pull:`636`).
+* Monkey patch zarr to accept zipped zarr transparently.
+
+.. _changes_0.15.2:
+
+`v0.15.2 <https://github.com/Ouranosinc/xscen/tree/0.15.2>`_ (2026-06-30)
+-------------------------------------------------------------------------
+Contributors: Pascal Bourgault (:user:`aulemahal`), Trevor James Smith (:user:`Zeitsperre`).
+
+Bug fixes
+^^^^^^^^^
+* Rewrite the way attributes are coerced in ``save_to_zarr`` and ``save_to_netcdf`` to fix issues with numpy native dtypes. Sequences are always re-written as comma-separated lists (strings). (:pull:`743`).
+* ``xs.spatial.subset`` with ``method='gridpoint'`` now works with ``stack_drop_nans`` outputs. (:pull:`745`).
+* Turn off memory management when reading catalog's csv to support large catalogs with sparsely populated categorical columns. (:pull:`747`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* ``xs.spatial.get_crs`` now works with any DataArray. (:pull:`745`).
+* ``xs.io.save_to_zarr`` now supports writing to a zipped zarr when ``compute=False``. (:pull:`748`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* When passed a ``.zarr.zip`` path, ``xs.io.save_to_zarr`` will now delete the intermediate zarr folder by default if ``zip_zarrdir`` is not given. This can always be overridden by passing ``zip_kwargs={'delete': False}``. (:pull:`748`).
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* `xscen` now has guidance documents on acceptable usages of AI and the expected methods of AI usage disclosure. See the documentation for more details. (:pull:`746`).
+* Fast-forwarded the cookiecutter with the latest changes. (:pull:`746`):
+    * Adjusted the permissions for some workflows to address security issues.
+    * Added the new "standard" AI disclosure guidance for code contributions.
+    * Updated the ReadTheDocs configuration to use newer OS and conda images.
+    * Modified ``make servedocs`` to use `sphinx-autobuild` (``make livehtml``).
+    * Added guidance for maintainers on git commit signing and immutable releases.
+    * Adjusted the source distribution inclusion/exclusion list.
+    * Set `bump-my-version` to sign tags by default.
+
+.. _changes_0.15.1:
+
+`v0.15.1 <https://github.com/Ouranosinc/xscen/tree/0.15.1>`_ (2026-05-25)
+-------------------------------------------------------------------------
+Contributors: Pascal Bourgault (:user:`aulemahal`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Trevor James Smith (:user:`Zeitsperre`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Performance enhancement of ``xs.subset_warminglevels`` when multiple realizations and/or multiple warming levels are requested. The change reduces the dask complexity of the function and adds support for subsetting timeseries with any frequencies. The function still can't do vectorized subsetting on sub-monthly timeseries with non-uniform calendars. (:pull:`736`).
+    * Also added a ``min_periods`` argument to allow subsetting periods shorter than the ``window``.
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* A handful of previously marked-deprecated functions have been removed. Their replacements are as follows (:pull:`737`):
+    * ``xscen.utils.publish_release_notes`` -> ``xscen.testing.publish_release_notes``
+    * ``xscen.utils.show_versions`` -> ``xscen.testing.show_versions``
+    * ``xscen.regrid.create_bounds_rotated_pole`` -> ``xscen.regrid.create_bounds_gridmapping``
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* Docstrings for all functions and classes now adhere to `numpy`-docstring standards. `numpydoc-validate` is now enforced for all docstrings via linting checks. (:pull:`737`).
+
+.. _changes_0.15.0:
+
+`v0.15.0 <https://github.com/Ouranosinc/xscen/tree/0.15.0>`_ (2026-05-19)
+-------------------------------------------------------------------------
+Contributors: Trevor James Smith (:user:`Zeitsperre`), Pascal Bourgault (:user:`aulemahal`), Asli Bese (:user:`aslibese`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
+
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* ``xs.climatological_op`` now supports the `theilslopes` operation calculating the Theil-Sen slope and intercept as well as other statistical measures. (:pull:`721`).
 * ``xs.climatological_op`` now supports daily inputs. Still best used with uniform calendar or with ``horizons_as_dim=True``. The function now uses ``xs.utils.unstack_dates`` to ungroup the time axis in its sub-year components and it can take options from that function. (:pull:`701`).
 * ``xs.spatial.get_crs`` now understands "lambert_conformal_conic" projections. (:pull:`701`).
 * Add annual global tas timeseries for CMIP6's models ACCESS-ESM1-5 r11i1p1f1 (ssp370), EC-Earth3-AerChem r1i1p1f1 (ssp370), GISS-E2-1-H r1i1p1f2 (ssp370), IPSL-CM5A2-INCA r1i1p1f1 (ssp370), CanESM5-CanOE r1i1p2f1 (ssp370), FGOALS-f3-L r1i1p1f1 (ssp370), and CAMS-CSM1-0 r1i1p1f1 (ssp370) (:pull:`706`).
-* ``zarrzip`` backend for Xarray that wraps the usual ``zarr`` engine but automatically opens zip paths with a ``ZipStore``. This avoids a regression in zarr 3 where this transparent behaviour was removed (:pull:`636`).
+* Updated the observational series in the global warming dataset : added ``NOAAGlobalTempv6``, ``Kadow_v100`` and ``Kadow_v103``, updated ``Berkeley``. New meta-realization option for ``get_warming_level_from_period`` and ``get_period_from_warming_level``: ``obs-IPCC-AR6`` and ``obs-IPCC-updated``. (:pull:`733`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * `h5py` and `h5netcdf` are no longer pinned. (:issue:`704`, :pull:`705`).
 * Development dependencies now follow the `dependency-groups` standard (`PEP 735 <https://peps.python.org/pep-0735/>`_). (:pull:`715`).
-* Upgrade intake-esm to 2025.12.12 which also means now depending on zarr > 3.1 (:issue:`618`, :pull:`636`).
-* When opening a assets through ``xs.extract_dataset`` or ``xs.Catalog.to_dataset()``, engine determination is forwarded to xarray itself, skipping inference made by intake-esm according to the "format" column of the catalog. This was done to allow the use of the ``zarrzip`` engine and of the ``netcdf_engine_order`` option in xarray. This means that some smart storage parsing is lost, xscen doesn't aim to support the same remote storage options as intake-esm (:pull:`636`).
+* Removed ``JRA-55`` and ``Berkeley-raw`` observational series from the global warming dataset. (:pull:`733`).
 
 Bug fixes
 ^^^^^^^^^
+* Fixed climatological_op when the operation is `linregress` so that x-intercept values are calculated more logically. (:pull:`721`, :issue:`723`).
 * When creating cartopy CRS objects from CF attributes, xscen will default to a spherical earth of radius 6370997 m. This fixes issues raised by the update of PROJ 9.8 (:pull:`701`).
 * Fix a bug stemming from a change in Pandas 3 in ``parse_directory`` when ``read_from_file`` tries to overwrite a column previously parsed as strings. (:pull:`703`).
 * Fix bug in ``xs.spatial_mean`` where the function would fail if the dataset had a `crs` coords instead of `rotated_pole`. (:pull:`716`, :issue:`718`).
+* Fix bug in ``xs.get_period_from_warming_level`` when requesting ``window > 50``. (:pull:`722`).
+* Fix bug in ``xs.get_period_from_warming_level`` and ``xs.get_warming_level_from_period`` where the functions would fail if the `driving_model` column of the catalog was a NaN instead of None. (:pull:`732`).
+* Fix a bug in ``xs.aggregate.spatial_mean`` with the `cos-lat` method where the function would give incorrect results if the dataset had irregular grid cells. (:issue:`726`, :pull:`727`).
+* Fix a bug in ``xs.parse_directory`` when the ``{...:_}`` pattern is used and the `parse` module is newer than 1.20.2. (:pull:`729`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
@@ -42,6 +117,7 @@ Internal changes
     * `Makefile` now handles some dependency installation logic.
     * `tox.toml` has been adjusted to use Makefile commands.
     * `tox.toml` no longer reinstalls `h5py` explicitly.
+* Added acknowledgement of funding support and Ouranos logo to documentation landing page and ``README.rst``. (:pull:`724`).
 
 .. _changes_0.14.0:
 

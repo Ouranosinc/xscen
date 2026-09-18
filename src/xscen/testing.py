@@ -63,6 +63,11 @@ def datablock_3d(
         The units of the variable. If None, the units are inferred from the variable name.
     as_dataset : bool
         If True, return a Dataset, else a DataArray.
+
+    Returns
+    -------
+    xr.DataArray or xr.Dataset
+        The created DataArray or Dataset.
     """
     attrs = {
         "lat": {
@@ -257,6 +262,7 @@ def publish_release_notes(
     Returns
     -------
     str, optional
+        A string containing the formatted release notes if `file` is None. Otherwise, None.
 
     Notes
     -----
@@ -338,6 +344,7 @@ def show_versions(
     Returns
     -------
     str or None
+        A string containing the versions of xscen and its dependencies, or None if printed to a file.
     """
 
     def _get_xscen_dependencies():

@@ -11,6 +11,7 @@ ignore =
 	E,
 	F,
 	RST210,
+	RST213,
 	W503,
 	W504
 per-file-ignores =

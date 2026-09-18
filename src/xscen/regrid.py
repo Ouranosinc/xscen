@@ -77,22 +77,23 @@ def regrid_dataset(  # noqa: C901
         If None, no intermediary grid is used, there is only a regrid from ds to ds_grid.
     to_level : str
         The processing level to assign to the output.
-        Defaults to 'regridded'
+        Defaults to 'regridded'.
 
     Returns
     -------
     xarray.Dataset
-        Regridded dataset
+        Regridded dataset.
+
+    See Also
+    --------
+    xesmf.regridde : Used to perform regridding operations.
+    xesmf.util.cf_grid_2d : Used to create grids that follow CF conventions.
 
     Notes
     -----
     intermediate_grids =
       {'name_of_inter_grid_1': {'cf_grid_2d': {arguments for util.cf_grid_2d },'regridder_kwargs':{arguments for xe.Regridder}},
         'name_of_inter_grid_2': dictionary_as_above}
-
-    See Also
-    --------
-    xesmf.regridder, xesmf.util.cf_grid_2d
     """
     if xe is None:
         raise ImportError("xscen's regridding functionality requires xESMF to work, please install that package.")
@@ -268,7 +269,7 @@ def create_mask(
         ">": operator.gt,
     }
 
-    def cmp(arg1, op, arg2):
+    def _cmp(arg1, op, arg2):
         operation = ops.get(op)
         return operation(arg1, arg2)
 
@@ -294,7 +295,7 @@ def create_mask(
             ds = convert_units_to(ds, where_threshold.split(" ")[1])
             where_threshold = float(where_threshold.split(" ")[0])
 
-        mask = xr.where(cmp(ds, where_operator, where_threshold), mask, 0, keep_attrs=True)
+        mask = xr.where(_cmp(ds, where_operator, where_threshold), mask, 0, keep_attrs=True)
 
     # Mask NaNs
     if mask_nans:
@@ -364,17 +365,22 @@ def _regridder(
     return regridder
 
 
-def create_bounds_rotated_pole(ds: xr.Dataset) -> xr.Dataset:
-    warnings.warn(
-        "This function is deprecated and will be removed in xscen v0.12.0. Use create_bounds_gridmapping instead.",
-        FutureWarning,
-        stacklevel=2,
-    )
-    return create_bounds_gridmapping(ds, "rotated_pole")
-
-
 def create_bounds_gridmapping(ds: xr.Dataset, gridmap: str | None = None) -> xr.Dataset:
-    """Create bounds for rotated pole datasets."""
+    """
+    Create bounds for rotated pole datasets.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Dataset with a grid mapping coordinate.
+    gridmap : str, optional
+        Name of the grid mapping coordinate. If None, it will be inferred from the dataset.
+
+    Returns
+    -------
+    xr.Dataset
+        Dataset with bounds coordinates for lat and lon.
+    """
     if gridmap is None:
         gridmap = get_grid_mapping(ds)
         if gridmap == "":

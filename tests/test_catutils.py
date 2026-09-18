@@ -28,10 +28,12 @@ def test_find_assets(exts, lens, dirglob, N):  # noqa: N803
 
 
 def test_name_parser():
+    # The first pattern shouldn't match because it's too short.
+    # Bug in xscen < 0.15 with parse >= 1.21
     d = cu._name_parser(
         "station-obs/GovCan/AHCCD/day/tasmin/tasmin_day_GovCan_AHCCD_1960-1999.nc",
         root="",
-        patterns=["{type}/{institution}/{source}/{frequency}/{variable}/{?var}_{?:_}_{DATES}.nc"],
+        patterns=["{source}/{type}/{institution}/{?:_}_{DATES}.nc", "{type}/{institution}/{source}/{frequency}/{variable}/{?var}_{?:_}_{DATES}.nc"],
     )
     assert d["type"] == "station-obs"
     assert d["date_start"] == "1960"

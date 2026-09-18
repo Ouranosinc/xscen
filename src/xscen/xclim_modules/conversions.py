@@ -34,15 +34,15 @@ def precipitation(prsn: xr.DataArray, prlp: xr.DataArray) -> xr.DataArray:
 
     Parameters
     ----------
-    prsn: xr.DataArray
-      Solid precipitation flux.
-    prlp: xr.DataArray
-      Liquid precipitation flux.
+    prsn : xr.DataArray
+        Solid precipitation flux.
+    prlp : xr.DataArray
+        Liquid precipitation flux.
 
     Returns
     -------
     xr.DataArray, [same as prsn]
-      Surface precipitation flux (all phases)
+        Surface precipitation flux (all phases).
     """
     prlp = convert_units_to(prlp, prsn, context="hydro")
     pr = prsn + prlp
@@ -59,15 +59,15 @@ def tasmin_from_dtr(dtr: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
 
     Parameters
     ----------
-    dtr: xr.DataArray
-      Daily temperature range
-    tasmax: xr.DataArray
-      Daily maximal temperature.
+    dtr : xr.DataArray
+        Daily temperature range.
+    tasmax : xr.DataArray
+        Daily maximal temperature.
 
     Returns
     -------
     xr.DataArray, [same as tasmax]
-      Daily minimum temperature
+        Daily minimum temperature.
     """
     out_units = tasmax.units
     # To prevent strange behaviors that could arise from changing DTR units, we change the units of tasmax to match DTR
@@ -87,15 +87,15 @@ def tasmax_from_dtr(dtr: xr.DataArray, tasmin: xr.DataArray) -> xr.DataArray:
 
     Parameters
     ----------
-    dtr: xr.DataArray
-      Daily temperature range
-    tasmin: xr.DataArray
-      Daily minimal temperature.
+    dtr : xr.DataArray
+        Daily temperature range.
+    tasmin : xr.DataArray
+        Daily minimal temperature.
 
     Returns
     -------
     xr.DataArray, [same as tasmin]
-      Daily maximum temperature
+        Daily maximum temperature.
     """
     out_units = tasmin.attrs["units"]
     # To prevent strange behaviors that could arise from changing DTR units, we change the units of tasmin to match DTR
@@ -111,19 +111,19 @@ def dtr_from_minmax(tasmin: xr.DataArray, tasmax: xr.DataArray) -> xr.DataArray:
     """
     DTR computed from tasmin and tasmax.
 
-    Dtr as tasmin subtracted from tasmax.
+    DTR as tasmin subtracted from tasmax.
 
     Parameters
     ----------
-    tasmin: xr.DataArray
-      Daily minimal temperature.
-    tasmax: xr.DataArray
-      Daily maximal temperature.
+    tasmin : xr.DataArray
+        Daily minimal temperature.
+    tasmax : xr.DataArray
+        Daily maximal temperature.
 
     Returns
     -------
     xr.DataArray
-      Daily temperature range
+        Daily temperature range.
     """
     tasmin = convert_units_to(tasmin, tasmax)
     dtr = tasmax - tasmin
@@ -139,12 +139,13 @@ def hurslogit_from_hurs(hurs: xr.DataArray) -> xr.DataArray:
 
     Parameters
     ----------
-    hurs: xr.DataArray
-      Daily relative humidity.
+    hurs : xr.DataArray
+        Daily relative humidity.
 
     Returns
     -------
-    in logit space.
+    xr.DataArray
+        Hurslogit.
 
     Notes
     -----
@@ -161,13 +162,13 @@ def hurs_from_hurslogit(hurslogit: xr.DataArray) -> xr.DataArray:
 
     Parameters
     ----------
-    hurslogit: xr.DataArray
-      Daily relative humidity in logit space.
+    hurslogit : xr.DataArray
+        Daily relative humidity in logit space.
 
     Returns
     -------
     xr.DataArray
-      Daily relative humidity.
+        Daily relative humidity.
 
     Notes
     -----
@@ -183,18 +184,18 @@ def orog_from_z(z: xr.DataArray) -> xr.DataArray:
 
     Parameters
     ----------
-    z: xr.DataArray
-      Geopotential 'z'.
+    z : xr.DataArray
+        Geopotential 'z'.
 
     Returns
     -------
     xr.DataArray
-      Orography.
+        Orography.
 
     Notes
     -----
     This converts geopotential in m2 s-2 to orography in m by dividing by standard gravity (9.80665 m s-2).
-    Reference: https://codes.ecmwf.int/grib/param-db/129
+    Reference: https://codes.ecmwf.int/grib/param-db/129.
     """
     z = convert_units_to(z, "m2 s-2")
     orog = z / 9.80665

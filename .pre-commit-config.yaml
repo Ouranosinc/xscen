@@ -49,7 +49,7 @@ repos:
       - id: rst-inline-touching-normal
       - id: text-unicode-replacement-char
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.9
+    rev: v0.16.1
     hooks:
       - id: ruff-check
         args: [ '--fix', '--show-fixes' ]
@@ -69,16 +69,16 @@ repos:
 #    hooks:
 #      - id: mypy
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.2
+    rev: v2.4.3
     hooks:
       - id: codespell
         additional_dependencies: [ 'tomli' ]
         args: [ '--toml=pyproject.toml' ]
-#  - repo: https://github.com/numpy/numpydoc
-#    rev: v1.10.0
-#    hooks:
-#      - id: numpydoc-validation
-#        exclude: ^docs/|^tests/
+  - repo: https://github.com/numpy/numpydoc
+    rev: v1.11.0rc0
+    hooks:
+      - id: numpydoc-validation
+        exclude: ^docs/|^tests/
   - repo: https://github.com/kynan/nbstripout
     rev: 0.9.1
     hooks:
@@ -92,12 +92,12 @@ repos:
         exclude: .cruft.json|docs/notebooks
         args: [ '--baseline=.secrets.baseline' ]
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.37.1
+    rev: 0.37.4
     hooks:
       - id: check-github-workflows
       - id: check-readthedocs
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: v1.23.1
+    rev: v1.29.0
     hooks:
       - id: zizmor
         args: [ '--config=.zizmor.yml' ]

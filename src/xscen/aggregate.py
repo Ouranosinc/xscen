@@ -19,6 +19,8 @@ import xarray as xr
 import xclim as xc
 import xclim.core.calendar
 
+from .regrid import create_bounds_gridmapping
+
 
 try:
     import xesmf as xe
@@ -74,7 +76,7 @@ def climatological_op(  # noqa: C901
     horizons_as_dim: bool = False,
     **unstack_kwargs,
 ) -> xr.Dataset:
-    """
+    r"""
     Perform an operation 'op' over time, for given time periods, respecting the temporal resolution of ds.
 
     Parameters
@@ -87,13 +89,23 @@ def climatological_op(  # noqa: C901
         If 'op' is a dictionary, the key is the operation name and the value is a dict of kwargs
         accepted by the equivalent NumPy function. See the Notes for more information.
         While other operations are technically possible, the following are recommended and tested:
-        ['max', 'mean', 'median', 'min', 'std', 'sum', 'var', 'linregress'].
+        ['max', 'mean', 'median', 'min', 'std', 'sum', 'var', 'linregress', 'theilslopes'].
         Operations beyond methods of xarray.core.rolling.DatasetRolling include:
 
             - 'linregress' : Computes the linear regression over time, using
               scipy.stats.linregress and employing years as regressors.
               The output will have a new dimension 'linreg_param' with coordinates:
               ['slope', 'intercept', 'rvalue', 'pvalue', 'stderr', 'intercept_stderr'].
+
+            - 'theilslopes' : Computes the Theil-Sen estimator over time, using
+              scipy.stats.theilslopes and employing years as regressors.
+              Correlation and p-value for the correlation are also computed using scipy.stats.kendalltau,
+              as the Theil-Sen estimator is based on Kendall's tau.
+              Other kwargs can be passed by defining an 'op' dictionary as described above but in this case
+              users must specify kwargs for both theilslopes and kendalltau functions :
+              example op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}}.
+              The output will have a new dimension 'theilslopes_param' with coordinates:
+              ['slope', 'intercept', 'lower_slope', 'upper_slope', 'correlation', 'p_value'].
 
         Only one operation per call is supported, so len(op)==1 if a dict.
     window : int, optional
@@ -122,13 +134,18 @@ def climatological_op(  # noqa: C901
         If True, the output will have 'horizon' and the frequency as 'month', 'season' or 'year' as
         dimensions and coordinates. The 'time' coordinate will be unstacked to horizon and frequency dimensions.
         Horizons originate from periods and/or windows and their stride in the rolling operation.
-    **unstack_kwargs
-        Other arguments to pass to `py:func:~xscen.utils.unstack_dates`.
+    \*\*unstack_kwargs : dict
+        Other arguments to pass to `:py:func:~xscen.utils.unstack_dates`.
 
     Returns
     -------
     xr.Dataset
         Dataset with the results from the climatological operation.
+
+    See Also
+    --------
+    scipy.stats.linregress : Linear least-squares regression for two sets of measurements.
+    scipy.stats.theilslopes : Theil-Sen estimator for a set of points (x, y).
 
     Notes
     -----
@@ -224,69 +241,14 @@ def climatological_op(  # noqa: C901
             # Shift by window - 1 to position the label at the start of the window
             # Select the windows at provided stride, dropping the last incomplete windows
             ds_rolling = ds_rolling.shift(time=-(window - 1)).isel(time=slice(None, -(window - 1), stride))
-
+        elif op == "theilslopes":
+            ds_rolling = _common_trend_utils(
+                ds_rolling=ds_rolling, func="theilslopes", op_kwargs=op_kwargs, window=window, stride=stride, min_periods=min_periods
+            )
         elif op == "linregress":
-
-            def _ulinregress(x, y, **kwargs):
-                # Wrapper for scipy.stats.linregress to unpack multiple return values in xr.apply_ufunc
-                valid_x = ~np.isnan(x)
-                valid_y = ~np.isnan(y)
-                mask = valid_x & valid_y
-                if np.sum(mask) >= kwargs.get("min_periods", 1):
-                    x = x[mask]
-                    y = y[mask]
-                    reg = scipy.stats.linregress(x, y, alternative=kwargs.get("alternative", "two-sided"))
-                    out = np.array(
-                        [
-                            reg.slope,
-                            reg.intercept,
-                            reg.rvalue,
-                            reg.pvalue,
-                            reg.stderr,
-                            reg.intercept_stderr,
-                        ]
-                    )
-                else:
-                    out = np.full(6, np.nan)
-                return out
-
-            # prepare kwargs
-            linreg_kwargs = {k: v for k, v in op_kwargs.items() if "keep_attrs" not in k}
-            linreg_kwargs["min_periods"] = min_periods
-
-            # unwrap DatasetRolling object and select years subset
-            dsr_construct = ds_rolling.construct(window_dim="window", keep_attrs=True)
-            dsr_construct = dsr_construct.shift(time=-(window - 1)).isel(time=slice(None, -(window - 1), stride))
-
-            # construct array to use years as x values (==regressors) in xr.apply_ufunc
-            years_as_x_values = xr.DataArray(
-                np.arange(dsr_construct.window.size).repeat(dsr_construct.time.size).reshape(dsr_construct.window.size, dsr_construct.time.size)
-                + dsr_construct.time.dt.year.values
-                - window
-                + 1,
-                dims=["window", "time"],
-                coords={
-                    "window": dsr_construct.window.values,
-                    "time": dsr_construct.time,
-                },
+            ds_rolling = _common_trend_utils(
+                ds_rolling=ds_rolling, func="linregress", op_kwargs=op_kwargs, window=window, stride=stride, min_periods=min_periods
             )
-
-            # apply linregress along windows
-            ds_rolling = xr.apply_ufunc(
-                _ulinregress,
-                years_as_x_values,
-                dsr_construct,
-                input_core_dims=[["window"], ["window"]],
-                output_core_dims=[["linreg_param"]],
-                vectorize=True,
-                dask="parallelized",
-                output_dtypes=["float32"],
-                dask_gufunc_kwargs={"output_sizes": {"linreg_param": 6}},
-                keep_attrs="no_conflicts",
-                kwargs=linreg_kwargs,
-            )
-            # label new coords
-            ds_rolling = ds_rolling.assign_coords(linreg_param=["slope", "intercept", "rvalue", "pvalue", "stderr", "intercept_stderr"])
         else:
             raise ValueError(f"Operation '{op}' not implemented.")
 
@@ -546,7 +508,7 @@ def spatial_mean(  # noqa: C901
 
     See Also
     --------
-    xesmf.SpatialAverager
+    xesmf.SpatialAverager : The exact average of a gridded array over a geometry.
     """
     if isinstance(ds, xr.DataArray):
         warnings.warn("Input is a DataArray, but should be a Dataset. This could lead to errors, especially with rotated poles.", stacklevel=2)
@@ -614,7 +576,7 @@ def spatial_mean(  # noqa: C901
             dims = ds.cf["longitude"].dims + ds.cf["latitude"].dims
         else:
             if "longitude" not in ds.cf.bounds:
-                ds = ds.cf.add_bounds(["longitude", "latitude"])
+                ds = ds.assign_coords(**create_bounds_gridmapping(ds))
             # Weights the weights by the cell area (in °²)
             weights = weights * xr.DataArray(
                 shapely.area(shapely.polygons(shapely.linearrings(ds.lon_bounds, ds.lat_bounds))),
@@ -685,8 +647,6 @@ def spatial_mean(  # noqa: C901
         geoms = shapely.segmentize(polygon.geometry, 1)
 
         if ds.cf["longitude"].ndim == 2 and "longitude" not in ds.cf.bounds:
-            from .regrid import create_bounds_gridmapping
-
             ds = ds.assign_coords(**create_bounds_gridmapping(ds))
 
         savg = xe.SpatialAverager(ds, geoms, **kwargs_copy)
@@ -734,11 +694,9 @@ def produce_horizon(  # noqa: C901
     to_level: str | None = "horizons",
 ) -> xr.Dataset:
     """
-    Compute indicators, then the climatological mean, and finally unstack dates in order
-    to have a single dataset with all indicators of different frequencies.
+    Compute indicators, the climatological mean, and unstack dates in order to have a single dataset with all indicators of different frequencies.
 
-    Once this is done, the function drops 'time' in favor of 'horizon'.
-    This function computes the indicators and does an interannual mean.
+    Once this is done, the function drops 'time' in favor of 'horizon'. This function computes the indicators and does an interannual mean.
     It stacks the season and month in different dimensions and adds a dimension `horizon` for the period or the warming level, if given.
 
     Parameters
@@ -746,7 +704,7 @@ def produce_horizon(  # noqa: C901
     ds : xr.Dataset
         Input dataset with a time dimension.
         If 'indicators' is None, the dataset should contain the precomputed indicators.
-    indicators :  str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]] | ModuleType, optional
+    indicators : str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]] | ModuleType, optional
         Indicators to compute. It will be passed to the `indicators` argument of `xs.compute_indicators`.
     periods : list of str or list of lists of str, optional
         Either [start, end] or list of [start_year, end_year] for the period(s) to be evaluated.
@@ -871,3 +829,112 @@ def produce_horizon(  # noqa: C901
 
     else:
         raise ValueError("No horizon could be computed. Check your inputs.")
+
+
+def _ulinregress(x, y, **kwargs):
+    # Wrapper for scipy.stats.linregress to unpack multiple return values in xr.apply_ufunc
+    valid_x = ~np.isnan(x)
+    valid_y = ~np.isnan(y)
+    mask = valid_x & valid_y
+    if np.sum(mask) >= kwargs.get("min_periods", 1):
+        kwargs.pop("min_periods", None)
+        x = x[mask]
+        y = y[mask]
+        reg = scipy.stats.linregress(x, y, **kwargs)
+        out = np.array(
+            [
+                reg.slope,
+                reg.intercept,
+                reg.rvalue,
+                reg.pvalue,
+                reg.stderr,
+                reg.intercept_stderr,
+            ]
+        )
+    else:
+        out = np.full(6, np.nan)
+    return out
+
+
+def _theilslopes(x, y, **kwargs):
+    # Wrapper for scipy.stats.theilslopes to unpack multiple return values in xr.apply_ufunc
+    valid_x = ~np.isnan(x)
+    valid_y = ~np.isnan(y)
+    mask = valid_x & valid_y
+    if np.sum(mask) >= kwargs.pop("min_periods", 1):
+        if kwargs:
+            # theilslopes and kendalltau can both take kwargs,
+            # make sure that the user is explicit about which kwargs are for which function
+            if not set(kwargs.keys()).issubset({"theilslopes", "kendalltau"}):
+                op_str = 'climatological_op(op={"theilslopes": {"theilslopes":{"alpha": 0.90}, "kendalltau": {"method": "auto"}}})'
+                msg = 'Sending scipy kwargs to climatological_op(op="theilslopes") requires explicit key,  \
+                    value pairs for "scipy.stats.theilslopes" and/or "scipy.stats.kendalltau".'
+                msg += f" Example: {op_str}, received {kwargs}"
+                raise ValueError(msg)
+        x = x[mask]
+        y = y[mask]
+        reg = scipy.stats.theilslopes(y, x, **kwargs.get("theilslopes", {}))
+        correlation, p_value = scipy.stats.kendalltau(x, y, **kwargs.get("kendalltau", {}))
+        out = np.array(
+            [
+                reg.slope,  # slope
+                reg.intercept,  # intercept
+                reg.low_slope,  # lower bound of slope confidence interval
+                reg.high_slope,  # upper bound of slope confidence interval
+                correlation,  # correlation coefficient for kendall tau
+                p_value,  # significance of the correlation for kendall tau
+            ]
+        )
+
+    else:
+        out = np.full(6, np.nan)
+    return out
+
+
+def _common_trend_utils(ds_rolling=None, func=None, op_kwargs=None, min_periods=None, window=None, stride=None, **kwargs):
+    # prepare kwargs
+    trend_kwargs = {k: v for k, v in op_kwargs.items() if "keep_attrs" not in k}
+    trend_kwargs["min_periods"] = min_periods
+
+    # unwrap DatasetRolling object and select years subset
+    dsr_construct = ds_rolling.construct(window_dim="window", keep_attrs=True)
+    dsr_construct = dsr_construct.shift(time=-(window - 1)).isel(time=slice(None, -(window - 1), stride))
+
+    # construct array to use years as x values (==regressors) in xr.apply_ufunc
+    years_as_x_values = xr.DataArray(
+        np.arange(dsr_construct.window.size).repeat(dsr_construct.time.size).reshape(dsr_construct.window.size, dsr_construct.time.size)
+        + dsr_construct.time.dt.year.values,
+        dims=["window", "time"],
+        coords={
+            "window": dsr_construct.window.values,
+            "time": dsr_construct.time,
+        },
+    )
+    if func == "linregress":
+        subfunc = _ulinregress
+    elif func == "theilslopes":
+        subfunc = _theilslopes
+    else:
+        raise ValueError(f"Unknown func: {func}")
+    # apply linregress along windows
+    ds_rolling = xr.apply_ufunc(
+        subfunc,
+        years_as_x_values,
+        dsr_construct,
+        input_core_dims=[["window"], ["window"]],
+        output_core_dims=[["trend_param"]],
+        vectorize=True,
+        dask="parallelized",
+        output_dtypes=["float32"],
+        dask_gufunc_kwargs={"output_sizes": {"trend_param": 6}},
+        keep_attrs="no_conflicts",
+        kwargs=trend_kwargs,
+    )
+    # label new coords
+    if func == "linregress":
+        ds_rolling = ds_rolling.rename({"trend_param": "linreg_param"})
+        ds_rolling = ds_rolling.assign_coords(linreg_param=["slope", "intercept", "rvalue", "pvalue", "stderr", "intercept_stderr"])
+    elif func == "theilslopes":
+        ds_rolling = ds_rolling.rename({"trend_param": "theilslopes_param"})
+        ds_rolling = ds_rolling.assign_coords(theilslopes_param=["slope", "intercept", "lower_slope", "upper_slope", "correlation", "p_value"])
+    return ds_rolling

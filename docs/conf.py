@@ -126,6 +126,7 @@ intersphinx_mapping = {
     "clisops": ("https://clisops.readthedocs.io/en/latest/", None),
     "rechunker": ("https://rechunker.readthedocs.io/en/latest/", None),
     "xesmf": ("https://pangeo-xesmf.readthedocs.io/en/latest/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
 }
 
 extlinks = {

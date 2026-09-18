@@ -34,10 +34,18 @@ Please refer to the `installation docs`_.
 
 Acknowledgments
 ---------------
+
+`xscen` development is funded through Ouranos_, a not-for-profit collaborative innovation organization fostering resilient adaptation to climate change, based in Québec, Canada.
+
+.. image:: https://raw.githubusercontent.com/Ouranosinc/.github/refs/heads/main/images/logo-ouranos-horizontal-couleur.svg
+        :target: https://www.ouranos.ca/en
+        :align: center
+
 This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pypackage`_ project template.
 
 .. _Cookiecutter: https://github.com/cookiecutter/cookiecutter
 .. _DerivedVariableRegistry: https://intake-esm.readthedocs.io/en/latest/how-to/define-and-use-derived-variable-registry.html
+.. _Ouranos: https://www.ouranos.ca/en
 .. _Ouranosinc/cookiecutter-pypackage: https://github.com/Ouranosinc/cookiecutter-pypackage
 .. _installation docs: https://xscen.readthedocs.io/en/latest/installation.html
 .. _intake-esm: https://intake-esm.readthedocs.io/

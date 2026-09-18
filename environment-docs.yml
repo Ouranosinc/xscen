@@ -38,7 +38,7 @@ dependencies:
   - sparse
   - toolz
   - xarray >=2023.11.0, !=2024.6.0
-  - xclim >=0.56, <0.61
+  - xclim >=0.56, <0.62
   - xsdba >=0.4.0
   - zarr >=3.1
   # Opt
@@ -53,6 +53,7 @@ dependencies:
   - nbsphinx >=0.9.8
   - nbval
   - sphinx >=8.2.0
+  - sphinx-autobuild >=2024.4.16
   - sphinx-autodoc-typehints >=3.1.0
   - sphinx-codeautolink >=0.16.2
   - sphinx-copybutton >=0.5.2

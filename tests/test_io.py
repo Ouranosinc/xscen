@@ -1,6 +1,7 @@
 import datetime
 from pathlib import Path
 
+import dask
 import numpy as np
 import pandas as pd
 import pytest
@@ -602,12 +603,12 @@ class TestSaveToZarr:
         xs.save_to_zarr(ds1, Path(tmpdir) / "test.zarr.zip")
 
         assert (Path(tmpdir) / "test.zarr.zip").exists()
-        assert (Path(tmpdir) / "test.zarr").exists()
+        assert not (Path(tmpdir) / "test.zarr").exists()
 
-        xs.save_to_zarr(ds1, Path(tmpdir) / "test2.zarr.zip", zip_kwargs={"delete": True})
+        xs.save_to_zarr(ds1, Path(tmpdir) / "test2.zarr.zip", zip_kwargs={"delete": False})
 
         assert (Path(tmpdir) / "test2.zarr.zip").exists()
-        assert not (Path(tmpdir) / "test2.zarr").exists()
+        assert (Path(tmpdir) / "test2.zarr").exists()
 
         xs.save_to_zarr(ds1, Path(tmpdir) / "test3.zarr", zip_kwargs={"zipfile": Path(tmpdir) / "test4.zarr.zip"})
 
@@ -624,6 +625,11 @@ class TestSaveToZarr:
         assert (Path(tmpdir) / Path(tmpdir) / "test6.zarr.zip").exists()
         assert (Path(tmpdir) / "test7.zarr").exists()
 
+        task = xs.save_to_zarr(ds1, Path(tmpdir) / "test8.zarr.zip", compute=False)
+        dask.compute(task)
+        assert (Path(tmpdir) / "test8.zarr.zip").exists()
+        assert not (Path(tmpdir) / "test8.zarr").exists()
+
     def test_zarr_zip_warn(self, tmpdir):
         ds1 = timeseries(
             np.arange(1, 5),
@@ -636,6 +642,37 @@ class TestSaveToZarr:
 
         assert (Path(tmpdir) / "test.zarr.zip").exists()
         assert not (Path(tmpdir) / "test1.zarr").exists()
+
+    def test_coerce_attrs(self, tmpdir):
+
+        class CustomObject:
+            pass
+
+        attrs = {"anNPint": np.int32(42), "adict": {"key": "value"}, "a_custom": CustomObject(), "amixedlist": [1, "2", np.uint16(3)]}
+        ds = xr.Dataset({"avar": 42}, attrs=attrs)
+        xs.save_to_zarr(ds, tmpdir / "test.zarr")
+
+        ds2 = xr.open_zarr(tmpdir / "test.zarr")
+        assert ds2.attrs["anNPint"] == 42
+        assert isinstance(ds2.attrs["adict"], str)
+        assert isinstance(ds2.attrs["a_custom"], str)
+        assert isinstance(ds2.attrs["amixedlist"], str)
+
+
+def test_coerce_attrs_netcdf(tmpdir):
+
+    class CustomObject:
+        pass
+
+    attrs = {"anNPint": np.int32(42), "adict": {"key": "value"}, "a_custom": CustomObject(), "amixedlist": [1, "2", np.uint16(3)]}
+    ds = xr.Dataset({"avar": 42}, attrs=attrs)
+    xs.save_to_netcdf(ds, tmpdir / "test.nc")
+
+    ds2 = xr.open_dataset(tmpdir / "test.nc")
+    assert ds2.attrs["anNPint"] == 42
+    assert isinstance(ds2.attrs["adict"], str)
+    assert isinstance(ds2.attrs["a_custom"], str)
+    assert isinstance(ds2.attrs["amixedlist"], str)
 
 
 @pytest.mark.parametrize("engine", ["netcdf", "zarr"])

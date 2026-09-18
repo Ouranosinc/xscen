@@ -1,3 +1,4 @@
+import cartopy.crs as ccrs
 import dask.array
 import geopandas as gpd
 import numpy as np
@@ -372,6 +373,26 @@ class TestSubset:
             lat_bnds=[47, 50],
         )
 
+    def test_subset_with_loc(self):
+        ds = datablock_3d(
+            np.zeros((20, 10, 10)),
+            "tas",
+            "rlon",
+            -142,
+            "rlat",
+            0,
+            2,
+            2,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        # stack spatial dim in 1d loc
+        ds = xs.utils.stack_drop_nans(ds, mask=["rlat", "rlon"])
+        out = xs.spatial.subset(ds.tas, method="gridpoint", lon=132.15, lat=-35.53)
+        assert len(out.dims) == 1
+        out = xs.spatial.subset(ds, method="gridpoint", lon=132.15, lat=-35.53)
+        assert len(out.dims) == 1
+
 
 def test_dask_coords():
     ds = datablock_3d(
@@ -549,3 +570,45 @@ def test_merge_duplicated_stations(precision, nexp):
     out = xs.spatial.merge_duplicated_stations(ds, precision=precision)
     assert out.station.size == nexp
     assert out.station[2].item() == "C"
+
+
+def test_get_crs():
+    ds = datablock_3d(
+        np.ones((3, 5, 5)),
+        "tas",
+        "rlon",
+        -10,
+        "rlat",
+        0,
+        0.5,
+        0.5,
+        "2000-01-01",
+        as_dataset=True,
+    )
+    ds["rotated_pole"] = xr.DataArray(
+        attrs={
+            "grid_mapping_name": "rotated_latitude_longitude",
+            "earth_radius": 6370997,
+            "grid_north_pole_latitude": 31.75831245449315,
+            "grid_north_pole_longitude": 87.597031302933,
+            "north_pole_grid_longitude": 0,
+        }
+    )
+    globe = ccrs.Globe(
+        ellipse=None,  # disable any named ellipsoid
+        semimajor_axis=6370997.0,
+        semiminor_axis=6370997.0,  # equal axes → perfect sphere
+    )
+
+    rotated_pole = ccrs.RotatedPole(pole_latitude=31.75831245449315, pole_longitude=87.597031302933, central_rotated_longitude=0.0, globe=globe)
+    # dataset
+    crs_guess = xs.spatial.get_crs(ds)
+    assert crs_guess == rotated_pole
+
+    # dataArray of variable
+    crs_guess = xs.spatial.get_crs(ds.tas)
+    assert crs_guess == rotated_pole
+
+    # dataArray of gridmap directly
+    crs_guess = xs.spatial.get_crs(ds.rotated_pole)
+    assert crs_guess == rotated_pole
