@@ -20,6 +20,9 @@
 
 import warnings
 
+# Monkey-patch Zarr to accept zipped zarr transparently
+import xscen._zarrzip
+
 # Import the submodules
 from . import (
     aggregate,
@@ -39,7 +42,6 @@ from . import (
     utils,
 )
 
-# zarrzip,
 # Import top-level functions
 from .aggregate import *
 from .biasadjust import *
