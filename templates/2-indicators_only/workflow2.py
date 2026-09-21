@@ -47,7 +47,7 @@ if __name__ == "__main__":
         for name, ind in mod.iter_indicators():
             # Get the frequency and variable names to check if they are already computed
             outfreq = ind.injected_parameters["freq"].replace("YS", "AS-JAN")
-            outnames = [cfatt.var_name for cfatt in ind.attrs]
+            outnames = [cfatt.var_name for cfatt in ind.outputs]
             if not pcat.exists_in_cat(
                 id=dsid,
                 variable=outnames,

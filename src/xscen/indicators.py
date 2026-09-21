@@ -264,7 +264,8 @@ def _derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
         out = ind(ds=ds)
         if isinstance(out, tuple):
             out = out[nout]
-        ds[out.name] = out
+        for var in out.data_vars:
+            ds[var] = out[var]
         return ds
 
     func.__name__ = ind.identifier

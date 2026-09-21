@@ -6,134 +6,134 @@ doc: |
 indicators:
   tg_mean_annual:
     base: tg_mean
-    attrs:
-      var_name: tg_mean
+    outputs:
+      - var_name: tg_mean
     parameters:
       freq: YS
   tg_mean_seasonal:
     base: tg_mean
-    attrs:
-      var_name: tg_mean
+    outputs:
+      - var_name: tg_mean
     parameters:
       freq: QS-DEC
   tx_mean_annual:
     base: tx_mean
-    attrs:
-      var_name: tx_mean
+    outputs:
+      - var_name: tx_mean
     parameters:
       freq: YS
   tx_mean_seasonal:
     base: tx_mean
-    attrs:
-      var_name: tx_mean
+    outputs:
+      - var_name: tx_mean
     parameters:
       freq: QS-DEC
   tn_mean_annual:
     base: tn_mean
-    attrs:
-      var_name: tn_mean
+    outputs:
+      - var_name: tn_mean
     parameters:
       freq: YS
   tn_mean_seasonal:
     base: tn_mean
-    attrs:
-      var_name: tn_mean
+    outputs:
+      - var_name: tn_mean
     parameters:
       freq: QS-DEC
   prcptot_annual:
     base: prcptot
-    attrs:
-      var_name: prcptot
+    outputs:
+      - var_name: prcptot
     parameters:
       freq: YS
   prcptot_seasonal:
     base: prcptot
-    attrs:
-      var_name: prcptot
+    outputs:
+      - var_name: prcptot
     parameters:
       freq: QS-DEC
   liquidprcptot_annual:
     base: liquidprcptot
-    attrs:
-      var_name: liquidprcptot
+    outputs:
+      - var_name: liquidprcptot
     parameters:
       freq: YS
   liquidprcptot_seasonal:
     base: liquidprcptot
-    attrs:
-      var_name: liquidprcptot
+    outputs:
+      - var_name: liquidprcptot
     parameters:
       freq: QS-DEC
   solidprcptot_annual:
     base: solidprcptot
-    attrs:
-      var_name: solidprcptot
+    outputs:
+      - var_name: solidprcptot
     parameters:
       freq: YS
   solidprcptot_seasonal:
     base: solidprcptot
-    attrs:
-      var_name: solidprcptot
+    outputs:
+      - var_name: solidprcptot
     parameters:
       freq: QS-DEC
   dlyfrzthw_annual:
     base: dlyfrzthw
-    attrs:
-      var_name: dlyfrzthw
+    outputs:
+      - var_name: dlyfrzthw
     parameters:
       freq: YS
   dlyfrzthw_seasonal:
     base: dlyfrzthw
-    attrs:
-      var_name: dlyfrzthw
+    outputs:
+      - var_name: dlyfrzthw
     parameters:
       freq: QS-DEC
   growing_degree_days_gt_4_annual:
     base: growing_degree_days
-    attrs:
-      var_name: growing_degree_days_gt_4
+    outputs:
+      - var_name: growing_degree_days_gt_4
     parameters:
       thresh: 4 degC
       freq: YS
   tn_days_above_0_seasonal:
     base: tn_days_above
-    attrs:
-      var_name: tn_days_above_0
+    outputs:
+      - var_name: tn_days_above_0
     parameters:
       thresh: 0 degC
       freq: QS-DEC
   tn_days_below_m25_seasonal:
     base: tn_days_below
-    attrs:
-      var_name: tn_days_below_m25
+    outputs:
+      - var_name: tn_days_below_m25
     parameters:
       thresh: -25 degC
       freq: QS-DEC
   tx_days_above_30_annual:
     base: tx_days_above
-    attrs:
-      var_name: tx_days_above_30
+    outputs:
+      - var_name: tx_days_above_30
     parameters:
       thresh: 30 degC
       freq: YS
   tx_days_above_32_annual:
     base: tx_days_above
-    attrs:
-      var_name: tx_days_above_32
+    outputs:
+      - var_name: tx_days_above_32
     parameters:
       thresh: 32 degC
       freq: YS
   tropical_nights_gt_22_annual:
     base: tn_days_above
-    attrs:
-      var_name: tn_days_above_22
+    outputs:
+      - var_name: tn_days_above_22
     parameters:
       thresh: 22 degC
       freq: YS
   tropical_nights_gt_20_annual:
     base: tn_days_above
-    attrs:
-      var_name: tn_days_above_20
+    outputs:
+      - var_name: tn_days_above_20
     parameters:
       thresh: 20 degC
       freq: YS
