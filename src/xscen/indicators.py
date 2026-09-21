@@ -2,15 +2,18 @@
 
 import logging
 import os
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import partial
+from inspect import signature
 from types import ModuleType
 
 import pandas as pd
 import xarray as xr
 import xclim as xc
+from boltons.funcutils import wraps
 from intake_esm import DerivedVariableRegistry
 from xclim.core.calendar import construct_offset, parse_offset
+from xclim.core.formatting import gen_call_string, update_history
 from xclim.core.indicator import Indicator
 
 from xscen.config import parse_config
@@ -57,6 +60,54 @@ def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str) -> tup
     return var_names, frq
 
 
+def _update_indicators_history(func: Callable) -> Callable:
+    """
+    Decorator that auto-generates and fills the history attribute.
+
+    Fills the history attributes of the datasets in each entry of the dictionary returned by the decorated function.
+    The history is generated from the signature of the function and added to the first output.
+    Because of a limitation of the `boltons` wrapper, all arguments passed to the wrapped function
+    will be printed as keyword arguments.
+
+    Parameters
+    ----------
+    func : Callable
+        The function to decorate.
+
+    Returns
+    -------
+    Callable
+        The decorated function.
+    """
+
+    @wraps(func)
+    def _call_and_add_history(*args, **kwargs):
+        """Call the function and then generate and add the history attr."""
+        outs = func(*args, **kwargs)
+
+        da_list = [arg for arg in args if isinstance(arg, xr.DataArray)]
+        da_dict = {name: arg for name, arg in kwargs.items() if isinstance(arg, xr.DataArray)}
+
+        # The wrapper hides how the user passed the arguments (positional or keyword)
+        # Instead of having it all position, we have it all keyword-like for explicitness.
+        bound_args = signature(func).bind(*args, **kwargs)
+        call_string = gen_call_string(func.__name__, **bound_args.arguments)
+
+        for key, val in outs.items():
+            if isinstance(val, xr.Dataset):
+                attr = update_history(
+                    call_string,
+                    *da_list,
+                    **da_dict,
+                )
+                outs[key].attrs["history"] = attr
+
+        return outs
+
+    return _call_and_add_history
+
+
+@_update_indicators_history
 @parse_config
 def compute_indicators(  # noqa: C901
     ds: xr.Dataset,
@@ -264,8 +315,9 @@ def _derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
         out = ind(ds=ds)
         if isinstance(out, tuple):
             out = out[nout]
-        for var in out.data_vars:
-            ds[var] = out[var]
+        var_name = list(out.data_vars)[nout]
+        ds[var_name] = out[var_name]
+        ds.attrs["history"] = out.attrs["history"]
         return ds
 
     func.__name__ = ind.identifier

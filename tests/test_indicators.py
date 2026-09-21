@@ -46,6 +46,7 @@ class TestComputeIndicators:
         assert all(xrfreq in ind_dict[xrfreq].attrs["cat:xrfreq"] for xrfreq in ind_dict.keys())
         assert all(v in ind_dict["YS-JAN"] for v in ["tg_min", "growing_degree_days"])
         assert all(v in ind_dict["YS-JAN"].attrs["cat:variable"] for v in ["tg_min", "growing_degree_days"])
+        # assert all('compute_indicators(ds=<Dataset>, indicators=<IndicatorCollection>' in ds.attrs['history'] for ds in ind_dict.values())
         if periods is None:
             assert "time" not in ind_dict["fx"].dims
             assert len(ind_dict["YS-JAN"].time) == 2
