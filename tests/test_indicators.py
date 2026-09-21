@@ -54,7 +54,7 @@ class TestComputeIndicators:
             assert len(ind_dict["YS-JAN"].time) == 8
 
     def test_qs_dec(self):
-        indicator = xclim.atmos.tg_min.__class__(
+        indicator = xclim.atmos.tg_min.copy(
             identifier="tg_min_qs",
             parameters=dict(freq="QS-DEC"),
         )
@@ -93,7 +93,7 @@ class TestComputeIndicators:
 
     @pytest.mark.parametrize("restrict_years", [True, False])
     def test_as_jul(self, restrict_years):
-        indicator = xclim.atmos.freezing_degree_days.__class__(
+        indicator = xclim.atmos.freezing_degree_days.copy(
             identifier="degree_days_below_0_annual_start_july",
             parameters=dict(freq="YS-JUL"),  # We inject the freq arg.
         )
@@ -133,11 +133,11 @@ class TestComputeIndicators:
             as_dataset=True,
         )
         indicators = {
-            "tg_min": xclim.atmos.tg_min.__class__(
+            "tg_min": xclim.atmos.tg_min.copy(
                 identifier="tg_min_qs",
                 parameters=dict(freq="QS-DEC"),
             ),
-            "precip_average": xclim.atmos.days_over_precip_thresh.__class__(
+            "precip_average": xclim.atmos.days_over_precip_thresh.copy(
                 identifier="precip_average_ms",
                 parameters=dict(freq="MS"),
             ),

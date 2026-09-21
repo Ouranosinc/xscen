@@ -334,10 +334,10 @@ class TestPropertiesMeasures:
 
         if period is None:
             np.testing.assert_allclose(p["quantile_98_tas"].values, 2)
-            np.testing.assert_allclose(p["mean-tas"].values, 1.5)
+            np.testing.assert_allclose(p["mean_tas"].values, 1.5)
         else:
             np.testing.assert_allclose(p["quantile_98_tas"].values, 2)
-            np.testing.assert_allclose(p["mean-tas"].values, 2)
+            np.testing.assert_allclose(p["mean_tas"].values, 2)
 
     def test_unstack(self):
         ds = datablock_3d(
@@ -395,7 +395,7 @@ class TestPropertiesMeasures:
             change_units_arg={"tas": "°C"},
         )
 
-        assert p["mean-tas"].attrs["units"] == "°C"
+        assert p["mean_tas"].attrs["units"] == "°C"
 
     def test_dref_for_measure(self):
         p1, m1 = xs.properties_and_measures(
@@ -428,7 +428,7 @@ class TestPropertiesMeasures:
 
         assert out.attrs["cat:processing_level"] == "test"
         assert "m2" in out.realization.values
-        assert "mean-tas" in out.properties.values
+        assert "mean_tas" in out.properties.values
         np.testing.assert_allclose(out["heatmap"].values, 0.5)
 
     def test_measures_improvement(self):
@@ -451,7 +451,7 @@ class TestPropertiesMeasures:
             out = xs.diagnostics.measures_improvement([m2, m2, m2], to_level="test")
 
         assert out.attrs["cat:processing_level"] == "test"
-        assert "mean-tas" in out.properties.values
+        assert "mean_tas" in out.properties.values
         np.testing.assert_allclose(out["improved_grid_points"].values, 1)
 
     def test_measures_improvement_dim(self):

@@ -391,6 +391,9 @@ def properties_and_measures(  # noqa: C901
 
     prop = xr.Dataset()  # dataset with all properties
     meas = xr.Dataset()  # dataset with all measures
+    # prop_history = ""
+    # meas_history = ""
+
     for i, ind in enumerate(properties, 1):
         if isinstance(ind, tuple):
             iden, ind = ind
@@ -403,6 +406,10 @@ def properties_and_measures(  # noqa: C901
             out = ind(ds=ds)
         vname = out.name
         prop[vname] = out
+        # FIXME: come back here when history is outputted by xsdba
+        # vname = ind.var_name
+        # prop=xr.merge([out, prop])
+        # prop_history+=f"{vname}: {out.attrs['history']}\n"
 
         if period is not None:
             prop[vname].attrs["period"] = f"{period[0]}-{period[1]}"
@@ -410,6 +417,10 @@ def properties_and_measures(  # noqa: C901
         # calculate the measure if a reference dataset is given for the measure
         if dref_for_measure and vname in dref_for_measure:
             with xclim_convert_units_to():
+                # meas_cur= ind.get_measure()(sim=prop[vname], ref=dref_for_measure[vname])
+                # meas_cur= meas_cur.rename({ind.get_measure().var_name:vname})
+                # meas=xr.merge([meas_cur, meas])
+                # meas_history+=f"{vname}: {meas_cur.attrs['history']}\n"
                 meas[vname] = ind.get_measure()(sim=prop[vname], ref=dref_for_measure[vname])
             # create a merged long_name
             update_attr(
@@ -431,6 +442,13 @@ def properties_and_measures(  # noqa: C901
 
     prop.attrs["cat:processing_level"] = to_level_prop
     meas.attrs["cat:processing_level"] = to_level_meas
+
+    # TODO: merge histories!!
+    # prop_history = prop_history + " \n " + ds.attrs.get("history","")
+    # prop.attrs["history"] = prop_history
+
+    # meas_history = meas_history + " \n " + ds.attrs.get("history","")
+    # meas.attrs["history"] = meas_history
 
     return prop, meas
 
@@ -470,7 +488,8 @@ def measures_heatmap(meas_datasets: list[xr.Dataset] | dict, to_level: str = "di
             da = meas[var_name]
             # mean the absolute value of the bias over all positions and add to heat map
             # TODO: check this indeed works with xsdba
-            if "xsdba.measures.RATIO" in da.attrs["history"]:
+            # FIXME : COME BACK only look at the right var part of history
+            if "ratio: ratio(" in meas["history"]:
                 # if ratio, best is 1, this moves "best to 0 to compare with bias
                 row.append(abs(da - 1).mean().values)
             else:
@@ -552,7 +571,7 @@ def measures_improvement(
         if dim is None:
             # reduce all dimensions (which may be variable dependent)
             dims = ds2[var].dims
-        if "xsdba.measures.RATIO" in ds1[var].attrs["history"]:
+        if "ratio: ratio(" in ds1[var].attrs["history"]:
             diff_bias = abs(ds1[var] - 1) - abs(ds2[var] - 1)
         else:
             diff_bias = abs(ds1[var]) - abs(ds2[var])

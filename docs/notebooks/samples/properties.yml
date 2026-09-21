@@ -5,6 +5,7 @@ indicators:
     outputs:
       - attrs:
           long_name: 98th quantile of the mean temperature
+        var_name: quantile_98_tas
     input:
       da: tas
     parameters:
@@ -15,6 +16,7 @@ indicators:
     outputs:
       - attrs:
           long_name: Maximum spell length distribution when the mean temperature is larger or equal to the 90th quantile.
+        var_name: maximum_length_of_warm_spell
     input:
       da: tas
     parameters:
@@ -27,6 +29,7 @@ indicators:
     outputs:
       - attrs:
           long_name: Bias of the mean temperature
+        var_name: mean_tas
     input:
       da: tas
-    measure: xsdba.measures.BIAS
+    measure: bias

@@ -250,15 +250,9 @@ class TestProduceHorizon:
         ds["tas"].values = ds["time"].dt.month
         ds["da"] = ds["tas"]
 
-        indicator_qs = xclim.atmos.tg_min.__class__(
-            var_name="tg_min_qs",
-            parameters=dict(freq="QS-DEC"),
-        )
+        indicator_qs = xclim.atmos.tg_min.copy(var_name="tg_min_qs", parameters=dict(freq="QS-DEC"), register=False)
 
-        indicator_ms = xclim.atmos.tg_min.__class__(
-            var_name="tg_min_ms",
-            parameters=dict(freq="MS"),
-        )
+        indicator_ms = xclim.atmos.tg_min.copy(var_name="tg_min_ms", parameters=dict(freq="MS"), register=False)
 
         indicators = [
             ("fit", xclim.indicators.generic.fit),
