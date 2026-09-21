@@ -17,7 +17,6 @@ from xclim.core import ValidationError, dataflags
 from xclim.core.indicator import Indicator
 
 from .config import parse_config
-from .indicators import load_xclim_module
 from .utils import (
     add_attr,
     change_units,
@@ -355,11 +354,11 @@ def properties_and_measures(  # noqa: C901
     --------
     xsdba.properties : Properties module, extending from `xclim`.
     xsdba.measures : Measures modules, extending from `xclim`.
-    xclim.core.indicator.build_indicator_module_from_yaml : YAML indicator constructor function of `xclim`.
+    xclim.IndicatorCollection.from_yaml : YAML indicator constructor function of `xclim`.
     """
     if isinstance(properties, str | Path):
         logger.debug("Loading properties module.")
-        module = load_xclim_module(properties)
+        module = xc.IndicatorCollection.from_yaml(properties)
         properties = module.iter_indicators()
     elif hasattr(properties, "iter_indicators"):
         properties = properties.iter_indicators()
@@ -392,6 +391,7 @@ def properties_and_measures(  # noqa: C901
 
     prop = xr.Dataset()  # dataset with all properties
     meas = xr.Dataset()  # dataset with all measures
+
     for i, ind in enumerate(properties, 1):
         if isinstance(ind, tuple):
             iden, ind = ind
@@ -470,8 +470,7 @@ def measures_heatmap(meas_datasets: list[xr.Dataset] | dict, to_level: str = "di
         for var_name in meas:
             da = meas[var_name]
             # mean the absolute value of the bias over all positions and add to heat map
-            # TODO: check this indeed works with xsdba
-            if "xsdba.measures.RATIO" in da.attrs["history"]:
+            if da.attrs.get("measure") == "ratio":
                 # if ratio, best is 1, this moves "best to 0 to compare with bias
                 row.append(abs(da - 1).mean().values)
             else:
@@ -553,7 +552,7 @@ def measures_improvement(
         if dim is None:
             # reduce all dimensions (which may be variable dependent)
             dims = ds2[var].dims
-        if "xsdba.measures.RATIO" in ds1[var].attrs["history"]:
+        if ds1[var].attrs.get("measure") == "ratio":
             diff_bias = abs(ds1[var] - 1) - abs(ds2[var] - 1)
         else:
             diff_bias = abs(ds1[var]) - abs(ds2[var])

@@ -1097,7 +1097,7 @@ def clean_up(  # noqa: C901
             for attrname, attrtmpl in attrs.items():
                 obj.attrs[attrname] = attrtmpl
 
-    if change_attr_prefix:
+    if change_attr_prefix is not None:
         if isinstance(change_attr_prefix, str):
             change_attr_prefix = {"cat:": change_attr_prefix}
         # Make sure that the prefixes are in the right format
@@ -1105,7 +1105,7 @@ def clean_up(  # noqa: C901
         for old_prefix, new_prefix in change_attr_prefix.items():
             if not old_prefix.endswith(":"):
                 old_prefix += ":"
-            if not new_prefix.endswith(":"):
+            if not new_prefix.endswith(":") and new_prefix != "":
                 new_prefix += ":"
             chg_attr_prefix[old_prefix] = new_prefix
 
