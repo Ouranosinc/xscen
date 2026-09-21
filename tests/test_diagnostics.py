@@ -492,7 +492,7 @@ class TestPropertiesMeasures:
         out = xs.diagnostics.measures_improvement_2d({"i1": imp, "i2": imp}, to_level="test")
 
         assert out.attrs["cat:processing_level"] == "test"
-        assert "mean-tas" in out.properties.values
+        assert "mean_tas" in out.properties.values
         assert "i1" in out.realization.values
         assert "i2" in out.realization.values
         np.testing.assert_allclose(out["improved_grid_points"].values, 1)

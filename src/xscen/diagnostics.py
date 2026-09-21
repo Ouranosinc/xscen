@@ -489,7 +489,7 @@ def measures_heatmap(meas_datasets: list[xr.Dataset] | dict, to_level: str = "di
             # mean the absolute value of the bias over all positions and add to heat map
             # TODO: check this indeed works with xsdba
             # FIXME : COME BACK only look at the right var part of history
-            if "ratio: ratio(" in meas["history"]:
+            if da.attrs.get("measure") == "ratio":
                 # if ratio, best is 1, this moves "best to 0 to compare with bias
                 row.append(abs(da - 1).mean().values)
             else:
@@ -571,7 +571,7 @@ def measures_improvement(
         if dim is None:
             # reduce all dimensions (which may be variable dependent)
             dims = ds2[var].dims
-        if "ratio: ratio(" in ds1[var].attrs["history"]:
+        if ds1[var].attrs.get("measure") == "ratio":
             diff_bias = abs(ds1[var] - 1) - abs(ds2[var] - 1)
         else:
             diff_bias = abs(ds1[var]) - abs(ds2[var])
