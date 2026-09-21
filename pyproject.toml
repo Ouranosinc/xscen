@@ -98,6 +98,7 @@ classifiers = [
 ]
 dynamic = ["description", "version"]
 dependencies = [
+  "boltons >=20.1",
   "cartopy >=0.23.0",
   "cftime",
   "cf_xarray >=0.7.6",
