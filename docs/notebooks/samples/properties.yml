@@ -32,4 +32,12 @@ indicators:
         var_name: mean_tas
     input:
       da: tas
-    measure: bias
+  mean_tas_ratio_meas:
+    base: mean
+    outputs:
+      - attrs:
+          long_name: Bias of the mean temperature
+        var_name: mean_tas_ratio_meas
+    input:
+      da: tas
+    measure: ratio

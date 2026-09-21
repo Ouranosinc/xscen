@@ -506,3 +506,37 @@ class TestPropertiesMeasures:
         )
 
         assert out.equals(out2)
+
+    def test_measures_ratio(self):
+        p1, m1 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+        )
+
+        p2, m2 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+            dref_for_measure=p1,
+        )
+
+        m3 = m2[["mean_tas_ratio_meas", "mean_tas"]].copy()
+        m4 = m2[["mean_tas_ratio_meas", "mean_tas"]].copy()
+        # for a bias, 1 is worst than 0.1
+        # for a ration 1 is better than 0.1
+        m3["mean_tas_ratio_meas"] = 0.1
+        m3["mean_tas"] = 0.1
+        m4["mean_tas_ratio_meas"] = 1
+        m4["mean_tas"] = 1
+
+        m3["mean_tas_ratio_meas"].attrs = m2["mean_tas_ratio_meas"].attrs
+        m3["mean_tas"].attrs = m2["mean_tas"].attrs
+        m4["mean_tas_ratio_meas"].attrs = m2["mean_tas_ratio_meas"].attrs
+        m4["mean_tas"].attrs = m2["mean_tas"].attrs
+
+        imp = xs.diagnostics.measures_improvement([m3, m4])
+
+        assert (imp.improved_grid_points.values == np.array([1, 0])).all()
+
+        hm = xs.diagnostics.measures_heatmap([m3, m4], to_level="test")
+
+        assert (hm.heatmap == np.array([[1.0, 0.0], [0.0, 1.0]])).all()
