@@ -259,8 +259,8 @@ def test_project_catalog_create_fails(tmpdir):
         )
 
 
-def test_stack_unstack(samplecat_multivar):
-    cat = samplecat_multivar
+def test_stack_unstack(samplecatmultivar):
+    cat = samplecatmultivar
     ds1 = cat.to_dataset(create_ensemble_on=["institution", "source"])
     assert "variable" in cat.esmcat.columns_with_iterables
 
