@@ -261,16 +261,16 @@ def test_project_catalog_create_fails(tmpdir):
 
 def test_stack_unstack(samplecatmultivar):
     cat = samplecatmultivar
-    ds1 = cat.to_dataset(create_ensemble_on=["institution", "source"])
+    ds1 = cat.to_dataset(create_ensemble_on=["institution", "source"], xarray_open_kwargs={"engine": "h5netcdf"})
     assert "variable" in cat.esmcat.columns_with_iterables
 
     cat.unstack()
-    ds2 = cat.to_dataset(create_ensemble_on=["institution", "source"])
+    ds2 = cat.to_dataset(create_ensemble_on=["institution", "source"], xarray_open_kwargs={"engine": "h5netcdf"})
     assert "variable" not in cat.esmcat.columns_with_iterables
 
     xr.testing.assert_identical(ds1, ds2)
 
-    ds3 = cat.search(variable="tasmax").to_dataset(create_ensemble_on=["institution", "source"])
+    ds3 = cat.search(variable="tasmax").to_dataset(create_ensemble_on=["institution", "source"], xarray_open_kwargs={"engine": "h5netcdf"})
     assert "tasmin" not in ds3.data_vars
 
     cat.stack()
