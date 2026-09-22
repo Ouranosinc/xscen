@@ -5,7 +5,6 @@ import logging
 import os
 import re
 import warnings
-from collections import defaultdict
 from collections.abc import Callable, Sequence
 from copy import deepcopy
 from pathlib import Path
@@ -136,14 +135,11 @@ def extract_dataset(  # noqa: C901
 
     if variables_and_freqs is None:
         try:
-            variables_and_freqs = defaultdict(list)
-            for a, b in zip(catalog._requested_variables_true, catalog._requested_variable_freqs, strict=False):
-                variables_and_freqs[a].extend([b])
-        except ValueError as err:
+            variables_and_freqs = catalog._requested_variable_freqs.copy()
+        except AttributeError as err:
             raise ValueError("Failed to determine the requested variables and freqs.") from err
-    else:
-        # Make everything a list
-        variables_and_freqs = {k: [v] if not isinstance(v, list) else v for k, v in variables_and_freqs.items()}
+    # Make everything a list
+    variables_and_freqs = {k: [v] if not isinstance(v, list) else v for k, v in variables_and_freqs.items()}
 
     # Default arguments to send xarray
     xr_kwargs = _xarray_defaults(xr_open_kwargs=xr_open_kwargs or {}, xr_combine_kwargs=xr_combine_kwargs or {})
@@ -751,7 +747,7 @@ def search_data_catalogs(  # noqa: C901
                     if "timedelta" in varcat.df.columns:
                         varcat.df.drop(columns=["timedelta"], inplace=True)
 
-                    varcat._requested_variable_freqs = [xrfreq]
+                    varcat._requested_variable_freqs = {var_id: xrfreq}
                     if was_stacked and "variable" not in varcat.esmcat.columns_with_iterables:
                         varcat.stack("variable")
                     varcats.append(varcat)

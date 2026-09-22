@@ -682,7 +682,7 @@ class DataCatalog(intake_esm.esm_datastore):
         grp_cols = list(set(self.df.columns) - {col})
         new = (
             self.df.groupby(grp_cols, dropna=False)  # groupby by everything except col
-            .apply(_stack)  # create single entry df with tuple for col
+            .apply(_stack, include_groups=False)  # create single entry df with tuple for col, argument is for pandas 2
             .droplevel(-1)  # old index is now last level of multiindex, drop it
             .reset_index()  # put back all index levels as columns
         )
@@ -1026,14 +1026,14 @@ def concat_data_catalogs(*dcs) -> DataCatalog:
     requested_variables = []
     requested_variables_true = []
     dependent_variables = []
-    requested_variable_freqs = []
+    requested_variable_freqs = {}
     for dc in dcs:
         registry.update(dc.derivedcat._registry)
         catalogs.append(dc.df)
         requested_variables.extend(dc._requested_variables)
         requested_variables_true.extend(getattr(dc, "_requested_variables_true", []))
         dependent_variables.extend(getattr(dc, "_dependent_variables", []))
-        requested_variable_freqs.extend(getattr(dc, "_requested_variable_freqs", []))
+        requested_variable_freqs.update(getattr(dc, "_requested_variable_freqs", {}))
     df = pd.concat(catalogs, axis=0).drop_duplicates(ignore_index=True)
     dvr = intake_esm.DerivedVariableRegistry()
     dvr._registry.update(registry)
@@ -1044,7 +1044,7 @@ def concat_data_catalogs(*dcs) -> DataCatalog:
     if dependent_variables:
         newcat._dependent_variables = list(set(dependent_variables))
     if requested_variable_freqs:
-        newcat._requested_variable_freqs = list(set(requested_variable_freqs))
+        newcat._requested_variable_freqs = requested_variable_freqs.copy()
     return newcat
 
 
