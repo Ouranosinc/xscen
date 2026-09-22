@@ -100,8 +100,8 @@ def samplecat_multivar(request, tmp_path_factory):
         compat="no_conflicts",
     )
     tmp_path = tmp_path_factory.mktemp("KPOP_data")
-    ds.to_netcdf(tmp_path / "Huntrix_Rumi.nc")
-    ds.to_netcdf(tmp_path / "Saja-Boys_Jinu.nc")
+    ds.to_netcdf(tmp_path / "Huntrix_Rumi.nc", engine="h5netcdf")
+    ds.to_netcdf(tmp_path / "Saja-Boys_Jinu.nc", engine="h5netcdf")
     df = xs.parse_directory(
         directories=[tmp_path],
         patterns=["{institution}_{source}.nc"],

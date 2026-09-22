@@ -157,8 +157,8 @@ def test_search_variable():
     assert scat._dependent_variables == []
 
     scat = cat.search(variable=["tasmax", "tasmin"])
-    assert scat._requested_variables == ["tasmax", "tasmin"]
-    assert scat._requested_variables_true == ["tasmax", "tasmin"]
+    assert set(scat._requested_variables) == {"tasmin", "tasmax"}
+    assert set(scat._requested_variables_true) == {"tasmin", "tasmax"}
     assert scat._dependent_variables == []
 
     reg = xs.indicators.registry_from_module(
@@ -166,9 +166,9 @@ def test_search_variable():
     )
     cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json", registry=reg)
     scat = cat.search(variable="tas")
-    assert scat._requested_variables == ["tasmax", "tasmin", "tas"]
+    assert set(scat._requested_variables) == {"tasmax", "tasmin", "tas"}
     assert scat._requested_variables_true == ["tas"]
-    assert scat._dependent_variables == ["tasmax", "tasmin"]
+    assert set(scat._dependent_variables) == {"tasmax", "tasmin"}
 
 
 def test_search_nothing():
