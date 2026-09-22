@@ -4,12 +4,26 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors:  Juliette Lavoie (:user:`juliettelavoie`).
+Contributors:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add CanESM5-1 to IPCC_annual_global_tas.nc. (:pull:`761`).
 * Add ``DataCatalog.unstack`` and ``DataCatalog.stack`` to transform iterable columns into multiple entries (and the opposite). (:issue:`762`, :pull:`763`).
+
+Bug fixes
+^^^^^^^^^
+* Fixed how IPCC_annual_global_tas.nc is loaded to prevent kernel crashes in edge cases. (:issue:`769`, :pull:`770`).
+* Fixed old checks for yearly frequency using "YS" in ``xscen.diagnostics.health_checks``. (:pull:`772`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* N/A.
+
+Internal changes
+^^^^^^^^^^^^^^^^
+* N/A.
+
 
 .. _changes_0.15.2:
 
