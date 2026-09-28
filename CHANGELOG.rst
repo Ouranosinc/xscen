@@ -8,7 +8,7 @@ Contributors:  Juliette Lavoie (:user:`juliettelavoie`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* Add CanESM5-1 to IPCC_annual_global_tas.nc. (:pull:`761`).
+* Add CanESM5-1 and other members of existing models to IPCC_annual_global_tas.nc. (:pull:`761`, :pull:`773`).
 
 .. _changes_0.15.2:
 
