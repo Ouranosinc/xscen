@@ -82,7 +82,7 @@ class TestSearchDataCatalogs:
 
     @pytest.mark.parametrize(
         "restrict_warming_level,exp",
-        [(True, 5), ({"wl": 2, "ignore_member": True}, 5), ({"wl": 4}, 2)],
+        [(True, 6), ({"wl": 2, "ignore_member": True}, 5), ({"wl": 4}, 2)],
     )
     def test_warminglevel(self, restrict_warming_level, exp):
         cat = deepcopy(self.cat)
