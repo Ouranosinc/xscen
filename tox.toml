@@ -31,6 +31,7 @@ labels = ["lint"]
 skip_install = true
 deps = []
 dependency_groups = ["lint"]
+commands_pre = [["pip", "list"], ["pip", "check"]]
 commands = [
   ["make", "lint"],
   ["make", "checkfrench"]
@@ -50,7 +51,11 @@ deps = [
   {replace = "if", condition = "env.XCLIM_UPSTREAM", then = ["xclim @ git+https://github.com/Ouranosinc/xclim.git@{env:XCLIM_UPSTREAM}"], extend = true}
 ]
 install_command = ["python", "-m", "pip", "install", "--no-user", "{opts}", "{packages}"]
-commands_pre = [["pip", "list"], ["pip", "check"]]
+commands_pre = [
+  {replace = "if", condition = "env.XCLIM_PRE", then = ["python", "-m", "pip", "install", "--no-user", "--upgrade", "--pre", "xclim"], extend = false},
+  ["pip", "list"],
+  ["pip", "check"]
+]
 commands = [
   ["pytest", "{posargs}"]
 ]
