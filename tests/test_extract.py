@@ -82,7 +82,7 @@ class TestSearchDataCatalogs:
 
     @pytest.mark.parametrize(
         "restrict_warming_level,exp",
-        [(True, 5), ({"wl": 2, "ignore_member": True}, 5), ({"wl": 4}, 2)],
+        [(True, 6), ({"wl": 2, "ignore_member": True}, 5), ({"wl": 4}, 2)],
     )
     def test_warminglevel(self, restrict_warming_level, exp):
         cat = deepcopy(self.cat)
@@ -265,6 +265,19 @@ class TestSearchDataCatalogs:
             out[k].df["experiment"],
             "another_experiment",
         )
+
+    def test_coarse_multi_vs_fine_single(self, tmp_path):
+        catsrc = """variable,source,frequency,path,format,date_start,date_end,xrfreq,processing_level,type,experiment,domain,id
+"('mrros',)",SPS,1hr,/project/ctb-frigon/bourgapa/SPS-output/daf-snt1-NESTMB022/series/2015/mrros_daf-snt1-NESTMB022_2015_se.nc,nc,2015-01-01,2015-12-31 23:59:59,h,raw,simulation,daf-snt1-NESTMB022,,SPS_daf-snt1-NESTMB022
+"('mrros', 'mrros_max', 'mrros_min', 'mrros_nans', 'mrros_perc', 'mrros_std')",SPS,mon,/project/ctb-frigon/bourgapa/SPS-output/daf-snt1-NESTMB022/series/2015/mrros_daf-snt1-NESTMB022_2015_sm.nc,nc,2015-01-01,2015-12-31 23:59:59,MS,raw,simulation,daf-snt1-NESTMB022,,SPS_daf-snt1-NESTMB022
+"""  # ruff: ignore[line-too-long]
+        with (tmp_path / "catalog.csv").open("w") as f:
+            f.write(catsrc)
+        cat = xs.DataCatalog.from_df(tmp_path / "catalog.csv")
+
+        _, scat = xs.search_data_catalogs(cat, {"mrros": "MS"}, allow_resampling=True).popitem()
+
+        assert scat.df.iloc[0].xrfreq == "MS"
 
 
 class TestGetWarmingLevel:

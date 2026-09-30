@@ -75,6 +75,25 @@ def samplecatzarr(request):
     return xs.DataCatalog({"esmcat": xs.catalog.esm_col_data, "df": df})
 
 
+@pytest.fixture(scope="session")
+def samplecatmultivar(request):
+    """Generate a sample catalog with the tutorial zarr.zips ."""
+    mark_skip = request.config.getoption("-m")
+    if "not requires_netcdf" in mark_skip or not SAMPLES_DIR.exists():
+        pytest.skip("Skipping tests that require netCDF files")
+
+    df = xs.parse_directory(
+        directories=[notebooks / "samples" / "testing"],
+        patterns=["{mip_era}_{activity}_{experiment}/{institution}_{source}.nc"],
+        homogenous_info={
+            "type": "simulation",
+            "processing_level": "rad",
+        },
+        read_from_file=True,
+    )
+    return xs.DataCatalog({"esmcat": xs.catalog.esm_col_data, "df": df})
+
+
 @pytest.fixture
 def datablock_3d():
     """

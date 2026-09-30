@@ -10,7 +10,8 @@ This version drops support for Python 3.10, Zarr 2 and intake-esm < 2025.12.12.
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* Add CanESM5-1 to IPCC_annual_global_tas.nc. (:pull:`761`).
+* Add CanESM5-1 and other members of existing models to IPCC_annual_global_tas.nc. (:pull:`761`, :pull:`773`).
+* Add ``DataCatalog.unstack`` and ``DataCatalog.stack`` to transform iterable columns into multiple entries (and the opposite). (:issue:`762`, :pull:`763`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
