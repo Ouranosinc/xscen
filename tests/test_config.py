@@ -78,6 +78,6 @@ def test_update_config():
 
 def test_get_configurable():
     d = xs.config.get_configurable()
-    assert len(d) == 32  # number of @parse_config
+    assert len(d) == 31  # number of @parse_config
 
     CONFIG.clear()  # reset config after tests
