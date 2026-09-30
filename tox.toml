@@ -31,7 +31,10 @@ labels = ["lint"]
 skip_install = true
 deps = []
 dependency_groups = ["lint"]
-commands_pre = [["pip", "list"], ["pip", "check"]]
+commands_pre = [
+  ["pip", "list"],
+  ["pip", "check"]
+]
 commands = [
   ["make", "lint"],
   ["make", "checkfrench"]
