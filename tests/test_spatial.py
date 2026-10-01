@@ -38,7 +38,7 @@ class TestCreepFill:
     )
     def test_n(self, n, mode):
         w = xs.spatial.creep_weights(self.ds["mask"], n=n, mode=mode)
-        out = xs.spatial.creep_fill(self.ds["tas"], w)
+        out = xs.spatial.apply_weights(self.ds["tas"], w)
 
         if mode == "clip":
             neighbours_0 = {
@@ -116,15 +116,30 @@ class TestCreepFill:
 
     def test_n0(self):
         w = xs.spatial.creep_weights(self.ds["mask"], n=0, mode="clip")
-        out = xs.spatial.creep_fill(self.ds["tas"], w)
+        out = xs.spatial.apply_weights(self.ds["tas"], w)
         np.testing.assert_equal(out.isel(lat=0, lon=0), np.tile(np.nan, 3))
         np.testing.assert_equal(out.isel(lat=3, lon=3), np.tile(np.nan, 3))
 
     def test_steps(self):
         # TODO: More in-depth testing ?
         w = xs.spatial.creep_weights(self.ds["mask"], n=1, steps=2, mode="clip")
-        xs.spatial.creep_fill(self.ds["tas"], w)
+        xs.spatial.apply_weights(self.ds["tas"], w)
         assert "step" in w.dims
+
+
+@pytest.mark.parametrize("mode,size,exp", [("clip", 3, 8 / 9), ("clip", 5, 19 / 20), ("wrap", 7, 50 / 42)])
+def test_blur(mode, size, exp):
+    arr = np.zeros((2, 10, 6), dtype="float")
+    arr[:, :, 0] = np.nan
+    arr[:, :, 1:] = 1
+    arr[:, 2, 2] = 0
+    arr[:, -1, 2] = 10
+    da = datablock_3d(arr, "tas", "lon", -142, "lat", 0, 2, 2, "2000-01-01")
+
+    w = xs.spatial.blur_weights(da.notnull(), size=size, mode=mode)
+    out = xs.spatial.apply_weights(da, w)
+
+    np.testing.assert_allclose(out[0, 2, 2], exp)
 
 
 class TestGetGrid:
