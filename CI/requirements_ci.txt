@@ -234,7 +234,6 @@ platformdirs==4.9.4 \
     --hash=sha256:68a9a4619a666ea6439f2ff250c12a853cd1cbd5158d258bd824a7df6be2f868
     # via
     #   pylint
-    #   python-discovery
     #   tox
     #   virtualenv
 pluggy==1.6.0 \
@@ -510,9 +509,9 @@ pyproject-api==1.10.0 \
     --hash=sha256:40c6f2d82eebdc4afee61c773ed208c04c19db4c4a60d97f8d7be3ebc0bbb330 \
     --hash=sha256:8757c41a79c0f4ab71b99abed52b97ecf66bd20b04fa59da43b5840bac105a09
     # via tox
-python-discovery==1.4.2 \
-    --hash=sha256:475803f53b7b2ed6e490e27373f9d8340f7d2eebf9acdaf645d7d714c97bb500 \
-    --hash=sha256:8f3746c4b4968d22afbb97d36e1a0e5b66e6c0f297290f2e95f05b9b8bf18690
+python-discovery==1.6.1 \
+    --hash=sha256:cf87d3627dfb4412437fdd5b13eae402607722998d21567993aedbc59b23c15e \
+    --hash=sha256:d43fcdef879fe795352bd13ccf8d185ba5a9f86f36cfcd00529f596e737442b3
     # via
     #   tox
     #   virtualenv
@@ -649,9 +648,9 @@ urllib3==2.7.0 \
     --hash=sha256:231e0ec3b63ceb14667c67be60f2f2c40a518cb38b03af60abc813da26505f4c \
     --hash=sha256:9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897
     # via requests
-virtualenv==21.2.0 \
-    --hash=sha256:1720dc3a62ef5b443092e3f499228599045d7fea4c79199770499df8becf9098 \
-    --hash=sha256:1bd755b504931164a5a496d217c014d098426cddc79363ad66ac78125f9d908f
+virtualenv==21.7.12 \
+    --hash=sha256:3572a2e13deac1c2727e48ec43dc962f698c453c5c90eb2bd737c81bcd2ac0b0 \
+    --hash=sha256:5b6576455f10637067cc20c3f9f7c677575eecaa8c95fc049db2f650652befd5
     # via tox
 wcmatch==8.5.2 \
     --hash=sha256:17d3ad3758f9d0b5b4dedc770b65420d4dac62e680229c287bf24c9db856a478 \
