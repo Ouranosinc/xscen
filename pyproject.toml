@@ -44,7 +44,7 @@ docs = [
   "sphinx-intl",
   "sphinx-mdinclude",
   "sphinx-rtd-theme >=1.0",
-  {include-group = "notebooks"}
+  { include-group = "notebooks" }
 ]
 tox = [
   "tox >=4.52.0",
@@ -57,22 +57,22 @@ dev = [
   "pip >=26.0.1",
   "prek >=0.3.0",
   "watchdog >=6.0.0",
-  {include-group = "docs"},
-  {include-group = "lint"},
-  {include-group = "test"},
-  {include-group = "tox"}
+  { include-group = "docs" },
+  { include-group = "lint" },
+  { include-group = "test" },
+  { include-group = "tox" }
 ]
 
 [project]
 name = "xscen"
 authors = [
-  {name = "Gabriel Rondeau-Genesse", email = "rondeau-genesse.gabriel@ouranos.ca"},
-  {name = "Pascal Bourgault", email = "bourgault.pascal@ouranos.ca"},
-  {name = "Juliette Lavoie", email = "lavoie.juliette@ouranos.ca"}
+  { name = "Gabriel Rondeau-Genesse", email = "rondeau-genesse.gabriel@ouranos.ca" },
+  { name = "Pascal Bourgault", email = "bourgault.pascal@ouranos.ca" },
+  { name = "Juliette Lavoie", email = "lavoie.juliette@ouranos.ca" }
 ]
 maintainers = [
-  {name = "Gabriel Rondeau-Genesse", email = "rondeau-genesse.gabriel@ouranos.ca"},
-  {name = "Trevor James Smith", email = "smith.trevorj@ouranos.ca"}
+  { name = "Gabriel Rondeau-Genesse", email = "rondeau-genesse.gabriel@ouranos.ca" },
+  { name = "Trevor James Smith", email = "smith.trevorj@ouranos.ca" }
 ]
 readme = "README.rst"
 requires-python = ">=3.10.0"
