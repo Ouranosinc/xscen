@@ -163,12 +163,10 @@ class DataCatalog(intake_esm.esm_datastore):
             esmdata = arg["esmcat"]
 
         # iterable_columns is not an official field of ESM, but proposed in intake-esm#752
+        # Default to assuming no column is iterable
         if "iterable_columns" in esmdata:
             return esmdata["iterable_columns"]
-        itc = esmdata.get("aggregation_control", {}).get("variable_column_name")
-        if itc is None:
-            return None
-        return [itc]
+        return None
 
     def __init__(self, *args, check_valid: bool = False, drop_duplicates: bool = False, **kwargs):
         kwargs["read_kwargs"] = recursive_update(csv_kwargs.copy(), kwargs.get("read_kwargs", {}))
