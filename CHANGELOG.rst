@@ -10,7 +10,7 @@ New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add CanESM5-1 and other members of existing models to IPCC_annual_global_tas.nc. (:pull:`761`, :pull:`773`).
 * Add ``DataCatalog.unstack`` and ``DataCatalog.stack`` to transform iterable columns into multiple entries (and the opposite). (:issue:`762`, :pull:`763`).
-* New ``spatial.blur_weights`` function to perform efficient blurring (uniform N-D filter convolution, rolling mean).
+* New ``spatial.blur_weights`` function to perform efficient blurring (uniform N-D filter convolution, rolling mean). (:pull:`784`).
 
 Bug fixes
 ^^^^^^^^^
@@ -19,7 +19,7 @@ Bug fixes
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* Function ``spatial.creep_fill`` has been renamed ``spatial.apply_weights`` and is also used with blurring weights.
+* Function ``spatial.creep_fill`` has been renamed ``spatial.apply_weights`` and is also used with blurring weights. (:pull:`784`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^
