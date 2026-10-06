@@ -50,7 +50,7 @@ dependencies:
   - deptry >=0.25.1
   - flake8 >=7.3.0
   - flake8-rst-docstrings >=0.4.0
-  - flit >=3.11.0,<4.0
+  - flit >=4.0,<5.0
   - mypy >=1.20.0
   - numpydoc >=1.10.0
   - pooch >=1.8.0
@@ -67,4 +67,4 @@ dependencies:
   - tox >=4.52.0
   - tox-gh >=1.7.1
   # Workarounds
-  - fastprogress <1.1  # FIXME: Temporary fix for https://github.com/AnswerDotAI/fastprogress/issues/117 (fastprogress is a dep through intake-esm)
+  - fastprogress <1.1 # FIXME: Temporary fix for https://github.com/AnswerDotAI/fastprogress/issues/117 (fastprogress is a dep through intake-esm)
