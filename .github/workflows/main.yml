@@ -66,8 +66,8 @@ jobs:
     strategy:
       matrix:
         os: [ 'ubuntu-latest' ]
-        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
-        esmf-version: [ "8.7.0" ]  # 8.8.0 breaks h5py
+        python-version: [ "3.12", "3.13", "3.14" ]
+        esmf-version: [ "8.9.1" ]
         include:
           - os: 'macos-latest'
             esmf-version: "8.7.0"
@@ -147,7 +147,7 @@ jobs:
     strategy:
       matrix:
         os: [ 'ubuntu-latest' ]
-        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         # FIXME: Uncomment when multiplatform tests are passing
         # include:
         #   - os: 'macos-latest'

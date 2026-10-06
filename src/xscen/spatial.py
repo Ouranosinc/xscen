@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "Region",
+    "apply_weights",
     "creep_fill",
     "creep_weights",
     "dataset_extent",
@@ -113,7 +114,7 @@ def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "c
             w = creep_weights(da.notnull())
             weights.append(w)
             if i < steps - 1:  # no need to do it one the last step
-                da = creep_fill(da, w)
+                da = apply_weights(da, w)
         # TODO: If we treated the nan differently we could maybe collapse all weights with dot instead of having to apply them iteratively
         return xr.concat(weights, "step")
 
@@ -156,33 +157,96 @@ def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "c
 
 
 @parse_config
-def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
+def blur_weights(mask: xr.DataArray, size: int = 3, minvals: int = 5, mode: str = "clip") -> xr.DataArray:
     """
-    Creep fill using pre-computed weights.
+    Compute weights for the uniform window blur.
+
+    The output is a sparse matrix with the same dimensions as `mask`, twice.
+
+    Parameters
+    ----------
+    mask : DataArray
+      A boolean DataArray. True values are included in the blur.
+      Usually they represent missing values (`mask = da.notnull()`).
+      All dimensions are blurred.
+    size : int
+      The size of the window.
+    minvals : int
+      The minimum number of valid values within the window for blurring. Otherwise, the point is NaN.
+    mode : {'clip', 'wrap'}
+      If a cell is on the edge of the domain, `mode='wrap'` will wrap around to find neighbours.
+
+    Returns
+    -------
+    DataArray
+       Weights. The dot product must be taken over the last N dimensions.
+    """
+    if mode not in ["clip", "wrap"]:
+        raise ValueError("mode must be either 'clip' or 'wrap'")
+
+    da = mask
+    mask = da.values
+    n = size // 2
+    neighbors = np.array(list(itertools.product(*[np.arange(-n, n + 1) for j in range(mask.ndim)]))).T
+    src = []
+    dst = []
+    w = []
+    it = np.nditer(mask, flags=["f_index", "multi_index"], order="C")
+    for _ in it:
+        neigh_idx_2d = np.atleast_2d(it.multi_index).T + neighbors
+        neigh_idx_1d = np.ravel_multi_index(neigh_idx_2d, mask.shape, order="C", mode=mode)
+        if mode == "clip":
+            neigh_idx = np.unravel_index(np.unique(neigh_idx_1d), mask.shape, order="C")
+        elif mode == "wrap":
+            neigh_idx = np.unravel_index(neigh_idx_1d, mask.shape, order="C")
+        neigh = mask[neigh_idx]
+        N = (neigh).sum()
+        if N >= minvals:
+            src.extend([it.multi_index] * N)
+            dst.extend(np.stack(neigh_idx)[:, neigh].T)
+            w.extend([1 / N] * N)
+        else:
+            src.extend([it.multi_index])
+            dst.extend([it.multi_index])
+            w.extend([np.nan])
+    crds = np.concatenate((np.array(src).T, np.array(dst).T), axis=0)
+    return xr.DataArray(
+        sp.COO(crds, w, (*da.shape, *da.shape)),
+        dims=[f"{d}_out" for d in da.dims] + list(da.dims),
+        coords=da.coords,
+        name="blur_weights",
+    )
+
+
+@parse_config
+def apply_weights(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
+    """
+    Apply pre-computed weights with a dot product.
 
     Parameters
     ----------
     da : xr.DataArray
       A DataArray sharing the dimensions with the one used to compute the weights.
       It can have other dimensions.
-      Dask is supported as long as there are no chunks over the creeped dims.
+      Dask is supported as long as there are no chunks over the dimensions of the weights dims.
     w : xr.DataArray
-      The result of `creep_weights`.
+      The result of :py:func:`creep_weights` or :py:func:`blur_weights`, for example.
+      If it has a `step` dimension, the weights for each step are applied consecutively.
 
     Returns
     -------
     xr.DataArray
-       Same shape as `da`, but values filled according to `w`.
+       Same shape as `da`.
 
     Examples
     --------
     >>> w = creep_weights(da.isel(time=0).notnull(), n=1)
-    >>> da_filled = creep_fill(da, w)
+    >>> da_filled = apply_weights(da, w)
     """
     if "step" in w.dims:
         out = da
         for step in w.step:
-            out = creep_fill(out, w.sel(step=step))
+            out = apply_weights(out, w.sel(step=step))
         return out
 
     def _dot(arr, wei):
@@ -200,6 +264,13 @@ def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
         dask="parallelized",
         output_dtypes=["float64"],
     )
+
+
+@parse_config
+def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
+    """Deprecated version of apply_weights."""  # numpydoc ignore=PR01,RT01
+    warnings.warn("creep_fill was renamed apply_weights.", FutureWarning, stacklevel=2)
+    return apply_weights(da, w)
 
 
 def rotate_vectors(
