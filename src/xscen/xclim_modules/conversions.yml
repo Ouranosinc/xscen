@@ -5,9 +5,6 @@ doc: |
 
   This module provides indicators generating base variables
   from other base variables. All indicators are non-resampling.
-#TODO: not sure what needs to be changed to convert here ?
-# FIXME: Change to "convert" when we pin xclim  >= 0.58
-realm: atmos
 base: Indicator
 indicators:
   wind_speed_from_vector:
@@ -15,7 +12,7 @@ indicators:
   wind_vector_from_speed:
     base: wind_vector_from_speed
   tas_midpoint:
-    compute: tas_midpoint
+    base: mean_temperature_from_max_and_min
     outputs:
       - var_name: tas
   relative_humidity_from_dewpoint:
@@ -45,7 +42,7 @@ indicators:
       method: binary
       thresh: 0 degC
     outputs:
-      - var_name: prlp #TODO: do we want to change the name here too ?
+      - var_name: prra
   precipitation:
     compute: precipitation
     outputs:
