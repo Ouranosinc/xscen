@@ -20,6 +20,7 @@ Bug fixes
 Breaking changes
 ^^^^^^^^^^^^^^^^
 * Function ``spatial.creep_fill`` has been renamed ``spatial.apply_weights`` and is also used with blurring weights. (:pull:`784`).
+* In ``spatial.creep_weights`` argument ``n``, the number of neighbours has been changed to ``size``, the size of the window, where ``size = 2 * n + 1``. A size of 1 (n = 0), is not supported anymore. (:pull:`784`).
 
 Internal changes
 ^^^^^^^^^^^^^^^^

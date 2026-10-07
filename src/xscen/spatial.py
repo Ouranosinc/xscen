@@ -80,7 +80,7 @@ A region specification, a dictionary with the following valid entries:
 
 
 @parse_config
-def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "clip") -> xr.DataArray:
+def creep_weights(mask: xr.DataArray, size: int = 3, steps: int = 1, mode: str = "clip", n: int | None = None) -> xr.DataArray:
     """
     Compute weights for the creep fill.
 
@@ -93,12 +93,14 @@ def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "c
       A boolean DataArray. False values are candidates to the filling.
       Usually they represent missing values (`mask = da.notnull()`).
       All dimensions are creep filled.
-    n : int
-      The number of neighbouring points to use. 1 means only the adjacent grid cells (in each dimension) are used.
+    size : int
+      The size of the square window to use when searching neighbours. 3 means only the adjacent grid cells (in each dimension) are used.
     steps : int
-      Apply the algorithm this number of times, creeping `n` neighbours at each step.
+      Apply the algorithm this number of times, creeping with the same `size` at each step.
     mode : {'clip', 'wrap'}
       If a cell is on the edge of the domain, `mode='wrap'` will wrap around to find neighbours.
+    n : int, optional
+      Deprecated argument. Use `size` instead.
 
     Returns
     -------
@@ -111,6 +113,14 @@ def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "c
     adds a condition on the minimum number of valid values. However, blurring also applies to all other valid pixels,
     unlike creep filling that only modifies invalid points.
     """
+    if n is not None:
+        warnings.warn(
+            "Argument `n` of `creep_weights` has been deprecated in favor of `size`. Please pass `size = 2 * n + 1` instead.",
+            FutureWarning,
+            stacklevel=1,
+        )
+        size = 2 * n + 1
+
     if mode not in ["clip", "wrap"]:
         raise ValueError("mode must be either 'clip' or 'wrap'")
 
@@ -118,12 +128,17 @@ def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "c
         da = xr.ones_like(mask).where(mask)
         weights = []
         for i in range(steps):
-            w = creep_weights(da.notnull())
+            w = creep_weights(da.notnull(), size=size, mode=mode)
             weights.append(w)
             if i < steps - 1:  # no need to do it one the last step
                 da = apply_weights(da, w)
         # TODO: If we treated the nan differently we could maybe collapse all weights with dot instead of having to apply them iteratively
         return xr.concat(weights, "step")
+
+    if size < 3 or size % 2 == 0:
+        raise ValueError(f"The size of the window needs to be at least 3 and to be odd for `creep_weights`. Got size={size}.")
+    # number of neighbours
+    n = (size - 1) // 2
 
     da = mask
     mask = da.values
@@ -174,7 +189,7 @@ def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "c
 
 
 @parse_config
-def blur_weights(mask: xr.DataArray, size: int = 3, minvals: int = 5, mode: str = "clip") -> xr.DataArray:
+def blur_weights(mask: xr.DataArray, size: int = 3, minvals: int | None = None, mode: str = "clip") -> xr.DataArray:
     """
     Compute weights for the uniform window blur.
 
@@ -187,9 +202,11 @@ def blur_weights(mask: xr.DataArray, size: int = 3, minvals: int = 5, mode: str 
       Usually they represent missing values (`mask = da.notnull()`).
       All dimensions are blurred.
     size : int
-      The size of the window.
-    minvals : int
+      The size of the square window.
+    minvals : int, optional
       The minimum number of valid values within the window for blurring. Otherwise, the point is NaN.
+      Default (None), is the same as setting minvals to the total number of points in the window, ``size**N``
+      where ``N`` is the number of dimensions in ``mask``, i.e. it requires all points within the window to be valid.
     mode : {'clip', 'wrap'}
       If a cell is on the edge of the domain, `mode='wrap'` will wrap around to find neighbours.
 
@@ -209,7 +226,9 @@ def blur_weights(mask: xr.DataArray, size: int = 3, minvals: int = 5, mode: str 
 
     da = mask
     mask = da.values
-    n = size // 2
+    n = (size - 1) // 2
+    if minvals is None:
+        minvals = size**mask.ndim
     neighbors = np.array(list(itertools.product(*[np.arange(-n, n + 1) for j in range(mask.ndim)]))).T
     src = []
     dst = []

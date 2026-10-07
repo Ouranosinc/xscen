@@ -37,7 +37,7 @@ class TestCreepFill:
         [(1, "clip"), (2, "clip"), (3, "clip"), (1, "wrap"), (2, "wrap"), (3, "wrap")],
     )
     def test_n(self, n, mode):
-        w = xs.spatial.creep_weights(self.ds["mask"], n=n, mode=mode)
+        w = xs.spatial.creep_weights(self.ds["mask"], size=2 * n + 1, mode=mode)
         out = xs.spatial.apply_weights(self.ds["tas"], w)
 
         if mode == "clip":
@@ -112,17 +112,11 @@ class TestCreepFill:
 
     def test_wrong_mode(self):
         with pytest.raises(ValueError, match="mode must be either"):
-            xs.spatial.creep_weights(self.ds["mask"], n=1, mode="wrong")
-
-    def test_n0(self):
-        w = xs.spatial.creep_weights(self.ds["mask"], n=0, mode="clip")
-        out = xs.spatial.apply_weights(self.ds["tas"], w)
-        np.testing.assert_equal(out.isel(lat=0, lon=0), np.tile(np.nan, 3))
-        np.testing.assert_equal(out.isel(lat=3, lon=3), np.tile(np.nan, 3))
+            xs.spatial.creep_weights(self.ds["mask"], size=3, mode="wrong")
 
     def test_steps(self):
         # TODO: More in-depth testing ?
-        w = xs.spatial.creep_weights(self.ds["mask"], n=1, steps=2, mode="clip")
+        w = xs.spatial.creep_weights(self.ds["mask"], size=3, steps=2, mode="clip")
         xs.spatial.apply_weights(self.ds["tas"], w)
         assert "step" in w.dims
 
