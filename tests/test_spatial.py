@@ -130,7 +130,7 @@ def test_blur(mode, size, exp):
     arr[:, -1, 2] = 10
     da = datablock_3d(arr, "tas", "lon", -142, "lat", 0, 2, 2, "2000-01-01")
 
-    w = xs.spatial.blur_weights(da.notnull(), size=size, mode=mode)
+    w = xs.spatial.blur_weights(da.notnull(), size=size, minvals=5, mode=mode)
     out = xs.spatial.apply_weights(da, w)
 
     np.testing.assert_allclose(out[0, 2, 2], exp)
