@@ -94,7 +94,7 @@ def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "c
       Usually they represent missing values (`mask = da.notnull()`).
       All dimensions are creep filled.
     n : int
-      The order of neighbouring to use. 1 means only the adjacent grid cells are used.
+      The number of neighbouring points to use. 1 means only the adjacent grid cells (in each dimension) are used.
     steps : int
       Apply the algorithm this number of times, creeping `n` neighbours at each step.
     mode : {'clip', 'wrap'}
