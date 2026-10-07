@@ -44,6 +44,7 @@ logger = logging.getLogger(__name__)
 __all__ = [
     "Region",
     "apply_weights",
+    "blur_weights",
     "creep_fill",
     "creep_weights",
     "dataset_extent",
@@ -103,6 +104,12 @@ def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "c
     -------
     DataArray
        Weights. The dot product must be taken over the last N dimensions, in sequence for each step.
+
+    Notes
+    -----
+    For invalid points neighbouring valid ones, this is the same as :py:func:`blur_weights`, except that this other function
+    adds condition on the minimum number of valid values. However, blurring also applies to all other valid pixels,
+    unlike creep filling that only modifies invalid points.
     """
     if mode not in ["clip", "wrap"]:
         raise ValueError("mode must be either 'clip' or 'wrap'")
@@ -126,28 +133,38 @@ def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "c
     w = []
     it = np.nditer(mask, flags=["f_index", "multi_index"], order="C")
     for i in it:
-        if not i:
+        if not i:  # this pixel is NaN
+            # get indexes of all neighbors
             neigh_idx_2d = np.atleast_2d(it.multi_index).T + neighbors
             neigh_idx_1d = np.ravel_multi_index(neigh_idx_2d, mask.shape, order="C", mode=mode)
-            if mode == "clip":
-                neigh_idx = np.unravel_index(np.unique(neigh_idx_1d), mask.shape, order="C")
-            elif mode == "wrap":
-                neigh_idx = np.unravel_index(neigh_idx_1d, mask.shape, order="C")
+            if mode == "clip":  # indexes are repeated, but we want one of each
+                neigh_idx_1d = np.unique(neigh_idx_1d)
+            neigh_idx = np.unravel_index(neigh_idx_1d, mask.shape, order="C")
+            # neighbouring values, self included
             neigh = mask[neigh_idx]
+            # number of valid neighbours
             N = (neigh).sum()
             if N > 0:
-                src.extend([it.multi_index] * N)
-                dst.extend(np.stack(neigh_idx)[:, neigh].T)
+                # at least one, then this pixel will be filled by their mean
+                # dst is this pixel's index
+                dst.extend([it.multi_index] * N)
+                # src are the indexes of valid neighbours
+                src.extend(np.stack(neigh_idx)[:, neigh].T)
+                # w are the weights. it will be a dot product on input dims,
+                # so the sum of w for one dest pixel should be 1 for a normal average
                 w.extend([1 / N] * N)
             else:
-                src.extend([it.multi_index])
+                # No valid neighbours, this pixels stays nan
+                # we add it explicitly as the default value of sparse is 0
                 dst.extend([it.multi_index])
+                src.extend([it.multi_index])
                 w.extend([np.nan])
         else:
-            src.extend([it.multi_index])
+            # this pixel is not Nan, no creep filling, we preserve the source value
             dst.extend([it.multi_index])
+            src.extend([it.multi_index])
             w.extend([1])
-    crds = np.concatenate((np.array(src).T, np.array(dst).T), axis=0)
+    crds = np.concatenate((np.array(dst).T, np.array(src).T), axis=0)
     return xr.DataArray(
         sp.COO(crds, w, (*da.shape, *da.shape)),
         dims=[f"{d}_out" for d in da.dims] + list(da.dims),
@@ -180,6 +197,12 @@ def blur_weights(mask: xr.DataArray, size: int = 3, minvals: int = 5, mode: str 
     -------
     DataArray
        Weights. The dot product must be taken over the last N dimensions.
+
+    Notes
+    -----
+    For invalid points neighbouring valid ones, this is the same as :py:func:`creep_weights`, except for
+    the added condition on the minimum number of valid values. However, blurring also applies to all other valid pixels,
+    unlike creep filling that only modifies invalid points.
     """
     if mode not in ["clip", "wrap"]:
         raise ValueError("mode must be either 'clip' or 'wrap'")
@@ -193,23 +216,32 @@ def blur_weights(mask: xr.DataArray, size: int = 3, minvals: int = 5, mode: str 
     w = []
     it = np.nditer(mask, flags=["f_index", "multi_index"], order="C")
     for _ in it:
+        # get indices of all neighbours
         neigh_idx_2d = np.atleast_2d(it.multi_index).T + neighbors
         neigh_idx_1d = np.ravel_multi_index(neigh_idx_2d, mask.shape, order="C", mode=mode)
         if mode == "clip":
-            neigh_idx = np.unravel_index(np.unique(neigh_idx_1d), mask.shape, order="C")
-        elif mode == "wrap":
-            neigh_idx = np.unravel_index(neigh_idx_1d, mask.shape, order="C")
+            neigh_idx_1d = np.unique(neigh_idx_1d)
+        neigh_idx = np.unravel_index(neigh_idx_1d, mask.shape, order="C")
+        # get neighbour values
         neigh = mask[neigh_idx]
+        # number of valid neighbours
         N = (neigh).sum()
         if N >= minvals:
-            src.extend([it.multi_index] * N)
-            dst.extend(np.stack(neigh_idx)[:, neigh].T)
+            # a minimum of neighbours are valid, so replace the value of this pixel
+            # with their average
+            # dst is this pixel's index
+            dst.extend([it.multi_index] * N)
+            # src is the indexes of neighbours
+            src.extend(np.stack(neigh_idx)[:, neigh].T)
+            # w are the weights. it will be a dot product on input dims,
+            # so the sum of w for one dest pixel should be 1 for a normal average
             w.extend([1 / N] * N)
         else:
-            src.extend([it.multi_index])
+            # No enough valid neighbours, put NaN
             dst.extend([it.multi_index])
+            src.extend([it.multi_index])
             w.extend([np.nan])
-    crds = np.concatenate((np.array(src).T, np.array(dst).T), axis=0)
+    crds = np.concatenate((np.array(dst).T, np.array(src).T), axis=0)
     return xr.DataArray(
         sp.COO(crds, w, (*da.shape, *da.shape)),
         dims=[f"{d}_out" for d in da.dims] + list(da.dims),
@@ -237,6 +269,11 @@ def apply_weights(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
     -------
     xr.DataArray
        Same shape as `da`.
+
+    See Also
+    --------
+    creep_weights : Create weights for creep filling extrapolation.
+    blur_weights : Create weights for a blur filter.
 
     Examples
     --------
