@@ -108,7 +108,7 @@ def creep_weights(mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "c
     Notes
     -----
     For invalid points neighbouring valid ones, this is the same as :py:func:`blur_weights`, except that this other function
-    adds condition on the minimum number of valid values. However, blurring also applies to all other valid pixels,
+    adds a condition on the minimum number of valid values. However, blurring also applies to all other valid pixels,
     unlike creep filling that only modifies invalid points.
     """
     if mode not in ["clip", "wrap"]:
