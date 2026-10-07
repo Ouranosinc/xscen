@@ -17,13 +17,13 @@ CONFIG_DIR1 = str(ROOT / "templates/1-basic_workflow_with_config/")
 LOGGER = logging.getLogger(__name__)
 
 
-def test_log(caplog):
+def test_log(caplog, reset_config):
     with caplog.at_level(logging.INFO):
         xs.load_config("test=test4", verbose=True, reset=True)
     assert "Updated the config with test=test4" in caplog.text
 
 
-def test_load_config():
+def test_load_config(reset_config):
     xs.load_config(CONFIG_FILE1)
     # test basic assignment
     assert CONFIG["scripting"]["send_mail_on_exit"]["subject"] == "Template 1 - basic_workflow_with_config"
@@ -56,7 +56,7 @@ def test_load_config():
     assert CONFIG["scripting"]["send_mail_on_exit"]["subject"] == "Template 1 - basic_workflow_with_config"
 
 
-def test_set_config():
+def test_set_config(reset_config):
     CONFIG.set("test", "test2")
 
     assert CONFIG["test"] == "test2"
@@ -70,7 +70,7 @@ def test_set_config():
         CONFIG.set("test.subtest", "test2")
 
 
-def test_update_config():
+def test_update_config(reset_config):
     CONFIG.update_from_list([("test", "test3")])
 
     assert CONFIG["test"] == "test3"
@@ -78,6 +78,4 @@ def test_update_config():
 
 def test_get_configurable():
     d = xs.config.get_configurable()
-    assert "xscen.aggregate.spatial_mean" in d
-
-    CONFIG.clear()  # reset config after tests
+    assert len(d) == 34
