@@ -3,7 +3,6 @@
 from __future__ import annotations  # For xclim dimension annotations; do not remove
 
 import xarray as xr
-from xclim.compute.converters import tas_from_tasmin_tasmax as tas_midpoint
 from xclim.core.units import convert_units_to, declare_units
 from xsdba.processing import from_additive_space, to_additive_space
 
@@ -14,7 +13,6 @@ __all__ = [
     "hurslogit_from_hurs",
     "orog_from_z",
     "precipitation",
-    "tas_midpoint",
     "tasmax_from_dtr",
     "tasmin_from_dtr",
 ]

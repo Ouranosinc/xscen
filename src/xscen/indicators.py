@@ -211,11 +211,6 @@ def compute_indicators(  # noqa: C901
             # Make the call to xclim
             out = ind(ds=ds_in)
 
-            # In the case of multiple outputs, merge them into a single dataset
-            if isinstance(out, tuple):
-                out = xr.merge(out)
-                out.attrs = {}
-
         else:
             # Multiple time periods to concatenate
             concats = []
@@ -227,11 +222,6 @@ def compute_indicators(  # noqa: C901
                     logger.debug("Dropping start of timeseries to ensure semiannual frequency works.")
                     ds_subset = fix_semiannual(ds_subset, freq)
                 tmp = ind(ds=ds_subset)
-
-                # In the case of multiple outputs, merge them into a single dataset
-                if isinstance(tmp, tuple):
-                    tmp = xr.merge(tmp)
-                    tmp.attrs = {}
 
                 # In order to concatenate time periods, the indicator still needs a time dimension
                 if freq == "fx":
@@ -299,8 +289,8 @@ def registry_from_collection(
     dvr = registry or DerivedVariableRegistry()
     for _name, ind in collection.iter_indicators():
         query = {variable_column: [p.default for p in ind.parameters.values() if p.kind == 0]}
-        for i, output in enumerate(ind.outputs):
-            dvr.register(variable=output.var_name, query=query)(_derived_func(ind, i))
+        for output in ind.outputs:
+            dvr.register(variable=output.var_name, query=query)(_derived_func(ind, output.var_name))
     return dvr
 
 
@@ -310,18 +300,13 @@ def _ensure_list(x):
     return x
 
 
-def _derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
-    def func(ds, *, ind, nout):
+def _derived_func(ind: xc.core.indicator.Indicator, var_name: str) -> partial:
+    def func(ds, *, ind, var_name):
         out = ind(ds=ds)
-        if isinstance(out, tuple):
-            out = out[nout]
-        var_name = list(out.data_vars)[nout]
-        ds[var_name] = out[var_name]
-        ds.attrs["history"] = out.attrs["history"]
-        return ds
+        return ds.assign({var_name: out[var_name]}).assign_attrs(history=out.attrs["history"])
 
     func.__name__ = ind.identifier
-    return partial(func, ind=ind, nout=nout)
+    return partial(func, ind=ind, var_name=var_name)
 
 
 def select_inds_for_avail_vars(

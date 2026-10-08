@@ -13,36 +13,26 @@ indicators:
     base: wind_vector_from_speed
   tas_midpoint:
     base: mean_temperature_from_max_and_min
-    outputs:
-      - var_name: tas
   relative_humidity_from_dewpoint:
     base: hurs_fromdewpoint
     parameters:
       method: buck81
       invalid_values: clip
-    outputs:
-      - var_name: hurs
   specific_humidity:
     base: huss
     parameters:
       method: tetens30
       ice_thresh: 0 degC
-    outputs:
-      - var_name: huss
   snowfall_approximation:
     base: prsn
     parameters:
       method: binary
       thresh: 0 degC
-    outputs:
-      - var_name: prsn
   rain_approximation:
     base: prra
     parameters:
       method: binary
       thresh: 0 degC
-    outputs:
-      - var_name: prra
   precipitation:
     compute: precipitation
     outputs:
@@ -50,7 +40,6 @@ indicators:
           standard_name: precipitation_flux
           description: Precipitation of all phases as the sum of solid and liquid precipitation.
           cell_methods: "time: mean"
-        var_name: pr
         units: kg m-2 s-1
   potential_evapotranspiration:
     base: potential_evapotranspiration
@@ -61,8 +50,6 @@ indicators:
         kind: 0
       tasmax:
         kind: 0
-    outputs:
-      - var_name: evspsblpot
   dtr:
     src_freq: D
     compute: dtr_from_minmax
