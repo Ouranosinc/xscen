@@ -70,20 +70,20 @@ jobs:
         python-version: [ "3.11", "3.12", "3.13" ]
         esmf-version: [ "8.7.0" ]  # 8.8.0 breaks h5py
         xclim-pre: [ false ]
-        xclim-upstream: [ "main" ]  # FIXME: Remove before merging to 'main'
+        xclim-upstream: [ "deepcopy-indicator" ]  # FIXME: Remove before merging to 'main'
         xsdba-upstream: [ "xclim_v1" ]  # FIXME: Remove before merging to 'main'
         include:
           - os: "macos-latest"
             esmf-version: "8.7.0"
             python-version: "3.12"
             xclim-pre: true
-            xclim-upstream: "main"  # FIXME: Remove before merging to 'main'
+            xclim-upstream: "deepcopy-indicator"  # FIXME: Remove before merging to 'main'
             xsdba-upstream:  "xclim_v1"   # FIXME: Remove before merging to 'main'
           - os: "ubuntu-latest"
             esmf-version: "8.7.0"
             python-version: "3.14"
             xclim-pre: true
-            xclim-upstream: "main"  # FIXME: Remove before merging to 'main'
+            xclim-upstream: "deepcopy-indicator"  # FIXME: Remove before merging to 'main'
             xsdba-upstream:  "xclim_v1"   # FIXME: Remove before merging to 'main'
           # FIXME: setup-micromamba and Windows images fail with code 3221225781 (STATUS_ACCESS_VIOLATION)
           # - os: "windows-latest"
@@ -198,7 +198,7 @@ jobs:
       - name: Install xclim (upstream)
         if: ${{ env.XCLIM_UPSTREAM }}
         run: |
-          python -m pip install --no-user "xclim @ git+https://github.com/Ouranosinc/xclim.git@main"
+          python -m pip install --no-user "xclim @ git+https://github.com/Ouranosinc/xclim.git@deepcopy-indicator"
       - name: Install xsdba (upstream)
         if: ${{ env.XSDBA_UPSTREAM }}
         run: |
