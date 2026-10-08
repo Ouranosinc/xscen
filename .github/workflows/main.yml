@@ -78,13 +78,13 @@ jobs:
             python-version: "3.12"
             xclim-pre: true
             xclim-upstream: "main"  # FIXME: Remove before merging to 'main'
-            xsdba-upstream: [ "xclim_v1" ]  # FIXME: Remove before merging to 'main'
+            xsdba-upstream:  "xclim_v1"   # FIXME: Remove before merging to 'main'
           - os: "ubuntu-latest"
             esmf-version: "8.7.0"
             python-version: "3.14"
             xclim-pre: true
             xclim-upstream: "main"  # FIXME: Remove before merging to 'main'
-            xsdba-upstream: [ "xclim_v1" ]  # FIXME: Remove before merging to 'main'
+            xsdba-upstream:  "xclim_v1"   # FIXME: Remove before merging to 'main'
           # FIXME: setup-micromamba and Windows images fail with code 3221225781 (STATUS_ACCESS_VIOLATION)
           # - os: "windows-latest"
           #   esmf-version: "8.7.0"
