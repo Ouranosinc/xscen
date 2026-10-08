@@ -39,7 +39,7 @@ dependencies:
   - sparse
   - toolz
   - xarray >=2023.11.0, !=2024.6.0
-  - xclim >=0.56, <0.62
+  - xclim >=0.56 #, <0.62 #FIXME: add pin v1 when it is released
   - xsdba >=0.4.0
   - zarr >=2.13, <3
   # Opt
