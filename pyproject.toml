@@ -454,7 +454,7 @@ convention = "numpy"
 [tool.vulture]
 exclude = []
 ignore_decorators = ["@pytest.fixture"]
-ignore_names = ["tas_midpoint"]
+ignore_names = ["tas_midpoint", "reset_config"]
 min_confidence = 90
 paths = ["src/xscen", "tests"]
 sort_by_size = true

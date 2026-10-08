@@ -1,5 +1,6 @@
 # noqa: D100
 import shutil
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -104,3 +105,12 @@ def datablock_3d():
     xscen.testing.datablock_3d : For create a generic timeseries objects.
     """
     return _datablock_3d
+
+
+@pytest.fixture
+def reset_config():
+    """Once the test is done, reset CONFIG to what it was before the test started."""
+    old = deepcopy(xs.CONFIG)
+    yield
+    xs.CONFIG.clear()
+    xs.CONFIG.update(old)
