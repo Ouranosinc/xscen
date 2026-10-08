@@ -18,8 +18,8 @@ __all__ = [
 ]
 
 
-@declare_units(prsn="[precipitation]", prlp="[precipitation]")
-def precipitation(prsn: xr.DataArray, prlp: xr.DataArray) -> xr.DataArray:
+@declare_units(prsn="[precipitation]", prra="[precipitation]")
+def precipitation(prsn: xr.DataArray, prra: xr.DataArray) -> xr.DataArray:
     """
     Precipitation of all phases.
 
@@ -29,16 +29,16 @@ def precipitation(prsn: xr.DataArray, prlp: xr.DataArray) -> xr.DataArray:
     ----------
     prsn : xr.DataArray
         Solid precipitation flux.
-    prlp : xr.DataArray
-        Liquid precipitation flux.
+    prra : xr.DataArray
+        Liquid precipitation flux. Previously prlp.
 
     Returns
     -------
     xr.DataArray, [same as prsn]
         Surface precipitation flux (all phases).
     """
-    prlp = convert_units_to(prlp, prsn, context="hydro")
-    pr = prsn + prlp
+    prra = convert_units_to(prra, prsn, context="hydro")
+    pr = prsn + prra
     pr.attrs["units"] = prsn.attrs["units"]
     return pr
 
