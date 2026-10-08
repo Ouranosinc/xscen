@@ -45,7 +45,7 @@ allowlist_externals = ["make"]
 [env_run_base]
 description = "Run tests with pytest under {basepython}"
 setenv = { PYTEST_ADDOPTS = "--color=yes --cov=xscen --cov-report=lcov", PYTHONPATH = "{toxinidir}" }
-passenv = ["CI", "COVERALLS_*", "ESMFMKFILE", "ESMF_VERSION", "GITHUB_*", "XCLIM_*"]
+passenv = ["CI", "COVERALLS_*", "ESMFMKFILE", "ESMF_VERSION", "GITHUB_*", "XCLIM_*", 'XSDBA_*']
 download = true
 dependency_groups = ["test"]
 deps = [
