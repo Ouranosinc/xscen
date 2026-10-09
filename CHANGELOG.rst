@@ -8,9 +8,13 @@ Contributors:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* Fix to work with xclim 1.0 (:pull:`764`).
+* Add ``xs.ensembles.unstack_ensembles`` function. (:pull:`764`).
+* Make ``change_attr_prefix`` argument of ``xs.utils.clean_up`` accept an empty string. (:pull:`764`, :issue:`771`).
 * Add CanESM5-1 and other members of existing models to IPCC_annual_global_tas.nc. (:pull:`761`, :pull:`773`).
 * Add ``DataCatalog.unstack`` and ``DataCatalog.stack`` to transform iterable columns into multiple entries (and the opposite). (:issue:`762`, :pull:`763`).
 * New ``spatial.blur_weights`` function to perform efficient blurring (uniform N-D filter convolution, rolling mean). (:pull:`784`).
+
 
 Bug fixes
 ^^^^^^^^^

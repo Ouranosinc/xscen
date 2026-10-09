@@ -10,6 +10,7 @@ dependencies:
   # Don't forget to sync changes between environment-docs, environment-dev.yml and pyproject.toml!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
+  - boltons >=20.1
   - cartopy >=0.23.0
   - cftime
   - cf_xarray >=0.7.6
@@ -38,7 +39,7 @@ dependencies:
   - sparse
   - toolz
   - xarray >=2023.11.0, !=2024.6.0
-  - xclim >=0.56, <0.62
+  - xclim >=0.56 #, <0.62 #FIXME: add pin v1 when it is released
   - xsdba >=0.4.0
   - zarr >=2.13, <3
   # Opt

@@ -145,7 +145,7 @@ extract:
           - ssp370
         source:
           - CMCC-ESM2
-          #- UKESM1-0-LL #FIXME: put back when https://github.com/Ouranosinc/xsdba/issues/148 is fixed
+          - UKESM1-0-LL
         member:
           - r1i1p1f1
     extract_dataset:
