@@ -1,7 +1,7 @@
 realm: generic
 indicators:
   quantile_98_tas:
-    base: quantile
+    base: xsdba.properties.quantile
     outputs:
       - attrs:
           long_name: 98th quantile of the mean temperature
@@ -12,7 +12,7 @@ indicators:
       q: 0.98
       group: time.season
   maximum_length_of_warm_spell:
-    base: spell_length_distribution
+    base: xsdba.properties.spell_length_distribution
     outputs:
       - attrs:
           long_name: Maximum spell length distribution when the mean temperature is larger or equal to the 90th quantile.
@@ -25,7 +25,7 @@ indicators:
       thresh: 0.9
       statistic: max
   mean_tas:
-    base: mean
+    base: xsdba.properties.mean
     outputs:
       - attrs:
           long_name: Bias of the mean temperature
@@ -33,7 +33,7 @@ indicators:
     input:
       da: tas
   mean_tas_ratio_meas:
-    base: mean
+    base: xsdba.properties.mean
     outputs:
       - attrs:
           long_name: Bias of the mean temperature
