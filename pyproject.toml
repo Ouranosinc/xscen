@@ -47,8 +47,8 @@ docs = [
   { include-group = "notebooks" }
 ]
 tox = [
-  "tox >=4.52.0",
-  "tox-gh >=1.7.1"
+  "tox >=4.64.0",
+  "tox-gh >=1.8.0"
 ]
 dev = [
   # Development and testing tools

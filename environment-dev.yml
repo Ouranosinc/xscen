@@ -65,7 +65,7 @@ dependencies:
   - xdoctest
   - yamllint >=1.35.1
   # Testing
-  - tox >=4.52.0
-  - tox-gh >=1.7.1
+  - tox >=4.64.0
+  - tox-gh >=1.8.0
   # Workarounds
   - fastprogress <1.1 # FIXME: Temporary fix for https://github.com/AnswerDotAI/fastprogress/issues/117 (fastprogress is a dep through intake-esm)
