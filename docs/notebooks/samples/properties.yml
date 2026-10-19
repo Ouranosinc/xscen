@@ -40,4 +40,4 @@ indicators:
         var_name: mean_tas_ratio_meas
     input:
       da: tas
-    measure: ratio
+    measure: measure.ratio

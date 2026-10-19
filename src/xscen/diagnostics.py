@@ -470,7 +470,7 @@ def measures_heatmap(meas_datasets: list[xr.Dataset] | dict, to_level: str = "di
         for var_name in meas:
             da = meas[var_name]
             # mean the absolute value of the bias over all positions and add to heat map
-            if da.attrs.get("measure") == "ratio":
+            if "ratio" in da.attrs.get("measure"):
                 # if ratio, best is 1, this moves "best to 0 to compare with bias
                 row.append(abs(da - 1).mean().values)
             else:
@@ -552,7 +552,7 @@ def measures_improvement(
         if dim is None:
             # reduce all dimensions (which may be variable dependent)
             dims = ds2[var].dims
-        if ds1[var].attrs.get("measure") == "ratio":
+        if "ratio" in ds1[var].attrs.get("measure"):
             diff_bias = abs(ds1[var] - 1) - abs(ds2[var] - 1)
         else:
             diff_bias = abs(ds1[var]) - abs(ds2[var])
