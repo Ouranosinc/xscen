@@ -64,27 +64,27 @@ jobs:
     needs: lint
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false  # FIXME: Remove before merging to 'main'
+      fail-fast: false # FIXME: Remove before merging to 'main'
       matrix:
         os: [ "ubuntu-latest" ]
         python-version: [ "3.11", "3.12", "3.13" ]
-        esmf-version: [ "8.7.0" ]  # 8.8.0 breaks h5py
+        esmf-version: [ "8.7.0" ] # 8.8.0 breaks h5py
         xclim-pre: [ false ]
-        xclim-upstream: [ "main" ]  # FIXME: Remove before merging to 'main'
-        xsdba-upstream: [ "xclim_v1" ]  # FIXME: Remove before merging to 'main'
+        xclim-upstream: [ "main" ] # FIXME: Remove before merging to 'main'
+        xsdba-upstream: [ "xclim_v1" ] # FIXME: Remove before merging to 'main'
         include:
           - os: "macos-latest"
             esmf-version: "8.7.0"
             python-version: "3.12"
             xclim-pre: true
-            xclim-upstream: "main"  # FIXME: Remove before merging to 'main'
-            xsdba-upstream:  "xclim_v1"   # FIXME: Remove before merging to 'main'
+            xclim-upstream: "main" # FIXME: Remove before merging to 'main'
+            xsdba-upstream: "xclim_v1" # FIXME: Remove before merging to 'main'
           - os: "ubuntu-latest"
             esmf-version: "8.7.0"
             python-version: "3.14"
             xclim-pre: true
-            xclim-upstream: "main"  # FIXME: Remove before merging to 'main'
-            xsdba-upstream:  "xclim_v1"   # FIXME: Remove before merging to 'main'
+            xclim-upstream: "main" # FIXME: Remove before merging to 'main'
+            xsdba-upstream: "xclim_v1" # FIXME: Remove before merging to 'main'
           # FIXME: setup-micromamba and Windows images fail with code 3221225781 (STATUS_ACCESS_VIOLATION)
           # - os: "windows-latest"
           #   esmf-version: "8.7.0"
@@ -141,7 +141,10 @@ jobs:
           python -m tox || true
         env:
           ESMF_VERSION: ${{ matrix.esmf-version }}
+          XCLIM_PRE: ${{ matrix.xclim-pre }}
+          XCLIM_UPSTREAM: ${{ matrix.xclim-upstream }}
           XCLIM_VERSION: ${{ matrix.xclim-version }}
+          XSDBA_UPSTREAM: ${{ matrix.xsdba-upstream }}
       - name: Trust Coveralls Homebrew tap # Homebrew v6.0 requirement; Remove when coverallsapp/github-action >2.3.7
         if: matrix.os == 'macos-latest'
         run: |
@@ -158,7 +161,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ 'ubuntu-latest' ]
+        os: [ "ubuntu-latest" ]
         python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         xclim-pre: [ true ]
         # FIXME: Uncomment when multiplatform tests are passing
