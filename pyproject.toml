@@ -152,7 +152,7 @@ all = ["xscen[extras]", "xscen[xesmf]"]
 [tool]
 
 [tool.bumpversion]
-current_version = "0.15.3-dev.4"
+current_version = "0.15.3-dev.5"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -453,7 +453,7 @@ convention = "numpy"
 [tool.vulture]
 exclude = []
 ignore_decorators = ["@pytest.fixture"]
-ignore_names = ["tas_midpoint"]
+ignore_names = ["tas_midpoint", "reset_config"]
 min_confidence = 90
 paths = ["src/xscen", "tests"]
 sort_by_size = true
