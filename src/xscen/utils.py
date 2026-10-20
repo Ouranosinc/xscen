@@ -1650,7 +1650,7 @@ def vectorized_time_bounds_subset(ds, bounds, size=None, bnd_dim="bnds", bnd_coo
         size = (bounds.isel({bnd_dim: 1}) - bounds.isel({bnd_dim: 0}) + 1).max().item()
     fake_time = xr.date_range("1000-01-01", f"{1000 + size - 1}-12-31", freq=freq, calendar=ds.time.dt.calendar)
 
-    # A sentinel value of invalid times because cftime doesn't have NaT and even so NaT is difficult to manade
+    # A sentinel value of invalid times, because cftime doesn't have NaT and even so, NaT is difficult to manage
     # Assuming time index is sorted and increasing, this value is impossible to have
     sentinel = ds.indexes["time"][0] - pd.Timedelta(seconds=1)
     date_cls = ds.indexes["time"][0].__class__
