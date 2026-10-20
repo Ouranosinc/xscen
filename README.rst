@@ -3,13 +3,13 @@ xscen |logo|
 ============
 
 +----------------------------+-------------------------------------------------------+
-| Versions                   | |pypi| |conda| |versions|                             |
+| Versions                   | |pypi| |conda|                                        |
 +----------------------------+-------------------------------------------------------+
-| Documentation and Support  | |docs|                                                |
+| Documentation and Support  | |docs| |versions|                                     |
 +----------------------------+-------------------------------------------------------+
 | Open Source                | |license| |ossf-score| |zenodo|                       |
 +----------------------------+-------------------------------------------------------+
-| Coding Standards           | |black| |isort| |ruff| |pre-commit| |ossf-bp| |fossa| |
+| Coding Standards           | |ruff| |prek| |pre-commit-ci| |ossf-bp| |fossa|       |
 +----------------------------+-------------------------------------------------------+
 | Development Status         | |status| |build| |coveralls|                          |
 +----------------------------+-------------------------------------------------------+
@@ -34,20 +34,24 @@ Please refer to the `installation docs`_.
 
 Acknowledgments
 ---------------
+
+`xscen` development is funded through Ouranos_, a not-for-profit collaborative innovation organization fostering resilient adaptation to climate change, based in Québec, Canada.
+
+.. image:: https://raw.githubusercontent.com/Ouranosinc/.github/refs/heads/main/images/logo-ouranos-horizontal-couleur.svg
+        :target: https://www.ouranos.ca/en
+        :align: center
+
 This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pypackage`_ project template.
 
 .. _Cookiecutter: https://github.com/cookiecutter/cookiecutter
 .. _DerivedVariableRegistry: https://intake-esm.readthedocs.io/en/latest/how-to/define-and-use-derived-variable-registry.html
+.. _Ouranos: https://www.ouranos.ca/en
 .. _Ouranosinc/cookiecutter-pypackage: https://github.com/Ouranosinc/cookiecutter-pypackage
 .. _installation docs: https://xscen.readthedocs.io/en/latest/installation.html
 .. _intake-esm: https://intake-esm.readthedocs.io/
 .. _xESMF: https://xesmf.readthedocs.io/
 .. _xclim: https://xclim.readthedocs.io/
 .. _xsdba: https://xsdba.readthedocs.io/
-
-.. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
-        :target: https://github.com/psf/black
-        :alt: Python Black
 
 .. |build| image:: https://github.com/Ouranosinc/xscen/actions/workflows/main.yml/badge.svg
         :target: https://github.com/Ouranosinc/xscen/actions/workflows/main.yml
@@ -69,10 +73,6 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
         :target: https://app.fossa.com/projects/git%2Bgithub.com%2FOuranosinc%2Fxscen?ref=badge_shield
         :alt: FOSSA
 
-.. |isort| image:: https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336
-        :target: https://pycqa.github.io/isort/
-        :alt: Isort
-
 .. |license| image:: https://img.shields.io/pypi/l/figanos
         :target: https://github.com/Ouranosinc/figanos/blob/main/LICENSE
         :alt: License
@@ -89,9 +89,13 @@ This package was created with Cookiecutter_ and the `Ouranosinc/cookiecutter-pyp
         :target: https://securityscorecards.dev/viewer/?uri=github.com/Ouranosinc/xscen
         :alt: Open Source Security Foundation Scorecard
 
-.. |pre-commit| image:: https://results.pre-commit.ci/badge/github/Ouranosinc/xscen/main.svg
+.. |pre-commit-ci| image:: https://results.pre-commit.ci/badge/github/Ouranosinc/xscen/main.svg
         :target: https://results.pre-commit.ci/latest/github/Ouranosinc/xscen/main
         :alt: pre-commit.ci status
+
+.. |prek| image:: https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/j178/prek/master/docs/assets/badge-v0.json
+        :target: https://github.com/j178/prek
+        :alt: prek
 
 .. |pypi| image:: https://img.shields.io/pypi/v/xscen.svg
         :target: https://pypi.python.org/pypi/xscen

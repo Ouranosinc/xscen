@@ -7,15 +7,13 @@ from collections.abc import Sequence
 from copy import deepcopy
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 import xclim as xc
-import xclim.core.dataflags
-from xclim.core import ValidationError
-from xclim.core.formatting import (  # noqa: F401
-    _merge_attrs_drop_conflicts as merge_attrs,
-)
+from xclim.core import ValidationError, dataflags
 from xclim.core.indicator import Indicator
 
 from .config import parse_config
@@ -30,6 +28,7 @@ from .utils import (
     update_attr,
     xclim_convert_units_to,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -69,69 +68,62 @@ def health_checks(  # noqa: C901
 
     Parameters
     ----------
-    ds: xr.Dataset or xr.DataArray
+    ds : xr.Dataset or xr.DataArray
         Dataset to check.
-    structure: dict, optional
+    structure : dict, optional
         Dictionary with keys "dims" and "coords" containing the expected dimensions and coordinates.
         This check will fail is extra dimensions or coordinates are found.
-    calendar: str, optional
+    calendar : str, optional
         Expected calendar. Synonyms should be detected correctly (e.g. "standard" and "gregorian").
-    start_date: str, optional
+    start_date : str, optional
         To check if the dataset starts at least at this date.
-    end_date: str, optional
+    end_date : str, optional
         To check if the dataset ends at least at this date.
-    variables_and_units: dict, optional
+    variables_and_units : dict, optional
         Dictionary containing the expected variables and units.
-    strict_units: bool
+    strict_units : bool
         If True, the units in variables_and_units need to match exactly.
-    cfchecks: dict, optional
+    cfchecks : dict, optional
         Dictionary where the key is the variable to check and the values are the cfchecks.
         The cfchecks themselves must be a dictionary with the keys being the cfcheck names
         and the values being the arguments to pass to the cfcheck.
         See `xclim.core.cfchecks` for more details.
-    freq: str, optional
+    freq : str, optional
         Expected frequency, written as the result of xr.infer_freq(ds.time).
-    missing: dict or str or list of str, optional
+    missing : dict or str or list of str, optional
         String, list of strings, or dictionary where the key is the method to check for missing data
         and the values are the arguments to pass to the method.
-        The methods are: "missing_any", "at_least_n_valid", "missing_pct", "missing_wmo".
+        The methods are: "missing_any", "at_least_n_valid", "missing_pct", "missing_wmo", "missing_some_but_not_all".
         See :py:func:`xclim.core.missing` for more details.
-    flags: dict, optional
+    flags : dict, optional
         Dictionary where the key is the variable to check and the values are the flags.
         The flags themselves must be a dictionary with the keys being the data_flags names
         and the values being the arguments to pass to the data_flags.
         If `None` is passed instead of a dictionary, then xclim's default flags for the given variable are run.
         See :py:data:`xclim.core.utils.VARIABLES`.
-        See also :py:func:`xclim.core.dataflags.data_flags` for the list of possible flags.
-    flags_kwargs: dict, optional
+    flags_kwargs : dict, optional
         Additional keyword arguments to pass to the data_flags ("dims" and "freq").
-    return_flags: bool
+    return_flags : bool
         Whether to return the Dataset created by data_flags.
-    raise_on: list of str, optional
+    raise_on : list of str, optional
         Whether to raise an error if a check fails, else there will only be a warning.
         The possible values are the names of the checks.
         Use ["all"] to raise on all checks.
 
     Returns
     -------
-    xr.Dataset or None
+    xr.Dataset, optional
         Dataset containing the flags if return_flags is True & raise_on is False for the "flags" check.
+
+    See Also
+    --------
+    xclim.core.dataflags.data_flags : The list of possible flags that can be passed to `flags`.
     """
     if isinstance(ds, xr.DataArray):
         ds = ds.to_dataset()
     raise_on = raise_on or []
     if "all" in raise_on:
-        raise_on = [
-            "structure",
-            "calendar",
-            "start_date",
-            "end_date",
-            "variables_and_units",
-            "cfchecks",
-            "freq",
-            "missing",
-            "flags",
-        ]
+        raise_on = ["structure", "calendar", "start_date", "end_date", "variables_and_units", "cfchecks", "freq", "missing", "flags"]
 
     warns = []
     errs = []
@@ -173,18 +165,16 @@ def health_checks(  # noqa: C901
                         )
                     else:
                         _error(f"The coordinate '{coord}' is missing.", "structure")
-            extra_coords = [
-                coord for coord in ds.coords if coord not in structure["coords"]
-            ]
+            extra_coords = [coord for coord in ds.coords if coord not in structure["coords"]]
             if len(extra_coords) > 0:
                 _error(f"Extra coordinates found: {extra_coords}.", "structure")
 
     # Check the calendar
     if calendar is not None:
         cal = ds.time.dt.calendar
-        if xc.core.calendar.common_calendar([calendar]).replace(
+        if xc.core.calendar.common_calendar([calendar]).replace("default", "standard") != xc.core.calendar.common_calendar([cal]).replace(
             "default", "standard"
-        ) != xc.core.calendar.common_calendar([cal]).replace("default", "standard"):
+        ):
             _error(f"The calendar is not '{calendar}'. Received '{cal}'.", "calendar")
 
     # Check the start/end dates
@@ -220,9 +210,7 @@ def health_checks(  # noqa: C901
                     except ValidationError as e:
                         _error(f"'{v}' ValidationError: {e}", "variables_and_units")
                 # are they technically the same
-                close_enough = xc.units.str2pint(
-                    ds[v].attrs["units"]
-                ) == xc.units.str2pint(variables_and_units[v])
+                close_enough = xc.units.str2pint(ds[v].attrs["units"]) == xc.units.str2pint(variables_and_units[v])
 
                 if strict_units or not close_enough:
                     _error(
@@ -251,17 +239,13 @@ def health_checks(  # noqa: C901
     if freq is not None:
         inferred_freq = xr.infer_freq(ds.time)
         if inferred_freq is None:
-            _error(
-                "The timesteps are irregular or cannot be inferred by xarray.", "freq"
-            )
-        elif freq.replace("YS", "YS-JAN") != inferred_freq:
-            _error(
-                f"The frequency is not '{freq}'. Received '{inferred_freq}'.", "freq"
-            )
+            _error("The timesteps are irregular or cannot be inferred by xarray.", "freq")
+        elif freq != inferred_freq:
+            _error(f"The frequency is not '{freq}'. Received '{inferred_freq}'.", "freq")
 
     if missing is not None:
         inferred_freq = xr.infer_freq(ds.time)
-        if inferred_freq not in ["M", "MS", "D", "H"]:
+        if not isinstance(inferred_freq, str) or not inferred_freq.startswith(("YS", "YE", "ME", "MS", "D", "H")):
             warnings.warn(
                 f"Frequency {inferred_freq} is not supported for missing data checks. That check will be skipped.",
                 UserWarning,
@@ -273,7 +257,7 @@ def health_checks(  # noqa: C901
             elif isinstance(missing, list):
                 missing = {m: {} for m in missing}
             for method, kwargs in missing.items():
-                kwargs.setdefault("freq", "YS")
+                kwargs.setdefault("freq", "YS-JAN")
                 for v in ds.data_vars:
                     if "time" in ds[v].dims:
                         ms = getattr(xc.core.missing, method)(ds[v], **kwargs)
@@ -283,16 +267,14 @@ def health_checks(  # noqa: C901
                                 "missing",
                             )
                     else:
-                        msg = (
-                            f"Variable '{v}' has no time dimension. The missing data check will be skipped.",
-                        )
+                        msg = (f"Variable '{v}' has no time dimension. The missing data check will be skipped.",)
                         logger.info(msg)
 
     if flags is not None:
         if return_flags:
             out = xr.Dataset()
         for v in flags:
-            dsflags = xc.core.dataflags.data_flags(
+            dsflags = dataflags.data_flags(
                 ds[v],
                 ds,
                 flags=flags[v],
@@ -311,19 +293,16 @@ def health_checks(  # noqa: C901
 
     _message()
     if return_flags and flags is not None:
+        base = "The following health checks failed:"
+        if len(warns) > 0:
+            out.attrs["warnings"] = "\n  - ".join([base] + warns)
         return out
 
 
 @parse_config
 def properties_and_measures(  # noqa: C901
     ds: xr.Dataset,
-    properties: (
-        str
-        | os.PathLike
-        | Sequence[Indicator]
-        | Sequence[tuple[str, Indicator]]
-        | ModuleType
-    ),
+    properties: (str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType),
     period: list[str] | None = None,
     unstack: bool = False,
     rechunk: dict | None = None,
@@ -332,19 +311,20 @@ def properties_and_measures(  # noqa: C901
     to_level_prop: str = "diag-properties",
     to_level_meas: str = "diag-measures",
 ) -> tuple[xr.Dataset, xr.Dataset]:
-    """Calculate properties and measures of a dataset.
+    """
+    Calculate properties and measures of a dataset.
 
     Parameters
     ----------
     ds : xr.Dataset
         Input dataset.
-    properties : str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType
+    properties : str or os.PathLike or Sequence[Indicator] or Sequence[tuple[str, Indicator]] or ModuleType
         Path to a YAML file that instructs on how to calculate properties.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
         tuples (indicator name, indicator) as returned by `iter_indicators()`.
     period : list of str, optional
-        [start, end] of the period to be evaluated. The period will be selected on ds
-        and dref_for_measure if it is given.
+        [start, end] of the period to be evaluated.
+        The period will be selected on ds and dref_for_measure if it is given.
     unstack : bool
         Whether to unstack ds before computing the properties.
     rechunk : dict, optional
@@ -360,20 +340,22 @@ def properties_and_measures(  # noqa: C901
         It can be useful to convert units before computing the properties, because it is sometimes
         easier to convert the units of the variables than the units of the properties (e.g. variance).
     to_level_prop : str
-        processing_level to give the first output (prop)
+        The processing_level to give the first output (prop).
     to_level_meas : str
-        processing_level to give the second output (meas)
+        The processing_level to give the second output (meas).
 
     Returns
     -------
     prop : xr.Dataset
-        Dataset of properties of ds
+        Dataset of properties of ds.
     meas : xr.Dataset
-        Dataset of measures between prop and dref_for_meas
+        Dataset of measures between prop and dref_for_meas.
 
     See Also
     --------
-    xsdba.properties, xsdba.measures, xclim.core.indicator.build_indicator_module_from_yaml
+    xsdba.properties : Properties module, extending from `xclim`.
+    xsdba.measures : Measures modules, extending from `xclim`.
+    xclim.core.indicator.build_indicator_module_from_yaml : YAML indicator constructor function of `xclim`.
     """
     if isinstance(properties, str | Path):
         logger.debug("Loading properties module.")
@@ -396,11 +378,7 @@ def properties_and_measures(  # noqa: C901
         ds = ds.sel({"time": slice(period[0], period[1])})
 
     # select periods for ref_measure
-    if (
-        dref_for_measure is not None
-        and period is not None
-        and "time" in dref_for_measure
-    ):
+    if dref_for_measure is not None and period is not None and "time" in dref_for_measure:
         dref_for_measure = dref_for_measure.sel({"time": slice(period[0], period[1])})
 
     if unstack:
@@ -433,9 +411,7 @@ def properties_and_measures(  # noqa: C901
         # calculate the measure if a reference dataset is given for the measure
         if dref_for_measure and vname in dref_for_measure:
             with xclim_convert_units_to():
-                meas[vname] = ind.get_measure()(
-                    sim=prop[vname], ref=dref_for_measure[vname]
-                )
+                meas[vname] = ind.get_measure()(sim=prop[vname], ref=dref_for_measure[vname])
             # create a merged long_name
             update_attr(
                 meas[vname],
@@ -460,10 +436,9 @@ def properties_and_measures(  # noqa: C901
     return prop, meas
 
 
-def measures_heatmap(
-    meas_datasets: list[xr.Dataset] | dict, to_level: str = "diag-heatmap"
-) -> xr.Dataset:
-    """Create a heatmap to compare the performance of the different datasets.
+def measures_heatmap(meas_datasets: list[xr.Dataset] | dict, to_level: str = "diag-heatmap") -> xr.Dataset:
+    """
+    Create a heatmap to compare the performance of the different datasets.
 
     The columns are properties and the rows are datasets.
     Each point is the absolute value of the mean of the measure over the whole domain.
@@ -507,16 +482,7 @@ def measures_heatmap(
     # plot heatmap of biases (1 column per properties, 1 row per dataset)
     hmap = np.array(hmap)
     # normalize to 0-1 -> best-worst
-    hmap = np.array(
-        [
-            (
-                (c - np.min(c)) / (np.max(c) - np.min(c))
-                if np.max(c) != np.min(c)
-                else [0.5] * len(c)
-            )
-            for c in hmap.T
-        ]
-    ).T
+    hmap = np.array([((c - np.min(c)) / (np.max(c) - np.min(c)) if np.max(c) != np.min(c) else [0.5] * len(c)) for c in hmap.T]).T
 
     name_of_datasets = name_of_datasets or list(range(1, hmap.shape[0] + 1))
     ds_hmap = xr.DataArray(
@@ -551,14 +517,14 @@ def measures_improvement(
 
     Parameters
     ----------
-    meas_datasets: list[xr.Dataset] | dict
-        List of 2 datasets: Initial dataset of measures and final (improved) dataset of measures.
+    meas_datasets : list[xr.Dataset] or dict
+        List of two datasets: Initial dataset of measures and final (improved) dataset of measures.
         Both datasets must have the same variables.
         It is also possible to pass a dictionary where the values are the datasets and the key are not used.
     dim : str or sequence of str, optional
         Dimension(s) on which to compute the percentage of improved grid points. Default is `None`, which reduces all dimensions.
-    to_level: str
-        processing_level to assign to the output dataset
+    to_level : str
+        The processing_level to assign to the output dataset.
 
     Returns
     -------
@@ -573,19 +539,14 @@ def measures_improvement(
         meas_datasets = list(meas_datasets.values())
 
     if len(meas_datasets) != 2:
-        warnings.warn(
-            "meas_datasets has more than 2 datasets."
-            " Only the first 2 will be compared."
-        )
+        warnings.warn("meas_datasets has more than 2 datasets. Only the first 2 will be compared.", stacklevel=2)
     ds1 = meas_datasets[0]
     ds2 = meas_datasets[1]
     if dim is not None:
         dims = [dim] if isinstance(dim, str) else dim
         for v in ds1.data_vars:
             if set(dims).issubset(set(ds1[v].dims)) is False:
-                raise ValueError(
-                    f"Dimension provided `dim` ({dim}) must be in every variable of `meas_datasets`"
-                )
+                raise ValueError(f"Dimension provided `dim` ({dim}) must be in every variable of `meas_datasets`")
 
     percent_better = []
     for var in ds2.data_vars:
@@ -617,20 +578,18 @@ def measures_improvement(
     return ds_better
 
 
-def measures_improvement_2d(
-    dict_input: dict, to_level: str = "diag-improved-2d"
-) -> xr.Dataset:
+def measures_improvement_2d(dict_input: dict[str, Any], to_level: str = "diag-improved-2d") -> xr.Dataset:
     """
     Create a 2D dataset with dimension `realization` showing the fraction of improved grid cell.
 
     Parameters
     ----------
-    dict_input: dict
-      If dict of datasets, the datasets should be the output of `measures_improvement`.
-      If dict of dict/list, the dict/list should be the input `meas_datasets` to `measures_improvement`.
-      The keys will be the values of the dimension `realization`.
-    to_level: str
-      Processing_level to assign to the output dataset.
+    dict_input : dict
+        If dict of datasets, the datasets should be the output of `measures_improvement`.
+        If dict of dict/list, the dict/list should be the input `meas_datasets` to `measures_improvement`.
+        The keys will be the values of the dimension `realization`.
+    to_level : str
+        Processing_level to assign to the output dataset.
 
     Returns
     -------
@@ -656,3 +615,40 @@ def measures_improvement_2d(
     ds_merge.attrs["cat:processing_level"] = to_level
 
     return ds_merge
+
+
+# Adapted from xarray.structure.merge_attrs and copied from xclim who got rid of it
+def merge_attrs(*objs: xr.DataArray | xr.Dataset) -> dict[str, Any]:
+    """
+    Merge attributes from different xarray objects, dropping any attributes that conflict.
+
+    Parameters
+    ----------
+    *objs : Sequence of xr.DataArray or xr.Dataset
+        Objects that conform to xarray data types.
+
+    Returns
+    -------
+    dict
+        Merged attributes.
+    """
+    out = {}
+    dropped = set()
+    for obj in objs:
+        attrs = obj.attrs
+        out.update({key: value for key, value in attrs.items() if key not in out and key not in dropped})
+        out = {key: value for key, value in out.items() if key not in attrs or _equivalent_attrs(attrs[key], value)}
+        dropped |= {key for key in attrs if key not in out}
+    return out
+
+
+# Adapted from xarray.core.utils.equivalent and copied from xclim who got rid of it
+def _equivalent_attrs(first, second) -> bool:
+    """Return whether two attributes are identical or not."""
+    if first is second:
+        return True
+    if isinstance(first, list) or isinstance(second, list):
+        if len(first) != len(second):
+            return False
+        return all(_equivalent_attrs(f, s) for f, s in zip(first, second, strict=False))
+    return (first == second) or (pd.isnull(first) and pd.isnull(second))

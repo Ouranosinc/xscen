@@ -94,18 +94,19 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
 
     .. code-block:: console
 
-        python -m pip install -e .[dev]
-        pre-commit install
+        python -m pip install --group dev
+        python -m pip install --editable .
+        prek install
 
     This installs ``xscen`` in an "editable" state, meaning that changes to the code are immediately seen by the environment. To ensure a consistent coding style, `make dev` also installs the ``pre-commit`` hooks to your local clone.
 
-    On commit, ``pre-commit`` will check that ``black``, ``blackdoc``, ``isort``, ``flake8``, and ``ruff`` checks are passing, perform automatic fixes if possible, and warn of violations that require intervention. If your commit fails the checks initially, simply fix the errors, re-add the files, and re-commit.
+    On commit, ``prek`` will will run ``pre-commit`` checks that ensure code quality checks are passing, perform automatic fixes if possible, and warn of violations that require intervention. If your commit fails the checks initially, simply fix the errors, re-add the files, and re-commit.
 
     You can also run the hooks manually with:
 
     .. code-block:: console
 
-        pre-commit run -a
+        prek run -a
 
     If you want to skip the ``pre-commit`` hooks temporarily, you can pass the `--no-verify` flag to `$ git commit`.
 
@@ -153,8 +154,7 @@ Ready to contribute? Here's how to set up ``xscen`` for local development.
         git commit -m "Your detailed description of your changes."
         git push origin name-of-your-bugfix-or-feature
 
-    If ``pre-commit`` hooks fail, try fixing the issues, re-staging the files to be committed, and re-committing your changes (or, if need be, you can skip them with `git commit --no-verify`).
-
+    If ``pre-commit`` hooks fail, try fixing the issues, re-staging the files to be committed, and re-committing your changes (or, if need be, you can skip them with `--no-verify` flag).
 
 #. Submit a `Pull Request <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request>`_ through the GitHub website.
 
@@ -259,6 +259,75 @@ Before you submit a pull request, check that it meets these guidelines:
 
 #. The pull request should work for all currently supported Python versions. Check the `pyproject.toml` or `tox.ini` files for the list of supported versions. We aim to follow the support and drop schedule of Python versions as recommended by the NumPy NEP calendar: https://numpy.org/neps/nep-0029-deprecation_policy.html
 
+AI Assistance Notice
+--------------------
+
+.. note::
+
+    The following information has been adapted from AI assistance usage policies developed by `Avocado <https://avocado-framework.readthedocs.io/en/latest/guides/contributor/chapters/ai_policy.html>`_ and `ghostty <https://github.com/ghostty-org/ghostty/blob/main/AI_POLICY.md>`_
+    with suggestions from software developers and maintainers at Ouranos Inc.
+
+What is AI Assistance ?
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Within the context of xscen development, AI assistance constitutess any code, code snippets, configurations, documentation, or other programmatic assets produced, suggested, or significantly modified by an artificial intelligence model, tool, or service.
+
+AI assistance can also include code that is heavily adapted from or influenced by outputs from prompts made to generative artificial intelligence models, tools, or services.
+
+Usage Disclosure
+~~~~~~~~~~~~~~~~
+
+If you are using any kind of AI assistance while contributing to xscen, **this must be disclosed in the pull request**, along with the extent to which AI assistance was used (e.g. documentation, code generation, review comments).
+Using AI to help draft responses is allowed only if the contributor meaningfully reviews, edits, and takes full responsibility for the content.
+Submitting AI-generated replies without human verification or understanding is not permitted.
+Misrepresenting AI-generated content as purely human-authored is considered a violation of the contribution guidelines.
+
+Some example disclosures:
+
+.. admonition:: Pull Request Description
+
+    ### Other information:
+
+    * This PR was primarily written using a combination of OpenClaw (Kimi K2.5) and ChatGPT (GPT-o4-mini). After using these tools, I reviewed the content.
+
+    <!-- or -->
+
+    * This PR was primarily written by me with small code snippets copy-pasted from chats with Claude (Sonnet 4.6).
+
+    <!-- or -->
+
+    * I asked GitHub Copilot to clean up and improve code I had written. I then reviewed the final product.
+
+As a small exception, trivial tab-completion doesn't need to be disclosed, so long as it is limited to single keywords or short phrases.
+
+For commits originating exclusively from AI, we also ask that their commits are signed with "Assisted-by: <tool name>" disclosure (this demand is repeated in `AGENTS.md`):
+
+.. admonition:: Commit Message
+
+    Added new method that implements the ReallyCoolNewFeature algorithm.
+
+    Assisted-by: Claude Opus 4.5
+
+Failing to disclose the use of artificial intelligence models, tools, or services is disrespectful to the developers and maintainers of open source software projects.
+We ask that contributors are forthcoming with this information so that the effort and scrutiny applied to Pull Request reviews can be adjusted accordingly.
+
+Code Review
+~~~~~~~~~~~
+
+All AI-assisted code contributions should be reviewed by the contributor before opening a Pull Request, except for minor or marginal changes, which may not require that step.
+All contributions should still be reviewed by at least one human reviewer before approval and merging into the `main` branch.
+
+Low Effort Contributions
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+AI-generated low-effort contributions are unacceptable; Human contributors must be capable of explaining their changes, responding to review comments, and precisely adapting their contributions as requested.
+
+Disclaimer
+~~~~~~~~~~
+
+The xscen maintainers reserve the right to reject Pull Requests and contributions for many different reasons (functionality out-of-scope, code quality issues, non-adherence to code of conduct, etc.)
+and this extends to code that has not been adequately disclosed as being assisted by artificial intelligence models, tools, or services.
+
 Tips
 ----
 
@@ -280,14 +349,11 @@ To run specific code style checks:
 
 .. code-block:: console
 
-    python -m black --check src/xscen tests
-    python -m isort --check src/xscen tests
-    python -m blackdoc --check src/xscen docs
     python -m ruff check src/xscen tests
     python -m flake8 src/xscen tests
-    validate-docstrings src/xscen/**.py
+    python -m numpydoc lint src/xscen/**.py
 
-To get ``black``, ``isort``, ``blackdoc``, ``ruff``, ``flake8`` (with the ``flake8-rst-docstrings`` plugin), and ``numpydoc`` (for ``validate-docstrings``), simply install them with ``pip`` (or ``conda``) into your environment.
+To get ``ruff``, ``flake8`` (with the ``flake8-rst-docstrings`` plugin), and ``numpydoc``, simply install them with ``pip`` (or ``conda``) into your environment.
 
 Versioning/Tagging
 ------------------

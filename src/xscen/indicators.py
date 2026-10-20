@@ -20,13 +20,15 @@ from xscen.config import parse_config
 from .catutils import parse_from_ds
 from .utils import CV, rechunk_for_resample, standardize_periods
 
+
 logger = logging.getLogger(__name__)
 
 __all__ = ["compute_indicators", "load_xclim_module", "registry_from_module"]
 
 
 def load_xclim_module(filename: str | os.PathLike, reload: bool = False) -> ModuleType:
-    """Return the xclim module described by the yaml file (or group of yaml, jsons and py).
+    """
+    Return the xclim module described by the yaml file (or group of yaml, jsons and py).
 
     Parameters
     ----------
@@ -61,23 +63,24 @@ def load_xclim_module(filename: str | os.PathLike, reload: bool = False) -> Modu
     return xc.build_indicator_module_from_yaml(filename)
 
 
-def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str):
-    """Returns the variables names and resampling frequency of a given indicator.
+def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str) -> tuple[list[str], str]:
+    """
+    Return the variables names and resampling frequency of a given indicator.
 
-    CAUTION : Some indicators will build the variable name on-the-fly according to the arguments.
+    CAUTION: Some indicators will build the variable name on-the-fly according to the arguments.
     This function will return the template string (with "{}").
 
     Parameters
     ----------
     ind : Indicator
-        An xclim indicator
+        An xclim indicator.
     in_freq : str
         The data's sampling frequency.
 
     Returns
     -------
     var_names : list
-        List of variable names
+        List of variable names.
     freq : str
         Indicator resampling frequency. "fx" for time-reducing indicator.
     """
@@ -86,11 +89,7 @@ def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str):
     elif not isinstance(ind, xc.core.indicator.ResamplingIndicator):
         frq = in_freq
     else:
-        frq = (
-            ind.injected_parameters["freq"]
-            if "freq" in ind.injected_parameters
-            else ind.parameters["freq"].default
-        )
+        frq = ind.injected_parameters["freq"] if "freq" in ind.injected_parameters else ind.parameters["freq"].default
     if frq == "YS":
         frq = "YS-JAN"
     var_names = [cfa["var_name"] for cfa in ind.cf_attrs]
@@ -100,20 +99,15 @@ def get_indicator_outputs(ind: xc.core.indicator.Indicator, in_freq: str):
 @parse_config
 def compute_indicators(  # noqa: C901
     ds: xr.Dataset,
-    indicators: (
-        str
-        | os.PathLike
-        | Sequence[Indicator]
-        | Sequence[tuple[str, Indicator]]
-        | ModuleType
-    ),
+    indicators: (str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType),
     *,
     periods: list[str] | list[list[str]] | None = None,
     restrict_years: bool = True,
     to_level: str | None = "indicators",
     rechunk_input: bool = False,
 ) -> dict:
-    """Calculate variables and indicators based on a YAML call to xclim.
+    """
+    Calculate variables and indicators based on a YAML call to xclim.
 
     The function cuts the output to be the same years as the inputs.
     Hence, if an indicator creates a timestep outside the original year range (e.g. the first DJF for QS-DEC),
@@ -123,7 +117,7 @@ def compute_indicators(  # noqa: C901
     ----------
     ds : xr.Dataset
         Dataset to use for the indicators.
-    indicators : str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType
+    indicators : str or os.PathLike or Sequence[Indicator] or Sequence[tuple[str, Indicator]] or ModuleType
         Path to a YAML file that instructs on how to calculate missing variables.
         Can also be only the "stem", if translations and custom indices are implemented.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
@@ -152,7 +146,8 @@ def compute_indicators(  # noqa: C901
 
     See Also
     --------
-    xclim.indicators, xclim.core.indicator.build_indicator_module_from_yaml
+    xclim.indicators : Indicators module of xclim.
+    xclim.core.indicator.build_indicator_module_from_yaml : YAML indicator constructor function of xclim.
     """
     if isinstance(indicators, str | os.PathLike):
         logger.debug("Loading indicator module.")
@@ -173,7 +168,7 @@ def compute_indicators(  # noqa: C901
     in_freq = xr.infer_freq(ds.time) if "time" in ds.dims else "fx"
     dss_rechunked = {}
 
-    out_dict = dict()
+    out_dict = {}
     for i, ind in enumerate(indicators, 1):
         if isinstance(ind, tuple):
             iden, ind = ind
@@ -199,9 +194,7 @@ def compute_indicators(  # noqa: C901
         if periods is None:
             # Pandas as no semiannual frequency and 2Q is capricious
             if freq.startswith("2Q"):
-                logger.debug(
-                    "Dropping start of timeseries to ensure semiannual frequency works."
-                )
+                logger.debug("Dropping start of timeseries to ensure semiannual frequency works.")
                 ds_in = fix_semiannual(ds_in, freq)
             # Make the call to xclim
             out = ind(ds=ds_in)
@@ -221,9 +214,7 @@ def compute_indicators(  # noqa: C901
                 ds_subset = ds_in.sel(time=slice(period[0], period[1]))
                 # Pandas as no semiannual frequency and 2Q is capricious
                 if freq.startswith("2Q"):
-                    logger.debug(
-                        "Dropping start of timeseries to ensure semiannual frequency works."
-                    )
+                    logger.debug("Dropping start of timeseries to ensure semiannual frequency works.")
                     ds_subset = fix_semiannual(ds_subset, freq)
                 tmp = ind(ds=ds_subset)
 
@@ -241,9 +232,7 @@ def compute_indicators(  # noqa: C901
             out = xr.concat(concats, dim="time")
 
         # Make sure that attributes have been kept for the dimensions and coordinates. Fixes a bug in xarray.
-        for c in set(list(out.coords) + list(out.dims)).intersection(
-            set(list(ds.coords) + list(ds.dims))
-        ):
+        for c in set(list(out.coords) + list(out.dims)).intersection(set(list(ds.coords) + list(ds.dims))):
             if (out[c].attrs != ds[c].attrs) and (out[c].sizes == ds[c].sizes):
                 out[c].attrs = ds[c].attrs
 
@@ -251,11 +240,7 @@ def compute_indicators(  # noqa: C901
             # cut the time axis to be within the same years as the input
             # for QS-DEC, xclim starts on DJF with time previous_year-12-01 with a nan as values. We want to cut this.
             # this should have no effect on YS and MS indicators
-            out = out.sel(
-                time=slice(
-                    str(ds.time[0].dt.year.values), str(ds.time[-1].dt.year.values)
-                )
-            )
+            out = out.sel(time=slice(str(ds.time[0].dt.year.values), str(ds.time[-1].dt.year.values)))
 
         # Create the dictionary key
         key = freq
@@ -271,9 +256,7 @@ def compute_indicators(  # noqa: C901
             for v in out.data_vars:
                 out_dict[key][v] = out[v]
     for key in out_dict:
-        out_dict[key].attrs["cat:variable"] = parse_from_ds(
-            out_dict[key], ["variable"]
-        )["variable"]
+        out_dict[key].attrs["cat:variable"] = parse_from_ds(out_dict[key], ["variable"])["variable"]
 
     return out_dict
 
@@ -283,7 +266,8 @@ def registry_from_module(
     registry: DerivedVariableRegistry | None = None,
     variable_column: str = "variable",
 ) -> DerivedVariableRegistry:
-    """Convert a xclim virtual indicators module to an intake_esm Derived Variable Registry.
+    """
+    Convert a xclim virtual indicators module to an intake_esm Derived Variable Registry.
 
     Parameters
     ----------
@@ -305,10 +289,8 @@ def registry_from_module(
         given their defaults.
     """
     dvr = registry or DerivedVariableRegistry()
-    for name, ind in module.iter_indicators():
-        query = {
-            variable_column: [p.default for p in ind.parameters.values() if p.kind == 0]
-        }
+    for _name, ind in module.iter_indicators():
+        query = {variable_column: [p.default for p in ind.parameters.values() if p.kind == 0]}
         for i, attrs in enumerate(ind.cf_attrs):
             dvr.register(variable=attrs["var_name"], query=query)(_derived_func(ind, i))
     return dvr
@@ -334,21 +316,16 @@ def _derived_func(ind: xc.core.indicator.Indicator, nout: int) -> partial:
 
 def select_inds_for_avail_vars(
     ds: xr.Dataset,
-    indicators: (
-        str
-        | os.PathLike
-        | Sequence[Indicator]
-        | Sequence[tuple[str, Indicator]]
-        | ModuleType
-    ),
+    indicators: (str | os.PathLike | Sequence[Indicator] | Sequence[tuple[str, Indicator]] | ModuleType),
 ) -> ModuleType:
-    """Filter the indicators for which the necessary variables are available.
+    """
+    Filter the indicators for which the necessary variables are available.
 
     Parameters
     ----------
     ds : xr.Dataset
         Dataset to use for the indicators.
-    indicators : str | os.PathLike | Sequence[Indicator] | Sequence[Tuple[str, Indicator]]
+    indicators : str or os.PathLike or Sequence[Indicator] or Sequence[Tuple[str, Indicator]]
         Path to a YAML file that instructs on how to calculate indicators.
         Can also be only the "stem", if translations and custom indices are implemented.
         Can be the indicator module directly, or a sequence of indicators or a sequence of
@@ -356,16 +333,16 @@ def select_inds_for_avail_vars(
 
     Returns
     -------
-    ModuleType – An indicator module of 'length' ∈ [0, n].
+    ModuleType
+        An indicator module of 'length' ∈ [0, n].
 
     See Also
     --------
-    xclim.indicators, xclim.core.indicator.build_indicator_module_from_yaml
+    xclim.indicators : Indicators module of xclim.
+    xclim.core.indicator.build_indicator_module_from_yaml : YAML indicator constructor function of xclim.
     """
     # Transform the 'indicators' input into a list of tuples (name, indicator)
-    is_list_of_tuples = isinstance(indicators, list) and all(
-        isinstance(i, tuple) for i in indicators
-    )
+    is_list_of_tuples = isinstance(indicators, list) and all(isinstance(i, tuple) for i in indicators)
     if isinstance(indicators, str | os.PathLike):
         logger.debug("Loading indicator module.")
         indicators = load_xclim_module(indicators, reload=True)
@@ -375,19 +352,10 @@ def select_inds_for_avail_vars(
         indicators = [(ind.base, ind) for ind in indicators]
 
     # FIXME: Remove if-else when updating minimum xclim version to 0.53
-    XCVARS = (
-        xc.core.VARIABLES if hasattr(xc.core, "VARIABLES") else xc.core.utils.VARIABLES
-    )
+    XCVARS = xc.core.VARIABLES if hasattr(xc.core, "VARIABLES") else xc.core.utils.VARIABLES
     available_vars = {var for var in ds.data_vars if var in XCVARS.keys()}
-    available_inds = [
-        (name, ind)
-        for var in available_vars
-        for name, ind in indicators
-        if var in ind.parameters.keys()
-    ]
-    return xc.core.indicator.build_indicator_module(
-        "inds_for_avail_vars", available_inds, reload=True
-    )
+    available_inds = [(name, ind) for var in available_vars for name, ind in indicators if var in ind.parameters.keys()]
+    return xc.core.indicator.build_indicator_module("inds_for_avail_vars", available_inds, reload=True)
 
 
 def _wrap_month(m):
@@ -396,12 +364,31 @@ def _wrap_month(m):
     return (m % 12) or 12
 
 
-def fix_semiannual(ds, freq):
+def fix_semiannual(ds: xr.Dataset, freq: str) -> xr.Dataset:
     """
     Avoid wrong start dates for semiannual frequency.
 
     Resampling with offsets that are multiples of a base frequency (ex: 2QS-OCT) is broken in pandas (https://github.com/pandas-dev/pandas/issues/51563).
     This will cut the beginning of the dataset so it starts exactly at the beginning of the resampling period.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        The Dataset to be adjusted.
+    freq : str
+        Frequency string.
+
+    Returns
+    -------
+    xr.Dataset
+        The adjusted Dataset.
+
+    Raises
+    ------
+    NotImplementedError
+        When a non-2Q frequency is passed.
+    ValueError
+        If a start date cannot be found in dataset.
     """
     # I hate that we have to do that
     mul, b, s, anc = parse_offset(freq)
@@ -409,7 +396,7 @@ def fix_semiannual(ds, freq):
         raise NotImplementedError("This only fixes 2Q frequencies.")
     # Get MONTH: N mapping (invert xarray's)
     months_inv = xr.coding.cftime_offsets._MONTH_ABBREVIATIONS
-    months = dict(zip(months_inv.values(), months_inv.keys()))
+    months = dict(zip(months_inv.values(), months_inv.keys(), strict=False))
 
     if s:
         m1 = months[anc]

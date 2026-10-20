@@ -91,3 +91,10 @@ indicators:
       description: Daily maximal temperature as computed from tasmin and dtr
       cell_methods: "time: maximum within days"
       var_name: tasmax
+  orog_from_z:
+    compute: orog_from_z
+    cf_attrs:
+      units: m
+      standard_name: surface_altitude
+      description: Surface altitude derived from geopotential height.
+      var_name: orog

@@ -1,5 +1,6 @@
 # noqa: D100
 import shutil
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -7,13 +8,15 @@ import pytest
 import xscen as xs
 from xscen.testing import datablock_3d as _datablock_3d
 
+
 notebooks = Path(__file__).parent.parent / "docs" / "notebooks"
 SAMPLES_DIR = notebooks / "samples" / "tutorial"
 
 
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_notebook_data_folder(request):
-    """Cleanup a testing file once we are finished.
+    """
+    Cleanup a testing file once we are finished.
 
     This flag prevents remote data from being downloaded multiple times in the same pytest run.
     """
@@ -38,7 +41,7 @@ def samplecat(request):
     df = xs.parse_directory(
         directories=[SAMPLES_DIR],
         patterns=[
-            "{activity}/{domain}/{institution}/{source}/{experiment}/{member}/{frequency}/{?:_}.nc"
+            "{activity}/{domain}/{institution}/{source}/{experiment}/{member}/{frequency}/{?:_}.nc",
         ],
         homogenous_info={
             "mip_era": "CMIP6",
@@ -51,12 +54,63 @@ def samplecat(request):
     return xs.DataCatalog({"esmcat": xs.catalog.esm_col_data, "df": df})
 
 
+@pytest.fixture(scope="session")
+def samplecatzarr(request):
+    """Generate a sample catalog with the tutorial zarr.zips ."""
+    mark_skip = request.config.getoption("-m")
+    if "not requires_netcdf" in mark_skip or not SAMPLES_DIR.exists():
+        pytest.skip("Skipping tests that require netCDF files")
+    elif not list(SAMPLES_DIR.rglob("*.zarr.zip")):
+        pytest.skip("No zarr.zip files found in the tutorial samples folder")
+
+    df = xs.parse_directory(
+        directories=[SAMPLES_DIR],
+        patterns=["{activity}/{domain}/{institution}/{source}/{experiment}/{member}/{frequency}/{?:_}.zarr.zip"],
+        homogenous_info={
+            "mip_era": "CMIP6",
+            "type": "simulation",
+            "processing_level": "raw",
+        },
+        read_from_file=["variable", "date_start", "date_end"],
+    )
+    return xs.DataCatalog({"esmcat": xs.catalog.esm_col_data, "df": df})
+
+
+@pytest.fixture(scope="session")
+def samplecatmultivar(request):
+    """Generate a sample catalog with the tutorial zarr.zips ."""
+    mark_skip = request.config.getoption("-m")
+    if "not requires_netcdf" in mark_skip or not SAMPLES_DIR.exists():
+        pytest.skip("Skipping tests that require netCDF files")
+
+    df = xs.parse_directory(
+        directories=[notebooks / "samples" / "testing"],
+        patterns=["{mip_era}_{activity}_{experiment}/{institution}_{source}.nc"],
+        homogenous_info={
+            "type": "simulation",
+            "processing_level": "rad",
+        },
+        read_from_file=True,
+    )
+    return xs.DataCatalog({"esmcat": xs.catalog.esm_col_data, "df": df})
+
+
 @pytest.fixture
 def datablock_3d():
-    """Create a generic timeseries object based on pre-defined dictionaries of existing variables.
+    """
+    Create a generic timeseries object based on pre-defined dictionaries of existing variables.
 
     See Also
     --------
-    xscen.testing.datablock_3d
+    xscen.testing.datablock_3d : For create a generic timeseries objects.
     """
     return _datablock_3d
+
+
+@pytest.fixture
+def reset_config():
+    """Once the test is done, reset CONFIG to what it was before the test started."""
+    old = deepcopy(xs.CONFIG)
+    yield
+    xs.CONFIG.clear()
+    xs.CONFIG.update(old)

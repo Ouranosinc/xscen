@@ -76,7 +76,7 @@ autosummary_generate = True
 nbsphinx_execute = "always"
 # To avoid running notebooks on linkcheck and when building PDF.
 try:
-    skip_notebooks = int(os.getenv("SKIP_NOTEBOOKS"))
+    skip_notebooks = bool(os.getenv("SKIP_NOTEBOOKS"))
 except TypeError:
     skip_notebooks = False
 if skip_notebooks:
@@ -126,6 +126,7 @@ intersphinx_mapping = {
     "clisops": ("https://clisops.readthedocs.io/en/latest/", None),
     "rechunker": ("https://rechunker.readthedocs.io/en/latest/", None),
     "xesmf": ("https://pangeo-xesmf.readthedocs.io/en/latest/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
 }
 
 extlinks = {

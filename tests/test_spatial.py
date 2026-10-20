@@ -1,7 +1,9 @@
+import cartopy.crs as ccrs
 import dask.array
 import geopandas as gpd
 import numpy as np
 import pytest
+import shapely as shp
 import xarray as xr
 import xclim as xc
 from shapely.geometry import Polygon
@@ -35,8 +37,8 @@ class TestCreepFill:
         [(1, "clip"), (2, "clip"), (3, "clip"), (1, "wrap"), (2, "wrap"), (3, "wrap")],
     )
     def test_n(self, n, mode):
-        w = xs.spatial.creep_weights(self.ds["mask"], n=n, mode=mode)
-        out = xs.spatial.creep_fill(self.ds["tas"], w)
+        w = xs.spatial.creep_weights(self.ds["mask"], size=2 * n + 1, mode=mode)
+        out = xs.spatial.apply_weights(self.ds["tas"], w)
 
         if mode == "clip":
             neighbours_0 = {
@@ -64,10 +66,7 @@ class TestCreepFill:
                 1: [22],
                 2: [22],
                 # Here all the values are included, except the False ones
-                3: [
-                    (self.ds["tas"].isel(time=0).sum().values - 22 - 1)
-                    / (self.ds["mask"].count().values - 2)
-                ],
+                3: [(self.ds["tas"].isel(time=0).sum().values - 22 - 1) / (self.ds["mask"].count().values - 2)],
             }
         else:
             neighbours_0 = {
@@ -98,56 +97,43 @@ class TestCreepFill:
                     14,
                     15,
                 ],
-                3: [
-                    (
-                        np.sum(np.arange(1, 37))
-                        - 22
-                        - 1
-                        + np.sum([19, 20, 21, 23, 24])
-                        + np.sum([4, 10, 16, 28, 34])
-                    )
-                    / (36 - 2 + 10)
-                ],
+                3: [(np.sum(np.arange(1, 37)) - 22 - 1 + np.sum([19, 20, 21, 23, 24]) + np.sum([4, 10, 16, 28, 34])) / (36 - 2 + 10)],
             }
             neighbours_3 = {
                 # For these n, the average is the same as the original value
                 1: [22],
                 2: [22],
                 # Here all the values are included, except the False ones
-                3: [
-                    (
-                        np.sum(np.arange(1, 37))
-                        - 22
-                        - 1
-                        + np.sum(np.arange(2, 7))
-                        + np.sum([7, 13, 19, 25, 31])
-                    )
-                    / (36 - 2 + 10)
-                ],
+                3: [(np.sum(np.arange(1, 37)) - 22 - 1 + np.sum(np.arange(2, 7)) + np.sum([7, 13, 19, 25, 31])) / (36 - 2 + 10)],
             }
 
-        np.testing.assert_allclose(
-            out.isel(lat=0, lon=0), np.tile(np.mean(neighbours_0[n]), 3)
-        )
-        np.testing.assert_allclose(
-            out.isel(lat=3, lon=3), np.tile(np.mean(neighbours_3[n]), 3)
-        )
+        np.testing.assert_allclose(out.isel(lat=0, lon=0), np.tile(np.mean(neighbours_0[n]), 3))
+        np.testing.assert_allclose(out.isel(lat=3, lon=3), np.tile(np.mean(neighbours_3[n]), 3))
 
     def test_wrong_mode(self):
         with pytest.raises(ValueError, match="mode must be either"):
-            xs.spatial.creep_weights(self.ds["mask"], n=1, mode="wrong")
-
-    def test_n0(self):
-        w = xs.spatial.creep_weights(self.ds["mask"], n=0, mode="clip")
-        out = xs.spatial.creep_fill(self.ds["tas"], w)
-        np.testing.assert_equal(out.isel(lat=0, lon=0), np.tile(np.nan, 3))
-        np.testing.assert_equal(out.isel(lat=3, lon=3), np.tile(np.nan, 3))
+            xs.spatial.creep_weights(self.ds["mask"], size=3, mode="wrong")
 
     def test_steps(self):
         # TODO: More in-depth testing ?
-        w = xs.spatial.creep_weights(self.ds["mask"], n=1, steps=2, mode="clip")
-        out = xs.spatial.creep_fill(self.ds["tas"], w)
+        w = xs.spatial.creep_weights(self.ds["mask"], size=3, steps=2, mode="clip")
+        xs.spatial.apply_weights(self.ds["tas"], w)
         assert "step" in w.dims
+
+
+@pytest.mark.parametrize("mode,size,exp", [("clip", 3, 8 / 9), ("clip", 5, 19 / 20), ("wrap", 7, 50 / 42)])
+def test_blur(mode, size, exp):
+    arr = np.zeros((2, 10, 6), dtype="float")
+    arr[:, :, 0] = np.nan
+    arr[:, :, 1:] = 1
+    arr[:, 2, 2] = 0
+    arr[:, -1, 2] = 10
+    da = datablock_3d(arr, "tas", "lon", -142, "lat", 0, 2, 2, "2000-01-01")
+
+    w = xs.spatial.blur_weights(da.notnull(), size=size, minvals=5, mode=mode)
+    out = xs.spatial.apply_weights(da, w)
+
+    np.testing.assert_allclose(out[0, 2, 2], exp)
 
 
 class TestGetGrid:
@@ -203,9 +189,7 @@ class TestGetGrid:
             as_dataset=True,
         )
         ds["tas"].attrs["grid_mapping"] = "lambert_conformal_conic"
-        with pytest.warns(
-            UserWarning, match="There are conflicting grid_mapping attributes"
-        ):
+        with pytest.warns(UserWarning, match="There are conflicting grid_mapping attributes"):
             assert xs.spatial.get_grid_mapping(ds) == "lambert_conformal_conic"
 
 
@@ -227,16 +211,22 @@ class TestSubset:
         ("kwargs", "name"),
         [
             ({"lon": -70, "lat": 45}, None),
+            ({"lon": -70, "lat": 45, "add_distance": True}, None),
             ({"lon": [-53.3, -69.6], "lat": [49.3, 46.6]}, "foo"),
+            (
+                {
+                    "lon": xr.DataArray([-53.3, -69.6], dims=("station",)),
+                    "lat": xr.DataArray([49.3, 46.6], dims=("station",)),
+                },
+                "foo",
+            ),
         ],
     )
     def test_subset_gridpoint(self, kwargs, name):
         with pytest.warns(UserWarning, match="tile_buffer is not used"):
-            out = xs.spatial.subset(
-                self.ds, "gridpoint", name=name, tile_buffer=5, **kwargs
-            )
+            out = xs.spatial.subset(self.ds, "gridpoint", name=name, tile_buffer=5, **kwargs)
 
-        if isinstance(kwargs["lon"], list):
+        if not isinstance(kwargs["lon"], (float, int)):
             expected = {
                 "lon": [np.round(k) for k in kwargs["lon"]],
                 "lat": [np.round(k) for k in kwargs["lat"]],
@@ -247,38 +237,55 @@ class TestSubset:
                 "lat": [np.round(kwargs["lat"])],
             }
 
-        assert (
-            f"gridpoint spatial subsetting on {len(expected['lon'])} coordinates"
-            in out.attrs["history"]
-        )
+        assert f"gridpoint spatial subsetting on {len(expected['lon'])} coordinates" in out.attrs["history"]
         np.testing.assert_array_equal(out["lon"], expected["lon"])
         np.testing.assert_array_equal(out["lat"], expected["lat"])
         if name:
             assert out.attrs["cat:domain"] == name
         else:
             assert "cat:domain" not in out.attrs
+        if isinstance(kwargs["lon"], xr.DataArray):
+            assert out.lon.dims == kwargs["lon"].dims
+
+    def test_subset_gridpoint_rotated(self):
+        dsr = datablock_3d(
+            np.ones((3, 50, 50)),
+            "tas",
+            "rlon",
+            -70,
+            "rlat",
+            45,
+            1,
+            1,
+            "2000-01-01",
+            as_dataset=True,
+        )
+
+        out = xs.spatial.subset(dsr, "gridpoint", lon=[-70, -60], lat=[45, 45])
+        assert "site" in out.dims
 
     @pytest.mark.parametrize(
         ("kwargs", "tile_buffer", "method"),
         [
             ({"lon_bnds": [-63, -60], "lat_bnds": [47, 50]}, 0, "bbox"),
             ({"lon_bnds": [-63, -60], "lat_bnds": [47, 50]}, 5, "bbox"),
-            ({}, 0, "shape"),
-            ({}, 5, "shape"),
-            ({"buffer": 3}, 5, "shape"),
+            ({}, 0, "shape-gdf"),
+            ({}, 5, "shape-poly"),
+            ({"buffer": 3}, 5, "shape-gdf"),
         ],
     )
     def test_subset_bboxshape(self, kwargs, tile_buffer, method):
-        if method == "shape":
-            gdf = gpd.GeoDataFrame(
-                {"geometry": [Polygon([(-63, 47), (-63, 50), (-60, 50), (-60, 47)])]}
-            )
-            kwargs["shape"] = gdf
+        if method.startswith("shape"):
+            poly = Polygon([(-63, 47), (-63, 50), (-60, 50), (-60, 47)])
+            if method == "shape-gdf":
+                gdf = gpd.GeoDataFrame({"geometry": [poly]})
+                kwargs["shape"] = gdf
+            else:
+                kwargs["shape"] = poly
+            method = "shape"
 
         if "buffer" in kwargs:
-            with pytest.raises(
-                ValueError, match="Both tile_buffer and clisops' buffer were requested."
-            ):
+            with pytest.raises(ValueError, match="Both tile_buffer and clisops' buffer were requested."):
                 xs.spatial.subset(self.ds, method, tile_buffer=tile_buffer, **kwargs)
         else:
             out = xs.spatial.subset(self.ds, method, tile_buffer=tile_buffer, **kwargs)
@@ -308,16 +315,12 @@ class TestSubset:
 
     @pytest.mark.parametrize("crs", ["bad", "EPSG:3857", "EPSG:4326"])
     def test_shape_crs(self, crs):
-        gdf = gpd.GeoDataFrame(
-            {"geometry": [Polygon([(-63, 47), (-63, 50), (-60, 50), (-60, 47)])]}
-        )
+        gdf = gpd.GeoDataFrame({"geometry": [Polygon([(-63, 47), (-63, 50), (-60, 50), (-60, 47)])]})
         if crs != "bad":
             gdf.crs = crs
             if crs != "EPSG:4326":
                 with pytest.warns(UserWarning, match="Reprojecting to this CRS"):
-                    with pytest.raises(
-                        ValueError, match="No grid cell centroids"
-                    ):  # This is from clisops, this is not our warning
+                    with pytest.raises(ValueError, match="No grid cell centroids"):  # This is from clisops, this is not our warning
                         xs.spatial.subset(self.ds, "shape", shape=gdf, tile_buffer=5)
             else:
                 # Make sure there is no warning about reprojection
@@ -343,7 +346,9 @@ class TestSubset:
             as_dataset=True,
         )
 
-        with pytest.raises(KeyError):
+        # Previous xarray raises KeyError as lon doesn't exist
+        # New xarray raises ValueError as it tries to create an integer lon from scratch, but can't because it would be 2D.
+        with pytest.raises((KeyError, ValueError)):
             xs.spatial.subset(ds, "sel", lon=[-75, -70], lat=[-5, 0])
         out = xs.spatial.subset(ds, "sel", rlon=[-5, 5], rlat=[0, 3])
 
@@ -376,6 +381,26 @@ class TestSubset:
             lon_bnds=[-63, -60],
             lat_bnds=[47, 50],
         )
+
+    def test_subset_with_loc(self):
+        ds = datablock_3d(
+            np.zeros((20, 10, 10)),
+            "tas",
+            "rlon",
+            -142,
+            "rlat",
+            0,
+            2,
+            2,
+            "2000-01-01",
+            as_dataset=True,
+        )
+        # stack spatial dim in 1d loc
+        ds = xs.utils.stack_drop_nans(ds, mask=["rlat", "rlon"])
+        out = xs.spatial.subset(ds.tas, method="gridpoint", lon=132.15, lat=-35.53)
+        assert len(out.dims) == 1
+        out = xs.spatial.subset(ds, method="gridpoint", lon=132.15, lat=-35.53)
+        assert len(out.dims) == 1
 
 
 def test_dask_coords():
@@ -449,6 +474,41 @@ def test_estimate_res_2d(lon_res, lat_res):
     np.testing.assert_allclose(lat_res_est, ds.lat.diff("rlat").max())
 
 
+def test_dataset_extent():
+    # curvilinear
+    ds = datablock_3d(
+        np.ones((3, 5, 5)),
+        "tas",
+        "rlon",
+        -10,
+        "rlat",
+        0,
+        0.5,
+        0.5,
+        "2000-01-01",
+        as_dataset=True,
+    )
+    bbox = xs.spatial.dataset_extent(ds, method="bbox")
+    np.testing.assert_allclose(bbox["lon_bnds"], [-112.635, -108.336], atol=1e-3)
+    np.testing.assert_allclose(bbox["lat_bnds"], [46.266, 49.157], atol=1e-3)
+
+    # rectilinear
+    ds = datablock_3d(
+        np.ones((3, 2, 2)),
+        "tas",
+        "lon",
+        -10.5,
+        "lat",
+        -0.5,
+        1,
+        1,
+        "2000-01-01",
+        as_dataset=True,
+    )
+    shape = xs.spatial.dataset_extent(ds)["shape"]
+    assert shape == shp.Polygon(([-9, -1], [-11, -1], [-11, 1], [-9, 1], [-9, -1]))
+
+
 def test_rotate_vectors():
     # Test data from CaSR 3.1, original rotation done by ECCC using librmn
     rlon = xr.DataArray(
@@ -466,8 +526,7 @@ def test_rotate_vectors():
     crs = xr.DataArray(
         attrs={
             "grid_mapping_name": "rotated_latitude_longitude",
-            "semi_major_axis": 6370997,
-            "semi_minor_axis": 6370997,
+            "earth_radius": 6370997,
             "grid_north_pole_latitude": 31.758312454493154,
             "grid_north_pole_longitude": 87.59703130293302,
             "north_pole_grid_longitude": 0,
@@ -506,3 +565,59 @@ def test_rotate_vectors():
     myuu, myvv = xs.spatial.rotate_vectors(ds.uuc, ds.vvc, reverse=True)
     np.testing.assert_allclose(myuu, ds.uu, atol=1e-3)
     np.testing.assert_allclose(myvv, ds.vv, atol=1e-3)
+
+
+@pytest.mark.parametrize("precision,nexp", [(None, 4), (2, 3)])
+def test_merge_duplicated_stations(precision, nexp):
+    ds = xr.Dataset(
+        coords={"station": xr.DataArray(list("ABCDE"), dims=("station",))},
+        data_vars={
+            "lon": xr.DataArray([-70, -60, -50.002, -50.002, -50], dims=("station",)),
+            "lat": xr.DataArray([47, 46, 46.002, 46.002, 46], dims=("station",)),
+        },
+    )
+    out = xs.spatial.merge_duplicated_stations(ds, precision=precision)
+    assert out.station.size == nexp
+    assert out.station[2].item() == "C"
+
+
+def test_get_crs():
+    ds = datablock_3d(
+        np.ones((3, 5, 5)),
+        "tas",
+        "rlon",
+        -10,
+        "rlat",
+        0,
+        0.5,
+        0.5,
+        "2000-01-01",
+        as_dataset=True,
+    )
+    ds["rotated_pole"] = xr.DataArray(
+        attrs={
+            "grid_mapping_name": "rotated_latitude_longitude",
+            "earth_radius": 6370997,
+            "grid_north_pole_latitude": 31.75831245449315,
+            "grid_north_pole_longitude": 87.597031302933,
+            "north_pole_grid_longitude": 0,
+        }
+    )
+    globe = ccrs.Globe(
+        ellipse=None,  # disable any named ellipsoid
+        semimajor_axis=6370997.0,
+        semiminor_axis=6370997.0,  # equal axes → perfect sphere
+    )
+
+    rotated_pole = ccrs.RotatedPole(pole_latitude=31.75831245449315, pole_longitude=87.597031302933, central_rotated_longitude=0.0, globe=globe)
+    # dataset
+    crs_guess = xs.spatial.get_crs(ds)
+    assert crs_guess == rotated_pole
+
+    # dataArray of variable
+    crs_guess = xs.spatial.get_crs(ds.tas)
+    assert crs_guess == rotated_pole
+
+    # dataArray of gridmap directly
+    crs_guess = xs.spatial.get_crs(ds.rotated_pole)
+    assert crs_guess == rotated_pole

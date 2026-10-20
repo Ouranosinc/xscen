@@ -1,1 +1,1 @@
-"""xclim extension module."""
+"""An xclim extension module."""

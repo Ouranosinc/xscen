@@ -6,8 +6,10 @@ import logging
 import warnings
 from collections.abc import Sequence
 from pathlib import Path
+from typing import TypeVar
 
 import cartopy.crs
+
 
 try:
     import clisops  # For version info
@@ -18,7 +20,8 @@ except KeyError as e:
             "The clisops package could not be imported due to a known KeyError bug that occurs with some "
             "older versions of ESMF and specific execution setups (such as debugging on a Windows machine). "
             "As a workaround, try installing 'importlib-metadata <8.0.0' and/or updating ESMF. If you do not "
-            "need 'clisops.core' functionalities (e.g. spatial subsetting), you can ignore this warning."
+            "need 'clisops.core' functionalities (e.g. spatial subsetting), you can ignore this warning.",
+            stacklevel=2,
         )
     else:
         raise e
@@ -27,6 +30,7 @@ except KeyError as e:
 import dask
 import geopandas as gpd
 import numpy as np
+import shapely as shp
 import sparse as sp
 import xarray as xr
 import xclim as xc
@@ -34,23 +38,51 @@ from pyproj.crs import CRS
 
 from .config import parse_config
 
+
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "Region",
+    "apply_weights",
+    "blur_weights",
     "creep_fill",
     "creep_weights",
+    "dataset_extent",
     "get_crs",
     "get_grid_mapping",
+    "merge_duplicated_stations",
     "rotate_vectors",
     "subset",
+    "voronoi_weights",
 ]
 
 
+Region = TypeVar("Region", bound=dict)
+"""
+A region specification, a dictionary with the following valid entries:
+
+- ``name`` : region name for the `domain` column
+- ``method`` : the method used for subsetting the region from a dataset:
+    - ``"shape"`` : The region is defined by a polygon in entry "shape".
+    - ``"bbox"`` : The region is defined by bounds in entries "lat_bnds" and "lon_bnds".
+    - ``"sel"`` : The region is defined by bounds in entries with the same name as the spatial coordinates.
+    - ``"gridpoint"`` : The region is a list of points defined in entries "lon" and "lat"
+
+- ``tile_buffer`` : For methods "bbox" and "shape", the actual subset is enlarged by this many grid cell sizes (approximated).
+  This differs from clisops\' ``buffer`` argument in :py:func:`~clisops.core.subset.subset_shape`.
+- ``shape`` : For method "shape" only. A shapely Polygon, geopandas GeoDataFrame or GeoSeries, or a path to a file that GeoPandas can open.
+  When multiplie shapes are present, the subsetting is done with the unary union of the geometries.
+  When the CRS information is missing, EPSG 4326 is assumed.
+- ``lat_bnds`` and ``lon_bnds`` : For method "bbox" only. Tuples of the minimum and maximum latitude or longitude values.
+- ``lon`` and ``lat`` : For method "gridpoint", 1D arrays of the longitude and latitude coordinates of the points to extract.
+- ``<coordinate name>`` : For method "sel", any other entry is understood as a tuple of the bounds to extract for that spatial dimension.
+"""
+
+
 @parse_config
-def creep_weights(
-    mask: xr.DataArray, n: int = 1, steps: int = 1, mode: str = "clip"
-) -> xr.DataArray:
-    """Compute weights for the creep fill.
+def creep_weights(mask: xr.DataArray, size: int = 3, steps: int = 1, mode: str = "clip", n: int | None = None) -> xr.DataArray:
+    """
+    Compute weights for the creep fill.
 
     The output is a sparse matrix with the same dimensions as `mask`, twice.
     If `steps` is larger than 1, the output has a "step" dimension of that length.
@@ -61,18 +93,34 @@ def creep_weights(
       A boolean DataArray. False values are candidates to the filling.
       Usually they represent missing values (`mask = da.notnull()`).
       All dimensions are creep filled.
-    n : int
-      The order of neighbouring to use. 1 means only the adjacent grid cells are used.
-    steps: int
-      Apply the algorithm this number of times, creeping `n` neighbours at each step.
+    size : int
+      The size of the square window to use when searching neighbours. 3 means only the adjacent grid cells (in each dimension) are used.
+    steps : int
+      Apply the algorithm this number of times, creeping with the same `size` at each step.
     mode : {'clip', 'wrap'}
       If a cell is on the edge of the domain, `mode='wrap'` will wrap around to find neighbours.
+    n : int, optional
+      Deprecated argument. Use `size` instead.
 
     Returns
     -------
     DataArray
        Weights. The dot product must be taken over the last N dimensions, in sequence for each step.
+
+    Notes
+    -----
+    For invalid points neighbouring valid ones, this is the same as :py:func:`blur_weights`, except that this other function
+    adds a condition on the minimum number of valid values. However, blurring also applies to all other valid pixels,
+    unlike creep filling that only modifies invalid points.
     """
+    if n is not None:
+        warnings.warn(
+            "Argument `n` of `creep_weights` has been deprecated in favor of `size`. Please pass `size = 2 * n + 1` instead.",
+            FutureWarning,
+            stacklevel=1,
+        )
+        size = 2 * n + 1
+
     if mode not in ["clip", "wrap"]:
         raise ValueError("mode must be either 'clip' or 'wrap'")
 
@@ -80,49 +128,58 @@ def creep_weights(
         da = xr.ones_like(mask).where(mask)
         weights = []
         for i in range(steps):
-            w = creep_weights(da.notnull())
+            w = creep_weights(da.notnull(), size=size, mode=mode)
             weights.append(w)
             if i < steps - 1:  # no need to do it one the last step
-                da = creep_fill(da, w)
+                da = apply_weights(da, w)
         # TODO: If we treated the nan differently we could maybe collapse all weights with dot instead of having to apply them iteratively
         return xr.concat(weights, "step")
 
+    if size < 3 or size % 2 == 0:
+        raise ValueError(f"The size of the window needs to be at least 3 and to be odd for `creep_weights`. Got size={size}.")
+    # number of neighbours
+    n = (size - 1) // 2
+
     da = mask
     mask = da.values
-    neighbors = np.array(
-        list(itertools.product(*[np.arange(-n, n + 1) for j in range(mask.ndim)]))
-    ).T
+    neighbors = np.array(list(itertools.product(*[np.arange(-n, n + 1) for j in range(mask.ndim)]))).T
     src = []
     dst = []
     w = []
     it = np.nditer(mask, flags=["f_index", "multi_index"], order="C")
     for i in it:
-        if not i:
+        if not i:  # this pixel is NaN
+            # get indexes of all neighbors
             neigh_idx_2d = np.atleast_2d(it.multi_index).T + neighbors
-            neigh_idx_1d = np.ravel_multi_index(
-                neigh_idx_2d, mask.shape, order="C", mode=mode
-            )
-            if mode == "clip":
-                neigh_idx = np.unravel_index(
-                    np.unique(neigh_idx_1d), mask.shape, order="C"
-                )
-            elif mode == "wrap":
-                neigh_idx = np.unravel_index(neigh_idx_1d, mask.shape, order="C")
+            neigh_idx_1d = np.ravel_multi_index(neigh_idx_2d, mask.shape, order="C", mode=mode)
+            if mode == "clip":  # indexes are repeated, but we want one of each
+                neigh_idx_1d = np.unique(neigh_idx_1d)
+            neigh_idx = np.unravel_index(neigh_idx_1d, mask.shape, order="C")
+            # neighbouring values, self included
             neigh = mask[neigh_idx]
+            # number of valid neighbours
             N = (neigh).sum()
             if N > 0:
-                src.extend([it.multi_index] * N)
-                dst.extend(np.stack(neigh_idx)[:, neigh].T)
+                # at least one, then this pixel will be filled by their mean
+                # dst is this pixel's index
+                dst.extend([it.multi_index] * N)
+                # src are the indexes of valid neighbours
+                src.extend(np.stack(neigh_idx)[:, neigh].T)
+                # w are the weights. it will be a dot product on input dims,
+                # so the sum of w for one dest pixel should be 1 for a normal average
                 w.extend([1 / N] * N)
             else:
-                src.extend([it.multi_index])
+                # No valid neighbours, this pixels stays nan
+                # we add it explicitly as the default value of sparse is 0
                 dst.extend([it.multi_index])
+                src.extend([it.multi_index])
                 w.extend([np.nan])
         else:
-            src.extend([it.multi_index])
+            # this pixel is not Nan, no creep filling, we preserve the source value
             dst.extend([it.multi_index])
+            src.extend([it.multi_index])
             w.extend([1])
-    crds = np.concatenate((np.array(src).T, np.array(dst).T), axis=0)
+    crds = np.concatenate((np.array(dst).T, np.array(src).T), axis=0)
     return xr.DataArray(
         sp.COO(crds, w, (*da.shape, *da.shape)),
         dims=[f"{d}_out" for d in da.dims] + list(da.dims),
@@ -132,31 +189,120 @@ def creep_weights(
 
 
 @parse_config
-def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
-    """Creep fill using pre-computed weights.
+def blur_weights(mask: xr.DataArray, size: int = 3, minvals: int | None = None, mode: str = "clip") -> xr.DataArray:
+    """
+    Compute weights for the uniform window blur.
+
+    The output is a sparse matrix with the same dimensions as `mask`, twice.
 
     Parameters
     ----------
-    da: DataArray
-      A DataArray sharing the dimensions with the one used to compute the weights.
-      It can have other dimensions.
-      Dask is supported as long as there are no chunks over the creeped dims.
-    w: DataArray
-      The result of `creep_weights`.
+    mask : DataArray
+      A boolean DataArray. True values are included in the blur.
+      Usually they represent missing values (`mask = da.notnull()`).
+      All dimensions are blurred.
+    size : int
+      The size of the square window.
+    minvals : int, optional
+      The minimum number of valid values within the window for blurring. Otherwise, the point is NaN.
+      Default (None), is the same as setting minvals to the total number of points in the window, ``size**N``
+      where ``N`` is the number of dimensions in ``mask``, i.e. it requires all points within the window to be valid.
+    mode : {'clip', 'wrap'}
+      If a cell is on the edge of the domain, `mode='wrap'` will wrap around to find neighbours.
 
     Returns
     -------
-    xarray.DataArray, same shape as `da`, but values filled according to `w`.
+    DataArray
+       Weights. The dot product must be taken over the last N dimensions.
+
+    Notes
+    -----
+    For invalid points neighbouring valid ones, this is the same as :py:func:`creep_weights`, except for
+    the added condition on the minimum number of valid values. However, blurring also applies to all other valid pixels,
+    unlike creep filling that only modifies invalid points.
+    """
+    if mode not in ["clip", "wrap"]:
+        raise ValueError("mode must be either 'clip' or 'wrap'")
+
+    da = mask
+    mask = da.values
+    n = (size - 1) // 2
+    if minvals is None:
+        minvals = size**mask.ndim
+    neighbors = np.array(list(itertools.product(*[np.arange(-n, n + 1) for j in range(mask.ndim)]))).T
+    src = []
+    dst = []
+    w = []
+    it = np.nditer(mask, flags=["f_index", "multi_index"], order="C")
+    for _ in it:
+        # get indices of all neighbours
+        neigh_idx_2d = np.atleast_2d(it.multi_index).T + neighbors
+        neigh_idx_1d = np.ravel_multi_index(neigh_idx_2d, mask.shape, order="C", mode=mode)
+        if mode == "clip":
+            neigh_idx_1d = np.unique(neigh_idx_1d)
+        neigh_idx = np.unravel_index(neigh_idx_1d, mask.shape, order="C")
+        # get neighbour values
+        neigh = mask[neigh_idx]
+        # number of valid neighbours
+        N = (neigh).sum()
+        if N >= minvals:
+            # a minimum of neighbours are valid, so replace the value of this pixel
+            # with their average
+            # dst is this pixel's index
+            dst.extend([it.multi_index] * N)
+            # src is the indexes of neighbours
+            src.extend(np.stack(neigh_idx)[:, neigh].T)
+            # w are the weights. it will be a dot product on input dims,
+            # so the sum of w for one dest pixel should be 1 for a normal average
+            w.extend([1 / N] * N)
+        else:
+            # No enough valid neighbours, put NaN
+            dst.extend([it.multi_index])
+            src.extend([it.multi_index])
+            w.extend([np.nan])
+    crds = np.concatenate((np.array(dst).T, np.array(src).T), axis=0)
+    return xr.DataArray(
+        sp.COO(crds, w, (*da.shape, *da.shape)),
+        dims=[f"{d}_out" for d in da.dims] + list(da.dims),
+        coords=da.coords,
+        name="blur_weights",
+    )
+
+
+@parse_config
+def apply_weights(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
+    """
+    Apply pre-computed weights with a dot product.
+
+    Parameters
+    ----------
+    da : xr.DataArray
+      A DataArray sharing the dimensions with the one used to compute the weights.
+      It can have other dimensions.
+      Dask is supported as long as there are no chunks over the dimensions of the weights dims.
+    w : xr.DataArray
+      The result of :py:func:`creep_weights` or :py:func:`blur_weights`, for example.
+      If it has a `step` dimension, the weights for each step are applied consecutively.
+
+    Returns
+    -------
+    xr.DataArray
+       Same shape as `da`.
+
+    See Also
+    --------
+    creep_weights : Create weights for creep filling extrapolation.
+    blur_weights : Create weights for a blur filter.
 
     Examples
     --------
     >>> w = creep_weights(da.isel(time=0).notnull(), n=1)
-    >>> da_filled = creep_fill(da, w)
+    >>> da_filled = apply_weights(da, w)
     """
     if "step" in w.dims:
         out = da
         for step in w.step:
-            out = creep_fill(out, w.sel(step=step))
+            out = apply_weights(out, w.sel(step=step))
         return out
 
     def _dot(arr, wei):
@@ -174,6 +320,13 @@ def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
         dask="parallelized",
         output_dtypes=["float64"],
     )
+
+
+@parse_config
+def creep_fill(da: xr.DataArray, w: xr.DataArray) -> xr.DataArray:
+    """Deprecated version of apply_weights."""  # numpydoc ignore=PR01,RT01
+    warnings.warn("creep_fill was renamed apply_weights.", FutureWarning, stacklevel=2)
+    return apply_weights(da, w)
 
 
 def rotate_vectors(
@@ -195,7 +348,7 @@ def rotate_vectors(
       Must be CF-compliant, so its coordinates are correctly found.
     crs : pyproj.CRS, optional
       The projection of the UU and VV grid. If not given, the grid mapping attribute from UU is read.
-    reverse: bool
+    reverse : bool
       If True, the opposite rotation is performed : inputs are understood as in the real S-N, W-E axes and are
       rotated back to the grid axes.
 
@@ -268,7 +421,7 @@ def subset(
     tile_buffer : float
         For ['bbox', shape'], uses an approximation of the grid cell size to add a buffer around the requested region.
         This differs from clisops' 'buffer' argument in subset_shape().
-    \*\*kwargs : dict
+    **kwargs : dict
         Arguments to be sent to clisops. See relevant function for details. Depending on the method, required kwargs are:
         - gridpoint: lon, lat
         - bbox: lon_bnds, lat_bnds
@@ -282,16 +435,17 @@ def subset(
 
     See Also
     --------
-    clisops.core.subset.subset_gridpoint, clisops.core.subset.subset_bbox, clisops.core.subset.subset_shape
+    clisops.core.subset.subset_gridpoint : Used for the 'gridpoint' method.
+    clisops.core.subset.subset_bbox : Used for the 'bbox' method.
+    clisops.core.subset.subset_shape : Used for the 'shape' method.
     """
     if cl is None and method in ["gridpoint", "bbox", "shape"]:
-        raise ImportError(
-            "The clisops package is required for the 'gridpoint', 'bbox' and 'shape' methods."
-        )
+        raise ImportError("The clisops package is required for the 'gridpoint', 'bbox' and 'shape' methods.")
     if tile_buffer > 0 and method in ["gridpoint", "sel"]:
         warnings.warn(
             f"tile_buffer is not used for the '{method}' method. Ignoring the argument.",
             UserWarning,
+            stacklevel=2,
         )
 
     if "latitude" not in ds.cf or "longitude" not in ds.cf:
@@ -306,9 +460,7 @@ def subset(
     elif method == "sel":
         ds_subset = _subset_sel(ds, name=name, **kwargs)
     else:
-        raise ValueError(
-            "Subsetting type not recognized. Use 'gridpoint', 'bbox', 'shape' or 'sel'."
-        )
+        raise ValueError("Subsetting type not recognized. Use 'gridpoint', 'bbox', 'shape' or 'sel'.")
 
     return ds_subset
 
@@ -321,7 +473,8 @@ def _subset_gridpoint(
     name: str | None = None,
     **kwargs,
 ) -> xr.Dataset:
-    r"""Subset the data to a gridpoint.
+    r"""
+    Subset the data to a gridpoint.
 
     Parameters
     ----------
@@ -333,7 +486,7 @@ def _subset_gridpoint(
         Latitude coordinate(s). Must be of the same length as lon.
     name: str, optional
         Used to rename the 'cat:domain' attribute.
-    \*\*kwargs : dict
+    **kwargs : dict
         Other arguments to be sent to clisops. Possible kwargs are:
         - start_date (str): Start date for the subset in the format 'YYYY-MM-DD'.
         - end_date (str): End date for the subset in the format 'YYYY-MM-DD'.
@@ -353,7 +506,48 @@ def _subset_gridpoint(
     if not hasattr(lat, "__iter__"):
         lat = [lat]
 
-    ds_subset = cl.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
+    if isinstance(lon, xr.DataArray):
+        dim = lon.dims[0]
+        lon = lon.rename({dim: "site"})
+        lat = lat.rename({dim: "site"})
+    else:
+        dim = "site"
+        lon = xr.DataArray(lon, dims=("site",), name="lon")
+        lat = xr.DataArray(lat, dims=("site",), name="lon")
+
+    try:
+        crs = get_crs(ds)
+    except (NotImplementedError, KeyError):
+        crs = None
+    if (
+        not set(kwargs.values()) - {None}  # No kwargs have been set differently from the default
+        and crs is not None  # the actual crs of the data is known
+        and "X" in ds.cf.axes
+        and "Y" in ds.cf.axes  # the coords (in the actual crs) are known
+        and ds.cf["X"].name in ds.indexes  # for the loc case
+        and ds.cf["Y"].name in ds.indexes  # the coords are indexable (required for nearest-sel)
+        and (lon.size * ds.cf["Y"].size * ds.cf["X"].size) > 1000  # the work to do is relatively large
+    ):
+        # Fast-track : use xarray's nearest-sel on 1D coordinate by converting the request to the actual CRS
+        PC = cartopy.crs.PlateCarree()
+        if isinstance(crs, cartopy.crs.PlateCarree):
+            X = lon
+            Y = lat
+        else:
+            crds = crs.transform_points(PC, lon, lat)
+            X = xr.DataArray(crds[:, 0], dims=lon.dims, coords=lon.coords, name=ds.cf["X"].name)
+            Y = xr.DataArray(crds[:, 1], dims=lat.dims, coords=lat.coords, name=ds.cf["Y"].name)
+
+        ds_subset = ds.cf.sel(X=X, Y=Y, method="nearest")
+
+        if ds_subset.site.size == 1:
+            ds_subset = ds_subset.squeeze(dim)
+    else:
+        ds_subset = cl.subset_gridpoint(ds, lon=lon, lat=lat, **kwargs)
+
+    if dim != "site":
+        ds_subset = ds_subset.rename(site=dim)
+
     new_history = (
         f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
         f"gridpoint spatial subsetting on {len(lon)} coordinates - clisops v{clisops.__version__}"
@@ -371,7 +565,8 @@ def _subset_bbox(
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
-    r"""Subset the data to a bounding box.
+    r"""
+    Subset the data to a bounding box.
 
     Parameters
     ----------
@@ -385,7 +580,7 @@ def _subset_bbox(
         Used to rename the 'cat:domain' attribute.
     tile_buffer: float
         Uses an approximation of the grid cell size to add a dynamic buffer around the requested region.
-    \*\*kwargs : dict
+    **kwargs : dict
         Other arguments to be sent to clisops. Possible kwargs are:
         - start_date (str): Start date for the subset in the format 'YYYY-MM-DD'.
         - end_date (str): End date for the subset in the format 'YYYY-MM-DD'.
@@ -425,25 +620,26 @@ def _subset_bbox(
 
 def _subset_shape(
     ds: xr.Dataset,
-    shape: str | Path | gpd.GeoDataFrame,
+    shape: str | Path | gpd.GeoDataFrame | shp.Polygon,
     *,
     name: str | None = None,
     tile_buffer: float = 0,
     **kwargs,
 ) -> xr.Dataset:
-    r"""Subset the data to a shape.
+    r"""
+    Subset the data to a shape.
 
     Parameters
     ----------
     ds : xr.Dataset
         Dataset to be subsetted.
-    shape : str or gpd.GeoDataFrame
-        Path to the shapefile or GeoDataFrame.
+    shape : str or gpd.GeoDataFrame or shp.Polygon
+        Path to the shapefile or GeoDataFrame or Polygon (which is assumed to have the ESPG:4326 CRS).
     name: str, optional
         Used to rename the 'cat:domain' attribute.
     tile_buffer: float
         Uses an approximation of the grid cell size to add a buffer around the requested region.
-    \*\*kwargs : dict
+    **kwargs : dict
         Other arguments to be sent to clisops. Possible kwargs are:
         - raster_crs (str or int): EPSG number or PROJ4 string.
         - shape_crs (str or int): EPSG number or PROJ4 string.
@@ -460,17 +656,17 @@ def _subset_shape(
     """
     ds = _load_lon_lat(ds)
 
+    if isinstance(shape, str | Path):
+        shape = gpd.read_file(shape)
+    elif isinstance(shape, shp.Polygon):
+        shape = gpd.GeoDataFrame(geometry=[shape], crs=CRS(4326))
+
     if tile_buffer > 0:
         if kwargs.get("buffer") is not None:
-            raise ValueError(
-                "Both tile_buffer and clisops' buffer were requested. Use only one."
-            )
+            raise ValueError("Both tile_buffer and clisops' buffer were requested. Use only one.")
         lon_res, lat_res = _estimate_grid_resolution(ds)
 
         # The buffer argument needs to be in the same units as the shapefile, so it's simpler to always project the shapefile to WGS84.
-        if isinstance(shape, str | Path):
-            shape = gpd.read_file(shape)
-
         try:
             shape_crs = shape.crs
         except AttributeError:
@@ -478,12 +674,14 @@ def _subset_shape(
         if shape_crs is None:
             warnings.warn(
                 "Shapefile does not have a CRS. Compatibility with the dataset is not guaranteed.",
+                stacklevel=2,
                 category=UserWarning,
             )
         elif shape_crs != CRS(4326):  # WGS84
             warnings.warn(
                 "Shapefile is not in EPSG:4326. Reprojecting to this CRS.",
                 UserWarning,
+                stacklevel=2,
             )
             shape = shape.to_crs(4326)
 
@@ -501,7 +699,8 @@ def _subset_shape(
 
 
 def _subset_sel(ds: xr.Dataset, *, name: str | None = None, **kwargs) -> xr.Dataset:
-    r"""Subset the data using the .sel() method.
+    r"""
+    Subset the data using the .sel() method.
 
     Parameters
     ----------
@@ -509,7 +708,7 @@ def _subset_sel(ds: xr.Dataset, *, name: str | None = None, **kwargs) -> xr.Data
         Dataset to be subsetted.
     name: str, optional
         Used to rename the 'cat:domain' attribute.
-    \*\*kwargs : dict
+    **kwargs : dict
         The keys are the dimensions to subset and the values are turned into a slice.
 
     Returns
@@ -524,10 +723,7 @@ def _subset_sel(ds: xr.Dataset, *, name: str | None = None, **kwargs) -> xr.Data
     ds_subset = ds.sel(**arg_sel)
 
     # Update the history attribute
-    new_history = (
-        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
-        f"sel subsetting with arguments {arg_sel}"
-    )
+    new_history = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] sel subsetting with arguments {arg_sel}"
 
     return update_history_and_name(ds_subset, new_history, name)
 
@@ -545,19 +741,25 @@ def _load_lon_lat(ds: xr.Dataset) -> xr.Dataset:
 
 
 def get_grid_mapping(ds: xr.Dataset) -> str:
-    """Get the grid_mapping attribute from the dataset."""
-    gridmap = [
-        ds[v].attrs["grid_mapping"]
-        for v in ds.data_vars
-        if "grid_mapping" in ds[v].attrs
-    ]
-    gridmap += [c for c in ds.coords if ds[c].attrs.get("grid_mapping_name", None)]
+    """
+    Get the grid_mapping attribute from the dataset.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        The dataset to get the grid mapping from.
+
+    Returns
+    -------
+    str
+        The name of the grid mapping variable, or an empty string if not found.
+    """
+    gridmap = [ds[v].attrs["grid_mapping"] for v in ds.data_vars if "grid_mapping" in ds[v].attrs]
+    gridmap += [c for c in ds.variables if ds[c].attrs.get("grid_mapping_name", None)]
     gridmap = list(np.unique(gridmap))
 
     if len(gridmap) > 1:
-        warnings.warn(
-            f"There are conflicting grid_mapping attributes in the dataset. Assuming {gridmap[0]}."
-        )
+        warnings.warn(f"There are conflicting grid_mapping attributes in the dataset. Assuming {gridmap[0]}.", stacklevel=2)
 
     return gridmap[0] if gridmap else ""
 
@@ -568,28 +770,51 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
 
     Parameters
     ----------
-    gridmap: xr.Dataset or xr.DataArray
-      Either a dataset that has a grid mapping variable or that grid mapping variable directly.
+    gridmap : xr.Dataset or xr.DataArray
+      Either a dataset or dataraay that has a grid mapping variable or that grid mapping variable directly.
 
     Returns
     -------
     cartopy.crs.Projection
       The cartopy crs. Only RotatedPole and ObliqueMercator are supported.
     """
-    if isinstance(gridmap, xr.Dataset):
-        gridmap = gridmap[get_grid_mapping(gridmap)]
+    # if not passing the grid mapping var itself, we need to get it
+    if "grid_mapping_name" not in gridmap.attrs:
+        if isinstance(gridmap, xr.Dataset):
+            gridmap_name = get_grid_mapping(gridmap)
+        else:  # DataArray
+            gridmap_name = gridmap.attrs["grid_mapping"]
+
+        if gridmap_name == "" and (
+            "longitude" in gridmap.cf
+            and "X" in gridmap.cf
+            and gridmap.cf["longitude"].name == gridmap.cf["X"].name
+            and gridmap.cf["X"].ndim == 1
+            and "latitude" in gridmap.cf
+            and "Y" in gridmap.cf
+            and gridmap.cf["latitude"].name == gridmap.cf["Y"].name
+            and gridmap.cf["Y"].ndim == 1
+        ):
+            gridmap = xr.DataArray(attrs={"grid_mapping_name": "latitude_longitude"})
+        else:
+            gridmap = gridmap[gridmap_name]
+
     cf_params = gridmap.attrs
+    # RotPole is a spherical-only projection, so having a WGS84 ellipse makes it confusing
+    # Moreover, climate models usually use spherical models of the earth, so we use a spherical globe by default
+    # This is different from cartopy, especially with PROJ >= 9.8
+    # 6370997 m is the conventional of the Earth as a sphere
     globe = cartopy.crs.Globe(
         datum=cf_params.get("horizontal_datum_name"),
-        ellipse=cf_params.get("reference_ellipsoid_name", "WGS84"),
-        semimajor_axis=(
-            cf_params.get("earth_radius") or cf_params.get("semi_major_axis")
-        ),
+        ellipse=cf_params.get("reference_ellipsoid_name", "sphere"),
+        semimajor_axis=(cf_params.get("earth_radius") or cf_params.get("semi_major_axis") or 6370997),
         semiminor_axis=cf_params.get("semi_minor_axis"),
         inverse_flattening=cf_params.get("inverse_flattening"),
         towgs84=cf_params.get("towgs84"),
     )
-    if cf_params["grid_mapping_name"] == "rotated_latitude_longitude":
+    if cf_params["grid_mapping_name"] == "latitude_longitude":
+        crs = cartopy.crs.PlateCarree(globe=globe)
+    elif cf_params["grid_mapping_name"] == "rotated_latitude_longitude":
         crs = cartopy.crs.RotatedPole(
             pole_longitude=cf_params["grid_north_pole_longitude"],
             pole_latitude=cf_params["grid_north_pole_latitude"],
@@ -606,10 +831,19 @@ def get_crs(gridmap: xr.Dataset | xr.DataArray) -> cartopy.crs.Projection:
             false_northing=cf_params.get("false_northing", 0),
             globe=globe,
         )
-    else:
-        raise NotImplementedError(
-            f"Grid mapping {cf_params['grid_mapping_name']} not implemented."
+    elif cf_params["grid_mapping_name"] == "lambert_conformal_conic":
+        crs = cartopy.crs.LambertConformal(
+            standard_parallels=(cf_params["standard_parallel"],)
+            if np.isscalar(cf_params["standard_parallel"])
+            else tuple(cf_params["standard_parallel"]),
+            central_longitude=cf_params["longitude_of_central_meridian"],
+            central_latitude=cf_params["latitude_of_projection_origin"],
+            false_easting=cf_params.get("false_easting", 0),
+            false_northing=cf_params.get("false_northing", 0),
+            globe=globe,
         )
+    else:
+        raise NotImplementedError(f"Grid mapping {cf_params['grid_mapping_name']} not implemented.")
     return crs
 
 
@@ -627,12 +861,216 @@ def _estimate_grid_resolution(ds: xr.Dataset) -> tuple[float, float]:
 
 
 def update_history_and_name(ds_subset, new_history, name):
-    history = (
-        new_history + " \n " + ds_subset.attrs["history"]
-        if "history" in ds_subset.attrs
-        else new_history
-    )
+    """
+    Update the history attribute and optionally the domain name of a dataset.
+
+    Parameters
+    ----------
+    ds_subset : xarray.Dataset
+        The dataset to update.
+    new_history : str
+        The new history entry.
+    name : str, optional
+        The new domain name.
+
+    Returns
+    -------
+    xarray.Dataset
+        The updated dataset.
+    """
+    history = new_history + " \n " + ds_subset.attrs["history"] if "history" in ds_subset.attrs else new_history
     ds_subset.attrs["history"] = history
     if name is not None:
         ds_subset.attrs["cat:domain"] = name
     return ds_subset
+
+
+def dataset_extent(ds: xr.Dataset, method: str = "shape", name: str | None = None) -> Region:
+    r"""
+    The dataset's spatial extent expressed as a xscen Region spec.
+
+    Parameters
+    ----------
+    ds : Dataset
+        A dataset containing a grid with latitude and longitude coordinates and either
+        the bounds or a grid mapping understood by :py:func:`~xscen.regrid.create_bounds_gridmapping`.
+    method : {'shape', 'bbox'}
+        One of the two methods recognized by xscen to specify an area.
+        "shape" will compute a shapely polygon in latitude longitude coordinates from
+        the cell bounds. "bbox" will return the total extent of that polygon.
+    name : str, optional
+        A name to give to the region.
+
+    Returns
+    -------
+    Region
+        A :py:data:`~xscen.spatial.Region` dictionary useful for subsetting other datasets.
+    """
+    from .regrid import create_bounds_gridmapping
+
+    if "lat_bounds" not in ds:
+        if "lat" in ds and ds.lat.ndim == 1:
+            ds = ds.cf.add_bounds(["lon", "lat"])
+        else:
+            ds = create_bounds_gridmapping(ds)
+    if ds["lat_bounds"].ndim == 2:
+        lonb = ds.lon_bounds.isel(bounds=xr.DataArray([0, 0, 1, 1], dims=("bounds",)))
+        latb = ds.lat_bounds.isel(bounds=xr.DataArray([0, 1, 1, 0], dims=("bounds",)))
+        lonb, latb = xr.broadcast(lonb, latb)
+    else:
+        lonb, latb = ds.lon_bounds, ds.lat_bounds
+
+    region = {"method": method}
+    if name is not None:
+        region["name"] = name
+
+    # Tolerance 0 is to merge colinear segments, without degrading anything else
+    p = shp.simplify(
+        shp.unary_union(shp.polygons(shp.linearrings(lonb.transpose(..., "bounds"), latb.transpose(..., "bounds")))),
+        tolerance=0,
+    )
+
+    match method:
+        case "shape":
+            region["shape"] = p
+        case "bbox":
+            bnds = p.bounds
+            region["lon_bnds"] = [bnds[0], bnds[2]]
+            region["lat_bnds"] = [bnds[1], bnds[3]]
+        case _ as err:
+            raise ValueError(f"Method must be 'shape' or 'bbox'. Got {err}.")
+
+    return region
+
+
+def merge_duplicated_stations(ds: xr.Dataset, precision: float | None = None) -> xr.Dataset:
+    """
+    Merge identical locations of a dataset.
+
+    Identical locations are merged by combination of float values (priority from order of the location dimension).
+    Non-float values are taken from the first element.
+
+    Parameters
+    ----------
+    ds : Dataset
+        Dataset with `lon` and `lat` coordinates. Both must be 1D and share the same dimension.
+    precision : float, optional
+        Round the coordinate up to this decimal before looking for duplicated points.
+        Default (None) is not to round.
+
+    Returns
+    -------
+    Dataset
+        A dataset with the same variables as the input but with duplicated locations merged.
+    """
+    dim = ds.lat.dims[0]
+    # Geopandas et des Points, c'est plus rapide que Pandas et des tuples
+    if precision is not None:
+        lon = ds.lon.round(precision)
+        lat = ds.lat.round(precision)
+    else:
+        lon, lat = ds.lon, ds.lat
+
+    df = gpd.GeoDataFrame(index=ds[dim], geometry=[shp.Point(lo, la) for lo, la in zip(lon, lat, strict=True)])
+    dups = df.duplicated("geometry")
+    if dups.sum() == 0:
+        # aucun dup
+        return ds
+
+    dss = []
+    N = 0
+    for _, grp in df.groupby("geometry"):
+        if len(grp) == 1:
+            dss.append(ds.sel({dim: [grp.index[0]]}))
+        else:
+            N += len(grp) - 1
+            dsi = ds.sel({dim: grp.index})
+            dss.append(
+                dsi.map(
+                    lambda x, d: (x.bfill(d) if x.dtype == "f" else x).isel({d: [0]}),
+                    args=(dim,),
+                )
+            )
+
+    h = f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Merged {N} co-located points along dimension {dim}."
+
+    return update_history_and_name(xr.concat(dss, dim), h, None)
+
+
+def voronoi_weights(
+    ds: xr.Dataset,
+    region: gpd.GeoDataFrame | shp.Polygon | None = None,
+    maxfrac: float | None = None,
+    minlocs: int = 0,
+    _pts: gpd.GeoDataFrame | None = None,
+) -> xr.DataArray:
+    """
+    Compute a weight for each location in the dataset inversely proportionnate to the location density.
+
+    The total extent of the dataset is divided in regions using the Voronoi partition and weights are
+    computed from the area of these regions. This is meant for station data for example.
+
+    Parameters
+    ----------
+    ds : Dataset
+        Dataset with `lon` and `lat` coordinates. Both must be 1D and share the same dimension.
+    region : GeoDataFrame or Polygon, optional
+        A polygon to constrain the total area to partition with Voronoi polygons.
+        Can also be a GeoDataFrame, in which case the weights are done for each feature.
+        Defaults to a convex hull around ds with a buffer of 1°.
+        See :py:func:`dataset_extent`.
+    maxfrac : float, optional
+        Limits the maximal region area to this fraction of the total area.
+    minlocs : int
+        When `region` is a GeoDataFrame, features containing less than this number of locations are removed from the output.
+    _pts : GeoDataFrame, optional
+        A GeoDataFrame of points to use for the Voronoi partition.
+        This is a shortcut for when iterating over regions.
+
+    Returns
+    -------
+    DataArray
+        The weights along the same dimension as the locations on the input.
+        If region was a GeoDataFrame, another dimension "geom" partitions the weights
+        for each feature and other columns are added as auxiliary coordinates (as with :py:func:`xs.spatial_mean`).
+    """
+    dim = ds.lon.dims[0]
+    if _pts is None:
+        pts = gpd.GeoDataFrame(
+            index=ds[dim],
+            geometry=[shp.Point(lo, la) for lo, la in zip(ds.lon, ds.lat, strict=True)],
+        )
+    else:  # Shortcut for when iterating over regions
+        pts = _pts
+
+    if region is None:
+        region = pts.union_all().convex_hull.buffer(1)
+    elif isinstance(region, gpd.GeoDataFrame):
+        weights = []
+        for _, row in region.iterrows():
+            weights.append(voronoi_weights(ds, row.geometry, maxfrac=maxfrac, _pts=pts).expand_dims(geom=[row.name]))
+        weight = xr.concat(weights, "geom")
+        weight = weight.assign_coords(region.drop(columns=["geometry"]).to_xarray().rename({region.index.name or "index": "geom"}))
+        if minlocs > 0:
+            weight = weight.where((weight > 0).sum(ds.lon.dims) >= minlocs, drop=True)
+            weight = weight.where((weight > 0).any("geom"), drop=True)
+        return weight
+
+    zones = gpd.GeoDataFrame(geometry=pts.voronoi_polygons(extend_to=region)).clip(region)
+    zones["geometry"] = zones.buffer(0)
+    zones["zone_area"] = zones.geometry.area
+
+    # overlay aligns points with their intersecting polygon
+    # reset_index, set_index, reindex dance to preserve indexing info and sort final DF as input
+    area = (gpd.overlay(pts.reset_index(names="station"), zones).set_index("station").reindex(pts.index)["zone_area"]).fillna(0)
+
+    if maxfrac is not None:
+        maxarea = area.sum() * maxfrac
+        area = area.clip(0, maxarea)
+
+    return xr.DataArray(
+        0 if area.sum() == 0 else area / area.sum(),
+        dims=(dim,),
+        coords=ds[dim].coords,
+        name="weights",
+    )

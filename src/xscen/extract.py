@@ -5,7 +5,6 @@ import logging
 import os
 import re
 import warnings
-from collections import defaultdict
 from collections.abc import Callable, Sequence
 from copy import deepcopy
 from pathlib import Path
@@ -17,6 +16,7 @@ import xclim as xc
 from intake_esm.derived import DerivedVariableRegistry
 from scipy.interpolate import interp1d
 from xclim.core.calendar import compare_offsets
+
 
 try:
     import xclim.indicators.convert as convert
@@ -33,10 +33,10 @@ from .catalog import (
 from .catutils import parse_from_ds
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
-from .spatial import subset
-from .utils import CV, _xarray_defaults
+from .spatial import Region, subset
+from .utils import CV, _xarray_defaults, get_cat_attrs, natural_sort, standardize_periods, vectorized_time_bounds_subset, xrfreq_to_timedelta
 from .utils import ensure_correct_time as _ensure_correct_time
-from .utils import get_cat_attrs, natural_sort, standardize_periods, xrfreq_to_timedelta
+
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ def extract_dataset(  # noqa: C901
     *,
     variables_and_freqs: dict | None = None,
     periods: list[str | int] | list[list[str | int]] | None = None,
-    region: dict | None = None,
+    region: Region | None = None,
     to_level: str = "extracted",
     ensure_correct_time: bool = True,
     xr_open_kwargs: dict | None = None,
@@ -68,10 +68,7 @@ def extract_dataset(  # noqa: C901
     mask: bool | xr.Dataset | xr.DataArray = False,
 ) -> dict:
     """
-    Take one element of the output of `search_data_catalogs` and returns a dataset,
-    performing conversions and resampling as needed.
-
-    Nothing is written to disk within this function.
+    Take one element of the output of `search_data_catalogs` and returns a dataset.
 
     Parameters
     ----------
@@ -84,8 +81,8 @@ def extract_dataset(  # noqa: C901
     periods : list of str or list of int or list of lists of str or list of lists of int, optional
         Either [start, end] or list of [start, end] for the periods to be evaluated.
         Will be read from catalog._requested_periods if None. Leave both None to extract everything.
-    region : dict, optional
-        Description of the region and the subsetting method (required fields listed in the Notes) used in `xscen.spatial.subset`.
+    region : :py:data:`~xscen.spatial.Region`, optional
+        Description of the region and the subsetting method used in `xscen.spatial.subset`.
     to_level : str
         The processing level to assign to the output. Defaults to 'extracted'.
     ensure_correct_time : bool
@@ -120,21 +117,11 @@ def extract_dataset(  # noqa: C901
         Dictionary (keys = xrfreq) with datasets containing all available and computed variables,
         subsetted to the region, everything resampled to the requested frequency.
 
-    Notes
-    -----
-    'region' fields:
-        name: str
-            Region name used to overwrite domain in the catalog.
-        method: str
-            ['gridpoint', 'bbox', shape', 'sel']
-        tile_buffer: float, optional
-            Multiplier to apply to the model resolution.
-        kwargs
-            Arguments specific to the method used.
-
     See Also
     --------
-    intake_esm.core.esm_datastore.to_dataset_dict, xarray.open_dataset, xarray.combine_by_coords
+    intake_esm.core.esm_datastore.to_dataset_dict: Method to open a catalog as a dictionary of xarray Datasets.
+    xarray.open_dataset: Function to open a file as an xarray Dataset.
+    xarray.combine_by_coords: Function to combine multiple xarray Datasets by their coordinates.
     """
     resample_methods = resample_methods or {}
 
@@ -142,38 +129,34 @@ def extract_dataset(  # noqa: C901
     # must have all the same processing level and same id
     unique = catalog.unique()
     if len(unique["processing_level"]) > 1 or len(unique["id"]) > 1:
-        raise ValueError(
-            "The extraction catalog must have a unique id and unique processing_level."
-        )
+        raise ValueError("The extraction catalog must have a unique id and unique processing_level.")
     if region is None and len(unique["domain"]) > 1:
-        raise ValueError(
-            "If a subset region is not given, the extraction catalog must have a unique domain."
-        )
+        raise ValueError("If a subset region is not given, the extraction catalog must have a unique domain.")
 
     if variables_and_freqs is None:
         try:
-            variables_and_freqs = defaultdict(list)
-            for a, b in zip(
-                catalog._requested_variables_true, catalog._requested_variable_freqs
-            ):
-                variables_and_freqs[a].extend([b])
-        except ValueError:
-            raise ValueError("Failed to determine the requested variables and freqs.")
-    else:
-        # Make everything a list
-        variables_and_freqs = {
-            k: [v] if not isinstance(v, list) else v
-            for k, v in variables_and_freqs.items()
-        }
+            variables_and_freqs = catalog._requested_variable_freqs.copy()
+        except AttributeError as err:
+            raise ValueError("Failed to determine the requested variables and freqs.") from err
+    # Make everything a list
+    variables_and_freqs = {k: [v] if not isinstance(v, list) else v for k, v in variables_and_freqs.items()}
 
     # Default arguments to send xarray
-    xr_kwargs = _xarray_defaults(
-        xr_open_kwargs=xr_open_kwargs or {}, xr_combine_kwargs=xr_combine_kwargs or {}
-    )
+    xr_kwargs = _xarray_defaults(xr_open_kwargs=xr_open_kwargs or {}, xr_combine_kwargs=xr_combine_kwargs or {})
+
+    def _new_preprocess(ds):
+        # existing preprocess first
+        if preprocess:
+            ds = preprocess(ds)
+        # if ensure_correct_time, we fix "anchor" for daily and finer, by flooring
+        # however, if we can't infer freq, we hope the postprocess version will fix it
+        if ensure_correct_time and "time" in ds and (xrfreq := (xr.infer_freq(ds.time) if ds.time.size > 2 else None)) in list("DHTMUL"):
+            ds["time"] = ds.time.dt.floor(xrfreq)
+        return ds
 
     # Open the catalog
     ds_dict = catalog.to_dataset_dict(
-        preprocess=preprocess,
+        preprocess=_new_preprocess,
         # Only print a progress bar when it is minimally useful
         progressbar=(len(catalog.keys()) > 1),
         **xr_kwargs,
@@ -186,15 +169,11 @@ def extract_dataset(  # noqa: C901
         # iterate on the datasets, in reverse timedelta order
         for key, ds_ts in sorted(
             ds_dict.items(),
-            key=lambda kv: pd.Timedelta(
-                CV.xrfreq_to_timedelta(catalog[kv[0]].df.xrfreq.iloc[0], default="NAN")
-            ),
+            key=lambda kv: pd.Timedelta(CV.xrfreq_to_timedelta(catalog[kv[0]].df.xrfreq.iloc[0], default="NAN")),
             reverse=True,
         ):
             if "time" in ds_ts:
-                if pd.Timedelta(
-                    CV.xrfreq_to_timedelta(catalog[key].df.xrfreq.iloc[0])
-                ) > pd.Timedelta(CV.xrfreq_to_timedelta(xrfreq)):
+                if pd.Timedelta(CV.xrfreq_to_timedelta(catalog[key].df.xrfreq.iloc[0])) > pd.Timedelta(CV.xrfreq_to_timedelta(xrfreq)):
                     continue
                 if ensure_correct_time:
                     # Expected freq (xrfreq is the wanted freq)
@@ -210,29 +189,15 @@ def extract_dataset(  # noqa: C901
                     continue
 
                 # TODO: 2nd part is a temporary fix until this is changed in intake_esm
-                if (
-                    var_name in ds
-                    or xrfreq not in variables_and_freqs.get(var_name, [])
-                    or var_name not in catalog._requested_variables_true
-                ):
+                if var_name in ds or xrfreq not in variables_and_freqs.get(var_name, []) or var_name not in catalog._requested_variables_true:
                     continue
 
                 # TODO: This is a temporary fix for an xclim bug where the grid_mapping attribute is not transferred upon calculation
-                if (
-                    var_name in catalog.derivedcat
-                    and len(
-                        set(ds_ts.data_vars).intersection(
-                            catalog.derivedcat[var_name].query["variable"]
-                        )
-                    )
-                    >= 1
-                ):
+                if var_name in catalog.derivedcat and len(set(ds_ts.data_vars).intersection(catalog.derivedcat[var_name].query["variable"])) >= 1:
                     grid_mapping = np.unique(
                         [
                             ds_ts[v].attrs["grid_mapping"]
-                            for v in set(ds_ts.data_vars).intersection(
-                                catalog.derivedcat[var_name].query["variable"]
-                            )
+                            for v in set(ds_ts.data_vars).intersection(catalog.derivedcat[var_name].query["variable"])
                             if "grid_mapping" in ds_ts[v].attrs
                         ]
                     )
@@ -241,14 +206,10 @@ def extract_dataset(  # noqa: C901
                     elif len(grid_mapping) > 1:
                         raise ValueError("Multiple grid_mapping detected.")
 
-                if "time" not in da.dims or (
-                    catalog[key].df["xrfreq"].iloc[0] == xrfreq
-                ):
+                if "time" not in da.dims or (catalog[key].df["xrfreq"].iloc[0] == xrfreq):
                     ds = ds.assign({var_name: da})
                 else:  # check if it needs resampling
-                    if pd.to_timedelta(
-                        CV.xrfreq_to_timedelta(catalog[key].df["xrfreq"].iloc[0])
-                    ) < pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq)):
+                    if pd.to_timedelta(CV.xrfreq_to_timedelta(catalog[key].df["xrfreq"].iloc[0])) < pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq)):
                         msg = f"Resampling {var_name} from [{catalog[key].df['xrfreq'].iloc[0]}] to [{xrfreq}]."
                         logger.info(msg)
                         ds = ds.assign(
@@ -262,9 +223,7 @@ def extract_dataset(  # noqa: C901
                             }
                         )
                     else:
-                        raise ValueError(
-                            "Variable is at a coarser frequency than requested."
-                        )
+                        raise ValueError("Variable is at a coarser frequency than requested.")
 
                 attrs = ds_ts.attrs
 
@@ -285,9 +244,7 @@ def extract_dataset(  # noqa: C901
             slices = []
             for period in periods_extract:
                 slices.extend([ds.sel({"time": slice(period[0], period[1])})])
-            ds = xr.concat(
-                slices, dim="time", **xr_kwargs["xarray_combine_by_coords_kwargs"]
-            )
+            ds = xr.concat(slices, dim="time", **xr_kwargs["xarray_combine_by_coords_kwargs"])
 
         # subset to the region
         if region is not None:
@@ -305,9 +262,7 @@ def extract_dataset(  # noqa: C901
             ds_mask = mask["mask"]
         elif isinstance(mask, xr.DataArray):
             ds_mask = mask
-        elif (
-            "fx" in out_dict and "mask" in out_dict["fx"]
-        ):  # get mask that was extracted above
+        elif "fx" in out_dict and "mask" in out_dict["fx"]:  # get mask that was extracted above
             ds_mask = out_dict["fx"]["mask"].copy()
         else:
             raise ValueError(
@@ -333,7 +288,8 @@ def resample(  # noqa: C901
     method: str | None = None,
     missing: str | dict | None = None,
 ) -> xr.DataArray:
-    """Aggregate variable to the target frequency.
+    """
+    Aggregate variable to the target frequency.
 
     If the input frequency is greater than a week, the resampling operation is weighted by
     the number of days in each sampling period.
@@ -353,7 +309,7 @@ def resample(  # noqa: C901
         The resampling method. If None (default), it is guessed from the variable name and frequency,
         using the mapping in CVs/resampling_methods.json. If the variable is not found there,
         "mean" is used by default.
-    missing: {'mask', 'drop'} or dict, optional
+    missing : {'mask', 'drop'} or dict, optional
         If 'mask' or 'drop', target periods that would have been computed from fewer timesteps than expected
         are masked or dropped, using a threshold of 5% of missing data.
         E.g. the first season of a `target_frequency` of "QS-DEC" will be masked or dropped if data starts in January.
@@ -364,7 +320,7 @@ def resample(  # noqa: C901
     Returns
     -------
     xr.DataArray
-        Resampled variable
+        Resampled variable.
     """
     var_name = da.name
 
@@ -373,7 +329,8 @@ def resample(  # noqa: C901
         if initial_frequency == "undetected":
             warnings.warn(
                 "Could not infer the frequency of the dataset. "
-                "Be aware that this might result in erroneous manipulations if the actual timestep is monthly or longer."
+                "Be aware that this might result in erroneous manipulations if the actual timestep is monthly or longer.",
+                stacklevel=2,
             )
             if missing is not None:
                 raise ValueError(
@@ -382,19 +339,14 @@ def resample(  # noqa: C901
                 )
 
     if method is None:
-        if (
-            target_frequency in CV.resampling_methods.dict
-            and var_name in CV.resampling_methods.dict[target_frequency]
-        ):
+        if target_frequency in CV.resampling_methods.dict and var_name in CV.resampling_methods.dict[target_frequency]:
             method = CV.resampling_methods(target_frequency)[var_name]
             msg = f"Resampling method for {var_name}: '{method}', based on variable name and frequency."
             logger.info(msg)
 
         elif var_name in CV.resampling_methods.dict["any"]:
             method = CV.resampling_methods("any")[var_name]
-            msg = (
-                f"Resampling method for {var_name}: '{method}', based on variable name."
-            )
+            msg = f"Resampling method for {var_name}: '{method}', based on variable name."
             logger.info(msg)
 
         else:
@@ -416,18 +368,12 @@ def resample(  # noqa: C901
             calendar=da.time.dt.calendar,
         )
         # This is the number of days in each sampling period
-        days_per_step = (
-            xr.DataArray(t, dims=("time",), coords={"time": t})
-            .diff("time", label="lower")
-            .dt.days
-        )
+        days_per_step = xr.DataArray(t, dims=("time",), coords={"time": t}).diff("time", label="lower").dt.days
         days_per_period = (
             days_per_step.resample(time=target_frequency)
             .sum()  # Total number of days per period
             .sel(time=days_per_step.time, method="ffill")  # Up-sample to initial freq
-            .assign_coords(
-                time=days_per_step.time
-            )  # Not sure why we need this, but time coord is from the resample even after sel
+            .assign_coords(time=days_per_step.time)  # Not sure why we need this, but time coord is from the resample even after sel
         )
         weights = days_per_step / days_per_period
 
@@ -440,9 +386,7 @@ def resample(  # noqa: C901
                 all(v in ds for v in ["sfcWind", "sfcWindfromdir"]),
             ]
         ):
-            raise ValueError(
-                "Resampling method 'wind_direction' failed to find all required variables."
-            )
+            raise ValueError("Resampling method 'wind_direction' failed to find all required variables.")
 
         # The method requires uas, vas, and sfcWind. Acquire all of them.
         if all(v in ds for v in ["uas", "vas"]):
@@ -450,9 +394,7 @@ def resample(  # noqa: C901
         else:
             uas, vas = convert.wind_vector_from_speed(ds.sfcWind, ds.sfcWindfromdir)
         if "sfcWind" not in ds:
-            ds["sfcWind"], _ = convert.wind_speed_from_vector(
-                uas=ds["uas"], vas=ds["vas"]
-            )
+            ds["sfcWind"], _ = convert.wind_speed_from_vector(uas=ds["uas"], vas=ds["vas"])
 
         # Resample first to find the average wind speed and components
         if weights is not None:
@@ -484,12 +426,7 @@ def resample(  # noqa: C901
         if method == "mean":
             # Avoiding resample().map() is much more performant
             with xr.set_options(keep_attrs=True):
-                out = (
-                    (da * weights)
-                    .resample(time=target_frequency)
-                    .sum(dim="time")
-                    .rename(da.name)
-                )
+                out = (da * weights).resample(time=target_frequency).sum(dim="time").rename(da.name)
         else:
             kws = {"q": 0.5} if method == "median" else {}
             ds = xr.merge([da, weights.rename("weights")])
@@ -500,32 +437,19 @@ def resample(  # noqa: C901
                 )(dim="time", **kws)
             )[da.name]
     else:
-        out = getattr(da.resample(time=target_frequency), method)(
-            dim="time", keep_attrs=True
-        )
+        out = getattr(da.resample(time=target_frequency), method)(dim="time", keep_attrs=True)
 
     missing_note = " "
-    initial_td = (
-        xrfreq_to_timedelta(initial_frequency)
-        if initial_frequency != "undetected"
-        else None
-    )
+    initial_td = xrfreq_to_timedelta(initial_frequency) if initial_frequency != "undetected" else None
     if missing in ["mask", "drop"] and not pd.isnull(initial_td):
-        steps_per_period = (
-            xr.ones_like(da.time, dtype="int").resample(time=target_frequency).sum()
-        )
+        steps_per_period = xr.ones_like(da.time, dtype="int").resample(time=target_frequency).sum()
         t = xr.date_range(
             steps_per_period.indexes["time"][0],
             periods=steps_per_period.time.size + 1,
             freq=target_frequency,
         )
 
-        expected = (
-            xr.DataArray(t, dims=("time",), coords={"time": t}).diff(
-                "time", label="lower"
-            )
-            / initial_td
-        )
+        expected = xr.DataArray(t, dims=("time",), coords={"time": t}).diff("time", label="lower") / initial_td
         complete = (steps_per_period / expected) > 0.95
         action = "masking" if missing == "mask" else "dropping"
         missing_note = f", {action} incomplete periods "
@@ -544,11 +468,7 @@ def resample(  # noqa: C901
         f"resample from {initial_frequency} to {target_frequency}"
         f"{missing_note}- xarray v{xr.__version__}"
     )
-    history = (
-        new_history + " \n " + out.attrs["history"]
-        if "history" in out.attrs
-        else new_history
-    )
+    history = new_history + " \n " + out.attrs["history"] if "history" in out.attrs else new_history
     out.attrs["history"] = history
 
     return out
@@ -556,9 +476,7 @@ def resample(  # noqa: C901
 
 @parse_config
 def search_data_catalogs(  # noqa: C901
-    data_catalogs: (
-        str | os.PathLike | DataCatalog | list[str | os.PathLike | DataCatalog]
-    ),
+    data_catalogs: (str | os.PathLike | DataCatalog | list[str | os.PathLike | DataCatalog]),
     variables_and_freqs: dict,
     *,
     other_search_criteria: dict | None = None,
@@ -574,7 +492,8 @@ def search_data_catalogs(  # noqa: C901
     restrict_members: dict | None = None,
     restrict_warming_level: dict | bool | None = None,
 ) -> dict:
-    """Search through DataCatalogs.
+    """
+    Search through DataCatalogs.
 
     Parameters
     ----------
@@ -592,7 +511,7 @@ def search_data_catalogs(  # noqa: C901
     exclusions : dict, optional
         Same as other_search_criteria, but for eliminating results.
         Any result that matches any of the exclusions will be removed.
-    match_hist_and_fut: bool
+    match_hist_and_fut : bool
         If True, historical and future simulations will be combined into the same line,
         and search results lacking one of them will be rejected.
     periods : list of str or list of lists of str, optional
@@ -610,7 +529,7 @@ def search_data_catalogs(  # noqa: C901
     conversion_yaml : str, optional
         Path to a YAML file that defines the possible conversions (used alongside 'allow_conversion'=True).
         This file should follow the xclim conventions for building a virtual module.
-        If None, the "derived variable registry" will be defined by the file in "xscen/xclim_modules/conversions.yml"
+        If None, the "derived variable registry" will be defined by the file in "xscen/xclim_modules/conversions.yml".
     restrict_resolution : str, optional
         Used to restrict the results to the finest/coarsest resolution available for a given simulation.
         ['finest', 'coarsest'].
@@ -628,12 +547,6 @@ def search_data_catalogs(  # noqa: C901
         and only datasets that reach the warming level will be kept.
         This can be combined with other arguments of the function, for example {'wl': 1.5, 'window': 30}.
 
-    Notes
-    -----
-    - The "other_search_criteria" and "exclusions" arguments accept wildcard (*) and regular expressions.
-    - Frequency can be wildcarded with 'NA' in the `variables_and_freqs` dict.
-    - Variable names cannot be wildcarded, they must be CMIP6-standard.
-
     Returns
     -------
     dict
@@ -646,7 +559,13 @@ def search_data_catalogs(  # noqa: C901
 
     See Also
     --------
-    intake_esm.core.esm_datastore.search
+    intake_esm.core.esm_datastore.search: Search function of intake-esm.
+
+    Notes
+    -----
+    - The "other_search_criteria" and "exclusions" arguments accept wildcard (*) and regular expressions.
+    - Frequency can be wildcarded with 'NA' in the `variables_and_freqs` dict.
+    - Variable names cannot be wildcarded, they must be CMIP6-standard.
     """
     # Cast single items to a list
     if isinstance(data_catalogs, str | os.PathLike | DataCatalog):
@@ -654,15 +573,7 @@ def search_data_catalogs(  # noqa: C901
 
     # Open the catalogs given as paths
     data_catalogs = [
-        (
-            dc
-            if not isinstance(dc, str | os.PathLike)
-            else (
-                DataCatalog(dc)
-                if Path(dc).suffix == ".json"
-                else DataCatalog.from_df(dc)
-            )
-        )
+        (dc if not isinstance(dc, str | os.PathLike) else (DataCatalog(dc) if Path(dc).suffix == ".json" else DataCatalog.from_df(dc)))
         for dc in data_catalogs
     ]
 
@@ -673,15 +584,17 @@ def search_data_catalogs(  # noqa: C901
     if allow_conversion:
         if conversion_yaml is None:
             conversion_yaml = Path(__file__).parent / "xclim_modules" / "conversions"
-        cat_kwargs = {
-            "registry": registry_from_module(load_xclim_module(conversion_yaml))
-        }
+        cat_kwargs = {"registry": registry_from_module(load_xclim_module(conversion_yaml))}
 
     # Prepare a unique catalog to search from, with the DerivedCat added if required
+    dfs = [
+        dc.df.astype({col: dc.df[col].dtype.categories.dtype for col in dc.df.columns if isinstance(dc.df.dtypes[col], pd.CategoricalDtype)})
+        for dc in data_catalogs
+    ]
     catalog = DataCatalog(
         {
             "esmcat": data_catalogs[0].esmcat.model_dump(),
-            "df": pd.concat([dc.df for dc in data_catalogs], ignore_index=True),
+            "df": pd.concat(dfs, ignore_index=True),
         },
         **cat_kwargs,
     )
@@ -696,17 +609,13 @@ def search_data_catalogs(  # noqa: C901
     if exclusions:
         for k in exclusions.keys():
             ex = catalog.search(**{k: exclusions[k]})
-            catalog.esmcat._df = pd.concat([catalog.df, ex.df]).drop_duplicates(
-                keep=False
-            )
+            catalog.esmcat._df = pd.concat([catalog.df, ex.df]).drop_duplicates(keep=False)
             msg = f"Removing {len(ex.df)} assets based on exclusion dict '{k}': {exclusions[k]}."
             logger.info(msg)
     full_catalog = deepcopy(catalog)  # Used for searching for fixed fields
     if other_search_criteria:
         catalog = catalog.search(**other_search_criteria)
-        msg = (
-            f"{len(catalog.df)} assets matched the criteria : {other_search_criteria}."
-        )
+        msg = f"{len(catalog.df)} assets matched the criteria : {other_search_criteria}."
         logger.info(msg)
     if restrict_warming_level:
         if isinstance(restrict_warming_level, bool):
@@ -743,6 +652,11 @@ def search_data_catalogs(  # noqa: C901
     if len(catalog) > 0:
         for (sim_id,), scat in catalog.iter_unique("id"):
             # Find all the entries that match search parameters
+            was_stacked = False
+            if "variable" in scat.esmcat.columns_with_iterables:
+                scat.unstack("variable")
+                was_stacked = True
+
             varcats = []
             for var_id, xrfreqs in variables_and_freqs.items():
                 if isinstance(xrfreqs, str):
@@ -759,10 +673,7 @@ def search_data_catalogs(  # noqa: C901
                             scat_id = {
                                 i: scat.df[i].iloc[0]
                                 for i in id_columns or ID_COLUMNS
-                                if (
-                                    (i in scat.df.columns)
-                                    and (not pd.isnull(scat.df[i].iloc[0]))
-                                )
+                                if ((i in scat.df.columns) and (not pd.isnull(scat.df[i].iloc[0])))
                             }
                             scat_id.pop("experiment", None)
                             scat_id.pop("member", None)
@@ -780,67 +691,35 @@ def search_data_catalogs(  # noqa: C901
                                     UserWarning,
                                     stacklevel=1,
                                 )
-                                for i in {"member", "experiment", "id"}.intersection(
-                                    varcat.df.columns
-                                ):
+                                for i in {"member", "experiment", "id"}.intersection(varcat.df.columns):
                                     varcat.df.loc[:, i] = scat.df[i].iloc[0]
-
-                        # TODO: Temporary fix until this is changed in intake_esm
-                        varcat._requested_variables_true = [var_id]
-                        varcat._dependent_variables = list(
-                            set(varcat._requested_variables).difference(
-                                varcat._requested_variables_true
-                            )
-                        )
                     else:
                         # TODO: Add support for DerivedVariables that themselves require DerivedVariables
                         # TODO: Add support for DerivedVariables that exist on different frequencies (e.g. 1hr 'pr' & 3hr 'tas')
-                        varcat = scat.search(
-                            variable=var_id, require_all_on=["id", "xrfreq"]
-                        )
+                        varcat = scat.search(variable=var_id, require_all_on=["id", "xrfreq"])
                         msg = f"At var {var_id}, after search cat has {varcat.derivedcat.keys()}"
                         logger.debug(msg)
-                        # TODO: Temporary fix until this is changed in intake_esm
-                        varcat._requested_variables_true = [var_id]
-                        varcat._dependent_variables = list(
-                            set(varcat._requested_variables).difference(
-                                varcat._requested_variables_true
-                            )
-                        )
 
                         # We want to match lines with the correct freq,
                         # IF allow_resampling is True and xrfreq translates to a timedelta,
                         # we also want those with (stricyly) higher temporal resolution
                         same_frq = varcat.df.xrfreq == xrfreq
                         td = pd.to_timedelta(CV.xrfreq_to_timedelta(xrfreq))
-                        varcat.df["timedelta"] = pd.to_timedelta(
-                            varcat.df.xrfreq.apply(
-                                CV.xrfreq_to_timedelta, default="NAN"
-                            )
-                        )
+                        varcat.df["timedelta"] = pd.to_timedelta(varcat.df.xrfreq.apply(CV.xrfreq_to_timedelta, default="NAN"))
                         # else is joker (any timedelta)
-                        lower_frq = (
-                            np.less(varcat.df.timedelta, td)
-                            if pd.notnull(td)
-                            else False
-                        )
-                        varcat.esmcat._df = varcat.df[
-                            same_frq | (lower_frq & allow_resampling)
-                        ]
+                        lower_frq = np.less(varcat.df.timedelta, td) if pd.notnull(td) else False
+                        varcat.esmcat._df = varcat.df[same_frq | (lower_frq & allow_resampling)]
 
                         # For each dataset (id * xrfreq * processing_level * domain * variable),
                         # make sure that file availability covers the requested time periods
                         if periods is not None and len(varcat) > 0:
                             valid_tp = []
-                            for var, group in varcat.df.groupby(
-                                varcat.esmcat.aggregation_control.groupby_attrs
-                                + ["variable"],
+                            for _var, group in varcat.df.groupby(
+                                varcat.esmcat.aggregation_control.groupby_attrs + ["variable"],
                                 observed=True,
                             ):
                                 valid_tp.append(
-                                    subset_file_coverage(
-                                        group, periods, **coverage_kwargs
-                                    )
+                                    subset_file_coverage(group, periods, **coverage_kwargs)
                                 )  # If valid, this returns the subset of files that cover the time period
                             varcat.esmcat._df = pd.concat(valid_tp)
 
@@ -848,16 +727,12 @@ def search_data_catalogs(  # noqa: C901
                         # We need to re-iterate over variables in case we used the registry
                         # (and thus there are multiple variables in varcat)
                         rows = []
-                        for var, group in varcat.df.groupby("variable"):
+                        for _var, group in varcat.df.groupby("variable"):
                             rows.append(group[group.timedelta == group.timedelta.max()])
                         if rows:
                             # check if the requested variable exists and if so, remove DeriveVariable references
-                            v_list = [
-                                rows[i]["variable"].iloc[0] for i in range(len(rows))
-                            ]
-                            v_list_check = [
-                                var_id in v_list[i] for i in range(len(v_list))
-                            ]  # necessary in case a file has multiple variables
+                            v_list = [rows[i]["variable"].iloc[0] for i in range(len(rows))]
+                            v_list_check = [var_id in v_list[i] for i in range(len(v_list))]  # necessary in case a file has multiple variables
                             if any(v_list_check):
                                 rows = [rows[v_list_check.index(True)]]
                                 varcat.derivedcat = DerivedVariableRegistry()
@@ -871,7 +746,10 @@ def search_data_catalogs(  # noqa: C901
                         break
                     if "timedelta" in varcat.df.columns:
                         varcat.df.drop(columns=["timedelta"], inplace=True)
-                    varcat._requested_variable_freqs = [xrfreq]
+
+                    varcat._requested_variable_freqs = {var_id: xrfreq}
+                    if was_stacked and "variable" not in varcat.esmcat.columns_with_iterables:
+                        varcat.stack("variable")
                     varcats.append(varcat)
 
                 else:
@@ -898,24 +776,21 @@ def search_data_catalogs(  # noqa: C901
 
 
 @parse_config
-def get_warming_level(
-    *args, **kwargs
-) -> xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list:
-    """
+def get_warming_level(*args, **kwargs) -> xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list:
+    r"""
     Deprecated. Use get_period_from_warming_level instead.
 
     Parameters
     ----------
-    args: list
-        Arguments to pass to get_period_from_warming_level
-    kwargs: dict
-        Keyword arguments to pass to get_period_from_warming_level
+    *args : list
+        Arguments to pass to get_period_from_warming_level.
+    **kwargs : dict
+        Keyword arguments to pass to get_period_from_warming_level.
 
     Returns
     -------
     xr.Dataset or xr.DataArray or dict or list or str
-        Output of get_period_from_warming_level
-
+        Output of get_period_from_warming_level.
     """
     kwargs = kwargs.copy()
     kwargs["return_central_year"] = not kwargs.get("return_horizon", True)
@@ -923,15 +798,14 @@ def get_warming_level(
     warnings.warn(
         "get_warming_level has been deprecated. Use get_period_from_warming_level instead.",
         FutureWarning,
+        stacklevel=2,
     )
     return get_period_from_warming_level(*args, **kwargs)
 
 
 @parse_config
 def get_period_from_warming_level(  # noqa: C901
-    realization: (
-        xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list
-    ),
+    realization: (xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list),
     wl: float,
     *,
     window: int = 20,
@@ -941,8 +815,7 @@ def get_period_from_warming_level(  # noqa: C901
     return_central_year: bool = False,
 ) -> xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list:
     """
-    Use the IPCC Atlas method to return the window of time
-    over which the requested level of global warming is first reached.
+    Find the period(s) when a given warming level is reached, using the IPCC Atlas method.
 
     Parameters
     ----------
@@ -956,6 +829,8 @@ def get_period_from_warming_level(  # noqa: C901
        'cat:mip_era', 'cat:experiment', 'cat:member',
        and either 'cat:source' for global models or 'cat:driving_model' for regional models.
        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
+       Additionally, it can be "obs-IPCC-AR6" to get the exact same observational ensemble as used in the IPCC AR6 WG1 Chap1, Figure 1.12,
+       or "obs-IPCC-updated" to get the same ensemble but with updated sources.
     wl : float, np.ndarray
        Warming level(s).
        e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
@@ -971,9 +846,9 @@ def get_period_from_warming_level(  # noqa: C901
        If None, it will default to data/IPCC_annual_global_tas.nc which was built from
        the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
        and extra data for missing CMIP6 models and pilot models of CRCM5 and ClimEx.
-    return_central_year: bool
+    return_central_year : bool
         If True, the output will be a string representing the middle of the period, using IPCC conventions in the case of an even window (y-9, y+10).
-        If False (default), the output will be a list following the format ['start_yr', 'end_yr']
+        If False (default), the output will be a list following the format ['start_yr', 'end_yr'].
 
     Returns
     -------
@@ -983,9 +858,7 @@ def get_period_from_warming_level(  # noqa: C901
         with values following the format indicated by `return_central_year`.
     """
     tas_src = tas_src or Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
-    tas_baseline_period = standardize_periods(
-        tas_baseline_period or ["1850", "1900"], multiple=False
-    )
+    tas_baseline_period = standardize_periods(tas_baseline_period or ["1850", "1900"], multiple=False)
 
     if (window % 2) not in {0, 1}:
         raise ValueError(f"window should be an integer, received {type(window)}")
@@ -994,7 +867,7 @@ def get_period_from_warming_level(  # noqa: C901
     info_models = _wl_prep_infomodels(realization, ignore_member, FIELDS)
 
     # open nc
-    tas = xr.open_dataset(tas_src).tas
+    tas = xr.open_dataset(tas_src).tas.load()
     if np.isscalar(wl):
         wl = np.array([wl])
 
@@ -1004,26 +877,22 @@ def get_period_from_warming_level(  # noqa: C901
             return None if return_central_year else [None, None]
 
         selected = "_".join([tas_sel[c].item() for c in FIELDS])
-        msg = (
-            f"Computing warming level +{wl}°C for {model} from simulation: {selected}."
-        )
+        msg = f"Computing warming level +{wl}°C for {model} from simulation: {selected}."
         logger.debug(msg)
 
         # compute reference temperature for the warming and difference from reference
         yearly_diff = tas_sel - tas_sel.sel(time=slice(*tas_baseline_period)).mean()
 
         # get the start and end date of the window when the warming level is first reached
-        rolling_diff = yearly_diff.rolling(
-            time=window, min_periods=window, center=True
-        ).mean()
+        rolling_diff = yearly_diff.rolling(time=window, min_periods=window, center=True).mean()
         # shift(+1) is needed to reproduce IPCC results.
         # rolling defines the window as [n-10,n+9], but the the IPCC defines it as [n-9,n+10], where n is the center year.
         # interpolate will shift by -1, so +1 shift required on odd windows.
 
         if window % 2 != 0:  # odd window
             rolling_diff = rolling_diff.shift(time=1)
-        # ensure series is monotonic -- keep only first year above point
-        rolling_diff = rolling_diff.cumulative("time").max()
+        # ensure series is monotonic -- keep only first year above point, drop any nans
+        rolling_diff = rolling_diff.cumulative("time").max().dropna("time")
         # create interpolator
         interp = interp1d(
             rolling_diff,
@@ -1040,11 +909,7 @@ def get_period_from_warming_level(  # noqa: C901
             if np.isnan(year):
                 years[i] = None if return_central_year else [None, None]
             else:
-                years[i] = (
-                    str(int(year))
-                    if return_central_year
-                    else [str(int(year - window / 2 + 1)), str(int(year + window / 2))]
-                )
+                years[i] = str(int(year)) if return_central_year else [str(int(year - window / 2 + 1)), str(int(year + window / 2))]
         if len(years) == 1:
             return years[0]
         return years
@@ -1074,9 +939,7 @@ def get_period_from_warming_level(  # noqa: C901
 
 @parse_config
 def get_warming_level_from_period(
-    realization: (
-        xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list
-    ),
+    realization: (xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list),
     period: list[str],
     *,
     tas_baseline_period: Sequence[str] | None = None,
@@ -1098,6 +961,8 @@ def get_warming_level_from_period(
        'cat:mip_era', 'cat:experiment', 'cat:member', and 'cat:source' for global models.
        For regional models : 'cat:mip_era', 'cat:experiment', 'cat:driving_member', and 'cat:driving_model'.
        e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
+       Additionally, it can be "obs-IPCC-AR6" to get the exact same observational ensemble as used in the IPCC AR6 WG1 Chap1, Figure 1.12,
+       or "obs-IPCC-updated" to get the same ensemble but with updated sources.
     period : list of str
        [start, end] of the period for which to compute the warming level.
     tas_baseline_period : list, optional
@@ -1118,16 +983,14 @@ def get_warming_level_from_period(
         If `realization` is a sequence, the output will be of the same type.
     """
     tas_src = tas_src or Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
-    tas_baseline_period = standardize_periods(
-        tas_baseline_period or ["1850", "1900"], multiple=False
-    )
+    tas_baseline_period = standardize_periods(tas_baseline_period or ["1850", "1900"], multiple=False)
     period = standardize_periods(period, multiple=False)
 
     FIELDS = ["mip_era", "source", "experiment", "member"]
     info_models = _wl_prep_infomodels(realization, ignore_member, FIELDS)
 
     # open nc
-    tas = xr.open_dataset(tas_src).tas
+    tas = xr.open_dataset(tas_src).tas.load()
 
     def _get_warming_level(model):
         tas_sel = _wl_find_column(tas, model)
@@ -1138,19 +1001,11 @@ def get_warming_level_from_period(
         msg = f"Computing warming level during {period} for {model} from simulation: {selected}."
         logger.debug(msg)
 
-        if not all(
-            yr in tas_sel.time.dt.year
-            for yr in np.arange(int(period[0]), int(period[1]) + 1)
-        ):
-            raise ValueError(
-                f"Period {period} is not fully covered by the provided 'tas_src' database for {selected}."
-            )
+        if not all(yr in tas_sel.time.dt.year for yr in np.arange(int(period[0]), int(period[1]) + 1)):
+            raise ValueError(f"Period {period} is not fully covered by the provided 'tas_src' database for {selected}.")
 
         # compute reference temperature for the warming and difference from reference
-        wl = (
-            tas_sel.sel(time=slice(*period)).mean()
-            - tas_sel.sel(time=slice(*tas_baseline_period)).mean()
-        )
+        wl = tas_sel.sel(time=slice(*period)).mean() - tas_sel.sel(time=slice(*tas_baseline_period)).mean()
 
         return wl.item()
 
@@ -1166,6 +1021,13 @@ def get_warming_level_from_period(
 
 
 def _wl_prep_infomodels(realization, ignore_member, fields):
+    obs_cnst = {"experiment": "obs", "mip_era": "obs", "member": ""}
+    if isinstance(realization, str):
+        if realization == "obs-IPCC-AR6":
+            return [{"source": src} | obs_cnst for src in ["Berkeley-LowRes", "HadCRUT5", "Kadow2020", "NOAAGlobalTempv5"]]
+        if realization == "obs-IPCC-updated":
+            return [{"source": src} | obs_cnst for src in ["Berkeley-HighRes", "HadCRUT5", "Kadow2026", "NOAAGlobalTempv6"]]
+
     if isinstance(realization, xr.Dataset | str | dict | pd.Series):
         reals = [realization]
     elif isinstance(realization, pd.DataFrame):
@@ -1176,19 +1038,23 @@ def _wl_prep_infomodels(realization, ignore_member, fields):
         reals = realization
 
     info_models = []
+
+    def _is_valid(name):
+        return not (name == "" or pd.isna(name))
+
     for real in reals:
         info = {}
         if isinstance(real, xr.Dataset):
             attrs = get_cat_attrs(real)
             # get info on ds
-            if attrs.get("driving_model") is None:
+            if not _is_valid(attrs.get("driving_model")):
                 info["source"] = attrs["source"]
             else:
                 info["source"] = attrs["driving_model"]
             info["experiment"] = attrs["experiment"]
             if ignore_member:
                 info["member"] = ".*"
-            elif attrs.get("driving_member") is None:
+            elif not _is_valid(attrs.get("driving_member")):
                 info["member"] = attrs["member"]
             else:
                 info["member"] = attrs["driving_member"]
@@ -1203,20 +1069,16 @@ def _wl_prep_infomodels(realization, ignore_member, fields):
             if ignore_member:
                 info["member"] = ".*"
         # Dict or Series (DataFrame row)
-        elif hasattr(real, "keys") and set(real.keys()).issuperset(
-            (set(fields) - {"member"}) if ignore_member else fields
-        ):
+        elif hasattr(real, "keys") and set(real.keys()).issuperset((set(fields) - {"member"}) if ignore_member else fields):
             info = real
-            if info.get("driving_model") is not None:
+            if _is_valid(info.get("driving_model")):
                 info["source"] = info["driving_model"]
             if ignore_member:
                 info["member"] = ".*"
-            elif info.get("driving_member") is not None:
+            elif _is_valid(info.get("driving_member")):
                 info["member"] = info["driving_member"]
         else:
-            raise ValueError(
-                f"'realization' must be a Dataset, dict, string or list. Received {type(real)}."
-            )
+            raise ValueError(f"'realization' must be a Dataset, dict, string or list. Received {type(real)}.")
         info_models.append(info)
 
     return info_models
@@ -1234,15 +1096,11 @@ def _wl_find_column(tas, model):
 
     candidates = mip & src & exp & mem
     if not candidates.any():
-        warnings.warn(
-            f"No simulation fit the attributes of the input dataset ({model})."
-        )
+        warnings.warn(f"No simulation fit the attributes of the input dataset ({model}).", stacklevel=2)
         return None
 
     if candidates.sum() > 1:
-        logger.info(
-            "More than one simulation of the database fits the dataset metadata. Choosing the first one."
-        )
+        logger.info("More than one simulation of the database fits the dataset metadata. Choosing the first one.")
     tas_sel = tas.isel(simulation=candidates.argmax("simulation"))
     return tas_sel
 
@@ -1253,12 +1111,13 @@ def subset_warming_level(
     wl: float | Sequence[float],
     to_level: str = "warminglevel-{wl}vs{period0}-{period1}",
     wl_dim: str | bool = "+{wl}Cvs{period0}-{period1}",
+    min_periods: int | None = None,
     **kwargs,
 ) -> xr.Dataset | None:
     r"""
-    Subsets the input dataset with only the window of time over which the requested level of global warming
-    is first reached, using the IPCC Atlas method.
-    A warming level is considered reached only if the full `window` years are available in the dataset.
+    Subset the input dataset based on the requested warming level(s), using the IPCC Atlas method.
+
+    A warming level is considered reached only if at least `min_periods` years are available in the dataset.
 
     Parameters
     ----------
@@ -1274,178 +1133,109 @@ def subset_warming_level(
        e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
        Multiple levels can be passed, in which case using "{wl}" in  `to_level` and `wl_dim` is not recommended.
        Multiple levels are currently only implemented for annual data.
-    to_level :
+    to_level : str, optional
        The processing level to assign to the output.
        Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
        `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
-    wl_dim : str or boolean, optional
+    wl_dim : str or bool, optional
        The value to use to fill the new `warminglevel` dimension.
        Use "{wl}", "{period0}" and "{period1}" in the string to dynamically include
        `wl`, 'tas_baseline_period[0]' and 'tas_baseline_period[1]'.
        If None, no new dimensions will be added, invalid if `wl` is a sequence.
        If True, the dimension will include `wl` as numbers and units of "degC".
-    \*\*kwargs :
+    min_periods : int, optional
+       The minimum number of years from the warming level period available in the dataset to keep it.
+       If fewer years are available, `nan` is returned. This only concerns the subsetting, the full window
+       must still exist in the global mean temperature dataset for the given simulation.
+       Defaults to the same as `window`.
+    **kwargs
         Instructions on how to search for warming levels, passed to :py:func:`get_period_from_warming_level`.
 
     Returns
     -------
     xr.Dataset or None
-        Warming level dataset, or None if `ds` can't be subsetted for the requested warming level.
+        Warming level dataset.
+        If a single realization and warming level is requested and that warming level is never reached, None is returned.
         The dataset will have a new dimension `warminglevel` with `wl_dim` as coordinates.
-        If `wl` was a list or if ds had a "realization" dim, the "time" axis is replaced
-        by a fake time starting in 1000-01-01 and with a length of `window` years.
-        Start and end years of the subsets are bound in the new coordinate "warminglevel_bounds".
+        If `wl` was a list or if ds was multiple realizations (along a "realization" coord) the "time" axis
+        is a fake time starting in 1000-01-01 and with a length of `window` years. Nans are appended when the subset is shorter than the window.
+        Start and end of the subsets are added as bounds, in the new coordinate "warminglevel_bounds".
     """
-    tas_baseline_period = standardize_periods(
-        kwargs.get("tas_baseline_period", ["1850", "1900"]), multiple=False
-    )
+    tas_baseline_period = standardize_periods(kwargs.get("tas_baseline_period", ["1850", "1900"]), multiple=False)
     window = kwargs.get("window", 20)
-
-    # If wl was originally a list, this function is called a 2nd time with a generated fake_time
-    fake_time = kwargs.pop("_fake_time", None)
-    # Fake time generation is needed : real is a dim or multiple levels
-    if (
-        fake_time is None
-        and not isinstance(wl, int | float)
-        or "realization" in ds.coords
-    ):
-        freq = xr.infer_freq(ds.time)
-        # FIXME: This is because I couldn't think of an elegant way to generate a fake_time otherwise.
-        if not compare_offsets(freq, "==", "YS"):
-            raise NotImplementedError(
-                "Passing multiple warming levels or vectorizing subsetting along the 'realization' dim is currently not supported for non-annual data"
-            )
-        fake_time = xr.date_range(
-            "1000-01-01", periods=window, freq=freq, calendar=ds.time.dt.calendar
-        )
-
-    # If we got a wl sequence, call ourself multiple times and concatenate
-    if not isinstance(wl, int | float):
-        if not wl_dim or (isinstance(wl_dim, str) and "{wl}" not in wl_dim):
-            raise ValueError(
-                "`wl_dim` must be True or a template string including '{wl}' if multiple levels are passed."
-            )
-        ds_wl = xr.concat(
-            [
-                subset_warming_level(
-                    ds,
-                    wli,
-                    to_level=to_level,
-                    wl_dim=wl_dim,
-                    _fake_time=fake_time,
-                    **kwargs,
-                )
-                for wli in wl
-            ],
-            "warminglevel",
-        )
-        return ds_wl
+    min_periods = min_periods or window
+    if isinstance(wl, int | float):
+        wl = [wl]
 
     # Creating the warminglevel coordinate
     if isinstance(wl_dim, str):  # a non-empty string
         wl_crd = xr.DataArray(
             [
                 wl_dim.format(
-                    wl=wl,
+                    wl=w,
                     period0=tas_baseline_period[0],
                     period1=tas_baseline_period[1],
                 )
+                for w in wl
             ],
             dims=("warminglevel",),
             name="warminglevel",
         )
     else:
-        wl_crd = xr.DataArray(
-            [wl], dims=("warminglevel",), name="warminglevel", attrs={"units": "degC"}
-        )
+        wl_crd = xr.DataArray(wl, dims=("warminglevel",), name="warminglevel", attrs={"units": "degC"})
 
-    # For generating the bounds coord
-    date_cls = xc.core.calendar.datetime_classes[ds.time.dt.calendar]
-    if "realization" in ds.coords:
-        # Vectorized subset
-        realdim = ds.realization.dims[0]
-        bounds = get_period_from_warming_level(
-            ds.realization, wl, return_central_year=False, **kwargs
-        )
-        reals = []
-        for real in bounds[realdim].values:
-            start, end = bounds.sel({realdim: real}).values
-            data = ds.sel({realdim: [real], "time": slice(start, end)})
-            wl_not_reached = (
-                (start is None)
-                or (data.time.size == 0)
-                or ((data.time.dt.year[-1] - data.time.dt.year[0] + 1) != window)
-            )
-            if not wl_not_reached:
-                bnds_crd = [
-                    date_cls(int(start), 1, 1),
-                    date_cls(int(end) + 1, 1, 1) - datetime.timedelta(seconds=1),
-                ]
+    if "realization" in ds.coords or len(wl) > 1:
+        # Vectorized subset (multiple sims, multiple wls or both)
+
+        if "realization" in ds.coords:
+            bounds = get_period_from_warming_level(ds.realization, wl, return_central_year=False, **kwargs)
+            if len(wl) == 1:
+                bounds = bounds.expand_dims(warminglevel=wl_crd)
             else:
-                # In the case of not reaching the WL, data might be too short
-                # We create it again with the proper length
-                data = (
-                    ds.sel({realdim: [real]}).isel(time=slice(0, fake_time.size))
-                    * np.nan
-                )
-                bnds_crd = [np.nan, np.nan]
-            reals.append(
-                data.expand_dims(warminglevel=wl_crd).assign_coords(
-                    time=fake_time[: data.time.size],
-                    warminglevel_bounds=(
-                        (realdim, "warminglevel", "wl_bounds"),
-                        [[bnds_crd]],
-                    ),
-                )
+                bounds = bounds.rename(wl="warminglevel").assign_coords(warminglevel=wl_crd)
+        else:
+            bounds = xr.DataArray(
+                get_period_from_warming_level(ds, wl, return_central_year=False, **kwargs),
+                dims=("warminglevel", "wl_bounds"),
+                coords={"warminglevel": wl_crd, "wl_bounds": [0, 1]},
             )
-        ds_wl = xr.concat(reals, realdim)
-    else:
-        # Scalar subset, single level
-        start_yr, end_yr = get_period_from_warming_level(
-            ds, wl=wl, return_central_year=False, **kwargs
+
+        def _wl_not_reached(time, bnds):
+            s, e = bnds
+            if not isinstance(s, str) or not isinstance(e, str):
+                return True
+            time = xr.DataArray(time, dims=("time",), coords={"time": time})
+            sl = time.sel(time=slice(s, e)).time.dt.year.values
+            return len(sl) == 0 or (sl[-1] - sl[0] + 1) < min_periods
+
+        wl_not_reached = xr.apply_ufunc(
+            _wl_not_reached,
+            ds.time,
+            bounds,
+            input_core_dims=[["time"], ["wl_bounds"]],
+            vectorize=True,
         )
+        bounds = bounds.astype(float).where(~wl_not_reached)
+        ds_wl = vectorized_time_bounds_subset(ds, bounds, size=window, bnd_dim="wl_bounds", bnd_coord="warminglevel_bounds")
+    else:
+        # Single sim, single wl
+        start_yr, end_yr = get_period_from_warming_level(ds, wl=wl[0], return_central_year=False, **kwargs)
         # cut the window selected above and expand dims with wl_crd
         ds_wl = ds.sel(time=slice(start_yr, end_yr))
-        wl_not_reached = (
-            (start_yr is None)
-            or (ds_wl.time.size == 0)
-            or ((ds_wl.time.dt.year[-1] - ds_wl.time.dt.year[0] + 1) != window)
-        )
-        if fake_time is None:
-            # WL not reached, not in ds, or not fully contained in ds.time
-            if wl_not_reached:
-                return None
-            ds_wl = ds_wl.expand_dims(warminglevel=wl_crd)
-        else:
-            # WL not reached, not in ds, or not fully contained in ds.time
-            if wl_not_reached:
-                ds_wl = ds.isel(time=slice(0, fake_time.size)) * np.nan
-                wlbnds = (("warminglevel", "wl_bounds"), [[np.nan, np.nan]])
-            else:
-                wlbnds = (
-                    ("warminglevel", "wl_bounds"),
-                    [
-                        [
-                            date_cls(int(start_yr), 1, 1),
-                            date_cls(int(end_yr) + 1, 1, 1)
-                            - datetime.timedelta(seconds=1),
-                        ]
-                    ],
-                )
-            # We are in an iteration over multiple levels, put the fake time axis, but remember bounds
-            ds_wl = ds_wl.expand_dims(warminglevel=wl_crd).assign_coords(
-                time=fake_time[: ds_wl.time.size],
-                warminglevel_bounds=wlbnds,
-            )
+        wl_not_reached = (start_yr is None) or (ds_wl.time.size == 0) or ((ds_wl.time.dt.year[-1] - ds_wl.time.dt.year[0] + 1) < min_periods)
+        # WL not reached, not in ds, or not fully contained in ds.time
+        if wl_not_reached:
+            return None
+        ds_wl = ds_wl.expand_dims(warminglevel=wl_crd)
 
     if to_level is not None:
         ds_wl.attrs["cat:processing_level"] = to_level.format(
-            wl=wl,
+            wl=wl[0] if len(wl) == 1 else wl,
             period0=tas_baseline_period[0],
             period1=tas_baseline_period[1],
         )
 
-    if not wl_dim:
+    if not wl_dim and len(wl) == 1:
         ds_wl = ds_wl.squeeze("warminglevel", drop=True)
     else:
         ds_wl.warminglevel.attrs.update(
@@ -1455,10 +1245,9 @@ def subset_warming_level(
     return ds_wl
 
 
-def _dispatch_historical_to_future(
-    catalog: DataCatalog, id_columns: list[str] | None = None
-) -> DataCatalog:
-    """Update a DataCatalog by recopying each "historical" entry to its corresponding future experiments.
+def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list[str] | None = None) -> DataCatalog:
+    """
+    Update a DataCatalog by recopying each "historical" entry to its corresponding future experiments.
 
     For examples, if an historical entry has corresponding "ssp245" and "ssp585" entries,
     then it is copied twice, with its "experiment" field modified accordingly.
@@ -1502,9 +1291,7 @@ def _dispatch_historical_to_future(
     # "Same hist member" as in "each future realization stems from the same historical member"
 
     df = catalog.df.copy()
-    df["same_hist_member"] = df[sim_id_no_exp].apply(
-        lambda row: "_".join(row.values.astype(str)), axis=1
-    )
+    df["same_hist_member"] = df[sim_id_no_exp].apply(lambda row: "_".join(map(str, row.values)), axis=1)
 
     new_lines = []
     for group in df.same_hist_member.unique():
@@ -1518,7 +1305,8 @@ def _dispatch_historical_to_future(
                 "If you want them to be included in the historical and future matching, "
                 "please put a valid activity (https://xscen.readthedocs.io/en/latest/columns.html)."
                 "For example, xscen expects experiment `historical` to have `CMIP` activity "
-                "and experiments `sspXYZ` to have `ScenarioMIP` activity. "
+                "and experiments `sspXYZ` to have `ScenarioMIP` activity. ",
+                stacklevel=2,
             )
         for activity_id in set(sdf.activity) - {"HighResMip", np.nan}:
             sub_sdf = sdf[sdf.activity == activity_id]
@@ -1529,19 +1317,14 @@ def _dispatch_historical_to_future(
                 exp_hist["same_hist_member"] = group
                 sim_ids = sub_sdf[sub_sdf.experiment == exp_id].id.unique()
                 if len(sim_ids) > 1:
-                    raise ValueError(
-                        f"Got multiple dataset ids where we expected only one... : {sim_ids}"
-                    )
+                    raise ValueError(f"Got multiple dataset ids where we expected only one... : {sim_ids}")
                 exp_hist["id"] = sim_ids[0]
 
                 # Remove fixed fields that already exist in the future experiment
                 dupes = pd.concat(
                     [
                         exp_hist.loc[exp_hist["frequency"] == "fx"],
-                        sub_sdf.loc[
-                            (sub_sdf["frequency"] == "fx")
-                            & (sub_sdf["experiment"] == exp_id)
-                        ],
+                        sub_sdf.loc[(sub_sdf["frequency"] == "fx") & (sub_sdf["experiment"] == exp_id)],
                     ]
                 ).duplicated(
                     subset=[
@@ -1558,9 +1341,7 @@ def _dispatch_historical_to_future(
 
                 new_lines.append(exp_hist)
 
-    df = pd.concat([df] + new_lines, ignore_index=True).drop(
-        columns=["same_hist_member"]
-    )
+    df = pd.concat([df] + new_lines, ignore_index=True).drop(columns=["same_hist_member"])
     df = df[df.experiment != "historical"].reset_index(drop=True)
     return DataCatalog(
         {"esmcat": catalog.esmcat.model_dump(), "df": df},
@@ -1569,10 +1350,9 @@ def _dispatch_historical_to_future(
     )
 
 
-def _restrict_by_resolution(
-    catalogs: dict, restrictions: str, id_columns: list[str] | None = None
-) -> dict:
-    """Update the results from search_data_catalogs by removing simulations with multiple resolutions available.
+def _restrict_by_resolution(catalogs: dict, restrictions: str, id_columns: list[str] | None = None) -> dict:
+    """
+    Update the results from search_data_catalogs by removing simulations with multiple resolutions available.
 
     Parameters
     ----------
@@ -1599,13 +1379,9 @@ def _restrict_by_resolution(
     """
     df = pd.concat([catalogs[s].df for s in catalogs.keys()])
     # remove the domain from the group_by
-    df["id_nodom"] = df[
-        list(
-            set(id_columns or ID_COLUMNS)
-            .intersection(df.columns)
-            .difference(["domain"])
-        )
-    ].apply(lambda row: "_".join(map(str, filter(pd.notna, row.values))), axis=1)
+    df["id_nodom"] = df[list(set(id_columns or ID_COLUMNS).intersection(df.columns).difference(["domain"]))].apply(
+        lambda row: "_".join(map(str, filter(pd.notna, row.values))), axis=1
+    )
     for i in pd.unique(df["id_nodom"]):
         df_sim = df[df["id_nodom"] == i]
         domains = pd.unique(df_sim["domain"])
@@ -1618,76 +1394,35 @@ def _restrict_by_resolution(
             if "MIP" in pd.unique(df_sim["activity"])[0]:
                 order = np.array([])
                 for d in domains:
-                    match = [
-                        CV.infer_resolution("CMIP").index(r)
-                        for r in CV.infer_resolution("CMIP")
-                        if re.match(pattern=r, string=d)
-                    ]
+                    match = [CV.infer_resolution("CMIP").index(r) for r in CV.infer_resolution("CMIP") if re.match(pattern=r, string=d)]
                     if len(match) != 1:
                         raise ValueError(f"'{d}' matches no known CMIP domain.")
                     order = np.append(order, match[0])
 
                 if restrictions == "finest":
-                    chosen = [
-                        np.sort(
-                            np.array(domains)[
-                                np.where(order == np.array(order).min())[0]
-                            ]
-                        )[0]
-                    ]
+                    chosen = [np.sort(np.array(domains)[np.where(order == np.array(order).min())[0]])[0]]
                 elif restrictions == "coarsest":
-                    chosen = [
-                        np.sort(
-                            np.array(domains)[
-                                np.where(order == np.array(order).max())[0]
-                            ]
-                        )[-1]
-                    ]
+                    chosen = [np.sort(np.array(domains)[np.where(order == np.array(order).max())[0]])[-1]]
                 else:
-                    raise ValueError(
-                        "'restrict_resolution' should be 'finest' or 'coarsest'"
-                    )
+                    raise ValueError("'restrict_resolution' should be 'finest' or 'coarsest'")
 
             # Note: For CORDEX, the order is dictated by both the grid label
             # and the resolution itself as well as the domain name
             elif pd.unique(df_sim["activity"])[0] == "CORDEX":
                 # Unique CORDEX domains
-                cordex_doms = list(
-                    pd.unique(pd.Series([d.split("-")[0] for d in domains]))
-                )
+                cordex_doms = list(pd.unique(pd.Series([d.split("-")[0] for d in domains])))
                 chosen = []
 
                 for d in cordex_doms:
                     sub = [doms for doms in domains if d in doms]
-                    order = [
-                        float(re.split(r"^([A-Z]{3})-([0-9\.]*)([i]{0,1})$", s)[2])
-                        for s in sub
-                    ]
+                    order = [float(re.split(r"^([A-Z]{3})-([0-9\.]*)([i]{0,1})$", s)[2]) for s in sub]
 
                     if restrictions == "finest":
-                        chosen.extend(
-                            [
-                                np.sort(
-                                    np.array(sub)[
-                                        np.where(order == np.array(order).min())[0]
-                                    ]
-                                )[0]
-                            ]
-                        )
+                        chosen.extend([np.sort(np.array(sub)[np.where(order == np.array(order).min())[0]])[0]])
                     elif restrictions == "coarsest":
-                        chosen.extend(
-                            [
-                                np.sort(
-                                    np.array(sub)[
-                                        np.where(order == np.array(order).max())[0]
-                                    ]
-                                )[0]
-                            ]
-                        )
+                        chosen.extend([np.sort(np.array(sub)[np.where(order == np.array(order).max())[0]])[0]])
                     else:
-                        raise ValueError(
-                            "'restrict_resolution' should be 'finest' or 'coarsest'"
-                        )
+                        raise ValueError("'restrict_resolution' should be 'finest' or 'coarsest'")
 
             else:
                 msg = f"Dataset {i} seems to have multiple resolutions, but its activity is not yet recognized or supported."
@@ -1695,13 +1430,7 @@ def _restrict_by_resolution(
                 chosen = list(domains)
                 pass
 
-            to_remove = pd.unique(
-                df_sim[
-                    df_sim["domain"].isin(
-                        list(set(pd.unique(df_sim["domain"])).difference(chosen))
-                    )
-                ]["id"]
-            )
+            to_remove = pd.unique(df_sim[df_sim["domain"].isin(list(set(pd.unique(df_sim["domain"])).difference(chosen)))]["id"])
 
             for k in to_remove:
                 msg = f"Removing {k} from the results."
@@ -1711,10 +1440,9 @@ def _restrict_by_resolution(
     return catalogs
 
 
-def _restrict_multimembers(
-    catalogs: dict, restrictions: dict, id_columns: list[str] | None = None
-):
-    """Update the results from search_data_catalogs by removing simulations with multiple members available.
+def _restrict_multimembers(catalogs: dict, restrictions: dict, id_columns: list[str] | None = None):
+    """
+    Update the results from search_data_catalogs by removing simulations with multiple members available.
 
     Uses regex to try and adequately detect and order the member's identification number, but only tested for 'r-i-p'.
 
@@ -1735,13 +1463,9 @@ def _restrict_multimembers(
     """
     df = pd.concat([catalogs[s].df for s in catalogs.keys()])
     # remove the member from the group_by
-    df["id_nomem"] = df[
-        list(
-            set(id_columns or ID_COLUMNS)
-            .intersection(df.columns)
-            .difference(["member", "driving_member"])
-        )
-    ].apply(lambda row: "_".join(map(str, filter(pd.notna, row.values))), axis=1)
+    df["id_nomem"] = df[list(set(id_columns or ID_COLUMNS).intersection(df.columns).difference(["member", "driving_member"]))].apply(
+        lambda row: "_".join(map(str, filter(pd.notna, row.values))), axis=1
+    )
 
     for i in pd.unique(df["id_nomem"]):
         df_sim = df[df["id_nomem"] == i]
@@ -1749,9 +1473,7 @@ def _restrict_multimembers(
             # We create a compound member for sorting
             # We can't use fillna("") as the columns might be categorical.
             # This order (member + driving_member) makes it so that the driving member priority over the rcm member.
-            fullmembers = df_sim.member.astype(str).replace(
-                "nan", "r1"
-            ) + df_sim.driving_member.astype(str).replace("nan", "r1")
+            fullmembers = df_sim.member.astype(str).replace("nan", "r1") + df_sim.driving_member.astype(str).replace("nan", "r1")
         else:
             fullmembers = df_sim.member.astype(str).replace("nan", "r1")
         members = pd.unique(fullmembers)
@@ -1763,13 +1485,9 @@ def _restrict_multimembers(
             if "ordered" in restrictions:
                 to_keep = natural_sort(members)[0 : restrictions["ordered"]]
             else:
-                raise NotImplementedError(
-                    "Subsetting multiple members currently only supports 'ordered'."
-                )
+                raise NotImplementedError("Subsetting multiple members currently only supports 'ordered'.")
 
-            to_remove = pd.unique(
-                df_sim[fullmembers.isin(list(set(members).difference(to_keep)))]["id"]
-            )
+            to_remove = pd.unique(df_sim[fullmembers.isin(list(set(members).difference(to_keep)))]["id"])
 
             for k in to_remove:
                 msg = f"Removing {k} from the results."
@@ -1780,7 +1498,8 @@ def _restrict_multimembers(
 
 
 def _restrict_wl(df: pd.DataFrame, restrictions: dict):
-    """Update the results from search_data_catalogs according to warming level restrictions.
+    """
+    Update the results from search_data_catalogs according to warming level restrictions.
 
     Parameters
     ----------
@@ -1797,9 +1516,7 @@ def _restrict_wl(df: pd.DataFrame, restrictions: dict):
         Updated DataFrame.
     """
     restrictions.setdefault("wl", 0)
-    to_keep = get_period_from_warming_level(
-        df, return_central_year=True, **restrictions
-    ).notnull()
+    to_keep = get_period_from_warming_level(df, return_central_year=True, **restrictions).notnull()
     removed = pd.unique(df[~to_keep]["id"])
     df = df[to_keep]
     msg = f"Removing the following datasets because of the restriction for warming levels: {list(removed)}"

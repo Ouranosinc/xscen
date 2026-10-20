@@ -1,6 +1,5 @@
 """Catalog creation and path building tools."""
 
-import json
 import logging
 import operator as op
 import os
@@ -8,7 +7,7 @@ import queue
 import string
 import threading
 import warnings
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from fnmatch import fnmatch
 from functools import partial, reduce
@@ -32,6 +31,7 @@ from .catalog import COLUMNS, DataCatalog, generate_id
 from .config import parse_config
 from .io import get_engine
 from .utils import CV, date_parser, ensure_new_xrfreq, get_cat_attrs
+
 
 logger = logging.getLogger(__name__)
 
@@ -65,8 +65,9 @@ Add your own types with the :py:func:`register_parse_type` decorator.
 """
 
 
-def register_parse_type(name: str, regex: str = r"([^\_\/\\]*)", group_count: int = 1):
-    r"""Register a new parse type to be available in :py:func:`parse_directory` patterns.
+def register_parse_type(name: str, regex: str = r"([^\_\/\\]*)", group_count: int = 1) -> Callable:
+    r"""
+    Register a new parse type to be available in :py:func:`parse_directory` patterns.
 
     Function decorated by this will be registered in :py:data:`EXTRA_PARSE_TYPES`.
     The function must take a single string and should return a single string.
@@ -74,19 +75,26 @@ def register_parse_type(name: str, regex: str = r"([^\_\/\\]*)", group_count: in
 
     Parameters
     ----------
-    name: str
+    name : str
         The type name. To make use of this type, put "{field:name}" in your pattern.
-    regex: str
+    regex : str
         A regex string to determine what can be matched by this type.
         The default matches anything but / \ and _, same as the default parse type.
-    group_count: int
+    group_count : int
         The number of regex groups in the previous regex string.
+
+    Returns
+    -------
+    Callable
+        Parsing function.
     """
+    if not name[0].isalpha():
+        raise ValueError("A pattern name should begin with a letter to avoid confusion with format modifiers.")
+    if name in parse.ALLOWED_TYPES:
+        raise ValueError("This name is already used for a base type in parse.")
 
     def _register_parse_type(func):
-        EXTRA_PARSE_TYPES[name] = parse.with_pattern(
-            regex, regex_group_count=group_count
-        )(func)
+        EXTRA_PARSE_TYPES[name] = parse.with_pattern(regex, regex_group_count=group_count)(func)
         return func
 
     return _register_parse_type
@@ -98,16 +106,14 @@ def _parse_word(text: str) -> str:
     return text
 
 
-@register_parse_type("_", regex=r"([^\/\\]*)", group_count=1)
+@register_parse_type("yes_", regex=r"([^\/\\]*)", group_count=1)
 def _parse_level(text: str) -> str:
     r"""Parse helper to match strings with anything except / or \."""
     return text
 
 
 # Minimum 4 digits for a date (a single year). Maximum is, in theory, YYYYMMDDHHMMSS so 14.
-@register_parse_type(
-    "datebounds", regex=r"(([\d]{4,15}(\-[\d]{4,15})?)|fx)", group_count=3
-)
+@register_parse_type("datebounds", regex=r"(([\d]{4,15}(\-[\d]{4,15})?)|fx)", group_count=3)
 def _parse_datebounds(
     text: str,
 ) -> list[str] | tuple[None, None] | tuple[str, str]:
@@ -126,7 +132,8 @@ def _find_assets(
     dirglob: str | None = None,
     skip_dirs: list[os.PathLike] | None = None,
 ):
-    """Walk recursively over files in a directory, filtering according to a glob pattern, path depth and extensions.
+    """
+    Walk recursively over files in a directory, filtering according to a glob pattern, path depth and extensions.
 
     Parameters
     ----------
@@ -156,10 +163,7 @@ def _find_assets(
                 logger.debug("Skipping %s", fdr)
                 alldirs.remove(dr)
 
-        if (
-            top != root
-            and (os.path.relpath(top, root).count(os.path.sep) + 1) not in lengths
-        ):
+        if top != root and (os.path.relpath(top, root).count(os.path.sep) + 1) not in lengths:
             continue
 
         if dirglob is not None and not fnmatch(top, dirglob):
@@ -175,9 +179,11 @@ def _find_assets(
 
 
 def _compile_pattern(pattern: str) -> parse.Parser:
-    r"""Compile a parse pattern (if needed) for quicker evaluation.
+    r"""
+    Compile a parse pattern (if needed) for quicker evaluation.
 
     The `no_` default format spec is added where no format spec was given.
+    The `_` xscen format spec is translated to the extra parse format spec `yes_`.
     The field prefix "?" is converted to "_" so the field name is a valid python variable name.
     """
     if isinstance(pattern, parse.Parser):
@@ -187,6 +193,8 @@ def _compile_pattern(pattern: str) -> parse.Parser:
     for pre, field, fmt, _ in string.Formatter().parse(pattern):
         if not fmt:
             fmt = "no_"
+        elif fmt == "_":
+            fmt = "yes_"
         if field:
             if field.startswith("?"):
                 field = "_" + field[1:]
@@ -206,7 +214,8 @@ def _name_parser(
     attrs_map: dict | None = None,
     xr_open_kwargs: dict | None = None,
 ) -> dict | None:
-    """Extract metadata information from the file path.
+    """
+    Extract metadata information from the file path.
 
     Parameters
     ----------
@@ -226,7 +235,7 @@ def _name_parser(
 
     Returns
     -------
-    dict or None
+    dict, optional
         The metadata fields parsed from the path using the first matching pattern.
         If no pattern matched, None is returned.
 
@@ -256,9 +265,7 @@ def _name_parser(
         d["date_start"], d["date_end"] = d.pop("DATES")
 
     if read_from_file:
-        fromfile = parse_from_ds(
-            abs_path, names=read_from_file, attrs_map=attrs_map, **xr_open_kwargs
-        )
+        fromfile = parse_from_ds(abs_path, names=read_from_file, attrs_map=attrs_map, **xr_open_kwargs)
         d.update(fromfile)
 
     # files with a single year/month
@@ -267,11 +274,7 @@ def _name_parser(
 
     # strip to clean off lost spaces and line jumps
     # do not include wildcarded fields (? was transformed to _ in _compile_pattern)
-    return {
-        k: v.strip() if isinstance(v, str) else v
-        for k, v in d.items()
-        if not k.startswith("_")
-    }
+    return {k: v.strip() if isinstance(v, str) else v for k, v in d.items() if not k.startswith("_")}
 
 
 def _parse_dir(  # noqa: C901
@@ -285,7 +288,8 @@ def _parse_dir(  # noqa: C901
     xr_open_kwargs: dict | None = None,
     progress: bool = False,
 ):
-    """Iterate and parses files in a directory, filtering according to basic pattern properties and optional checks.
+    """
+    Iterate and parses files in a directory, filtering according to basic pattern properties and optional checks.
 
     Parameters
     ----------
@@ -300,7 +304,7 @@ def _parse_dir(  # noqa: C901
         This pattern can not include the asset's basename.
     skip_dirs : list of strings or Paths, optional
         A list of directories to skip in the walk.
-    checks: list of str, optional
+    checks : list of str, optional
         A list of checks to perform, available values are:
         - "readable" : Check that the file is readable by the current user.
         - "writable" : Check that the file is writable by the current user.
@@ -388,9 +392,7 @@ def _parse_dir(  # noqa: C901
                     parsed.append(d)
                     n = len(parsed)
                     # Print number of files but on round numbers to limit the calls to stdout for large collections
-                    if progress and all(
-                        [(n < N or (n % N == 0)) for N in [10, 100, 1000]]
-                    ):
+                    if progress and all([(n < N or (n % N == 0)) for N in [10, 100, 1000]]):
                         print(f"Found {n:7d} files", end="\r")
                 else:
                     msg = f"File {path} didn't match any pattern."
@@ -423,7 +425,8 @@ def _get_new_item(name, newval, repval, oldval, fromcol, is_list):
 
 
 def _replace_in_row(oldrow: pd.Series, replacements: dict):
-    """Replace values in Series (row) according to replacements mapping.
+    """
+    Replace values in Series (row) according to replacements mapping.
 
     Replacements can be simple mappings, but also mapping to other fields.
     List-like fields are handled.
@@ -438,22 +441,16 @@ def _replace_in_row(oldrow: pd.Series, replacements: dict):
             if (col in list_cols and repval in row[col]) or repval == row[col]:
                 if isinstance(new, dict):  # Replacement is for multiple columns
                     for name, newval in new.items():
-                        row[name] = _get_new_item(
-                            name, newval, repval, row[col], col, name in list_cols
-                        )
+                        row[name] = _get_new_item(name, newval, repval, row[col], col, name in list_cols)
                 else:
-                    row[col] = _get_new_item(
-                        col, new, repval, row[col], col, col in list_cols
-                    )
+                    row[col] = _get_new_item(col, new, repval, row[col], col, col in list_cols)
     # Special case for "variable" where we remove Nones.
     if "variable" in row and "variable" in list_cols and None in row["variable"]:
         row["variable"] = tuple(v for v in row["variable"] if v is not None)
     return row
 
 
-def _parse_first_ds(
-    grp: pd.DataFrame, cols: list[str], attrs_map: dict, xr_open_kwargs: dict
-):
+def _parse_first_ds(grp: pd.DataFrame, cols: list[str], attrs_map: dict, xr_open_kwargs: dict):
     """Parse attributes from one file per group, apply them to the whole group."""
     fromfile = parse_from_ds(grp.path.iloc[0], cols, attrs_map, **xr_open_kwargs)
 
@@ -461,6 +458,8 @@ def _parse_first_ds(
     logger.info(msg)
     out = grp.copy()
     for col, val in fromfile.items():
+        if isinstance(val, tuple) and out.dtypes[col] != "O":
+            out[col] = out[col].astype("O")
         for i in grp.index:  # If val is an iterable we can't use loc.
             out.at[i, col] = val
     return out
@@ -472,12 +471,7 @@ def parse_directory(  # noqa: C901
     patterns: list[str],
     *,
     id_columns: list[str] | None = None,
-    read_from_file: (
-        bool
-        | Sequence[str]
-        | tuple[Sequence[str], Sequence[str]]
-        | Sequence[tuple[Sequence[str], Sequence[str]]]
-    ) = False,
+    read_from_file: (bool | Sequence[str] | tuple[Sequence[str], Sequence[str]] | Sequence[tuple[Sequence[str], Sequence[str]]]) = False,
     homogenous_info: dict | None = None,
     cvs: str | os.PathLike | dict | None = None,
     dirglob: str | None = None,
@@ -488,7 +482,8 @@ def parse_directory(  # noqa: C901
     parallel_dirs: bool | int = False,
     file_checks: list[str] | None = None,
 ) -> pd.DataFrame:
-    r"""Parse files in a directory and return them as a pd.DataFrame.
+    r"""
+    Parse files in a directory and return them as a pd.DataFrame.
 
     Parameters
     ----------
@@ -499,7 +494,7 @@ def parse_directory(  # noqa: C901
     id_columns : list of str, optional
         List of column names on which to base the dataset definition. Empty columns will be skipped.
         If None (default), it uses :py:data:`ID_COLUMNS`.
-    read_from_file : boolean or set of strings or tuple of 2 sets of strings or list of tuples
+    read_from_file : bool or set of strings or tuple of 2 sets of strings or list of tuples
         If True, if some fields were not parsed from their path, files are opened and
         missing fields are parsed from their metadata, if found.
         If a sequence of column names, only those fields are parsed from the file, if missing.
@@ -513,7 +508,7 @@ def parse_directory(  # noqa: C901
     homogenous_info : dict, optional
         Using the {column_name: description} format, information to apply to all files.
         These are applied before the `cvs`.
-    cvs: str or os.PathLike or dict, optional
+    cvs : str or os.PathLike or dict, optional
         Dictionary with mapping from parsed term to preferred terms (Controlled VocabularieS) for each column.
         May have an additional "attributes" entry which maps from attribute names in the files to
         official column names. The attribute translation is done before the rest.
@@ -525,9 +520,9 @@ def parse_directory(  # noqa: C901
         Only folders matching the pattern are parsed to find datasets.
     skip_dirs : list of str or Paths, optional
         A list of folders that will be removed from the search, should be absolute.
-    xr_open_kwargs: dict
+    xr_open_kwargs : dict
         If needed, arguments to send xr.open_dataset() when opening the file to read the attributes.
-    only_official_columns: bool
+    only_official_columns : bool
         If True (default), this ensures the final catalog only has the columns defined in :py:data:`xscen.catalog.COLUMNS`.
         Other fields in the patterns will raise an error.
         If False, the columns are those used in the patterns and the homogeneous info.
@@ -535,15 +530,20 @@ def parse_directory(  # noqa: C901
         Path, format, and id are always present in the output.
     progress : bool
         If True, a counter is shown in stdout when finding files on disk. Does nothing if `parallel_dirs` is not False.
-    parallel_dirs: bool or int
+    parallel_dirs : bool or int
         If True, each directory is searched in parallel. If an int, it is the number of parallel searches.
         This should only be significantly useful if the directories are on different disks.
-    file_checks: list of str, optional
+    file_checks : list of str, optional
         A list of file checks to run on the parsed files. Available values are:
         - "readable" : Check that the file is readable by the current user.
         - "writable" : Check that the file is writable by the current user.
         - "ncvalid" : For netCDF, check that it is valid (openable with netCDF4).
         Any check will slow down the parsing.
+
+    Returns
+    -------
+    pd.DataFrame
+        Parsed directory files.
 
     Notes
     -----
@@ -569,11 +569,6 @@ def parse_directory(  # noqa: C901
         The first section of the filename will be excluded from the output, it was given a name (ignore project name) to make the pattern readable.
         The last section of the filenames ("dates") will yield a "date_start" / "date_end" couple.
         All other sections in the middle will be ignored, as they match "{?:_}".
-
-    Returns
-    -------
-    pd.DataFrame
-        Parsed directory files
     """
     if isinstance(directories, str | Path):
         directories = [directories]
@@ -581,13 +576,9 @@ def parse_directory(  # noqa: C901
     xr_open_kwargs = xr_open_kwargs or {}
     if only_official_columns:
         columns = set(COLUMNS) - homogenous_info.keys()
-        pattern_fields = {
-            f
-            for f in set.union(
-                *(set(patt.named_fields) for patt in map(_compile_pattern, patterns))
-            )
-            if not f.startswith("_")
-        } - {"DATES"}
+        pattern_fields = {f for f in set.union(*(set(patt.named_fields) for patt in map(_compile_pattern, patterns))) if not f.startswith("_")} - {
+            "DATES"
+        }
         unrecognized = pattern_fields - set(COLUMNS)
         if unrecognized:
             raise ValueError(
@@ -696,28 +687,16 @@ def parse_directory(  # noqa: C901
     # the dtype will be "object" if any of the dates are out-of-bounds.
     # `na_values=np.datetime64('')` is needed because pandas' NaT does not translate to numpy's NaT, but to float.
     if "date_start" in df.columns:
-        df["date_start"] = (
-            df["date_start"]
-            .apply(date_parser)
-            .to_numpy(na_value=np.datetime64(""))
-            .astype("<M8[ms]")
-        )
+        df["date_start"] = df["date_start"].apply(date_parser).to_numpy(na_value=np.datetime64("")).astype("<M8[ms]")
     if "date_end" in df.columns:
-        df["date_end"] = (
-            df["date_end"]
-            .apply(date_parser, end_of_period=True)
-            .to_numpy(na_value=np.datetime64(""))
-            .astype("<M8[ms]")
-        )
+        df["date_end"] = df["date_end"].apply(date_parser, end_of_period=True).to_numpy(na_value=np.datetime64("")).astype("<M8[ms]")
     # Checks
     if {"date_start", "date_end", "xrfreq", "frequency"}.issubset(df.columns):
         # All NaN dates correspond to a fx frequency.
         invalid = df.date_start.isnull() & df.date_end.isnull() & (df.xrfreq != "fx")
         n = invalid.sum()
         if n > 0:
-            warnings.warn(
-                f"{n} invalid entries where the start and end dates are Null but the frequency is not 'fx'."
-            )
+            warnings.warn(f"{n} invalid entries where the start and end dates are Null but the frequency is not 'fx'.", stacklevel=2)
             msg = f"Paths: {df.path[invalid].values}"
             logger.debug(msg)
             df = df[~invalid]
@@ -725,9 +704,7 @@ def parse_directory(  # noqa: C901
         invalid = df.date_start.notnull() & df.date_end.notnull() & (df.xrfreq == "fx")
         n = invalid.sum()
         if n > 0:
-            warnings.warn(
-                f"{n} invalid entries where the start and end dates are given but the frequency is 'fx'."
-            )
+            warnings.warn(f"{n} invalid entries where the start and end dates are given but the frequency is 'fx'.", stacklevel=2)
             msg = f"Paths: {df.path[invalid].values}"
             logger.debug(msg)
             df = df[~invalid]
@@ -735,7 +712,9 @@ def parse_directory(  # noqa: C901
     # Create id from user specifications
     df["id"] = generate_id(df, id_columns)
 
-    # TODO: ensure variable is a tuple ?
+    # ensure variable is a tuple
+    if "variable" in df.columns:
+        df["variable"] = df.variable.apply(lambda v: (v,) if isinstance(v, str) else tuple(v))
 
     # ensure path is a string
     df["path"] = df.path.apply(str)
@@ -751,8 +730,9 @@ def parse_from_ds(  # noqa: C901
     names: Sequence[str],
     attrs_map: Mapping[str, str] | None = None,
     **xrkwargs,
-):
-    """Parse a list of catalog fields from the file/dataset itself.
+) -> dict[str, Any]:
+    r"""
+    Parse a list of catalog fields from the file/dataset itself.
 
     If passed a path, this opens the file.
 
@@ -766,33 +746,32 @@ def parse_from_ds(  # noqa: C901
 
     Parameters
     ----------
-    obj: str or os.PathLike or xr.Dataset
+    obj : str or os.PathLike or xr.Dataset
         Dataset to parse.
-    names: sequence of str
+    names : sequence of str
         List of attributes to be parsed from the dataset.
-    attrs_map: dict, optional
+    attrs_map : dict, optional
         In the case of non-standard names in the file, this can be used to match entries in the files to specific 'names' in the requested list.
-    xrkwargs:
+    **xrkwargs : dict
         Arguments to be passed to open_dataset().
+
+    Returns
+    -------
+    dict
+        Attributes.
     """
-    get_time = bool(
-        {"frequency", "xrfreq", "date_start", "date_end"}.intersection(names)
-    )
+    get_time = bool({"frequency", "xrfreq", "date_start", "date_end"}.intersection(names))
     if not isinstance(obj, xr.Dataset):
         obj = Path(obj)
 
     if isinstance(obj, Path) and obj.suffixes[-1] == ".zarr":
         msg = f"Parsing attributes from Zarr {obj}."
         logger.info(msg)
-        ds_attrs, variables, time = _parse_from_zarr(
-            obj, get_vars="variable" in names, get_time=get_time
-        )
+        ds_attrs, variables, time = _parse_from_zarr(obj, get_vars="variable" in names, get_time=get_time)
     elif isinstance(obj, Path) and obj.suffixes[-1] == ".nc":
         msg = f"Parsing attributes with netCDF4 from {obj}."
         logger.info(msg)
-        ds_attrs, variables, time = _parse_from_nc(
-            obj, get_vars="variable" in names, get_time=get_time
-        )
+        ds_attrs, variables, time = _parse_from_nc(obj, get_vars="variable" in names, get_time=get_time)
     else:
         if isinstance(obj, Path):
             msg = f"Parsing attributes with xarray from {obj}."
@@ -800,9 +779,7 @@ def parse_from_ds(  # noqa: C901
             obj = xr.open_dataset(obj, engine=get_engine(obj), **xrkwargs)
         ds_attrs = obj.attrs
         time = obj.indexes["time"] if "time" in obj else None
-        variables = set(obj.data_vars.keys()).difference(
-            [v for v in obj.data_vars if len(obj[v].dims) == 0]
-        )
+        variables = set(obj.data_vars.keys()).difference([v for v in obj.data_vars if len(obj[v].dims) == 0])
 
     rev_attrs_map = {v: k for k, v in (attrs_map or {}).items()}
     attrs = {}
@@ -819,9 +796,7 @@ def parse_from_ds(  # noqa: C901
                 if "frequency" in names:
                     attrs["frequency"] = CV.xrfreq_to_frequency(freq)
             else:
-                warnings.warn(
-                    f"Couldn't infer frequency of dataset {obj if not isinstance(obj, xr.Dataset) else ''}"
-                )
+                warnings.warn(f"Couldn't infer frequency of dataset {obj if not isinstance(obj, xr.Dataset) else ''}", stacklevel=2)
         elif name in ("frequency", "xrfreq") and time is None:
             attrs[name] = "fx"
         elif name == "date_start" and time is not None:
@@ -838,12 +813,11 @@ def parse_from_ds(  # noqa: C901
     return attrs
 
 
-def _parse_from_zarr(
-    path: os.PathLike | str, get_vars: bool = True, get_time: bool = True
-):
-    """Obtain the list of variables, the time coordinate and the list of global attributes from a zarr dataset.
+def _parse_from_zarr(path: os.PathLike | str, get_vars: bool = True, get_time: bool = True):
+    """
+    Obtain the list of variables, the time coordinate and the list of global attributes from a zarr dataset.
 
-    Vars and attrs from reading the JSON files directly, time by reading the data with zarr.
+    Reading with zarr directly.
 
     Variables are those
     - where .zattrs/_ARRAY_DIMENSIONS is not empty
@@ -860,51 +834,38 @@ def _parse_from_zarr(
         If True, return the time coordinate.
     """
     path = Path(path)
-
-    if (path / ".zattrs").is_file():
-        with (path / ".zattrs").open() as f:
-            ds_attrs = json.load(f)
-    else:
-        ds_attrs = {}
+    if path.suffix == ".zip":
+        path = zarr.storage.ZipStore(path)
+    ds = zarr.open(path)
 
     variables = []
     if get_vars:
-        coords = []
-        for varpath in path.iterdir():
-            if varpath.is_dir() and (varpath / ".zattrs").is_file():
-                with (varpath / ".zattrs").open() as f:
-                    var_attrs = json.load(f)
-                if (
-                    varpath.name in var_attrs["_ARRAY_DIMENSIONS"]
-                    or len(var_attrs["_ARRAY_DIMENSIONS"]) == 0
-                ):
-                    coords.append(varpath.name)
-                if "coordinates" in var_attrs:
-                    coords.extend(
-                        list(map(str.strip, var_attrs["coordinates"].split(" ")))
-                    )
-        variables = [
-            varpath.name
-            for varpath in path.iterdir()
-            if varpath.name not in coords and varpath.is_dir()
-        ]
+        coords = set()
+        for var in ds.keys():
+            dv = ds[var]
+            if var in dv.metadata.dimension_names:
+                coords.add(var)
+            if dv.ndim == 0:
+                coords.add(var)
+            if "coordinates" in dv.attrs:
+                coords = coords | set(map(str.strip, dv.attrs["coordinates"].split(" ")))
+        variables = set(ds.keys()) - coords
+
     time = None
-    if get_time and (path / "time").is_dir():
-        ds = zarr.open(path)
+    if get_time and "time" in ds:
         time = xr.CFTimeIndex(
             cftime.num2date(
-                ds.time[:],
-                calendar=ds.time.attrs["calendar"],
-                units=ds.time.attrs["units"],
+                ds["time"][:],
+                calendar=ds["time"].attrs["calendar"],
+                units=ds["time"].attrs["units"],
             )
         )
-    return ds_attrs, variables, time
+    return dict(ds.attrs), variables, time
 
 
-def _parse_from_nc(
-    path: os.PathLike | str, get_vars: bool = True, get_time: bool = True
-):
-    """Obtain the list of variables, the time coordinate, and the list of global attributes from a netCDF dataset, using netCDF4.
+def _parse_from_nc(path: os.PathLike | str, get_vars: bool = True, get_time: bool = True):
+    """
+    Obtain the list of variables, the time coordinate, and the list of global attributes from a netCDF dataset, using netCDF4.
 
     Parameters
     ----------
@@ -923,20 +884,14 @@ def _parse_from_nc(
         coords = []
         for name, var in ds.variables.items():
             if "coordinates" in var.ncattrs():
-                coords.extend(
-                    list(map(str.strip, var.getncattr("coordinates").split(" ")))
-                )
+                coords.extend(list(map(str.strip, var.getncattr("coordinates").split(" "))))
             if len(var.dimensions) == 0 or name in var.dimensions:
                 coords.append(name)
         variables = [var for var in ds.variables.keys() if var not in coords]
 
     time = None
     if get_time and "time" in ds.variables:
-        time = xr.CFTimeIndex(
-            cftime.num2date(
-                ds["time"][:], calendar=ds["time"].calendar, units=ds["time"].units
-            ).data
-        )
+        time = xr.CFTimeIndex(cftime.num2date(ds["time"][:], calendar=ds["time"].calendar, units=ds["time"].units).data)
     ds.close()
     return ds_attrs, variables, time
 
@@ -969,9 +924,7 @@ def _schema_level(schema: dict | list[str] | str, facets: dict):
         if isna(facets.get(schema)):
             if optional:
                 return None
-            raise ValueError(
-                f"Facet {schema} is needed but None-like or missing in the data."
-            )
+            raise ValueError(f"Facet {schema} is needed but None-like or missing in the data.")
         return facets[schema]
     if isinstance(schema, list):
         parts = []
@@ -992,30 +945,19 @@ def _schema_dates(facets: dict, optional: bool = False):
     if any([facets.get(f) is None for f in ["date_start", "date_end", "xrfreq"]]):
         if optional:
             return None
-        raise ValueError(
-            "Facets date_start, date_end and xrfreq are needed, but at least one is missing or None-like in the data."
-        )
+        raise ValueError("Facets date_start, date_end and xrfreq are needed, but at least one is missing or None-like in the data.")
 
     start = date_parser(facets["date_start"])
     end = date_parser(facets["date_end"])
     freq = pd.Timedelta(CV.xrfreq_to_timedelta(facets["xrfreq"]))
 
     # Full years : Starts on Jan 1st and is either annual or ends on Dec 31st (accepting Dec 30 for 360 cals)
-    if (
-        start.month == 1
-        and start.day == 1
-        and (
-            freq >= pd.Timedelta(CV.xrfreq_to_timedelta("YS"))
-            or (end.month == 12 and end.day > 29)
-        )
-    ):
+    if start.month == 1 and start.day == 1 and (freq >= pd.Timedelta(CV.xrfreq_to_timedelta("YS")) or (end.month == 12 and end.day > 29)):
         if start.year == end.year:
             return f"{start:%4Y}"
         return f"{start:%4Y}-{end:%4Y}"
     # Full months : Starts on the 1st and is either monthly or ends on the last day
-    if start.day == 1 and (
-        freq >= pd.Timedelta(CV.xrfreq_to_timedelta("M")) or end.day > 27
-    ):
+    if start.day == 1 and (freq >= pd.Timedelta(CV.xrfreq_to_timedelta("M")) or end.day > 27):
         # Full months
         if (start.year, start.month) == (end.year, end.month):
             return f"{start:%4Y%m}"
@@ -1055,9 +997,7 @@ def _get_needed_fields(schema: dict):
                 if not (lvl.startswith("(") and lvl.endswith(")")):
                     needed.add(lvl)
         elif not (isinstance(level, dict) and list(level.keys()) == ["text"]):
-            raise ValueError(
-                f"Invalid schema with unknown {level} of type {type(level)}."
-            )
+            raise ValueError(f"Invalid schema with unknown {level} of type {type(level)}.")
     return needed
 
 
@@ -1075,9 +1015,7 @@ def _read_schemas(schemas):
     for name, schema in schemas.items():
         missing_fields = {"with", "folders", "filename"} - set(schema.keys())
         if missing_fields:
-            raise ValueError(
-                f"Invalid schema specification. Missing fields {missing_fields} in schema {name}."
-            )
+            raise ValueError(f"Invalid schema specification. Missing fields {missing_fields} in schema {name}.")
     return schemas
 
 
@@ -1086,31 +1024,24 @@ def _build_path(
     schemas: dict,
     root: str | os.PathLike,
     get_type: bool = False,
-    **extra_facets,
+    **extra_facets: dict[str, Any],
 ) -> Path | tuple[Path, str]:
     # Get all known metadata
+    facets = {}
     if isinstance(data, xr.Dataset | xr.DataArray):
         facets = (
             # Get non-attribute metadata
-            parse_from_ds(
-                data, ["frequency", "xrfreq", "date_start", "date_end", "variable"]
-            )
-            | data.attrs
-            | get_cat_attrs(data)
+            parse_from_ds(data, ["frequency", "xrfreq", "date_start", "date_end", "variable"]) | data.attrs | get_cat_attrs(data)
         )
     elif isinstance(data, pd.Series):
         facets = dict(data)
-    else:
+    elif not isinstance(data, dict):
         raise NotImplementedError(f"Cannot build path with object of type {type(data)}")
 
     facets = facets | extra_facets
 
     # Scalar-ize variable if needed.
-    if (
-        "variable" in facets
-        and not isinstance(facets["variable"], str)
-        and len(facets["variable"]) == 1
-    ):
+    if "variable" in facets and not isinstance(facets["variable"], str) and len(facets["variable"]) == 1:
         facets["variable"] = facets["variable"][0]
 
     # Find the first fitting schema
@@ -1118,16 +1049,12 @@ def _build_path(
         if not schema["with"]:
             match = True
         else:
-            match = reduce(
-                op.and_, map(partial(_schema_option, facets=facets), schema["with"])
-            )
+            match = reduce(op.and_, map(partial(_schema_option, facets=facets), schema["with"]))
         if match:
             # Checks
             needed_fields = _get_needed_fields(schema)
             if missing_fields := needed_fields - set(facets.keys()):
-                raise ValueError(
-                    f"Missing facets {missing_fields} are needed to build the path according to selected schema {name}."
-                )
+                raise ValueError(f"Missing facets {missing_fields} are needed to build the path according to selected schema {name}.")
             if "variable" in needed_fields and not isinstance(facets["variable"], str):
                 raise ValueError(
                     f"Selected schema {name} is meant to be used with single-variable datasets. Got multiple: {facets['variable']}. "
@@ -1152,9 +1079,10 @@ def build_path(
     data: dict | xr.Dataset | xr.DataArray | pd.Series | DataCatalog | pd.DataFrame,
     schemas: str | os.PathLike | dict | None = None,
     root: str | os.PathLike | None = None,
-    **extra_facets,
+    **extra_facets: dict[str, Any],
 ) -> Path | DataCatalog | pd.DataFrame:
-    r"""Parse the schema from a configuration and construct path using a dictionary of facets.
+    r"""
+    Parse the schema from a configuration and construct path using a dictionary of facets.
 
     Parameters
     ----------
@@ -1170,7 +1098,7 @@ def build_path(
         Or a single schema dict (single element of the yaml).
     root : str or Path, optional
         If given, the generated path(s) is given under this root one.
-    \*\*extra_facets
+    **extra_facets : dict
         Extra facets to supplement or override metadadata missing from the first input.
 
     Returns
@@ -1189,7 +1117,6 @@ def build_path(
     >>> new_cat = xs.catutils.build_path(old_cat)
     >>> for i, row in new_cat.iterrows():
     ...     sh.move(row.path, row.new_path)
-    ...
     """
     if root:
         root = Path(root)
@@ -1222,18 +1149,33 @@ def _as_template(a):
     return "{" + a + "}"
 
 
-def partial_format(template, **fmtargs):
-    """Format a template only partially, leaving un-formatted templates intact."""
+def partial_format(template: str, **fmtargs):
+    """
+    Format a template only partially, leaving un-formatted templates intact.
 
-    class PartialFormatDict(dict):
+    Parameters
+    ----------
+    template : str
+        Template to format.
+    **fmtargs : dict
+        Formatting keyword arguments.
+
+    Returns
+    -------
+    str
+        Partially-formatted template.
+    """
+
+    class _PartialFormatDict(dict):
         def __missing__(self, key):
             return _as_template(key)
 
-    return template.format_map(PartialFormatDict(**fmtargs))
+    return template.format_map(_PartialFormatDict(**fmtargs))
 
 
-def patterns_from_schema(schema: str | dict, exts: Sequence[str] | None = None):
-    """Generate all valid patterns for a given schema.
+def patterns_from_schema(schema: str | dict, exts: Sequence[str] | None = None) -> list[str]:
+    """
+    Generate all valid patterns for a given schema.
 
     Generated patterns are meant for use with :py:func:`parse_directory`.
     This hardcodes the rule that facet can never contain a underscore ("_") except "variable".
@@ -1241,17 +1183,18 @@ def patterns_from_schema(schema: str | dict, exts: Sequence[str] | None = None):
 
     Parameters
     ----------
-    schema: dict or str
+    schema : dict or str
         A dict with keys "with" (optional), "folders" and "filename", constructed as described
         in the `xscen/data/file_schema.yml` file.
         Or the name of a pattern group from that file.
-    exts: sequence of strings, optional
+    exts : sequence of strings, optional
         A list of file extensions to consider, with the leading dot.
         Defaults to ``[".nc", ".zarr", ".zarr.zip"]``.
 
     Returns
     -------
-    list of patterns compatible with :py:func:`parse_directory`.
+    list[str]
+        List of patterns compatible with :py:func:`parse_directory`.
     """
     if isinstance(schema, str):
         schemas = Path(__file__).parent / "data" / "file_schema.yml"
@@ -1261,16 +1204,10 @@ def patterns_from_schema(schema: str | dict, exts: Sequence[str] | None = None):
     # # Base folder patterns
 
     # Index of optional folder parts
-    opt_idx = [
-        i
-        for i, k in enumerate(schema["folders"])
-        if isinstance(k, str) and k.startswith("(")
-    ]
+    opt_idx = [i for i, k in enumerate(schema["folders"]) if isinstance(k, str) and k.startswith("(")]
 
     raw_folders = []
-    for skip in chain.from_iterable(
-        combinations(opt_idx, r) for r in range(len(opt_idx) + 1)
-    ):
+    for skip in chain.from_iterable(combinations(opt_idx, r) for r in range(len(opt_idx) + 1)):
         # skip contains index of levels to skip
         # we go through every possible missing levels combinations
         parts = []
@@ -1313,9 +1250,7 @@ def patterns_from_schema(schema: str | dict, exts: Sequence[str] | None = None):
     # # Filenames
     if "DATES" in schema["filename"]:
         if schema["filename"][-1] != "DATES":
-            raise ValueError(
-                "Reverse pattern generation is not supported for filenames with date bounds not at the end."
-            )
+            raise ValueError("Reverse pattern generation is not supported for filenames with date bounds not at the end.")
         filename = "{?:_}_{DATES}"
     else:
         filename = "{?:_}"

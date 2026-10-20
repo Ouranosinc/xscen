@@ -44,7 +44,7 @@ This will install the latest stable release from `PyPI`, but will not include `x
 Development Installation (Anaconda + pip)
 -----------------------------------------
 
-For development purposes, we provide the means for generating a conda environment with the latest dependencies in an `environment.yml` file at the top-level of the `Github repo <https://github.com/Ouranosinc/xscen>`_.
+For development purposes, we provide the means for generating a conda environment with the latest dependencies in an `environment-dev.yml` file at the top-level of the `Github repo <https://github.com/Ouranosinc/xscen>`_.
 
 The sources for xscen can be downloaded from the `Github repo`_.
 
@@ -76,7 +76,6 @@ The sources for xscen can be downloaded from the `Github repo`_.
 
         python -m pip install -e .[dev]
 
-    Even if you do not intend to contribute to `xscen`, we favor using `environment-dev.yml` over `environment.yml` because it includes additional packages that are used to run all the examples provided in the documentation.
     If for some reason you wish to install the `PyPI` version of `xscen` into an existing Anaconda environment (*not recommended if requirements are not met*), only run the last command above.
 
 #. When new changes are made to the `Github repo`_, if using a clone, you can update your local copy using the following commands from the root of the repository:

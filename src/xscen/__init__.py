@@ -20,6 +20,9 @@
 
 import warnings
 
+# Monkey-patch Zarr to accept zipped zarr transparently
+import xscen._zarrzip
+
 # Import the submodules
 from . import (
     aggregate,
@@ -69,9 +72,10 @@ from .scripting import (
 )
 from .utils import clean_up
 
+
 __author__ = """Gabriel Rondeau-Genesse"""
 __email__ = "rondeau-genesse.gabriel@ouranos.ca"
-__version__ = "0.13.1-dev.3"
+__version__ = "0.15.3-dev.6"
 
 
 # FIXME: file and line are unused
