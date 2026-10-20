@@ -120,7 +120,6 @@ csv_kwargs = {
     "schema_overrides": {
         "date_start": pl.Datetime(time_unit="ms"),
         "date_end": pl.Datetime(time_unit="ms"),
-        **{col: pl.String() for col in set(COLUMNS) - set(_NONSTR_COLUMNS)},
     },
     "try_parse_dates": True,
 }
@@ -325,10 +324,10 @@ class DataCatalog(intake_esm.esm_datastore):
         if len(columns) > 0:
             cat = super().search(**columns)
         else:
-            cat = self.__class__({"esmcat": self.esmcat.model_dump(), "df": self.esmcat._df})
+            cat = self.__class__({"esmcat": self.esmcat.model_dump(), "df": self.esmcat.df})
 
         if periods is not False:
-            cat.esmcat._df = subset_file_coverage(cat.esmcat._df, periods=periods, coverage=0, duplicates_ok=True)
+            cat.esmcat._df = subset_file_coverage(cat.esmcat.df, periods=periods, coverage=0, duplicates_ok=True)
 
         variables = columns.get(self.esmcat.aggregation_control.variable_column_name)
         if variables:
@@ -368,7 +367,7 @@ class DataCatalog(intake_esm.esm_datastore):
                     # Since setting multiple entries to tuples is a pain, update only the duplicated and re-add it to df
                     # Other entries will be dropped by drop_duplicates
                     d["variable"] = tuple(set(append_v))
-                    self.esmcat._df = pd.concat([self.esmcat._df, pd.DataFrame(d).transpose()])
+                    self.esmcat._df = pd.concat([self.esmcat.df, pd.DataFrame(d).transpose()])
 
         # Drop duplicates
         self.esmcat.df.drop_duplicates(subset=columns, keep="last", ignore_index=True, inplace=True)
@@ -401,9 +400,9 @@ class DataCatalog(intake_esm.esm_datastore):
 
         df_len = len(self.df)
         if df_len > 0:
-            self.esmcat._df = self.df[self.df.apply(_check_existing, axis=1)].reset_index(drop=True)
-            if df_len > 0:  # FIXME: What's going on here?
-                self.esmcat._df["variable"] = self.df.apply(_check_variables, axis=1)
+            df = self.df[self.df.apply(_check_existing, axis=1)].reset_index(drop=True)
+            df["variable"] = self.df.apply(_check_variables, axis=1)
+            self.esmcat._df = df
 
     def exists_in_cat(self, **columns) -> bool:
         """
@@ -581,7 +580,7 @@ class DataCatalog(intake_esm.esm_datastore):
         from .io import unzip_directory, zip_directory
 
         dest = Path(dest)
-        data = self.esmcat._df.copy()
+        data = self.esmcat.df.copy()
         if flat:
             new_paths = []
             for path in map(Path, data.path.values):
@@ -625,7 +624,7 @@ class DataCatalog(intake_esm.esm_datastore):
                 logger.info(msg)
                 sh.copy(old, new)
         if inplace:
-            self.esmcat._df["path"] = data["new_path"]
+            self.esmcat.df["path"] = data["new_path"]
             return
         data["path"] = data["new_path"]
         data = data.drop(columns=["new_path"])
