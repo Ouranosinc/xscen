@@ -610,7 +610,7 @@ class TestSubsetWarmingLevel:
         assert ds_sub.time.equals(ds.sel(time=slice("2003", "2022")).time)
 
         # multiple wl
-        with pytest.raises(ValueError, match="Subsetting by warming levels"):
+        with pytest.raises(ValueError, match="Vectorized time subsetting"):
             ds_sub = xs.subset_warming_level(ds, wl=[1.5, 2, 20])
 
         ds = ds.convert_calendar("noleap")

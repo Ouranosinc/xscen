@@ -34,7 +34,7 @@ from .catutils import parse_from_ds
 from .config import parse_config
 from .indicators import load_xclim_module, registry_from_module
 from .spatial import Region, subset
-from .utils import CV, _xarray_defaults, get_cat_attrs, natural_sort, standardize_periods, xrfreq_to_timedelta
+from .utils import CV, _xarray_defaults, get_cat_attrs, natural_sort, standardize_periods, vectorized_time_bounds_subset, xrfreq_to_timedelta
 from .utils import ensure_correct_time as _ensure_correct_time
 
 
@@ -1187,15 +1187,6 @@ def subset_warming_level(
     if "realization" in ds.coords or len(wl) > 1:
         # Vectorized subset (multiple sims, multiple wls or both)
 
-        # Fake time generation is needed
-        freq = xr.infer_freq(ds.time)
-        if compare_offsets(freq, "<", "MS") and ds.time.dt.calendar not in ["noleap", "all_leap", "360_day"]:
-            raise ValueError(
-                "Subsetting by warming levels with multiple realizations and/or multiple warming levels is not implemented "
-                f"for frequencies finer than monthly and non-uniform calendars. Got freq={freq} and calendar={ds.time.dt.calendar}"
-            )
-        fake_time = xr.date_range("1000-01-01", f"{1000 + window - 1}-12-31", freq=freq, calendar=ds.time.dt.calendar)
-
         if "realization" in ds.coords:
             bounds = get_period_from_warming_level(ds.realization, wl, return_central_year=False, **kwargs)
             if len(wl) == 1:
@@ -1224,57 +1215,8 @@ def subset_warming_level(
             input_core_dims=[["time"], ["wl_bounds"]],
             vectorize=True,
         )
-
-        date_cls = ds.indexes["time"][0].__class__
-        # sentinel value for NaT, having this value is highly improbable and it should always be smaller then the first time
-        # makes no sense to have data going before 1850 when working with warming levels
-        sentinel = date_cls(1849, 12, 31, 23, 59, 59)
-        # Weird, but much easier to use xarray/pandas indexing for selecting years and much cleaner code using apply_ufunc
-
-        def _bounds_to_sel(time, bnds, not_reached):
-            time = xr.DataArray(time, dims=("time",), coords={"time": time})
-            if not_reached:
-                sl = time.isel(time=slice(0, fake_time.size))
-            else:
-                sl = time.sel(time=slice(*bnds))
-                if min_periods != window:
-                    sl = sl.pad(time=(0, fake_time.size - sl.time.size), constant_values=sentinel)
-            return sl.values
-
-        timesels = xr.apply_ufunc(
-            _bounds_to_sel,
-            ds.time,
-            bounds,
-            wl_not_reached,
-            input_core_dims=[["time"], ["wl_bounds"], []],
-            vectorize=True,
-            output_core_dims=[["fake_time"]],
-        ).assign_coords(fake_time=fake_time)
-
-        def _make_bounds(bnds, not_reached):
-            # Need to return the proper dtype for apply_ufunc, this will be masked with wl_not_reached afterwards
-            if not_reached:
-                return np.array([sentinel, sentinel])
-            s, e = bnds
-            # xscen returns first and last year included in the period
-            # cf conventions want the time point that finishes the periods
-            return np.array([date_cls(int(s), 1, 1), date_cls(int(e) + 1, 1, 1)])
-
-        bnds_crd = xr.apply_ufunc(
-            _make_bounds, bounds, wl_not_reached, input_core_dims=[["wl_bounds"], []], vectorize=True, output_core_dims=[["wl_bounds"]]
-        ).where(~wl_not_reached)
-
-        if min_periods != window and (timesels == sentinel).any():
-            sentinel_ds = xr.zeros_like(ds.isel(time=0)).assign_coords(time=[sentinel])
-            ds = xr.concat([sentinel_ds, ds], "time")
-        ds_wl = (
-            ds.sel(time=timesels)
-            .drop_vars("time")
-            .where(~wl_not_reached & (timesels != sentinel))
-            .rename(fake_time="time")
-            .assign_coords(warminglevel_bounds=bnds_crd)
-            .drop_vars("wl_bounds")
-        )
+        bounds = bounds.astype(float).where(~wl_not_reached)
+        ds_wl = vectorized_time_bounds_subset(ds, bounds, size=window, bnd_dim="wl_bounds", bnd_coord="warminglevel_bounds")
     else:
         # Single sim, single wl
         start_yr, end_yr = get_period_from_warming_level(ds, wl=wl[0], return_central_year=False, **kwargs)
