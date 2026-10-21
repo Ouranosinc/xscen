@@ -600,7 +600,6 @@ def search_data_catalogs(  # noqa: C901
     )
     msg = f"Catalog opened: {catalog} from {len(data_catalogs)} files."
     logger.info(msg)
-
     if match_hist_and_fut:
         logger.info("Dispatching historical dataset to future experiments.")
         catalog = _dispatch_historical_to_future(catalog, id_columns)
@@ -709,7 +708,6 @@ def search_data_catalogs(  # noqa: C901
                         # else is joker (any timedelta)
                         lower_frq = np.less(varcat.df.timedelta, td) if pd.notnull(td) else False
                         varcat.esmcat._df = varcat.df[same_frq | (lower_frq & allow_resampling)]
-
                         # For each dataset (id * xrfreq * processing_level * domain * variable),
                         # make sure that file availability covers the requested time periods
                         if periods is not None and len(varcat) > 0:
@@ -722,7 +720,6 @@ def search_data_catalogs(  # noqa: C901
                                     subset_file_coverage(group, periods, **coverage_kwargs)
                                 )  # If valid, this returns the subset of files that cover the time period
                             varcat.esmcat._df = pd.concat(valid_tp)
-
                         # We now select the coarsest timedelta for each variable
                         # We need to re-iterate over variables in case we used the registry
                         # (and thus there are multiple variables in varcat)
@@ -730,11 +727,11 @@ def search_data_catalogs(  # noqa: C901
                         for _var, group in varcat.df.groupby("variable"):
                             rows.append(group[group.timedelta == group.timedelta.max()])
                         if rows:
-                            # check if the requested variable exists and if so, remove DeriveVariable references
-                            v_list = [rows[i]["variable"].iloc[0] for i in range(len(rows))]
-                            v_list_check = [var_id in v_list[i] for i in range(len(v_list))]  # necessary in case a file has multiple variables
-                            if any(v_list_check):
-                                rows = [rows[v_list_check.index(True)]]
+                            # check if the requested variable exists in assets
+                            # "variable" is always a string here because we unstacked above
+                            is_var_id = [var_id == r["variable"].iloc[0] for r in rows]
+                            if any(is_var_id):  # it does, keep only this row
+                                rows = [rows[is_var_id.index(True)]]
                                 varcat.derivedcat = DerivedVariableRegistry()
                             varcat.esmcat._df = pd.concat(rows, ignore_index=True)
                         else:
@@ -746,7 +743,6 @@ def search_data_catalogs(  # noqa: C901
                         break
                     if "timedelta" in varcat.df.columns:
                         varcat.df.drop(columns=["timedelta"], inplace=True)
-
                     varcat._requested_variable_freqs = {var_id: xrfreq}
                     if was_stacked and "variable" not in varcat.esmcat.columns_with_iterables:
                         varcat.stack("variable")
@@ -1291,7 +1287,7 @@ def _dispatch_historical_to_future(catalog: DataCatalog, id_columns: list[str] |
     # "Same hist member" as in "each future realization stems from the same historical member"
 
     df = catalog.df.copy()
-    df["same_hist_member"] = df[sim_id_no_exp].apply(lambda row: "_".join(row.values.astype(str)), axis=1)
+    df["same_hist_member"] = df[sim_id_no_exp].apply(lambda row: "_".join(map(str, row.values)), axis=1)
 
     new_lines = []
     for group in df.same_hist_member.unique():
