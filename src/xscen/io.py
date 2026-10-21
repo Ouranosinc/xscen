@@ -458,6 +458,7 @@ def save_to_zarr(  # noqa: C901
     itervar: bool = False,
     timeout_cleanup: bool = True,
     strip_cat_metadata: bool = False,
+    zarr_format: int = 2,
     zip_zarrdir: str | None = None,
     zip_kwargs: dict | None = None,
 ):
@@ -481,7 +482,6 @@ def save_to_zarr(  # noqa: C901
         Rechunking is only done on *data* variables sharing dimensions with this argument.
     zarr_kwargs : dict, optional
         Additional arguments to send `to_zarr()`.
-        Passing ``zarr_format=2`` should be done here if needed.
     compute : bool
         Whether to start the computation or return a delayed object.
     encoding : dict, optional
@@ -507,6 +507,9 @@ def save_to_zarr(  # noqa: C901
         This does nothing if `compute` is False.
     strip_cat_metadata : bool
         If True (default), strips all catalog-added attributes before saving the dataset.
+    zarr_format : int
+        Which version of the zarr format to use. Defaults to 2.
+        If 3, numcodecs compressors are dropped from the encodings of ``ds``.
     zip_zarrdir : str, optional
         If given and filename ends in zip, the saved zarr directory is first saved in this directory,
         then zipped to `filename`. For the initial zarr, if the zip_zarrdir ends in .zarr, it is used as is. If it
@@ -532,9 +535,13 @@ def save_to_zarr(  # noqa: C901
     xarray.Dataset.to_zarr : The xarray function used to save the dataset.
     """
     # to address this issue https://github.com/pydata/xarray/issues/3476
-    for v in list(ds.coords.keys()):
-        if ds.coords[v].dtype == object:
+    for v in list(ds.variables.keys()):
+        if v in ds.coords and ds.coords[v].dtype == object:
             ds[v].encoding.clear()
+        elif zarr_format > 2:
+            # drop any compressors in dataset's encoding
+            # avoids having zarr-2 compressors when saving to zarr 3
+            ds[v].encoding.pop("compressors", None)
 
     if rechunk:
         ds = rechunk_for_saving(ds, rechunk)
