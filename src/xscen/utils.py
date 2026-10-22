@@ -24,7 +24,7 @@ import xarray as xr
 import xsdba
 from xarray.coding import cftime_offsets as cfoff
 from xclim.core import units
-from xclim.core.calendar import parse_offset
+from xclim.core.calendar import compare_offsets, parse_offset
 from xclim.core.options import METADATA_LOCALES
 from xclim.core.options import OPTIONS as XC_OPTIONS
 from xclim.core.utils import uses_dask
@@ -54,6 +54,7 @@ __all__ = [
     "unstack_dates",
     "unstack_fill_nan",
     "update_attr",
+    "vectorized_time_bounds_subset",
     "xclim_convert_units_to",
     "xrfreq_to_timedelta",
 ]
@@ -1610,3 +1611,91 @@ def rechunk_for_resample(obj: xr.DataArray | xr.Dataset, **resample_kwargs) -> x
 
     res = obj.resample(**resample_kwargs)
     return flox.xarray.rechunk_for_blockwise(obj, res._dim, res._codes)
+
+
+def vectorized_time_bounds_subset(ds, bounds, size=None, bnd_dim="bnds", bnd_coord="time_bnds"):
+    """
+    Subset a dataset by temporal slices defined as year bounds, efficiently and dask-compatible.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        A dataset with a time dimension. The time coordinate is assumed to be in ascending order.
+        The sampling must be monthly or coarser if the calendar is non-uniform.
+    bounds : xr.DataArray
+        An array of year bounds, as floats. The bound dimension must be given in `bnd_dim`.
+        A NaN bound will result in that slice to be invalid and all NaN in the output.
+        Temporal subsetting with years is always inclusive of both bounds.
+    size : int, optional
+        The size of the time subset, in years (not actual array size). If None, the maximum (+1) span is used.
+        It must be as large as the largest span.
+    bnd_dim : str
+        The name of the len-2 dimension of the slice bounds (start, end).
+    bnd_coord : str
+        The name of the CF-compliant time bound auxiliary coordinate added to the output.
+        This new coordinate is essentially the same as `bounds` but with the proper datetime dtype.
+
+    Returns
+    -------
+    Dataset
+        Same as `ds`, but subsetted. The new time coordinate starts in 1000 and has a length of `size`.
+    """
+    freq = xr.infer_freq(ds.time)
+    if compare_offsets(freq, "<", "MS") and ds.time.dt.calendar not in ["noleap", "all_leap", "360_day"]:
+        raise ValueError(
+            "Vectorized time subsetting is not implemented for frequencies finer than monthly and non-uniform calendars. "
+            f"Got freq={freq} and calendar={ds.time.dt.calendar}"
+        )
+    if size is None:
+        size = (bounds.isel({bnd_dim: 1}) - bounds.isel({bnd_dim: 0}) + 1).max().item()
+    fake_time = xr.date_range("1000-01-01", f"{1000 + size - 1}-12-31", freq=freq, calendar=ds.time.dt.calendar)
+
+    # A sentinel value of invalid times, because cftime doesn't have NaT and even so, NaT is difficult to manage
+    # Assuming time index is sorted and increasing, this value is impossible to have
+    sentinel = ds.indexes["time"][0] - pd.Timedelta(seconds=1)
+    date_cls = ds.indexes["time"][0].__class__
+
+    valid = bounds.notnull().all(bnd_dim)
+
+    def _bounds_to_sel(time, bnds, isvalid):
+        time = xr.DataArray(time, dims=("time",), coords={"time": time})
+        if not isvalid:
+            sl = time.isel(time=slice(0, fake_time.size))
+        else:
+            sl = time.sel(time=slice(f"{bnds[0]:.0f}", f"{bnds[1]:.0f}"))
+            if sl.time.size < fake_time.size:
+                sl = sl.pad(time=(0, fake_time.size - sl.time.size), constant_values=sentinel)
+        return sl.values
+
+    timesels = xr.apply_ufunc(
+        _bounds_to_sel,
+        ds.time,
+        bounds,
+        valid,
+        input_core_dims=[["time"], [bnd_dim], []],
+        vectorize=True,
+        output_core_dims=[["fake_time"]],
+    ).assign_coords(fake_time=fake_time)
+
+    def _make_bounds(bnds, isvalid):
+        # Need to return the proper dtype for apply_ufunc, this will be masked with wl_not_reached afterwards
+        if not isvalid:
+            return np.array([sentinel, sentinel])
+        s, e = bnds
+        # xscen returns first and last year included in the period
+        # cf conventions want the time point that finishes the periods
+        return np.array([date_cls(int(s), 1, 1), date_cls(int(e) + 1, 1, 1)])
+
+    bnds_crd = xr.apply_ufunc(_make_bounds, bounds, valid, input_core_dims=[[bnd_dim], []], vectorize=True, output_core_dims=[[bnd_dim]]).where(valid)
+
+    if (timesels == sentinel).any():
+        sentinel_ds = xr.zeros_like(ds.isel(time=0)).assign_coords(time=[sentinel])
+        ds = xr.concat([sentinel_ds, ds], "time")
+    return (
+        ds.sel(time=timesels)
+        .drop_vars("time")
+        .where(valid & (timesels != sentinel))
+        .rename(fake_time="time")
+        .assign_coords({bnd_coord: bnds_crd})
+        .drop_vars(bnd_dim, errors="ignore")
+    )
