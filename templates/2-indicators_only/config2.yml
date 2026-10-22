@@ -8,7 +8,7 @@ dask:
     memory_limit: 10GB
     # dashboard_address: 11111
     # silence_logs: 50  # To suppress warnings about garbage collection and other inevitable stuff
-    array.slicing.split_large_chunks: False
+    #array.slicing.split_large_chunks: False
 
 logging:
   formatters:
@@ -45,7 +45,7 @@ main:
   catalog:
   ## The template of the file name, including the parent path, valid fields are the catalog's column
   ## One zarr dataset per xrfreq is produced
-  # outfilename: /DATA/{source}_indicators_{xrfreq}_{date_start:%Y}-{date_end:%Y}.zarr
+  # outfilename: /DATA/{source}_indicators_{xrfreq}.zarr
   outfilename:
 
 indicators:
