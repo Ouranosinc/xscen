@@ -811,7 +811,7 @@ def get_period_from_warming_level(  # noqa: C901
     window: int = 20,
     tas_baseline_period: Sequence[str] | None = None,
     ignore_member: bool = False,
-    tas_src: str | os.PathLike | None = None,
+    tas_src: str | os.PathLike | xr.DataArray | None = None,
     return_central_year: bool = False,
 ) -> xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list:
     """
@@ -840,7 +840,7 @@ def get_period_from_warming_level(  # noqa: C901
        [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
     ignore_member : bool
        Decides whether to ignore the member when searching for the model run in tas_csv.
-    tas_src : str, optional
+    tas_src : str, xr.DataArray or xr.Dataset, optional
        Path to a netCDF of annual global mean temperature (tas) with an annual "time" dimension
        and a "simulation" dimension with the following coordinates: "mip_era", "source", "experiment" and "member".
        If None, it will default to data/IPCC_annual_global_tas.nc which was built from
@@ -857,7 +857,6 @@ def get_period_from_warming_level(  # noqa: C901
         If `realization` is a sequence, the output will be of the same type,
         with values following the format indicated by `return_central_year`.
     """
-    tas_src = tas_src or Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
     tas_baseline_period = standardize_periods(tas_baseline_period or ["1850", "1900"], multiple=False)
 
     if (window % 2) not in {0, 1}:
@@ -867,7 +866,13 @@ def get_period_from_warming_level(  # noqa: C901
     info_models = _wl_prep_infomodels(realization, ignore_member, FIELDS)
 
     # open nc
-    tas = xr.open_dataset(tas_src).tas.load()
+    if isinstance(tas_src, xr.DataArray):
+        tas = tas_src.to_dataset("tas")
+    elif isinstance(tas_src, xr.Dataset):
+        tas = tas_src
+    else:
+        tas_src = tas_src or Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
+        tas = xr.open_dataset(tas_src).tas.load()
     if np.isscalar(wl):
         wl = np.array([wl])
 
@@ -944,7 +949,7 @@ def get_warming_level_from_period(
     *,
     tas_baseline_period: Sequence[str] | None = None,
     ignore_member: bool = False,
-    tas_src: str | os.PathLike | None = None,
+    tas_src: str | os.PathLike | xr.DataArray | None = None,
 ) -> xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | float | list:
     """
     Return the warming level reached in the given period.
@@ -969,7 +974,7 @@ def get_warming_level_from_period(
        [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
     ignore_member : bool
        Decides whether to ignore the member when searching for the model run in tas_csv.
-    tas_src : str, optional
+    tas_src : str, xr.DataArray or xr.Dataset, optional
        Path to a netCDF of annual global mean temperature (tas) with an annual "time" dimension
        and a "simulation" dimension with the following coordinates: "mip_era", "source", "experiment" and "member".
        If None, it will default to data/IPCC_annual_global_tas.nc which was built from
@@ -982,7 +987,6 @@ def get_warming_level_from_period(
         If `realization` is not a sequence, the output will be a float.
         If `realization` is a sequence, the output will be of the same type.
     """
-    tas_src = tas_src or Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
     tas_baseline_period = standardize_periods(tas_baseline_period or ["1850", "1900"], multiple=False)
     period = standardize_periods(period, multiple=False)
 
@@ -990,7 +994,13 @@ def get_warming_level_from_period(
     info_models = _wl_prep_infomodels(realization, ignore_member, FIELDS)
 
     # open nc
-    tas = xr.open_dataset(tas_src).tas.load()
+    if isinstance(tas_src, xr.DataArray):
+        tas = tas_src.to_dataset("tas")
+    elif isinstance(tas_src, xr.Dataset):
+        tas = tas_src
+    else:
+        tas_src = tas_src or Path(__file__).parent / "data" / "IPCC_annual_global_tas.nc"
+        tas = xr.open_dataset(tas_src).tas.load()
 
     def _get_warming_level(model):
         tas_sel = _wl_find_column(tas, model)
