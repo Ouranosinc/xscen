@@ -7,26 +7,19 @@ from xclim.core.units import convert_units_to, declare_units
 from xsdba.processing import from_additive_space, to_additive_space
 
 
-try:
-    from xclim.indices.converters import tas_from_tasmin_tasmax as tas_midpoint
-except ImportError:  # FIXME: Remove when we pin xclim >= 0.58
-    from xclim.indices import tas as tas_midpoint
-
-
 __all__ = [
     "dtr_from_minmax",
     "hurs_from_hurslogit",
     "hurslogit_from_hurs",
     "orog_from_z",
     "precipitation",
-    "tas_midpoint",
     "tasmax_from_dtr",
     "tasmin_from_dtr",
 ]
 
 
-@declare_units(prsn="[precipitation]", prlp="[precipitation]")
-def precipitation(prsn: xr.DataArray, prlp: xr.DataArray) -> xr.DataArray:
+@declare_units(prsn="[precipitation]", prra="[precipitation]")
+def precipitation(prsn: xr.DataArray, prra: xr.DataArray) -> xr.DataArray:
     """
     Precipitation of all phases.
 
@@ -36,16 +29,16 @@ def precipitation(prsn: xr.DataArray, prlp: xr.DataArray) -> xr.DataArray:
     ----------
     prsn : xr.DataArray
         Solid precipitation flux.
-    prlp : xr.DataArray
-        Liquid precipitation flux.
+    prra : xr.DataArray
+        Liquid precipitation flux. Previously prlp.
 
     Returns
     -------
     xr.DataArray, [same as prsn]
         Surface precipitation flux (all phases).
     """
-    prlp = convert_units_to(prlp, prsn, context="hydro")
-    pr = prsn + prlp
+    prra = convert_units_to(prra, prsn, context="hydro")
+    pr = prsn + prra
     pr.attrs["units"] = prsn.attrs["units"]
     return pr
 
