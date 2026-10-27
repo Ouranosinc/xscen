@@ -2,8 +2,31 @@
 Changelog
 =========
 
-`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-------------------------------------------------------------
+..
+    `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
+    ------------------------------------------------------------
+    Contributors:
+
+    New features and enhancements
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    * No change.
+
+    Bug fixes
+    ^^^^^^^^^
+    * No change.
+
+    Breaking changes
+    ^^^^^^^^^^^^^^^^
+    * No change.
+
+    Internal changes
+    ^^^^^^^^^^^^^^^^
+    * No change.
+
+.. _changes_0.15.3:
+
+`v0.15.3 <https://github.com/Ouranosinc/xscen/tree/0.15.3>`_ (2026-10-27)
+-------------------------------------------------------------------------
 Contributors:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
@@ -23,10 +46,6 @@ Breaking changes
 * Function ``spatial.creep_fill`` has been renamed ``spatial.apply_weights`` and is also used with blurring weights. (:pull:`784`).
 * In ``spatial.creep_weights`` argument ``n``, the number of neighbours has been changed to ``size``, the size of the window, where ``size = 2 * n + 1``. A size of 1 (n = 0), is not supported anymore. (:pull:`784`).
 * Python 3.10 is no longer supported. (:pull:`792`).
-
-Internal changes
-^^^^^^^^^^^^^^^^
-* N/A.
 
 
 .. _changes_0.15.2:
