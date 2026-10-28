@@ -270,6 +270,7 @@ include = [
   "docs/notebooks/samples/*.json",
   "docs/notebooks/samples/*.yml",
   "docs/notebooks/samples/tutorial/**/*.nc",
+  "docs/notebooks/samples/tutorial/**/*.zarr.zip",
   "pyproject.toml",
   "requirements_upstream.txt",
   "src/xscen/**/*.py",
