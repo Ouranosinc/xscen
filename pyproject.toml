@@ -132,6 +132,9 @@ dependencies = [
   "zarr >=3.1"
 ]
 
+[project.entry-points."xarray.backends"]
+zarrzip = "zarrzip:ZarrZipBackendEntrypoint"
+
 [project.optional-dependencies]
 extras = [
   "nc-time-axis >=1.3.1",
@@ -278,6 +281,7 @@ include = [
   "src/xscen/data/*.nc",
   "src/xscen/data/fr/LC_MESSAGES/*.mo",
   "src/xscen/data/fr/LC_MESSAGES/*.po",
+  "src/zarrzip/*.py",
   "templates/readme.rst",
   "templates/**/*.py",
   "templates/**/*.yml",
