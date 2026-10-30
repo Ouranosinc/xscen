@@ -5,13 +5,13 @@ import logging
 import os
 import re
 import shutil as sh
-from collections.abc import Generator, Mapping, Sequence
+from collections.abc import Generator, Sequence
 from copy import deepcopy
 from functools import reduce
 from itertools import chain, product
 from operator import or_
 from pathlib import Path
-from typing import Any
+from tempfile import TemporaryDirectory
 
 import fsspec as fs
 import intake_esm
@@ -21,7 +21,7 @@ import tlz
 import xarray as xr
 from intake_esm.cat import ESMCatalogModel
 
-from .config import CONFIG, args_as_str, recursive_update
+from .config import CONFIG, recursive_update
 from .utils import (
     _xarray_defaults,
     date_parser,
@@ -170,7 +170,6 @@ class DataCatalog(intake_esm.esm_datastore):
     def __init__(self, *args, check_valid: bool = False, drop_duplicates: bool = False, **kwargs):
         kwargs["read_kwargs"] = recursive_update(csv_kwargs.copy(), kwargs.get("read_kwargs", {}))
         kwargs.setdefault("columns_with_iterables", self._parse_iterable_columns(args[0]))
-        args = args_as_str(args)
 
         super().__init__(*args, **kwargs)
 
@@ -185,35 +184,32 @@ class DataCatalog(intake_esm.esm_datastore):
         data: pd.DataFrame | os.PathLike,
         esmdata: os.PathLike | dict | None = None,
         *,
-        read_kwargs: Mapping[str, Any] | None = None,
         name: str = "virtual",
-        **intake_kwargs,
+        **kwargs,
     ):
         """
-        Create a DataCatalog from one or more csv files.
+        Create a DataCatalog from a csv file or a DataFrame.
+
+        This loads the dataframe as a catalog by assuming the default xscen specifications, as in :py:data:`esm_col_data`.
+        One can also pass `esmdata` directly for a custom specification or as a path to use the specification from an
+        existing catalog with a different csv file.
 
         Parameters
         ----------
-        data : DataFrame or path or sequence of paths
-          A DataFrame or one or more paths to csv files.
+        data : DataFrame or path
+          A DataFrame or a csv file.
         esmdata : path or dict, optional
           The "ESM collection data" as a path to a json file or a dict.
           If None (default), xscen's default :py:data:`esm_col_data` is used.
-        read_kwargs : dict, optional
-          Extra kwargs to pass to the CSV reading function, in addition to the ones in :py:data:`csv_kwargs`.
         name : str
-          If `metadata` doesn't contain it, a name to give to the catalog.
-        **intake_kwargs : dict
-            Keyword argunments passed to intake.
+          If `esmdata` doesn't contain an `id`, a name to give to the catalog.
+        **kwargs : dict
+            Any other arguments that can be passed to the :py:class:`DataCatalog`.
 
         Returns
         -------
-        dict
-            DataCatalog object.
-
-        See Also
-        --------
-        pandas.read_csv : Read a comma-separated values (csv) file into DataFrame.
+        DataCatalog
+            DataCatalog.
         """
         if isinstance(esmdata, os.PathLike):
             with Path(esmdata).open(encoding="utf-8") as f:
@@ -225,13 +221,16 @@ class DataCatalog(intake_esm.esm_datastore):
         esmdata.setdefault("last_updated", None)
 
         if not isinstance(data, pd.DataFrame):
-            read_kwargs = recursive_update(csv_kwargs.copy(), read_kwargs or {})
-            esmdata["catalog_file"] = str(data)
-            cat = ESMCatalogModel.model_validate(esmdata)
-            _mapper = fs.get_mapper(data)
-            data = cat._df_from_file(cat, _mapper, {}, read_kwargs).pandas
+            esmdata["catalog_file"] = str(Path(data).absolute())
 
-        return cls({"esmcat": esmdata, "df": data}, **intake_kwargs)
+            with TemporaryDirectory() as tmpdir:
+                tmp_cat_file = Path(tmpdir) / "catalog.json"
+                with tmp_cat_file.open("w") as f:
+                    json.dump(esmdata, f)
+                cat = cls(tmp_cat_file, **kwargs)
+        else:
+            cat = cls({"esmcat": esmdata, "df": data}, **kwargs)
+        return cat
 
     def __dir__(self) -> list[str]:  # noqa: D105
         rv = ["iter_unique", "drop_duplicates", "check_valid"]
@@ -401,7 +400,7 @@ class DataCatalog(intake_esm.esm_datastore):
         df_len = len(self.df)
         if df_len > 0:
             df = self.df[self.df.apply(_check_existing, axis=1)].reset_index(drop=True)
-            df["variable"] = self.df.apply(_check_variables, axis=1)
+            df["variable"] = df.apply(_check_variables, axis=1)
             self.esmcat._df = df
 
     def exists_in_cat(self, **columns) -> bool:

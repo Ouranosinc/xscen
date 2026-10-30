@@ -275,7 +275,7 @@ class TestSearchDataCatalogs:
 """  # ruff: ignore[line-too-long]
         with (tmp_path / "catalog.csv").open("w") as f:
             f.write(catsrc)
-        cat = xs.DataCatalog.from_df(tmp_path / "catalog.csv")
+        cat = xs.DataCatalog.from_df(tmp_path / "catalog.csv", columns_with_iterables=("variable",))
 
         _, scat = xs.search_data_catalogs(cat, {"mrros": "MS"}, allow_resampling=True).popitem()
 
