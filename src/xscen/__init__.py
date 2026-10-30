@@ -20,6 +20,8 @@
 
 import warnings
 
+import zarrzip  # pylint: disable=unused-import
+
 # Import the submodules
 from . import (
     aggregate,
