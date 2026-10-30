@@ -127,7 +127,7 @@ dependencies = [
   "sparse",
   "toolz",
   "xarray >=2023.11.0, !=2024.6.0",
-  "xclim >=0.56, <0.62",
+  "xclim >=0.56, <0.63",
   "xsdba >=0.4.0",
   "zarr >=3.1"
 ]
@@ -155,7 +155,7 @@ all = ["xscen[extras]", "xscen[xesmf]"]
 [tool]
 
 [tool.bumpversion]
-current_version = "0.15.3-dev.6"
+current_version = "0.15.3"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -273,6 +273,7 @@ include = [
   "docs/notebooks/samples/*.json",
   "docs/notebooks/samples/*.yml",
   "docs/notebooks/samples/tutorial/**/*.nc",
+  "docs/notebooks/samples/tutorial/**/*.zarr.zip",
   "pyproject.toml",
   "requirements_upstream.txt",
   "src/xscen/**/*.py",
