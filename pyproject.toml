@@ -133,7 +133,7 @@ dependencies = [
 ]
 
 [project.entry-points."xarray.backends"]
-zarrzip = "zarrzip:ZarrZipBackendEntrypoint"
+zarrzip = "xscen:_zarrzip.ZarrZipBackendEntrypoint"
 
 [project.optional-dependencies]
 extras = [
@@ -281,7 +281,6 @@ include = [
   "src/xscen/data/*.nc",
   "src/xscen/data/fr/LC_MESSAGES/*.mo",
   "src/xscen/data/fr/LC_MESSAGES/*.po",
-  "src/zarrzip/*.py",
   "templates/readme.rst",
   "templates/**/*.py",
   "templates/**/*.yml",

@@ -20,10 +20,9 @@
 
 import warnings
 
-import zarrzip  # pylint: disable=unused-import
-
 # Import the submodules
 from . import (
+    _zarrzip,  # pylint: disable=unused-import
     aggregate,
     biasadjust,
     catalog,
