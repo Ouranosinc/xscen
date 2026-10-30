@@ -10,6 +10,9 @@
     "column_name": "path",
     "format": "zarr"
   },
+  "iterable_columns": [
+    "variable"
+  ],
   "aggregation_control": {
     "variable_column_name": "variable",
     "groupby_attrs": [

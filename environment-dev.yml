@@ -18,19 +18,19 @@ dependencies:
   - geopandas >=1.0
   - h5netcdf
   - h5py
-  - intake-esm ==2025.2.3
+  - intake-esm >2025.7.9
   - matplotlib >=3.6
   - netcdf4
   - numcodecs
   - numpy >=1.24
   - openpyxl
-  - pandas >=2.2
+  - pandas >=2.2,<3.1
   - parse
+  - polars
   - pyarrow >=15.0.0
   - pydantic >=2.8.2
   - pyproj
   - pyyaml
-  - rechunker >=0.5.3
   - scipy >=1.11.0
   - shapely >=2.0
   - sparse
@@ -38,7 +38,7 @@ dependencies:
   - xarray >=2023.11.0, !=2024.6.0
   - xclim >=0.56, <0.63
   - xsdba >=0.4.0
-  - zarr >=2.13, <3
+  - zarr >=3.1
   # Opt
   - nc-time-axis >=1.3.1
   - xesmf >=0.7, !=0.8.8

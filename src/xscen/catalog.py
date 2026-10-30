@@ -1,38 +1,36 @@
 """Catalog objects and related tools."""
 
-import ast
 import json
 import logging
 import os
 import re
 import shutil as sh
-from collections.abc import Generator, Mapping, Sequence
+from collections.abc import Generator, Sequence
 from copy import deepcopy
 from functools import reduce
 from itertools import chain, product
 from operator import or_
 from pathlib import Path
-from typing import Any
+from tempfile import TemporaryDirectory
 
 import fsspec as fs
 import intake_esm
 import pandas as pd
+import polars as pl
 import tlz
 import xarray as xr
-from intake_esm.cat import ESMCatalogModel
 
-from .config import CONFIG, args_as_str, recursive_update
+from .config import CONFIG, recursive_update
 from .utils import (
     _xarray_defaults,
     date_parser,
     ensure_correct_time,
-    ensure_new_xrfreq,
     standardize_periods,
 )
 
 
 logger = logging.getLogger(__name__)
-# Monkey patch for attribute names in the output of to_dataset_dict
+# For attribute names in the output of to_dataset_dict
 intake_esm.set_options(attrs_prefix="cat")
 
 
@@ -78,6 +76,8 @@ COLUMNS = [
 ]
 """Official column names."""
 
+_NONSTR_COLUMNS = ["date_start", "date_end", "variable"]
+
 ID_COLUMNS = [
     "bias_adjust_project",
     "bias_adjust_reference",
@@ -95,8 +95,9 @@ ID_COLUMNS = [
 
 
 esm_col_data = {
-    "esmcat_version": "0.1.0",  # intake-esm JSON file structure version, as per: https://github.com/NCAR/esm-collection-spec
+    "esmcat_version": "0.1.0",  # intake-esm JSON file structure version, as per: https://github.com/intake/intake-esm/blob/main/docs/source/reference/esm-catalog-spec.md
     "assets": {"column_name": "path", "format_column_name": "format"},
+    "iterable_columns": ["variable"],
     "aggregation_control": {
         "variable_column_name": "variable",
         "groupby_attrs": ["id", "domain", "processing_level", "xrfreq"],
@@ -114,25 +115,14 @@ esm_col_data = {
 """Default ESM column data for the official catalogs."""
 
 
-def _parse_list_of_strings(elem):
-    """Parse an element of a csv in case it is a tuple of strings."""
-    if elem.startswith("(") or elem.startswith("["):
-        out = ast.literal_eval(elem)
-        return tuple(out)
-    return (elem,)
-
-
 csv_kwargs = {
-    "dtype": {
-        key: "category" if not key == "path" else "string[pyarrow]" for key in COLUMNS if key not in ["xrfreq", "variable", "date_start", "date_end"]
+    "schema_overrides": {
+        "date_start": pl.Datetime(time_unit="ms"),
+        "date_end": pl.Datetime(time_unit="ms"),
     },
-    "converters": {
-        "variable": _parse_list_of_strings,
-        "xrfreq": ensure_new_xrfreq,
-    },
-    "low_memory": False,
+    "try_parse_dates": True,
 }
-"""Kwargs to pass to `pd.read_csv` when opening an official Ouranos catalog."""
+"""Kwargs to pass to `pl.scan_csv` when opening an official Ouranos catalog."""
 
 
 class DataCatalog(intake_esm.esm_datastore):
@@ -141,9 +131,8 @@ class DataCatalog(intake_esm.esm_datastore):
 
     This class expects the catalog to have the columns listed in :py:data:`xscen.catalog.COLUMNS`
     and it comes with default arguments for reading the CSV files (:py:data:`xscen.catalog.csv_kwargs`).
-    For example, all string columns (except `path`) are cast to a categorical dtype and the
-    datetime columns are parsed with a special function that allows dates outside the conventional
-    `datetime64[ns]` bounds by storing the data using :py:class:`pandas.Period` objects.
+    The "date_start" and "date_end" columns are read as datetime. This class will also default to the variable
+    column to be iterable (variable column name determined from the catalog's json).
 
     Parameters
     ----------
@@ -163,18 +152,25 @@ class DataCatalog(intake_esm.esm_datastore):
     intake_esm.core.esm_datastore : Intake plugin for parsing an ESM (Earth System Model) Catalog and loading assets into xarray datasets.
     """
 
+    @staticmethod
+    def _parse_iterable_columns(arg: os.PathLike | dict):
+        if not isinstance(arg, dict):
+            with Path(arg).open(encoding="utf-8") as f:
+                esmdata = json.load(f)
+        else:
+            esmdata = arg["esmcat"]
+
+        # iterable_columns is not an official field of ESM, but proposed in intake-esm#752
+        # Default to assuming no column is iterable
+        if "iterable_columns" in esmdata:
+            return esmdata["iterable_columns"]
+        return None
+
     def __init__(self, *args, check_valid: bool = False, drop_duplicates: bool = False, **kwargs):
-        kwargs["read_csv_kwargs"] = recursive_update(csv_kwargs.copy(), kwargs.get("read_csv_kwargs", {}))
-        args = args_as_str(args)
+        kwargs["read_kwargs"] = recursive_update(csv_kwargs.copy(), kwargs.get("read_kwargs", {}))
+        kwargs.setdefault("columns_with_iterables", self._parse_iterable_columns(args[0]))
 
         super().__init__(*args, **kwargs)
-
-        # Cast date columns into datetime (with ms reso, that's why we do it here and not in the `read_csv_kwargs`)
-        # Pandas >=2 supports [ms] resolution, but can't parse strings with this resolution, so we need to go through numpy
-        for datecol in ["date_start", "date_end"]:
-            if datecol in self.df.columns and self.df[datecol].dtype in ["O", "str"]:
-                # Missing values in object columns are np.nan, which numpy can't convert to datetime64 (what's up with that numpy???)
-                self.df[datecol] = self.df[datecol].dropna().astype("datetime64[ms]")
 
         if check_valid:
             self.check_valid()
@@ -184,59 +180,56 @@ class DataCatalog(intake_esm.esm_datastore):
     @classmethod
     def from_df(
         cls,
-        data: pd.DataFrame | os.PathLike | Sequence[os.PathLike],
+        data: pd.DataFrame | os.PathLike,
         esmdata: os.PathLike | dict | None = None,
         *,
-        read_csv_kwargs: Mapping[str, Any] | None = None,
         name: str = "virtual",
-        **intake_kwargs,
+        **kwargs,
     ):
         """
-        Create a DataCatalog from one or more csv files.
+        Create a DataCatalog from a csv file or a DataFrame.
+
+        This loads the dataframe as a catalog by assuming the default xscen specifications, as in :py:data:`esm_col_data`.
+        One can also pass `esmdata` directly for a custom specification or as a path to use the specification from an
+        existing catalog with a different csv file.
 
         Parameters
         ----------
-        data : DataFrame or path or sequence of paths
-            A DataFrame or one or more paths to csv files.
+        data : DataFrame or path
+          A DataFrame or a csv file.
         esmdata : path or dict, optional
-            The "ESM collection data" as a path to a json file or a dict.
-            If None (default), xscen's default :py:data:`esm_col_data` is used.
-        read_csv_kwargs : dict, optional
-            Extra kwargs to pass to `pd.read_csv`, in addition to the ones in :py:data:`csv_kwargs`.
+          The "ESM collection data" as a path to a json file or a dict.
+          If None (default), xscen's default :py:data:`esm_col_data` is used.
         name : str
-            If `metadata` doesn't contain it, a name to give to the catalog.
-        **intake_kwargs : dict
-            Keyword argunments passed to intake.
+          If `esmdata` doesn't contain an `id`, a name to give to the catalog.
+        **kwargs : dict
+            Any other arguments that can be passed to the :py:class:`DataCatalog`.
 
         Returns
         -------
-        dict
-            DataCatalog object.
-
-        See Also
-        --------
-        pandas.read_csv : Read a comma-separated values (csv) file into DataFrame.
+        DataCatalog
+            DataCatalog.
         """
-        if isinstance(data, pd.DataFrame):
-            df = data
-        else:
-            if isinstance(data, os.PathLike):
-                data = [data]
-
-            read_csv_kwargs = recursive_update(csv_kwargs.copy(), read_csv_kwargs or {})
-
-            df = pd.concat([pd.read_csv(pth, **read_csv_kwargs) for pth in data]).reset_index(drop=True)
-
         if isinstance(esmdata, os.PathLike):
             with Path(esmdata).open(encoding="utf-8") as f:
                 esmdata = json.load(f)
         elif esmdata is None:
             esmdata = deepcopy(esm_col_data)
-        if "id" not in esmdata:
-            esmdata["id"] = name
 
-        # Create the intake catalog
-        return cls({"esmcat": esmdata, "df": df}, **intake_kwargs)
+        esmdata.setdefault("id", name)
+        esmdata.setdefault("last_updated", None)
+
+        if not isinstance(data, pd.DataFrame):
+            esmdata["catalog_file"] = str(Path(data).absolute())
+
+            with TemporaryDirectory() as tmpdir:
+                tmp_cat_file = Path(tmpdir) / "catalog.json"
+                with tmp_cat_file.open("w") as f:
+                    json.dump(esmdata, f)
+                cat = cls(tmp_cat_file, **kwargs)
+        else:
+            cat = cls({"esmcat": esmdata, "df": data}, **kwargs)
+        return cat
 
     def __dir__(self) -> list[str]:  # noqa: D105
         rv = ["iter_unique", "drop_duplicates", "check_valid"]
@@ -329,10 +322,10 @@ class DataCatalog(intake_esm.esm_datastore):
         if len(columns) > 0:
             cat = super().search(**columns)
         else:
-            cat = self.__class__({"esmcat": self.esmcat.model_dump(), "df": self.esmcat._df})
+            cat = self.__class__({"esmcat": self.esmcat.model_dump(), "df": self.esmcat.df})
 
         if periods is not False:
-            cat.esmcat._df = subset_file_coverage(cat.esmcat._df, periods=periods, coverage=0, duplicates_ok=True)
+            cat.esmcat._df = subset_file_coverage(cat.esmcat.df, periods=periods, coverage=0, duplicates_ok=True)
 
         variables = columns.get(self.esmcat.aggregation_control.variable_column_name)
         if variables:
@@ -372,7 +365,7 @@ class DataCatalog(intake_esm.esm_datastore):
                     # Since setting multiple entries to tuples is a pain, update only the duplicated and re-add it to df
                     # Other entries will be dropped by drop_duplicates
                     d["variable"] = tuple(set(append_v))
-                    self.esmcat._df = pd.concat([self.esmcat._df, pd.DataFrame(d).transpose()])
+                    self.esmcat._df = pd.concat([self.esmcat.df, pd.DataFrame(d).transpose()])
 
         # Drop duplicates
         self.esmcat.df.drop_duplicates(subset=columns, keep="last", ignore_index=True, inplace=True)
@@ -405,9 +398,9 @@ class DataCatalog(intake_esm.esm_datastore):
 
         df_len = len(self.df)
         if df_len > 0:
-            self.esmcat._df = self.df[self.df.apply(_check_existing, axis=1)].reset_index(drop=True)
-            if df_len > 0:  # FIXME: What's going on here?
-                self.esmcat._df["variable"] = self.df.apply(_check_variables, axis=1)
+            df = self.df[self.df.apply(_check_existing, axis=1)].reset_index(drop=True)
+            df["variable"] = df.apply(_check_variables, axis=1)
+            self.esmcat._df = df
 
     def exists_in_cat(self, **columns) -> bool:
         """
@@ -585,7 +578,7 @@ class DataCatalog(intake_esm.esm_datastore):
         from .io import unzip_directory, zip_directory
 
         dest = Path(dest)
-        data = self.esmcat._df.copy()
+        data = self.esmcat.df.copy()
         if flat:
             new_paths = []
             for path in map(Path, data.path.values):
@@ -603,7 +596,7 @@ class DataCatalog(intake_esm.esm_datastore):
                         new = dest / (name + f"_{i:02d}" + suffixes)
                         i += 1
                 new_paths.append(new)
-            data["new_path"] = new_paths
+            data["new_path"] = list(map(str, new_paths))
         else:
             data = build_path(data, root=dest).drop(columns=["new_path_type"])
 
@@ -629,7 +622,7 @@ class DataCatalog(intake_esm.esm_datastore):
                 logger.info(msg)
                 sh.copy(old, new)
         if inplace:
-            self.esmcat._df["path"] = data["new_path"]
+            self.esmcat.df["path"] = data["new_path"]
             return
         data["path"] = data["new_path"]
         data = data.drop(columns=["new_path"])
@@ -760,7 +753,7 @@ class ProjectCatalog(DataCatalog):
         data_path = path.with_suffix(".csv")
 
         if (meta_path.is_file() or data_path.is_file()) and not overwrite:
-            raise FileExistsError("Catalog file already exist (at least one of {meta_path} or {data_path}).")
+            raise FileExistsError(f"Catalog file already exist (at least one of {meta_path} or {data_path}).")
 
         meta_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -772,24 +765,15 @@ class ProjectCatalog(DataCatalog):
         project["catalog_file"] = str(data_path)
 
         esmdata = recursive_update(esm_col_data.copy(), project)
+        esmdata["catalog_file"] = data_path.name
 
         df = pd.DataFrame(columns=COLUMNS)
 
-        cat = cls({"esmcat": esmdata, "df": df})  # TODO: Currently, this drops "version" because it is not a recognized attribute
-        cat.serialize(
-            path.stem,
-            directory=path.parent,
-            catalog_type="file",
-            to_csv_kwargs={"compression": None},
-        )
-
-        # Change catalog_file to a relative path
-        with Path(meta_path).open(encoding="utf-8") as f:
-            meta = json.load(f)
-            meta["catalog_file"] = data_path.name
+        # TODO; We are not using intake-esm's serialize because of all the magic we added (iterable_columns for example)
+        df.to_csv(data_path, compression=None, index=False)
         with Path(meta_path).open("w", encoding="utf-8") as f:
-            json.dump(meta, f, indent=2)
-        return cls(str(meta_path))
+            json.dump(esmdata, f, indent=2)
+        return cls(meta_path)
 
     def __init__(
         self,
@@ -883,46 +867,27 @@ class ProjectCatalog(DataCatalog):
             self.drop_duplicates()
 
         # make sure year really has 4 digits
-        if "date_start" in self.df:
-            if os.name == "nt":
-                y_format = "%Y"
-            else:
-                y_format = "%4Y"
-
-            df_fix_date = self.df.copy()
-            df_fix_date["date_start"] = pd.Series(
-                [(x if isinstance(x, str) else "" if pd.isnull(x) else x.strftime(f"{y_format}-%m-%d %H:00")) for x in self.df.date_start]
-            )
-
-            df_fix_date["date_end"] = pd.Series(
-                [(x if isinstance(x, str) else "" if pd.isnull(x) else x.strftime(f"{y_format}-%m-%d %H:00")) for x in self.df.date_end]
-            )
-
-            df_str = df_fix_date
+        if os.name == "nt":
+            y_format = "%Y"
         else:
-            df_str = self.df
+            y_format = "%4Y"
+        date_format = f"{y_format}-%m-%d %H:00"
 
         if self.meta_file is not None:
             with fs.open(self.esmcat.catalog_file, "wb") as csv_outfile:
-                df_str.to_csv(csv_outfile, index=False, compression=None)
+                self.df.to_csv(csv_outfile, index=False, compression=None, date_format=date_format)
         else:
-            read_csv_kwargs = deepcopy(self.read_csv_kwargs)
-            del read_csv_kwargs["parse_dates"]
-            del read_csv_kwargs["date_parser"]
             # Update the catalog file saved on disk
-            disk_cat = DataCatalog(
-                {
-                    "esmcat": self.esmcat.dict(),
-                    "df": pd.read_csv(self.esmcat.catalog_file, **read_csv_kwargs),
-                }
+            disk_cat = DataCatalog.from_df(
+                self.esmcat.catalog_file, esmdata=self.esmdata.dict(), columns_with_iterables=self.esmcat.columns_with_iterables
             )
-            disk_cat.esmcat._df = pd.concat([disk_cat.df, df_str])
+            disk_cat.esmcat._df = pd.concat([disk_cat.df, self.df])
             if self.check_valid_flag:
                 disk_cat.check_valid()
             if self.drop_duplicates_flag:
                 disk_cat.drop_duplicates()
             with fs.open(disk_cat.esmcat.catalog_file, "wb") as csv_outfile:
-                disk_cat.df.to_csv(csv_outfile, index=False, compression=None)
+                disk_cat.df.to_csv(csv_outfile, index=False, compression=None, date_format=date_format)
 
     def update_from_ds(
         self,
@@ -988,7 +953,8 @@ class ProjectCatalog(DataCatalog):
         """Reread the catalog CSV saved on disk."""
         if self.meta_file is None:
             raise ValueError("Only full catalogs can be refreshed, but this instance is only a subset.")
-        self.esmcat = ESMCatalogModel.load(self.meta_file, read_csv_kwargs=self.read_csv_kwargs)
+        clone = DataCatalog(self.meta_file)
+        self.esmcat = clone.esmcat
         initlen = len(self.esmcat.df)
         if self.check_valid_flag:
             self.check_valid()
