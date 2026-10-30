@@ -19,7 +19,6 @@ import pandas as pd
 import polars as pl
 import tlz
 import xarray as xr
-from intake_esm.cat import ESMCatalogModel
 
 from .config import CONFIG, recursive_update
 from .utils import (
@@ -31,7 +30,7 @@ from .utils import (
 
 
 logger = logging.getLogger(__name__)
-# Monkey patch for attribute names in the output of to_dataset_dict
+# For attribute names in the output of to_dataset_dict
 intake_esm.set_options(attrs_prefix="cat")
 
 
@@ -754,7 +753,7 @@ class ProjectCatalog(DataCatalog):
         data_path = path.with_suffix(".csv")
 
         if (meta_path.is_file() or data_path.is_file()) and not overwrite:
-            raise FileExistsError("Catalog file already exist (at least one of {meta_path} or {data_path}).")
+            raise FileExistsError(f"Catalog file already exist (at least one of {meta_path} or {data_path}).")
 
         meta_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -766,24 +765,15 @@ class ProjectCatalog(DataCatalog):
         project["catalog_file"] = str(data_path)
 
         esmdata = recursive_update(esm_col_data.copy(), project)
+        esmdata["catalog_file"] = data_path.name
 
         df = pd.DataFrame(columns=COLUMNS)
 
-        cat = cls({"esmcat": esmdata, "df": df})  # TODO: Currently, this drops "version" because it is not a recognized attribute
-        cat.serialize(
-            path.stem,
-            directory=path.parent,
-            catalog_type="file",
-            to_csv_kwargs={"compression": None},
-        )
-
-        # Change catalog_file to a relative path
-        with Path(meta_path).open(encoding="utf-8") as f:
-            meta = json.load(f)
-            meta["catalog_file"] = data_path.name
+        # TODO; We are not using intake-esm's serialize because of all the magic we added (iterable_columns for example)
+        df.to_csv(data_path, compression=None, index=False)
         with Path(meta_path).open("w", encoding="utf-8") as f:
-            json.dump(meta, f, indent=2)
-        return cls(str(meta_path))
+            json.dump(esmdata, f, indent=2)
+        return cls(meta_path)
 
     def __init__(
         self,
@@ -877,46 +867,27 @@ class ProjectCatalog(DataCatalog):
             self.drop_duplicates()
 
         # make sure year really has 4 digits
-        if "date_start" in self.df:
-            if os.name == "nt":
-                y_format = "%Y"
-            else:
-                y_format = "%4Y"
-
-            df_fix_date = self.df.copy()
-            df_fix_date["date_start"] = pd.Series(
-                [(x if isinstance(x, str) else "" if pd.isnull(x) else x.strftime(f"{y_format}-%m-%d %H:00")) for x in self.df.date_start]
-            )
-
-            df_fix_date["date_end"] = pd.Series(
-                [(x if isinstance(x, str) else "" if pd.isnull(x) else x.strftime(f"{y_format}-%m-%d %H:00")) for x in self.df.date_end]
-            )
-
-            df_str = df_fix_date
+        if os.name == "nt":
+            y_format = "%Y"
         else:
-            df_str = self.df
+            y_format = "%4Y"
+        date_format = f"{y_format}-%m-%d %H:00"
 
         if self.meta_file is not None:
             with fs.open(self.esmcat.catalog_file, "wb") as csv_outfile:
-                df_str.to_csv(csv_outfile, index=False, compression=None)
+                self.df.to_csv(csv_outfile, index=False, compression=None, date_format=date_format)
         else:
-            read_csv_kwargs = deepcopy(self.read_csv_kwargs)
-            del read_csv_kwargs["parse_dates"]
-            del read_csv_kwargs["date_parser"]
             # Update the catalog file saved on disk
-            disk_cat = DataCatalog(
-                {
-                    "esmcat": self.esmcat.dict(),
-                    "df": pd.read_csv(self.esmcat.catalog_file, **read_csv_kwargs),
-                }
+            disk_cat = DataCatalog.from_df(
+                self.esmcat.catalog_file, esmdata=self.esmdata.dict(), columns_with_iterables=self.esmcat.columns_with_iterables
             )
-            disk_cat.esmcat._df = pd.concat([disk_cat.df, df_str])
+            disk_cat.esmcat._df = pd.concat([disk_cat.df, self.df])
             if self.check_valid_flag:
                 disk_cat.check_valid()
             if self.drop_duplicates_flag:
                 disk_cat.drop_duplicates()
             with fs.open(disk_cat.esmcat.catalog_file, "wb") as csv_outfile:
-                disk_cat.df.to_csv(csv_outfile, index=False, compression=None)
+                disk_cat.df.to_csv(csv_outfile, index=False, compression=None, date_format=date_format)
 
     def update_from_ds(
         self,
@@ -982,7 +953,8 @@ class ProjectCatalog(DataCatalog):
         """Reread the catalog CSV saved on disk."""
         if self.meta_file is None:
             raise ValueError("Only full catalogs can be refreshed, but this instance is only a subset.")
-        self.esmcat = ESMCatalogModel.load(self.meta_file, read_csv_kwargs=self.read_csv_kwargs)
+        clone = DataCatalog(self.meta_file)
+        self.esmcat = clone.esmcat
         initlen = len(self.esmcat.df)
         if self.check_valid_flag:
             self.check_valid()

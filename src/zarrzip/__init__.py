@@ -22,6 +22,10 @@ async def make_store(
     """Drop-in replacement for zarr.storage._common.make_store that opens zip paths directly in ZipStores."""  # numpydoc ignore=PR01,RT01
     if (isinstance(store_like, Path) and store_like.suffix == ".zip") or (isinstance(store_like, str) and store_like.endswith(".zip")):
         return await ZipStore.open(path=store_like, mode=mode, read_only=(mode == "r"))
+
+    # Zarr is very strict and refuses to work with non-none storage options if store_like is not a fsspec object
+    if storage_options == {}:
+        storage_options = None
     return await old_make_store(store_like, mode=mode, storage_options=storage_options)
 
 
