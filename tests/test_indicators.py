@@ -53,7 +53,7 @@ class TestComputeIndicators:
         module = xs.indicators.load_xclim_module(self.yaml_file)
         ind_dict = xs.compute_indicators(
             ds,
-            indicators=[("fit", xclim.indicators.generic.fit)] + [x for x in module.iter_indicators()],
+            indicators=[("fit", xclim.indicators.generic.fit)] + [*module.iter_indicators()],
             periods=periods,
         )
         assert all(xrfreq in ind_dict[xrfreq].attrs["cat:xrfreq"] for xrfreq in ind_dict.keys())

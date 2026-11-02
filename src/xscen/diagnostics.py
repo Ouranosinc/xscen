@@ -495,7 +495,7 @@ def measures_heatmap(meas_datasets: list[xr.Dataset] | dict, to_level: str = "di
     )
     ds_hmap = ds_hmap.to_dataset(name="heatmap")
 
-    ds_hmap.attrs = merge_attrs(*[ds for ds in meas_datasets])
+    ds_hmap.attrs = merge_attrs(*[*meas_datasets])
     ds_hmap = clean_up(
         ds=ds_hmap,
         common_attrs_only=meas_datasets,
