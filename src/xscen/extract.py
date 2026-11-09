@@ -7,6 +7,7 @@ import re
 import warnings
 from collections.abc import Callable, Sequence
 from copy import deepcopy
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -1016,6 +1017,88 @@ def get_warming_level_from_period(
     return out
 
 
+# TODO: better signature and docstring
+def get_period_from_warming_level_shiftbase(
+    realization_sim: (xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list),
+    realization_ref: (xr.Dataset | xr.DataArray | dict | pd.Series | pd.DataFrame | str | list),
+    wl: float,
+    training_period: Sequence[str],
+    *,
+    window: int = 20,
+    tas_baseline_period: Sequence[str] | None = None,
+    ignore_member: bool = False,
+    tas_src: str | os.PathLike | None = None,
+    return_central_year: bool = False,
+):
+    """
+    Find the period(s) when a given warming level is reached, using the shiftbase method.
+
+    #TODO: add more to explain the shiftbase method here
+
+    Parameters
+    ----------
+    realization_sim : xr.Dataset, xr.DataArray, dict, str, Series or sequence of those
+       Model to be evaluated. Needs the four fields mip_era, source, experiment and member,
+       as a dict or in a Dataset's attributes.
+       Strings should follow this formatting: {mip_era}_{source}_{experiment}_{member}.
+       Lists of dicts, strings or Datasets are also accepted, in which case the output will be a dict.
+       Regex wildcards (.*) are accepted, but may lead to unexpected results.
+       Datasets should include the catalogue attributes (starting by "cat:") required to create such a string:
+       'cat:mip_era', 'cat:experiment', 'cat:member',
+       and either 'cat:source' for global models or 'cat:driving_model' for regional models.
+       e.g. 'CMIP5_CanESM2_rcp85_r1i1p1'
+       Additionally, it can be "obs-IPCC-AR6" to get the exact same observational ensemble as used in the IPCC AR6 WG1 Chap1, Figure 1.12,
+       or "obs-IPCC-updated" to get the same ensemble but with updated sources.
+    realization_ref : xr.Dataset, xr.DataArray, dict, str, Series or sequence of those
+        Same as `realization_sim`, but for the dataset that is used as the reference.
+    wl : float, np.ndarray
+       Warming level(s).
+       e.g. 2 for a global warming level of +2 degree Celsius above the mean temperature of the `tas_baseline_period`.
+    training_period : list of str
+       [start, end] of the period used to compute the warming level of the reference dataset.
+    window : int
+       Size of the rolling window in years over which to compute the warming level.
+    tas_baseline_period : list, optional
+       [start, end] of the base period. The warming is calculated with respect to it. The default is ["1850", "1900"].
+    ignore_member : bool
+       Decides whether to ignore the member when searching for the model run in tas_csv.
+    tas_src : str, optional
+       Path to a netCDF of annual global mean temperature (tas) with an annual "time" dimension
+       and a "simulation" dimension with the following coordinates: "mip_era", "source", "experiment" and "member".
+       If None, it will default to data/IPCC_annual_global_tas.nc which was built from
+       the IPCC atlas data from  Iturbide et al., 2020 (https://doi.org/10.5194/essd-12-2959-2020)
+       and extra data for missing CMIP6 models and pilot models of CRCM5 and ClimEx.
+    return_central_year : bool
+        If True, the output will be a string representing the middle of the period, using IPCC conventions in the case of an even window (y-9, y+10).
+        If False (default), the output will be a list following the format ['start_yr', 'end_yr'].
+
+    Returns
+    -------
+    pd.Series or xr.DataArray or dict or list or str
+        If `realization` is not a sequence, the output will follow the format indicated by `return_central_year`.
+        If `realization` is a sequence, the output will be of the same type,
+        with values following the format indicated by `return_central_year`.
+    """
+    # TODO: add warning if training_period is not length of window
+
+    # get the GWL of the ref btw training_period and tas_baseline_period
+    GWL_train_ref = get_warming_level_from_period(
+        realization_ref, training_period, tas_baseline_period=tas_baseline_period, ignore_member=ignore_member, tas_src=tas_src
+    )
+
+    # get period of the sim when it reaches wl-GWL_train_ref from training_period
+    period_fut_sim = get_period_from_warming_level(
+        realization_sim,
+        wl=wl - GWL_train_ref,
+        tas_baseline_period=training_period,
+        window=window,
+        ignore_member=ignore_member,
+        tas_src=tas_src,
+        return_central_year=return_central_year,
+    )
+    return period_fut_sim
+
+
 def _wl_prep_infomodels(realization, ignore_member, fields):
     obs_cnst = {"experiment": "obs", "mip_era": "obs", "member": ""}
     if isinstance(realization, str):
@@ -1108,6 +1191,7 @@ def subset_warming_level(
     to_level: str = "warminglevel-{wl}vs{period0}-{period1}",
     wl_dim: str | bool = "+{wl}Cvs{period0}-{period1}",
     min_periods: int | None = None,
+    method: str = "standard",
     **kwargs,
 ) -> xr.Dataset | None:
     r"""
@@ -1144,6 +1228,8 @@ def subset_warming_level(
        If fewer years are available, `nan` is returned. This only concerns the subsetting, the full window
        must still exist in the global mean temperature dataset for the given simulation.
        Defaults to the same as `window`.
+    method : str, optional
+         The method to use for finding the warming level period. #TODO: add more here.
     **kwargs
         Instructions on how to search for warming levels, passed to :py:func:`get_period_from_warming_level`.
 
@@ -1162,6 +1248,14 @@ def subset_warming_level(
     min_periods = min_periods or window
     if isinstance(wl, int | float):
         wl = [wl]
+    if method == "standard":
+        get_period_func = partial(get_period_from_warming_level, return_central_year=False, **kwargs)
+    elif method == "shiftbase":
+        if "training_period" not in kwargs or "realization_ref" not in kwargs:
+            raise ValueError("training_period and realization_ref must be provided when using method='shiftbase'.")
+        get_period_func = partial(get_period_from_warming_level_shiftbase, return_central_year=False, **kwargs)
+    else:
+        raise ValueError(f"Invalid method '{method}'. Choose either 'standard' or 'shiftbase'.")
 
     # Creating the warminglevel coordinate
     if isinstance(wl_dim, str):  # a non-empty string
@@ -1184,14 +1278,17 @@ def subset_warming_level(
         # Vectorized subset (multiple sims, multiple wls or both)
 
         if "realization" in ds.coords:
-            bounds = get_period_from_warming_level(ds.realization, wl, return_central_year=False, **kwargs)
+            bounds = get_period_func(ds.realization, wl=wl)
             if len(wl) == 1:
                 bounds = bounds.expand_dims(warminglevel=wl_crd)
             else:
                 bounds = bounds.rename(wl="warminglevel").assign_coords(warminglevel=wl_crd)
         else:
             bounds = xr.DataArray(
-                get_period_from_warming_level(ds, wl, return_central_year=False, **kwargs),
+                get_period_func(
+                    ds,
+                    wl=wl,
+                ),
                 dims=("warminglevel", "wl_bounds"),
                 coords={"warminglevel": wl_crd, "wl_bounds": [0, 1]},
             )
@@ -1215,7 +1312,7 @@ def subset_warming_level(
         ds_wl = vectorized_time_bounds_subset(ds, bounds, size=window, bnd_dim="wl_bounds", bnd_coord="warminglevel_bounds")
     else:
         # Single sim, single wl
-        start_yr, end_yr = get_period_from_warming_level(ds, wl=wl[0], return_central_year=False, **kwargs)
+        start_yr, end_yr = get_period_func(ds, wl=wl[0])
         # cut the window selected above and expand dims with wl_crd
         ds_wl = ds.sel(time=slice(start_yr, end_yr))
         wl_not_reached = (start_yr is None) or (ds_wl.time.size == 0) or ((ds_wl.time.dt.year[-1] - ds_wl.time.dt.year[0] + 1) < min_periods)
