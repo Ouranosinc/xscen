@@ -1099,6 +1099,7 @@ def get_period_from_warming_level_shiftbase(
         tas_src=tas_src,
         return_central_year=return_central_year,
     )
+    print(period_fut_sim)
     return period_fut_sim
 
 
@@ -1252,6 +1253,7 @@ def subset_warming_level(
     if isinstance(wl, int | float):
         wl = [wl]
     if method == "standard":
+        kwargs.pop("training_period", None)
         get_period_func = partial(get_period_from_warming_level, return_central_year=False, **kwargs)
     elif method == "shiftbase":
         if "training_period" not in kwargs or "realization_ref" not in kwargs:
