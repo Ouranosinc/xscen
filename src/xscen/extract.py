@@ -1086,6 +1086,9 @@ def get_period_from_warming_level_shiftbase(
         realization_ref, training_period, tas_baseline_period=tas_baseline_period, ignore_member=ignore_member, tas_src=tas_src
     )
 
+    if isinstance(wl, list):
+        wl = np.array(wl)
+
     # get period of the sim when it reaches wl-GWL_train_ref from training_period
     period_fut_sim = get_period_from_warming_level(
         realization_sim,
