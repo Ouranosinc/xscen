@@ -1099,7 +1099,6 @@ def get_period_from_warming_level_shiftbase(
         tas_src=tas_src,
         return_central_year=return_central_year,
     )
-    print(period_fut_sim)
     return period_fut_sim
 
 
