@@ -127,8 +127,8 @@ dependencies = [
   "shapely >=2.0",
   "sparse",
   "toolz",
-  "xarray >=2023.11.0, !=2024.6.0",
-  "xclim", # FIXME: add pin v1 when it is released
+  "xarray >=2024.11.0",
+  "xclim >=1.0.0",
   "xsdba >=0.4.0",
   "zarr >=2.13,<3.0"
 ]
@@ -152,7 +152,7 @@ all = ["xscen[nc-time-axis]", "xscen[xesmf]"]
 [tool]
 
 [tool.bumpversion]
-current_version = "0.15.3-dev.6"
+current_version = "0.15.4-dev.0"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -271,6 +271,7 @@ include = [
   "docs/notebooks/samples/*.json",
   "docs/notebooks/samples/*.yml",
   "docs/notebooks/samples/tutorial/**/*.nc",
+  "docs/notebooks/samples/tutorial/**/*.zarr.zip",
   "pyproject.toml",
   "requirements_upstream.txt",
   "src/xscen/**/*.py",
@@ -309,7 +310,7 @@ exclude = [
 
 [tool.mypy]
 files = "."
-python_version = "3.10"
+python_version = "3.11"
 show_error_codes = true
 strict = true
 warn_no_return = true

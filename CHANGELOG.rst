@@ -2,8 +2,31 @@
 Changelog
 =========
 
-`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-------------------------------------------------------------
+..
+    `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
+    ------------------------------------------------------------
+    Contributors:
+
+    New features and enhancements
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    * No change.
+
+    Bug fixes
+    ^^^^^^^^^
+    * No change.
+
+    Breaking changes
+    ^^^^^^^^^^^^^^^^
+    * No change.
+
+    Internal changes
+    ^^^^^^^^^^^^^^^^
+    * No change.
+
+.. _changes_0.15.3:
+
+`v0.15.3 <https://github.com/Ouranosinc/xscen/tree/0.15.3>`_ (2026-10-27)
+-------------------------------------------------------------------------
 Contributors:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
@@ -12,7 +35,7 @@ New features and enhancements
 * Add ``xs.ensembles.unstack_ensembles`` function. (:pull:`764`).
 * Make ``change_attr_prefix`` argument of ``xs.utils.clean_up`` accept an empty string. (:pull:`764`, :issue:`771`).
 * Add CanESM5-1 and other members of existing models to IPCC_annual_global_tas.nc. (:pull:`761`, :pull:`773`).
-* Add ``DataCatalog.unstack`` and ``DataCatalog.stack`` to transform iterable columns into multiple entries (and the opposite). (:issue:`762`, :pull:`763`).
+* Add ``DataCatalog.unstack`` and ``DataCatalog.stack`` to transform iterable columns into multiple entries (and the opposite). (:issue:`762`, :pull:`763`, :pull:`788`).
 * New ``spatial.blur_weights`` function to perform efficient blurring (uniform N-D filter convolution, rolling mean). (:pull:`784`).
 * Add ``utils.vectorized_time_bounds_subset`` for efficient sel-like temporal subset with N-D year bounds. (:pull:`786`).
 
@@ -26,10 +49,7 @@ Breaking changes
 ^^^^^^^^^^^^^^^^
 * Function ``spatial.creep_fill`` has been renamed ``spatial.apply_weights`` and is also used with blurring weights. (:pull:`784`).
 * In ``spatial.creep_weights`` argument ``n``, the number of neighbours has been changed to ``size``, the size of the window, where ``size = 2 * n + 1``. A size of 1 (n = 0), is not supported anymore. (:pull:`784`).
-
-Internal changes
-^^^^^^^^^^^^^^^^
-* N/A.
+* Python 3.10 is no longer supported. (:pull:`792`).
 
 
 .. _changes_0.15.2:

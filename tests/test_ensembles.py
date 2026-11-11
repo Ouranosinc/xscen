@@ -965,7 +965,7 @@ class TestEnsemblePartition:
             "lat": 5,
             "lon": 4,
         }
-        assert [i for i in ds.data_vars] == ["tas"]
+        assert [*ds.data_vars] == ["tas"]
         assert ds.attrs["cat:processing_level"] == "test"
 
     def test_partition_from_catalog(self, samplecat):

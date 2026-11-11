@@ -180,7 +180,7 @@ class TestSearchDataCatalogs:
     def test_allow_conversion(self, allow_conversion):
         out = xs.search_data_catalogs(
             data_catalogs=self.cat,
-            variables_and_freqs={"evspsblpot": "D"},
+            variables_and_freqs={"tas": "D"},
             other_search_criteria={
                 "institution": ["NOAA-GFDL"],
                 "experiment": ["ssp585"],
@@ -189,8 +189,10 @@ class TestSearchDataCatalogs:
         )
         assert len(out) == (2 if allow_conversion else 0)
         if allow_conversion:
-            assert all(v in out[list(out.keys())[0]].unique("variable") for v in ["tasmin", "tasmax"])
-            assert "tas" not in out[list(out.keys())[0]].unique("variable")
+            scat = out[list(out.keys())[0]]
+            assert all(v in scat.unique("variable") for v in ["tasmin", "tasmax"])
+            assert "tas" not in scat.unique("variable")
+            assert scat.derivedcat.keys() == ["tas"]
 
     def test_no_match(self):
         out = xs.search_data_catalogs(
