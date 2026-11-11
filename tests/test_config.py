@@ -78,4 +78,4 @@ def test_update_config(reset_config):
 
 def test_get_configurable():
     d = xs.config.get_configurable()
-    assert len(d) == 34
+    assert len(d) == 33

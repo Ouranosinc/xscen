@@ -109,19 +109,19 @@ dependencies = [
   "geopandas >=1.0",
   "h5netcdf",
   "h5py",
-  "intake-esm ==2025.2.3",
+  "intake-esm >2025.7.9",
   "matplotlib >=3.6",
   "netcdf4",
-  "numcodecs <0.16.0", # FIXME: Pin required for zarr v2.x compatibility
+  "numcodecs",
   "numpy >=1.24",
   "openpyxl",
-  "pandas >=2.2",
+  "pandas >=2.2,<3.1",
   "parse",
+  "polars",
   "pyarrow >=15.0.0",
   "pydantic >=2.8.2",
   "pyproj",
   "pyyaml",
-  "rechunker >=0.5.3",
   "scipy >=1.11.0",
   "shapely >=2.0",
   "sparse",
@@ -129,8 +129,11 @@ dependencies = [
   "xarray >=2023.11.0, !=2024.6.0",
   "xclim >=0.56, <0.63",
   "xsdba >=0.4.0",
-  "zarr >=2.13,<3.0"
+  "zarr >=3.1"
 ]
+
+[project.entry-points."xarray.backends"]
+zarrzip = "xscen:_zarrzip.ZarrZipBackendEntrypoint"
 
 [project.optional-dependencies]
 extras = [

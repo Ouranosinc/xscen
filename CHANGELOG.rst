@@ -29,12 +29,19 @@ Changelog
 -------------------------------------------------------------------------
 Contributors:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
 
+This version drops support for Python 3.10, Zarr 2 and intake-esm < 2025.12.12.
+
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add CanESM5-1 and other members of existing models to IPCC_annual_global_tas.nc. (:pull:`761`, :pull:`773`).
 * Add ``DataCatalog.unstack`` and ``DataCatalog.stack`` to transform iterable columns into multiple entries (and the opposite). (:issue:`762`, :pull:`763`, :pull:`788`).
 * New ``spatial.blur_weights`` function to perform efficient blurring (uniform N-D filter convolution, rolling mean). (:pull:`784`).
 * Add ``utils.vectorized_time_bounds_subset`` for efficient sel-like temporal subset with N-D year bounds. (:pull:`786`).
+
+Breaking changes
+^^^^^^^^^^^^^^^^
+* Upgrade intake-esm to 2025.12.12 which also means now depending on zarr > 3.1 (:issue:`618`, :pull:`636`).
+* Monkey patch zarr to accept zipped zarr transparently.
 
 Bug fixes
 ^^^^^^^^^

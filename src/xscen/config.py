@@ -65,7 +65,6 @@ EXTERNAL_MODULES = ["logging", "xarray", "xclim", "warnings"]
 
 __all__ = [
     "CONFIG",
-    "args_as_str",
     "load_config",
     "parse_config",
     "recursive_update",
@@ -149,29 +148,6 @@ def recursive_update(d: dict[str, Any], other: dict[str, Any]) -> dict[str, Any]
         else:
             d[k] = v
     return d
-
-
-def args_as_str(*args: tuple[Any, ...]) -> tuple[str, ...]:
-    """
-    Return arguments as strings.
-
-    Parameters
-    ----------
-    *args : tuple of Any
-        Arguments.
-
-    Returns
-    -------
-    tuple of str
-        Arguments as strings.
-    """
-    new_args = []
-    for _i, arg in enumerate(*args):
-        if isinstance(arg, Path):
-            new_args.append(str(arg))
-        else:
-            new_args.append(arg)
-    return tuple(new_args)
 
 
 def load_config(
