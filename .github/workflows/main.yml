@@ -159,11 +159,11 @@ jobs:
     strategy:
       matrix:
         os: [ "ubuntu-latest" ]
-        python-version: [ "3.11", "3.12", "3.13" ]
+        python-version: [ "3.12", "3.13", "3.14" ]
         xsdba-upstream: ["main"] # FIXME: Remove before merging to 'main'
         include:
           - os: 'ubuntu-latest'
-            python-version: "3.14"
+            python-version: "3.11"
             pandas-version: "2.2" # minimally-supported version
             xarray-version: "2024.11.0" # minimally-supported version
             xclim-upstream: "main"
