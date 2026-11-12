@@ -164,6 +164,7 @@ jobs:
         include:
           - os: 'ubuntu-latest'
             python-version: "3.14"
+            pandas-version: "2.2" # minimally-supported version
             xarray-version: "2024.11.0" # minimally-supported version
             xclim-upstream: "main"
             xsdba-upstream: "main"
@@ -194,6 +195,10 @@ jobs:
           environment-file: environment-dev.yml
           create-args: >-
             python=${{ matrix.python-version }}
+      - name: Install pandas (minimally supported version)
+        if: ${{ matrix.pandas-version }}
+        run: |
+          micromamba install pandas==${{ matrix.pandas-version }}
       - name: Install xarray (minimally supported version)
         if: ${{ matrix.xarray-version }}
         run: |
