@@ -39,7 +39,7 @@ dependencies:
   - sparse
   - toolz
   - xarray >=2024.11.0
-  - xclim >1.0.0
+  - xclim >=1.0.0
   - xsdba >=0.4.0
   - zarr >=2.13, <3
   # Opt
