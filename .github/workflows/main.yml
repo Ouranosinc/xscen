@@ -157,6 +157,7 @@ jobs:
       matrix:
         os: [ "ubuntu-latest" ]
         python-version: [ "3.11", "3.12", "3.13" ]
+        xsdba-upstream: ["main"] # FIXME: Remove before merging to 'main'
         include:
           - os: 'ubuntu-latest'
             python-version: "3.14"
