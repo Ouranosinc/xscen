@@ -116,7 +116,7 @@ dependencies = [
   "numcodecs <0.16.0", # FIXME: Pin required for zarr v2.x compatibility
   "numpy >=1.24",
   "openpyxl",
-  "pandas >=2.2",
+  "pandas >=2.3.0",
   "parse",
   "pyarrow >=15.0.0",
   "pydantic >=2.8.2",
