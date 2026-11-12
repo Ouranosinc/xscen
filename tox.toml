@@ -58,7 +58,7 @@ deps = [
 ]
 install_command = ["python", "-m", "pip", "install", "--no-user", "{opts}", "{packages}"]
 commands_pre = [
-  { replace = "if", condition = "env.NUMCODECS_COMPILE", then = ["python", "-m", "pip", "install", "--upgrade", "--force-reinstall", "--no-user", "--no-cache-dir", "--no-binary", "numcodecs", "numcodecs<0.16.0"], extend = false },
+  [{ replace = "if", condition = "env.NUMCODECS_COMPILE", then = ["python", "-m", "pip", "install", "--upgrade", "--force-reinstall", "--no-user", "--no-cache-dir", "--no-binary", "numcodecs", "numcodecs<0.16.0"], extend = true }],
   ["pip", "list"],
   ["pip", "check"]
 ]
