@@ -69,22 +69,18 @@ jobs:
         os: [ "ubuntu-latest" ]
         python-version: [ "3.11", "3.12", "3.13" ]
         esmf-version: [ "8.7.0" ] # 8.8.0 breaks h5py
-        xclim-pre: [ false ]
-        xclim-upstream: [ "main" ] # FIXME: Remove before merging to 'main'
-        xsdba-upstream: [ "xclim_v1" ] # FIXME: Remove before merging to 'main'
+        xsdba-upstream: [ "main" ] # FIXME: Remove before merging to 'main'
         include:
           - os: "macos-latest"
             esmf-version: "8.7.0"
             python-version: "3.12"
-            xclim-pre: true
-            xclim-upstream: "main" # FIXME: Remove before merging to 'main'
-            xsdba-upstream: "xclim_v1" # FIXME: Remove before merging to 'main'
+            xsdba-upstream: "main" # FIXME: Remove before merging to 'main'
           - os: "ubuntu-latest"
             esmf-version: "8.7.0"
             python-version: "3.14"
-            xclim-pre: true
-            xclim-upstream: "main" # FIXME: Remove before merging to 'main'
-            xsdba-upstream: "xclim_v1" # FIXME: Remove before merging to 'main'
+            xarray-version: "2024.11.0" # minimally-supported version
+            xclim-version: "1.0.0" # minimally-supported version
+            xsdba-upstream: "main" # FIXME: Remove before merging to 'main'
           # FIXME: setup-micromamba and Windows images fail with code 3221225781 (STATUS_ACCESS_VIOLATION)
           # - os: "windows-latest"
           #   esmf-version: "8.7.0"
@@ -131,8 +127,7 @@ jobs:
           python -m tox
         env:
           ESMF_VERSION: ${{ matrix.esmf-version }}
-          XCLIM_PRE: ${{ matrix.xclim-pre }}
-          XCLIM_UPSTREAM: ${{ matrix.xclim-upstream }}
+          XARRAY_VERSION: ${{ matrix.xarray-version }}
           XCLIM_VERSION: ${{ matrix.xclim-version }}
           XSDBA_UPSTREAM: ${{ matrix.xsdba-upstream }}
       - name: Test with tox (macOS and Windows; no report failure)
@@ -141,8 +136,7 @@ jobs:
           python -m tox || true
         env:
           ESMF_VERSION: ${{ matrix.esmf-version }}
-          XCLIM_PRE: ${{ matrix.xclim-pre }}
-          XCLIM_UPSTREAM: ${{ matrix.xclim-upstream }}
+          XARRAY_VERSION: ${{ matrix.xarray-version }}
           XCLIM_VERSION: ${{ matrix.xclim-version }}
           XSDBA_UPSTREAM: ${{ matrix.xsdba-upstream }}
       - name: Trust Coveralls Homebrew tap # Homebrew v6.0 requirement; Remove when coverallsapp/github-action >2.3.7
@@ -162,17 +156,19 @@ jobs:
     strategy:
       matrix:
         os: [ "ubuntu-latest" ]
-        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
-        xclim-pre: [ true ]
+        python-version: [ "3.11", "3.12", "3.13" ]
+        include:
+          - os: 'ubuntu-latest'
+            python-version: "3.14"
+            xarray-version: "2024.11.0" # minimally-supported version
+            xclim-upstream: "main"
+            xsdba-upstream: "main"
         # FIXME: Uncomment when multiplatform tests are passing
         # include:
         #   - os: 'macos-latest'
         #     python-version: "3.11"
         #   - os: 'windows-latest'
         #     python-version: "3.12"
-    env:
-      XCLIM_UPSTREAM: true
-      XSDBA_UPSTREAM: true
     defaults:
       run:
         shell: bash -l {0}
@@ -194,18 +190,18 @@ jobs:
           environment-file: environment-dev.yml
           create-args: >-
             python=${{ matrix.python-version }}
-      - name: Install xclim (pre-releases)
-        if: ${{ matrix.xclim-pre }}
+      - name: Install xarray (minimally supported version)
+        if: ${{ matrix.xarray-version }}
         run: |
-          python -m pip install --no-user --pre xclim
+          micromamba install xarray==${{ matrix.xarray-version }}
       - name: Install xclim (upstream)
-        if: ${{ env.XCLIM_UPSTREAM }}
+        if: ${{ matrix.xsdba-upstream }}
         run: |
-          python -m pip install --no-user "xclim @ git+https://github.com/Ouranosinc/xclim.git@main"
+          python -m pip install --no-user "xclim @ git+https://github.com/Ouranosinc/xclim.git@${{ matrix.xclim-upstream }}"
       - name: Install xsdba (upstream)
-        if: ${{ env.XSDBA_UPSTREAM }}
+        if: ${{ matrix.xsdba-upstream }}
         run: |
-          python -m pip install --no-user "xsdba @ git+https://github.com/Ouranosinc/xsdba.git@xclim_v1"
+          python -m pip install --no-user "xsdba @ git+https://github.com/Ouranosinc/xsdba.git@${{ matrix.xsdba-upstream }}"
       - name: Compile catalogs and install xscen
         run: |
           make translate
@@ -213,7 +209,7 @@ jobs:
       - name: Check versions
         run: |
           micromamba list
-          python -m pip check || true
+          python -m pip check
       - name: Test with pytest
         run: |
           python -m pytest --cov=xscen --cov-report=lcov
