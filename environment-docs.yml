@@ -10,6 +10,7 @@ dependencies:
   # Don't forget to sync changes between environment-docs, environment-dev.yml and pyproject.toml!
   # Also consider updating the list in xs.utils.show_versions if you add a new package.
   # Main packages
+  - boltons >=20.1
   - cartopy >=0.23.0
   - cftime
   - cf_xarray >=0.7.6
@@ -37,9 +38,11 @@ dependencies:
   - shapely >=2.0
   - sparse
   - toolz
-  - xarray >=2023.11.0, !=2024.6.0
-  - xclim >=0.56, <0.63
-  - xsdba >=0.4.0
+  - xarray >=2024.11.0
+  - xclim >=1.0.0
+  # - xsdba >=0.4.0
+  - pip:
+    - xsdba @ git+https://github.com/Ouranosinc/xsdba.git@main  # FIXME: Remove before merging to 'main'
   - zarr >=2.13, <3
   # Opt
   - nc-time-axis >=1.3.1

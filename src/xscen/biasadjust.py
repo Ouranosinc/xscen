@@ -262,7 +262,7 @@ def adjust(  # noqa: C901
     bias_adjust_project : str, optional
         The project to assign to the output.
     bias_adjust_reference : str, optional
-        FIXME: What is this exactly? TBD.
+        The name of reference dataset used for the training.
     align_on : str, optional
         `align_on` argument for the function `xr.DataArray.convert_calendar`.
 
