@@ -67,16 +67,16 @@ jobs:
       fail-fast: false # FIXME: Remove before merging to 'main'
       matrix:
         os: [ "ubuntu-latest" ]
+        esmf-version: [ "8.9.1" ]
         python-version: [ "3.11", "3.12", "3.13" ]
-        esmf-version: [ "8.7.0" ] # 8.8.0 breaks h5py
         xsdba-upstream: [ "main" ] # FIXME: Remove before merging to 'main'
         include:
           - os: "macos-latest"
-            esmf-version: "8.7.0"
+            esmf-version: "8.9.1"
             python-version: "3.12"
             xsdba-upstream: "main" # FIXME: Remove before merging to 'main'
           - os: "ubuntu-latest"
-            esmf-version: "8.7.0"
+            esmf-version: "8.9.1"
             python-version: "3.14"
             numcodecs-compile: true
             xarray-version: "2024.11.0" # minimally-supported version
@@ -84,7 +84,7 @@ jobs:
             xsdba-upstream: "main" # FIXME: Remove before merging to 'main'
           # FIXME: setup-micromamba and Windows images fail with code 3221225781 (STATUS_ACCESS_VIOLATION)
           # - os: "windows-latest"
-          #   esmf-version: "8.7.0"
+          #   esmf-version: "8.9.1"
           #   python-version: "3.11"
     defaults:
       run:
