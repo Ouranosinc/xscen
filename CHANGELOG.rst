@@ -39,7 +39,6 @@ New features and enhancements
 * New ``spatial.blur_weights`` function to perform efficient blurring (uniform N-D filter convolution, rolling mean). (:pull:`784`).
 * Add ``utils.vectorized_time_bounds_subset`` for efficient sel-like temporal subset with N-D year bounds. (:pull:`786`).
 
-
 Bug fixes
 ^^^^^^^^^
 * Fixed how IPCC_annual_global_tas.nc is loaded to prevent kernel crashes in edge cases. (:issue:`769`, :pull:`770`).
