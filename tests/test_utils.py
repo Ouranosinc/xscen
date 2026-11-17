@@ -1314,7 +1314,9 @@ def test_xarray_defaults():
 
 def test_vectorized_time_subsetting():
     ds = timeseries(np.arange(36), "tas", freq="MS", start="1990-01-01").to_dataset()
-    bnds = xr.DataArray([[1991, 1993], [1990, 1992], [np.nan, 1]], dims=("wl", "bnds"))
+    bnds = xr.DataArray([[1991, 1993], [1990, 1992], [1989, 1991], [1992, 1994], [np.nan, 1]], dims=("wl", "bnds"))
     out = xs.utils.vectorized_time_bounds_subset(ds, bnds, size=3, bnd_dim="bnds")
-    np.testing.assert_array_equal(out.tas.isel(time=0), [12, 0, np.nan])
+    np.testing.assert_array_equal(out.tas.isel(time=0), [12, 0, 0, 24, np.nan])
+    np.testing.assert_array_equal(out.tas.min("time"), [12, 0, 0, 24, np.nan])
+    np.testing.assert_array_equal(out.tas.max("time"), [35, 35, 23, 35, np.nan])
     assert set(out.tas.dims) == {"wl", "time"}
