@@ -24,11 +24,7 @@ class TestLocale:
             freq="D",
             as_dataset=True,
         )
-        indicator = xc.core.indicator.Indicator.from_dict(
-            data={"base": "tg_mean"},
-            identifier="tg_mean",
-            module="atmos",
-        )
+        indicator = xc.atmos.tg_mean
         with xc.set_options(metadata_locales="fr"):
             out = xs.compute_indicators(ds, [("tg_mean", indicator)])["YS-JAN"]
         out = xs.climatological_op(out, op="mean")

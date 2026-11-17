@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 import xarray as xr
+import xclim as xc
 from conftest import SAMPLES_DIR, notebooks
 
 import xscen as xs
@@ -161,8 +162,8 @@ def test_search_variable():
     assert set(scat._requested_variables_true) == {"tasmin", "tasmax"}
     assert scat._dependent_variables == []
 
-    reg = xs.indicators.registry_from_module(
-        xs.indicators.load_xclim_module(notebooks.parent.parent / "src" / "xscen" / "xclim_modules" / "conversions")
+    reg = xs.indicators.registry_from_collection(
+        xc.IndicatorCollection.from_yaml(notebooks.parent.parent / "src" / "xscen" / "xclim_modules" / "conversions")
     )
     cat = catalog.DataCatalog(SAMPLES_DIR.parent / "pangeo-cmip6.json", registry=reg)
     scat = cat.search(variable="tas")
