@@ -1664,7 +1664,7 @@ def vectorized_time_bounds_subset(ds, bounds, size=None, bnd_dim="bnds", bnd_coo
     sentinel_time = date_cls(999, 1, 1)
     invalid_sel = np.full(fake_time.size, sentinel)
 
-    def _bounds_to_sel(year, bnds, isvalid):
+    def _bounds_to_isel(year, bnds, isvalid):
         """
         Generate isel selection for given bounds.
 
