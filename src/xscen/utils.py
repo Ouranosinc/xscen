@@ -1647,7 +1647,7 @@ def vectorized_time_bounds_subset(ds, bounds, size=None, bnd_dim="bnds", bnd_coo
             f"Got freq={freq} and calendar={ds.time.dt.calendar}"
         )
     if size is None:
-        size = round((bounds.isel({bnd_dim: 1}) - bounds.isel({bnd_dim: 0}) + 1).max().item())
+        size = (bounds.isel({bnd_dim: 1}) - bounds.isel({bnd_dim: 0}) + 1).max().item()
     fake_time = xr.date_range(
         "1000-01-01",
         f"{1000 + size - 1}-12-31",
