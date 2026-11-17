@@ -1694,7 +1694,7 @@ def vectorized_time_bounds_subset(ds, bounds, size=None, bnd_dim="bnds", bnd_coo
         return sl
 
     timesels = xr.apply_ufunc(
-        _bounds_to_sel,
+        _bounds_to_isel,
         ds.time.dt.year,
         bounds,
         valid,
