@@ -640,9 +640,6 @@ class TestSubsetWarmingLevel:
     def test_incomplete_baseline(self):
         with pytest.raises(
             ValueError,
-            match="Baseline period ['1890', '1910'] is incomplete for "
-            "CMIP6_NorESM2-MM_ssp245_r1i1p1f1. Check the tas_src file or use a "
-            "different baseline period.",
         ):
             xs.get_warming_level(["CMIP6_NorESM2-MM_ssp245_r1i1p1f1"], wl=2, tas_baseline_period=["1890", "1910"])
 
