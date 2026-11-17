@@ -45,7 +45,7 @@ allowlist_externals = ["make"]
 [env_run_base]
 description = "Run tests with pytest under {basepython}"
 setenv = { PYTEST_ADDOPTS = "--color=yes --cov=xscen --cov-report=lcov", PYTHONPATH = "{toxinidir}", CFLAGS = "-std=gnu17" }
-passenv = ["CI", "COVERALLS_*", "ESMFMKFILE", "ESMF_VERSION", "GITHUB_*", "NUMCODECS_*", "XARRAY_*", "XCLIM_*", 'XSDBA_*']
+passenv = ["CI", "COVERALLS_*", "ESMFMKFILE", "ESMF_VERSION", "GITHUB_*", "XARRAY_*", "XCLIM_*", 'XSDBA_*']
 download = true
 dependency_groups = ["test"]
 deps = [
@@ -58,7 +58,6 @@ deps = [
 ]
 install_command = ["python", "-m", "pip", "install", "--no-user", "{opts}", "{packages}"]
 commands_pre = [
-  [{ replace = "if", condition = "env.NUMCODECS_COMPILE", then = ["python", "-m", "pip", "install", "--upgrade", "--force-reinstall", "--no-user", "--no-cache-dir", "--no-binary", "numcodecs", "numcodecs<0.16.0"], extend = true }],
   ["pip", "list"],
   ["pip", "check"]
 ]

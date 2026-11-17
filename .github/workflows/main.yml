@@ -69,19 +69,15 @@ jobs:
         os: [ "ubuntu-latest" ]
         esmf-version: [ "8.9.1" ]
         python-version: [ "3.11", "3.12", "3.13" ]
-        xsdba-upstream: [ "main" ] # FIXME: Remove before merging to 'main'
         include:
           - os: "macos-latest"
             esmf-version: "8.9.1"
             python-version: "3.12"
-            xsdba-upstream: "main" # FIXME: Remove before merging to 'main'
           - os: "ubuntu-latest"
             esmf-version: "8.9.1"
             python-version: "3.14"
-            numcodecs-compile: true
             xarray-version: "2024.11.0" # minimally-supported version
             xclim-version: "1.0.0" # minimally-supported version
-            xsdba-upstream: "main" # FIXME: Remove before merging to 'main'
           # FIXME: setup-micromamba and Windows images fail with code 3221225781 (STATUS_ACCESS_VIOLATION)
           # - os: "windows-latest"
           #   esmf-version: "8.9.1"
@@ -128,20 +124,16 @@ jobs:
           python -m tox
         env:
           ESMF_VERSION: ${{ matrix.esmf-version }}
-          NUMCODECS_COMPILE: ${{ matrix.numcodecs-compile }}
           XARRAY_VERSION: ${{ matrix.xarray-version }}
           XCLIM_VERSION: ${{ matrix.xclim-version }}
-          XSDBA_UPSTREAM: ${{ matrix.xsdba-upstream }}
       - name: Test with tox (macOS and Windows; no report failure)
         if: matrix.os != 'ubuntu-latest'
         run: |
           python -m tox || true
         env:
           ESMF_VERSION: ${{ matrix.esmf-version }}
-          NUMCODECS_COMPILE: ${{ matrix.numcodecs-compile }}
           XARRAY_VERSION: ${{ matrix.xarray-version }}
           XCLIM_VERSION: ${{ matrix.xclim-version }}
-          XSDBA_UPSTREAM: ${{ matrix.xsdba-upstream }}
       - name: Trust Coveralls Homebrew tap # Homebrew v6.0 requirement; Remove when coverallsapp/github-action >2.3.7
         if: matrix.os == 'macos-latest'
         run: |
@@ -161,14 +153,12 @@ jobs:
       matrix:
         os: [ "ubuntu-latest" ]
         python-version: [ "3.12", "3.13", "3.14" ]
-        xsdba-upstream: [ "main" ] # FIXME: Remove before merging to 'main'
         include:
           - os: 'ubuntu-latest'
             python-version: "3.11"
             pandas-version: "2.3" # minimally-supported version
             xarray-version: "2024.11.0" # minimally-supported version
             xclim-upstream: "main"
-            xsdba-upstream: "main"
         # FIXME: Uncomment when multiplatform tests are passing
         # include:
         #   - os: 'macos-latest'
@@ -204,10 +194,6 @@ jobs:
         if: ${{ matrix.xclim-upstream }}
         run: |
           python -m pip install --no-user "xclim @ git+https://github.com/Ouranosinc/xclim.git@${{ matrix.xclim-upstream }}"
-      - name: Install xsdba (upstream)
-        if: ${{ matrix.xsdba-upstream }}
-        run: |
-          python -m pip install --no-user "xsdba @ git+https://github.com/Ouranosinc/xsdba.git@${{ matrix.xsdba-upstream }}"
       - name: Compile catalogs and install xscen
         run: |
           make translate
