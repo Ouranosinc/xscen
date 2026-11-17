@@ -31,7 +31,7 @@ Contributors:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* Fix to work with xclim 1.0 (:pull:`764`).
+* `xscen` now requires `xclim >=1.0.0` and `xsdba >=0.8.0`. The codebase now accepts modern `xclim` virtual module conventions. (:pull:`764`).
 * Add ``xs.ensembles.unstack_ensembles`` function. (:pull:`764`).
 * Make ``change_attr_prefix`` argument of ``xs.utils.clean_up`` accept an empty string. (:pull:`764`, :issue:`771`).
 * Add CanESM5-1 and other members of existing models to IPCC_annual_global_tas.nc. (:pull:`761`, :pull:`773`).
