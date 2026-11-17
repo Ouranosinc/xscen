@@ -1252,6 +1252,7 @@ def subset_warming_level(
     if isinstance(wl, int | float):
         wl = [wl]
     if method == "standard":
+        # TODO: add warnings
         kwargs.pop("training_period", None)
         kwargs.pop("realization_ref", None)
         get_period_func = partial(get_period_from_warming_level, return_central_year=False, **kwargs)
