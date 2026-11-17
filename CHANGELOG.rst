@@ -32,6 +32,9 @@ Contributors:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 * Add CanESM5-1, other members of existing models and missing years to IPCC_annual_global_tas.nc. (:pull:`761`, :pull:`773`, :issue:`795`, :pull:`796`,).
+* `xscen` now requires `xclim >=1.0.0` and `xsdba >=0.8.0`. The codebase now accepts modern `xclim` virtual module conventions. (:pull:`764`).
+* Add ``xs.ensembles.unstack_ensembles`` function. (:pull:`764`).
+* Make ``change_attr_prefix`` argument of ``xs.utils.clean_up`` accept an empty string. (:pull:`764`, :issue:`771`).
 * Add ``DataCatalog.unstack`` and ``DataCatalog.stack`` to transform iterable columns into multiple entries (and the opposite). (:issue:`762`, :pull:`763`, :pull:`788`).
 * New ``spatial.blur_weights`` function to perform efficient blurring (uniform N-D filter convolution, rolling mean). (:pull:`784`).
 * Add ``utils.vectorized_time_bounds_subset`` for efficient sel-like temporal subset with N-D year bounds. (:pull:`786`).
