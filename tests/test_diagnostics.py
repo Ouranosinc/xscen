@@ -293,7 +293,7 @@ class TestPropertiesMeasures:
 
     @pytest.mark.parametrize("input", ["module", "iter"])
     def test_input_types(self, input):
-        module = xs.indicators.load_xclim_module(self.yaml_file)
+        module = xc.IndicatorCollection.from_yaml(self.yaml_file)
         p1, m1 = xs.properties_and_measures(
             self.ds,
             properties=module if input == "module" else module.iter_indicators(),
@@ -334,10 +334,10 @@ class TestPropertiesMeasures:
 
         if period is None:
             np.testing.assert_allclose(p["quantile_98_tas"].values, 2)
-            np.testing.assert_allclose(p["mean-tas"].values, 1.5)
+            np.testing.assert_allclose(p["mean_tas"].values, 1.5)
         else:
             np.testing.assert_allclose(p["quantile_98_tas"].values, 2)
-            np.testing.assert_allclose(p["mean-tas"].values, 2)
+            np.testing.assert_allclose(p["mean_tas"].values, 2)
 
     def test_unstack(self):
         ds = datablock_3d(
@@ -395,7 +395,7 @@ class TestPropertiesMeasures:
             change_units_arg={"tas": "°C"},
         )
 
-        assert p["mean-tas"].attrs["units"] == "°C"
+        assert p["mean_tas"].attrs["units"] == "°C"
 
     def test_dref_for_measure(self):
         p1, m1 = xs.properties_and_measures(
@@ -428,7 +428,7 @@ class TestPropertiesMeasures:
 
         assert out.attrs["cat:processing_level"] == "test"
         assert "m2" in out.realization.values
-        assert "mean-tas" in out.properties.values
+        assert "mean_tas" in out.properties.values
         np.testing.assert_allclose(out["heatmap"].values, 0.5)
 
     def test_measures_improvement(self):
@@ -451,7 +451,7 @@ class TestPropertiesMeasures:
             out = xs.diagnostics.measures_improvement([m2, m2, m2], to_level="test")
 
         assert out.attrs["cat:processing_level"] == "test"
-        assert "mean-tas" in out.properties.values
+        assert "mean_tas" in out.properties.values
         np.testing.assert_allclose(out["improved_grid_points"].values, 1)
 
     def test_measures_improvement_dim(self):
@@ -492,7 +492,7 @@ class TestPropertiesMeasures:
         out = xs.diagnostics.measures_improvement_2d({"i1": imp, "i2": imp}, to_level="test")
 
         assert out.attrs["cat:processing_level"] == "test"
-        assert "mean-tas" in out.properties.values
+        assert "mean_tas" in out.properties.values
         assert "i1" in out.realization.values
         assert "i2" in out.realization.values
         np.testing.assert_allclose(out["improved_grid_points"].values, 1)
@@ -506,3 +506,37 @@ class TestPropertiesMeasures:
         )
 
         assert out.equals(out2)
+
+    def test_measures_ratio(self):
+        p1, m1 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+        )
+
+        p2, m2 = xs.properties_and_measures(
+            self.ds,
+            properties=self.yaml_file,
+            dref_for_measure=p1,
+        )
+
+        m3 = m2[["mean_tas_ratio_meas", "mean_tas"]].copy()
+        m4 = m2[["mean_tas_ratio_meas", "mean_tas"]].copy()
+        # for a bias, 1 is worst than 0.1
+        # for a ration 1 is better than 0.1
+        m3["mean_tas_ratio_meas"] = 0.1
+        m3["mean_tas"] = 0.1
+        m4["mean_tas_ratio_meas"] = 1
+        m4["mean_tas"] = 1
+
+        m3["mean_tas_ratio_meas"].attrs = m2["mean_tas_ratio_meas"].attrs
+        m3["mean_tas"].attrs = m2["mean_tas"].attrs
+        m4["mean_tas_ratio_meas"].attrs = m2["mean_tas_ratio_meas"].attrs
+        m4["mean_tas"].attrs = m2["mean_tas"].attrs
+
+        imp = xs.diagnostics.measures_improvement([m3, m4])
+
+        assert (imp.improved_grid_points.values == np.array([1, 0])).all()
+
+        hm = xs.diagnostics.measures_heatmap([m3, m4], to_level="test")
+
+        assert (hm.heatmap == np.array([[1.0, 0.0], [0.0, 1.0]])).all()
