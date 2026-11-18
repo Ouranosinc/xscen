@@ -82,7 +82,7 @@ class TestSearchDataCatalogs:
 
     @pytest.mark.parametrize(
         "restrict_warming_level,exp",
-        [(True, 6), ({"wl": 2, "ignore_member": True}, 5), ({"wl": 4}, 2)],
+        [(True, 6), ({"wl": 2, "ignore_member": True}, 4), ({"wl": 4}, 2)],
     )
     def test_warminglevel(self, restrict_warming_level, exp):
         cat = deepcopy(self.cat)
@@ -636,6 +636,12 @@ class TestSubsetWarmingLevel:
         # Single real
         ds_sub = xs.subset_warming_level(ds, wl=1, window=30, min_periods=10)
         assert ds_sub.time.size == 14
+
+    def test_incomplete_baseline(self):
+        with pytest.raises(
+            ValueError,
+        ):
+            xs.get_warming_level(["CMIP6_NorESM2-MM_ssp245_r1i1p1f1"], wl=2, tas_baseline_period=["1890", "1910"])
 
 
 class TestResample:
