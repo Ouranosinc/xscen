@@ -129,3 +129,4 @@ venv.bak/
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/
 templates/1-basic_workflow_with_config/paths1.yml
+templates/2-indicators_only/paths2.yml

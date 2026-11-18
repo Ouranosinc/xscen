@@ -4,6 +4,7 @@ from copy import deepcopy
 import numpy as np
 import pytest
 import xarray as xr
+import xclim as xc
 
 
 try:
@@ -226,6 +227,23 @@ class TestEnsembleStats:
                     }
                 },
             )
+
+    def test_unstack_ensemble_member(self):
+        lens = self.make_ensemble(3)
+        ens = xc.ensembles.create_ensemble(lens)
+
+        ens["realization"] = [
+            "ESPO_CaSR_CMIP6_ScenarioMIP_CCCma_CanESM5_ssp370_r1i1p1f1_NAM",  # pragma: allowlist secret
+            "ESPO_CaSR_CMIP6_ScenarioMIP_CCCma_CanESM5_ssp370_r2i1p1f1_NAM",  # pragma: allowlist secret
+            "ESPO_CaSR_CMIP6_ScenarioMIP_CSIRO-ARCCSS_ACCESS-CM2_ssp370_r3i1p1f1_NAM",  # pragma: allowlist secret
+        ]
+        ens2 = xs.ensembles.unstack_ensemble_member(ens)
+
+        assert ens2.dims == {"realization": 2, "member": 2, "time": 4}
+        assert ens2.realization.values.tolist() == [
+            "ESPO_CaSR_CMIP6_ScenarioMIP_CCCma_CanESM5_ssp370_NAM",
+            "ESPO_CaSR_CMIP6_ScenarioMIP_CSIRO-ARCCSS_ACCESS-CM2_ssp370_NAM",
+        ]
 
 
 class TestGenerateWeights:
@@ -947,7 +965,7 @@ class TestEnsemblePartition:
             "lat": 5,
             "lon": 4,
         }
-        assert [i for i in ds.data_vars] == ["tas"]
+        assert [*ds.data_vars] == ["tas"]
         assert ds.attrs["cat:processing_level"] == "test"
 
     def test_partition_from_catalog(self, samplecat):
