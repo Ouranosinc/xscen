@@ -2,54 +2,52 @@
 Changelog
 =========
 
-..
-    `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-    ------------------------------------------------------------
-    Contributors:
+`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
+------------------------------------------------------------
+Contributors: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`).
 
-    New features and enhancements
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    * No change.
+New features and enhancements
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+* The codebase now accepts `xclim >=1.0.0` virtual module conventions. (:pull:`764`).
+* Add ``xs.ensembles.unstack_ensembles`` function. (:pull:`764`).
+* Make ``change_attr_prefix`` argument of ``xs.utils.clean_up`` accept an empty string. (:issue:`771`, :pull:`764`).
+* Filled missing timesteps in ``IPCC_annual_global_tas.nc``. (:issue:`795`, :pull:`796`).
 
-    Bug fixes
-    ^^^^^^^^^
-    * No change.
+Bug fixes
+^^^^^^^^^
+* Added missing ``*.zarr.zip`` to files included in source distribution. (:pull:`793`).
 
-    Breaking changes
-    ^^^^^^^^^^^^^^^^
-    * No change.
+Breaking changes
+^^^^^^^^^^^^^^^^
+* `xscen` now requires `xclim >=1.0.0` and `xsdba >=0.8.0`. (:pull:`764`).
 
-    Internal changes
-    ^^^^^^^^^^^^^^^^
-    * No change.
+Internal changes
+^^^^^^^^^^^^^^^^
+* No change.
 
 .. _changes_0.15.3:
 
 `v0.15.3 <https://github.com/Ouranosinc/xscen/tree/0.15.3>`_ (2026-10-27)
 -------------------------------------------------------------------------
-Contributors:  Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
+Contributors: Juliette Lavoie (:user:`juliettelavoie`), Gabriel Rondeau-Genesse (:user:`RondeauG`), Pascal Bourgault (:user:`aulemahal`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-* Add CanESM5-1, other members of existing models and missing years to IPCC_annual_global_tas.nc. (:pull:`761`, :pull:`773`, :issue:`795`, :pull:`796`,).
-* `xscen` now requires `xclim >=1.0.0` and `xsdba >=0.8.0`. The codebase now accepts modern `xclim` virtual module conventions. (:pull:`764`).
-* Add ``xs.ensembles.unstack_ensembles`` function. (:pull:`764`).
-* Make ``change_attr_prefix`` argument of ``xs.utils.clean_up`` accept an empty string. (:pull:`764`, :issue:`771`).
+* Add CanESM5-1 and other members of existing models to IPCC_annual_global_tas.nc. (:pull:`761`, :pull:`773`).
 * Add ``DataCatalog.unstack`` and ``DataCatalog.stack`` to transform iterable columns into multiple entries (and the opposite). (:issue:`762`, :pull:`763`, :pull:`788`).
 * New ``spatial.blur_weights`` function to perform efficient blurring (uniform N-D filter convolution, rolling mean). (:pull:`784`).
 * Add ``utils.vectorized_time_bounds_subset`` for efficient sel-like temporal subset with N-D year bounds. (:pull:`786`).
 
 Bug fixes
 ^^^^^^^^^
-* Fixed how IPCC_annual_global_tas.nc is loaded to prevent kernel crashes in edge cases. (:issue:`769`, :pull:`770`).
+* Fixed how ``IPCC_annual_global_tas.nc`` is loaded to prevent kernel crashes in edge cases. (:issue:`769`, :pull:`770`).
 * Fixed old checks for yearly frequency using "YS" in ``xscen.diagnostics.health_checks``. (:pull:`772`).
 
 Breaking changes
 ^^^^^^^^^^^^^^^^
-* Function ``spatial.creep_fill`` has been renamed ``spatial.apply_weights`` and is also used with blurring weights. (:pull:`784`).
+* Function ``spatial.creep_fill`` has been renamed ``spatial.apply_weights`` and is also now used with blurring weights. (:pull:`784`).
 * In ``spatial.creep_weights`` argument ``n``, the number of neighbours has been changed to ``size``, the size of the window, where ``size = 2 * n + 1``. A size of 1 (n = 0), is not supported anymore. (:pull:`784`).
 * Python 3.10 is no longer supported. (:pull:`792`).
-
 
 .. _changes_0.15.2:
 
