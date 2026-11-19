@@ -5,11 +5,12 @@ Changelog
 ..
     `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
     ------------------------------------------------------------
-    Contributors:
+    Contributors: Sarah Gammon (:user:`SarahG-579462`)
 
     New features and enhancements
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    * No change.
+    * ``utils.vectorized_time_bounds_subset`` is even faster now thanks to `numpy` vectorization. (pull:`797`).
+
 
     Bug fixes
     ^^^^^^^^^

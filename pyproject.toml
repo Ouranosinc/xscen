@@ -246,7 +246,8 @@ optional_dependencies_dev_groups = ["all"]
 "sphinx-intl" = "sphinx_intl"
 
 [tool.deptry.per_rule_ignores]
-DEP002 = ["fastprogress", "h5netcdf", "nc-time-axis", "openpyxl", "pyarrow", "pydantic"]
+DEP002 = ["fastprogress", "h5netcdf", "nc-time-axis", "openpyxl", "pyarrow", "pydantic", "xscen"]
+DEP004 = ["xscen"]
 
 [tool.flit.sdist]
 include = [
