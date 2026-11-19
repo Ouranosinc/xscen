@@ -1604,7 +1604,7 @@ def rechunk_for_resample(obj: xr.DataArray | xr.Dataset, **resample_kwargs) -> x
     Returns
     -------
     xr.DataArray or xr.Dataset
-         Rechunked object for resampling.
+        Rechunked object for resampling.
     """
     if not uses_dask(obj):
         return obj
@@ -1648,51 +1648,82 @@ def vectorized_time_bounds_subset(ds, bounds, size=None, bnd_dim="bnds", bnd_coo
         )
     if size is None:
         size = (bounds.isel({bnd_dim: 1}) - bounds.isel({bnd_dim: 0}) + 1).max().item()
-    fake_time = xr.date_range("1000-01-01", f"{1000 + size - 1}-12-31", freq=freq, calendar=ds.time.dt.calendar)
+    fake_time = xr.date_range(
+        "1000-01-01",
+        f"{1000 + size - 1}-12-31",
+        freq=freq,
+        calendar=ds.time.dt.calendar,
+    )
+
+    date_cls = ds.indexes["time"][0].__class__
+    valid = bounds.notnull().all(bnd_dim)
 
     # A sentinel value of invalid times, because cftime doesn't have NaT and even so, NaT is difficult to manage
     # Assuming time index is sorted and increasing, this value is impossible to have
-    sentinel = ds.indexes["time"][0] - pd.Timedelta(seconds=1)
-    date_cls = ds.indexes["time"][0].__class__
+    sentinel = -1
+    sentinel_time = date_cls(999, 1, 1)
+    invalid_sel = np.full(fake_time.size, sentinel)
 
-    valid = bounds.notnull().all(bnd_dim)
+    def _bounds_to_isel(year, bnds, isvalid):
+        """
+        Generate isel selection for given bounds.
 
-    def _bounds_to_sel(time, bnds, isvalid):
-        time = xr.DataArray(time, dims=("time",), coords={"time": time})
+        Parameters
+        ----------
+        year : np.ndarray
+            Valid years for dataset
+        bnds : [str|np.nan, str|np.nan]
+            Bounds to check
+        isvalid : bool
+            Whether the bounds are valid or not
+
+        Returns
+        -------
+        np.ndarray
+            isel with sentinel values for bounds
+        """
         if not isvalid:
-            sl = time.isel(time=slice(0, fake_time.size))
+            sl = invalid_sel
         else:
-            sl = time.sel(time=slice(f"{bnds[0]:.0f}", f"{bnds[1]:.0f}"))
-            if sl.time.size < fake_time.size:
-                sl = sl.pad(time=(0, fake_time.size - sl.time.size), constant_values=sentinel)
-        return sl.values
+            yrl = np.int64(bnds[0])
+            yrh = np.int64(bnds[1])
+            sl = np.nonzero((year >= yrl) & (year <= yrh))[0]
+            w = fake_time.size - sl.size
+            if w > 0:
+                sl = np.pad(sl, (0, w), constant_values=sentinel)
+        return sl
 
     timesels = xr.apply_ufunc(
-        _bounds_to_sel,
-        ds.time,
+        _bounds_to_isel,
+        ds.time.dt.year,
         bounds,
         valid,
         input_core_dims=[["time"], [bnd_dim], []],
         vectorize=True,
         output_core_dims=[["fake_time"]],
+        output_dtypes=[np.int64],
     ).assign_coords(fake_time=fake_time)
 
     def _make_bounds(bnds, isvalid):
         # Need to return the proper dtype for apply_ufunc, this will be masked with wl_not_reached afterwards
         if not isvalid:
-            return np.array([sentinel, sentinel])
+            return np.array([sentinel_time, sentinel_time])
         s, e = bnds
         # xscen returns first and last year included in the period
         # cf conventions want the time point that finishes the periods
         return np.array([date_cls(int(s), 1, 1), date_cls(int(e) + 1, 1, 1)])
 
-    bnds_crd = xr.apply_ufunc(_make_bounds, bounds, valid, input_core_dims=[[bnd_dim], []], vectorize=True, output_core_dims=[[bnd_dim]]).where(valid)
+    bnds_crd = xr.apply_ufunc(
+        _make_bounds,
+        bounds,
+        valid,
+        input_core_dims=[[bnd_dim], []],
+        vectorize=True,
+        output_core_dims=[[bnd_dim]],
+    ).where(valid)
 
-    if (timesels == sentinel).any():
-        sentinel_ds = xr.zeros_like(ds.isel(time=0)).assign_coords(time=[sentinel])
-        ds = xr.concat([sentinel_ds, ds], "time")
     return (
-        ds.sel(time=timesels)
+        ds.isel(time=timesels)
         .drop_vars("time")
         .where(valid & (timesels != sentinel))
         .rename(fake_time="time")

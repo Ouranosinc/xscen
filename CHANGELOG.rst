@@ -4,7 +4,7 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`).
+Contributors: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12,6 +12,7 @@ New features and enhancements
 * Add ``xs.ensembles.unstack_ensembles`` function. (:pull:`764`).
 * Make ``change_attr_prefix`` argument of ``xs.utils.clean_up`` accept an empty string. (:issue:`771`, :pull:`764`).
 * Filled missing timesteps in ``IPCC_annual_global_tas.nc``. (:issue:`795`, :pull:`796`).
+* ``utils.vectorized_time_bounds_subset`` is even faster now thanks to `numpy` vectorization. (:pull:`797`).
 
 Bug fixes
 ^^^^^^^^^
