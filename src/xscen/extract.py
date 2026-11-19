@@ -872,6 +872,12 @@ def get_period_from_warming_level(  # noqa: C901
         msg = f"Computing warming level +{wl}°C for {model} from simulation: {selected}."
         logger.debug(msg)
 
+        # fail if baseline is incomplete
+        if tas_sel.sel(time=slice(*tas_baseline_period)).isnull().sum().values > 0:
+            raise ValueError(
+                f"Baseline period {tas_baseline_period!s} is incomplete for {selected}. Check the tas_src file or use a different baseline period.",
+            )
+
         # compute reference temperature for the warming and difference from reference
         yearly_diff = tas_sel - tas_sel.sel(time=slice(*tas_baseline_period)).mean()
 
