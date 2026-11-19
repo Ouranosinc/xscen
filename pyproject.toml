@@ -152,7 +152,7 @@ all = ["xscen[nc-time-axis]", "xscen[xesmf]"]
 [tool]
 
 [tool.bumpversion]
-current_version = "0.15.4-dev.3"
+current_version = "0.16.0"
 commit = true
 commit_args = "--no-verify"
 tag = false
@@ -244,10 +244,10 @@ optional_dependencies_dev_groups = ["all"]
 "pyyaml" = "yaml"
 "toolz" = "tlz"
 "sphinx-intl" = "sphinx_intl"
+"sphinx-autobuild" = "sphinx_autobuild"
 
 [tool.deptry.per_rule_ignores]
-DEP002 = ["fastprogress", "h5netcdf", "nc-time-axis", "openpyxl", "pyarrow", "pydantic", "xscen"]
-DEP004 = ["xscen"]
+DEP002 = ["fastprogress", "h5netcdf", "nc-time-axis", "openpyxl", "pyarrow", "pydantic"]
 
 [tool.flit.sdist]
 include = [
