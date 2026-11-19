@@ -4,7 +4,7 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`).
+Contributors: Gabriel Rondeau-Genesse (:user:`RondeauG`), Juliette Lavoie (:user:`juliettelavoie`), Sarah Gammon (:user:`SarahG-579462`), Trevor James Smith (:user:`Zeitsperre`).
 
 New features and enhancements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -24,7 +24,7 @@ Breaking changes
 
 Internal changes
 ^^^^^^^^^^^^^^^^
-* No change.
+* ``tox.toml`` now accepts a handful of environment variables for controlling versions of `xarray`, `xclim` and `xsdba` used in testing and CI. (:pull:`764`).
 
 .. _changes_0.15.3:
 
