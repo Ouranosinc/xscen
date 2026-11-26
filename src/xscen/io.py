@@ -22,8 +22,7 @@ import xarray as xr
 import zarr
 from numcodecs.bitround import BitRound
 from rechunker import rechunk as _rechunk
-from xclim.core.options import METADATA_LOCALES
-from xclim.core.options import OPTIONS as XC_OPTIONS
+from xclim.core.options import METADATA_LOCALES, get_options
 from xclim.core.utils import uses_dask
 
 from .config import parse_config
@@ -797,7 +796,7 @@ def make_toc(ds: xr.Dataset | xr.DataArray, loc: str | None = None) -> pd.DataFr
       A DataFrame with variables as index, and columns "description" and "units".
     """
     if loc is None:
-        loc = (XC_OPTIONS[METADATA_LOCALES] or ["en"])[0]
+        loc = (get_options()[METADATA_LOCALES] or ["en"])[0]
     locsuf = "" if loc == "en" else f"_{loc}"
     _ = TRANSLATOR[loc]  # Combine translation and gettext parsing (like it usually is)
 

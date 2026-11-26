@@ -128,7 +128,7 @@ dependencies = [
   "sparse",
   "toolz",
   "xarray >=2024.11.0",
-  "xclim >=1.0.0",
+  "xclim >=1.0.1",
   "xsdba >=0.8.0",
   "zarr >=2.13,<3.0"
 ]
@@ -152,7 +152,7 @@ all = ["xscen[nc-time-axis]", "xscen[xesmf]"]
 [tool]
 
 [tool.bumpversion]
-current_version = "0.16.0"
+current_version = "0.16.1-dev.0"
 commit = true
 commit_args = "--no-verify"
 tag = false
