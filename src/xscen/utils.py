@@ -25,8 +25,7 @@ import xsdba
 from xarray.coding import cftime_offsets as cfoff
 from xclim.core import units
 from xclim.core.calendar import compare_offsets, parse_offset
-from xclim.core.options import METADATA_LOCALES
-from xclim.core.options import OPTIONS as XC_OPTIONS
+from xclim.core.options import METADATA_LOCALES, get_options
 from xclim.core.utils import uses_dask
 
 from .config import parse_config
@@ -162,7 +161,7 @@ def add_attr(ds: xr.Dataset | xr.DataArray, attr: str, new: str, **fmt):
         Formatting data to fill the template string.
     """
     ds.attrs[attr] = new.format(**fmt)
-    for loc in XC_OPTIONS[METADATA_LOCALES]:
+    for loc in get_options()[METADATA_LOCALES]:
         ds.attrs[f"{attr}_{loc}"] = TRANSLATOR[loc](new).format(**fmt)
 
 
