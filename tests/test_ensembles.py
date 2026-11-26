@@ -151,6 +151,8 @@ class TestEnsembleStats:
             ):
                 xs.ensemble_stats(ens, statistics=statistics)
             return
+        else:
+            raise NotImplementedError(f"{fractions} not supported.")
 
         out = xs.ensemble_stats(ens, statistics=statistics, weights=weights)
 
@@ -239,7 +241,7 @@ class TestEnsembleStats:
         ]
         ens2 = xs.ensembles.unstack_ensemble_member(ens)
 
-        assert ens2.dims == {"realization": 2, "member": 2, "time": 4}
+        assert ens2.sizes == {"realization": 2, "member": 2, "time": 4}
         assert ens2.realization.values.tolist() == [
             "ESPO_CaSR_CMIP6_ScenarioMIP_CCCma_CanESM5_ssp370_NAM",
             "ESPO_CaSR_CMIP6_ScenarioMIP_CSIRO-ARCCSS_ACCESS-CM2_ssp370_NAM",

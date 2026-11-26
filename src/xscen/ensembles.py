@@ -878,7 +878,8 @@ def unstack_ensemble_member(ens: xr.DataArray):
         counters[s] += 1
 
     midx = pd.MultiIndex.from_arrays([sub_ids, numbers], names=["sub_id", "member"])
-    ens = ens.assign_coords({"realization": midx}).unstack("realization")
+    mindex_coords = xr.Coordinates.from_pandas_multiindex(midx, "realization")
+    ens = ens.assign_coords(mindex_coords).unstack("realization")
     ens = ens.rename({"sub_id": "realization"})
     n_members = [counters[s] for s in ens["realization"].values]
     ens = ens.assign_coords(n_pool=("realization", n_members))
