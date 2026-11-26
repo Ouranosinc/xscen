@@ -2,18 +2,17 @@
 Changelog
 =========
 
-..
-    `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
-    ------------------------------------------------------------
-    Contributors:
+`Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
+------------------------------------------------------------
+Contributors: Pascal Bourgault (:user:`aulemahal`).
 
-    Changes
-    ^^^^^^^
-    * No change.
+Changes
+^^^^^^^
+* No change.
 
-    Fixes
-    ^^^^^
-    * No change.
+Fixes
+^^^^^
+* Use xclim's new ``get_options`` to read metadata locales. (:issue:`759`, :pull:`800`).
 
 .. _changes_0.16.0:
 
