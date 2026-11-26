@@ -641,7 +641,7 @@ class TestSubsetWarmingLevel:
         with pytest.raises(
             ValueError,
         ):
-            xs.get_warming_level(["CMIP6_NorESM2-MM_ssp245_r1i1p1f1"], wl=2, tas_baseline_period=["1890", "1910"])
+            xs.get_period_from_warming_level(["CMIP6_NorESM2-MM_ssp245_r1i1p1f1"], wl=2, tas_baseline_period=["1890", "1910"])
 
 
 class TestResample:
