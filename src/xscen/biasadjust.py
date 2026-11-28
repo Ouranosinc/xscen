@@ -544,9 +544,9 @@ def only_adjust(  # noqa: C901
 
     if isinstance(group, dict):
         # So we can specify window and add_dims in yaml.
-        group = xsdba.Grouper.from_kwargs(**group)["group"]
+        xsdba_adjust_args["group"] = xsdba.Grouper.from_kwargs(**group)["group"]
     elif isinstance(group, str):
-        group = xsdba.Grouper(group)
+        xsdba_adjust_args["group"] = xsdba.Grouper(group)
 
     with xclim_convert_units_to():
         if jitter_over is not None:
