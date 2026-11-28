@@ -409,3 +409,210 @@ def adjust(  # noqa: C901
     dscen.attrs["cat:bias_adjust_reference"] = bias_adjust_reference or dtrain.attrs.get("cat:bias_adjust_reference", None) or "unknown"
 
     return dscen
+
+
+@parse_config
+def only_adjust(  # noqa: C901
+    dref: xr.Dataset,
+    dhist: xr.Dataset | None,
+    dsim: xr.Dataset,
+    var: str | list[str],
+    train_period: list[str],
+    periods: list[str] | list[list[str]],
+    method: str,
+    *,
+    group: xsdba.Grouper | str | dict | bool | None = None,
+    xsdba_adjust_args: dict | None = None,
+    maximal_calendar: str = "noleap",
+    jitter_under: dict | None = None,
+    jitter_over: dict | None = None,
+    align_on: str | None = "year",
+    additive_space: dict | None = None,
+    stack_periods: dict | None = None,
+    to_level: str = "biasadjusted",
+    bias_adjust_institution: str | None = None,
+    bias_adjust_project: str | None = None,
+    bias_adjust_reference: str | None = None,
+) -> xr.Dataset:
+    """
+    Adjust a simulation with a ``xsdba.Adjust`` method.
+
+    Parameters
+    ----------
+    dref : xr.Datase
+        Reference timeseries.
+    dhist : xr.Dataset, optional
+        Reference timeseries. If None, `dhist` will be the subset of `dsim` on the training period.
+    dsim : xr.Dataset
+        Simulated timeseries, projected period.
+    var : str or list of str
+        Variable(s) on which to do the adjustment.
+    train_period : list of str
+        [start, end] of the reference period.
+    periods : list of str or list of lists of str
+        Either [start, end] or list of [start, end] of the simulation periods to be adjusted (one at a time).
+    method : str
+        Name of the `xsdba.Adjust` method of xclim.
+    group : str or xsdba.Grouper or dict or bool, optional
+        Grouping information. If a string, it is interpreted as a grouper on the time dimension.
+        If a dict, it is passed to `xsdba.Grouper.from_kwargs`.
+        Defaults to {"group": "time.dayofyear", "window": 31}.
+        If False, this argument will be skipped and never passed to the adjustment.
+    xsdba_adjust_args : dict, optional
+        Dict of arguments to pass to the `.adjust` of the adjustment object.
+    maximal_calendar : str
+        Maximal calendar dhist can be. The hierarchy: 360_day < noleap < standard < all_leap.
+        If dhist's calendar is higher than maximal calendar, it will be converted to the maximal calendar.
+    jitter_under : dict, optional
+        If given, a dictionary of args to pass to `jitter_under_thresh`.
+    jitter_over : dict, optional
+        If given, a dictionary of args to pass to `jitter_over_thresh`.
+    align_on : str, optional
+        `align_on` argument for the function `xr.DataArray.convert_calendar`.
+    additive_space : dict, optional
+        A dictionary of variables and their arguments to convert them to additive space.
+        The transformation will be applied to both `dref` and `dhist` datasets,
+        as well as `dsim` and `dref` in `adjust`.
+        Finally, `from_additive_space` will be called on the output of `adjust`.
+        The keys are the variable names, and the values are the arguments for `to_additive_space`.
+        If given, `kind` in `xsdba_train_args` must be '+'.
+    stack_periods : dict, optional
+        Dictionary of arguments to pass to `xsdba.stack_periods` before adjustment. `xsdba.unstack_periods` will be called after.
+        If given, the 'periods' argument must contain a single period, which will be subsetted before calling `xsdba.stack_periods`.
+    to_level : str
+        The processing level to assign to the output.
+        Defaults to 'biasadjusted'.
+    bias_adjust_institution : str, optional
+        The institution to assign to the output.
+    bias_adjust_project : str, optional
+        The project to assign to the output.
+    bias_adjust_reference : str, optional
+        The name of reference dataset used for the training.
+    align_on : str, optional
+        `align_on` argument for the function `xr.DataArray.convert_calendar`.
+
+    Returns
+    -------
+    xr.Dataset
+        The bias-adjusted timeseries (dscen).
+    """
+    xsdba_adjust_args = deepcopy(xsdba_adjust_args)
+    xsdba_adjust_args = xsdba_adjust_args or {}
+    group = group if group is not None else {"group": "time.dayofyear", "window": 31}
+
+    # cut out the right period
+    train_period = standardize_periods(train_period, multiple=False)
+    periods = standardize_periods(periods)
+    dref = dref.sel(time=slice(*train_period))
+    if dhist is None:
+        dhist = dsim.sel(time=slice(*train_period))
+    else:
+        dhist = dhist.sel(time=slice(*train_period))
+
+    if additive_space:
+        for add_var, add_args in additive_space.items():
+            dref[add_var] = to_additive_space(dref[add_var], **add_args)
+            dhist[add_var] = to_additive_space(dhist[add_var], **add_args)
+            dsim[add_var] = to_additive_space(dsim[add_var], **add_args)
+        if "kind" in xsdba_adjust_args and xsdba_adjust_args["kind"] != "+":
+            warnings.warn("`additive_space` was given, but `kind` in `xsdba_adjust_args` is not '+'.", stacklevel=2)
+
+    # choose var
+    if isinstance(var, str):
+        var = [var]
+    if len(var) == 1:
+        var = var[0]
+        ref = dref[var]
+        hist = dhist[var]
+        sim = dsim[var]
+    else:
+        ref = xsdba.stack_variables(dref[var])
+        hist = xsdba.stack_variables(dhist[var])
+        sim = xsdba.stack_variables(dsim[var])
+
+    group = group if group is not None else {"group": "time.dayofyear", "window": 31}
+
+    # get right calendar
+    refcal = ref.time.dt.calendar
+    histcal = hist.time.dt.calendar
+    simcal = sim.time.dt.calendar
+    mincal = minimum_calendar(simcal, maximal_calendar)
+    if histcal != mincal:
+        hist = hist.convert_calendar(mincal, align_on=align_on)
+    if refcal != mincal:
+        ref = ref.convert_calendar(mincal, align_on=align_on)
+
+    if isinstance(group, dict):
+        # So we can specify window and add_dims in yaml.
+        group = xsdba.Grouper.from_kwargs(**group)["group"]
+    elif isinstance(group, str):
+        group = xsdba.Grouper(group)
+
+    with xclim_convert_units_to():
+        if jitter_over is not None:
+            ref = xsdba.processing.jitter_over_thresh(ref, **jitter_over)
+            hist = xsdba.processing.jitter_over_thresh(hist, **jitter_over)
+            sim = xsdba.processing.jitter_over_thresh(sim, **jitter_over)
+
+        if jitter_under is not None:
+            ref = xsdba.processing.jitter_under_thresh(ref, **jitter_under)
+            hist = xsdba.processing.jitter_under_thresh(hist, **jitter_under)
+            sim = xsdba.processing.jitter_under_thresh(sim, **jitter_under)
+
+    method_class = getattr(xsdba.adjustment, method)
+
+    with xclim_convert_units_to():
+        if xsdba_adjust_args.get("period_dim", None) is not None or stack_periods is not None:
+            if len(periods) > 1:
+                raise ValueError(
+                    "Period stacking (`period_dim` specified in `xsdba_adjust_args`) is not allowed with multiple time slices in `periods`."
+                )
+            stack_periods = deepcopy(stack_periods) or {}
+            period_dim = xsdba_adjust_args.get("period_dim", "period")
+            if "dim" in stack_periods and stack_periods["dim"] != period_dim:
+                warnings.warn(
+                    f"`dim` in `stack_periods` ({stack_periods['dim']}) is different from `period_dim` "
+                    f"in `xsdba_adjust_args` ({period_dim}). Using `period_dim` value.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                stack_periods.pop("dim")
+            sim_stacked = xsdba.stack_periods(sim.sel(time=slice(*periods[0])), dim=period_dim, **stack_periods).chunk({period_dim: -1})
+            # Also stack `scen` if needed
+            if "scen" in xsdba_adjust_args:
+                scen = xsdba_adjust_args["scen"]
+                scen_stacked = xsdba.stack_periods(scen.sel(time=slice(*periods[0])), dim=period_dim, **stack_periods).chunk({period_dim: -1})
+                xsdba_adjust_args["scen"] = scen_stacked
+
+            out = method_class.adjust(ref, hist, sim_stacked, **xsdba_adjust_args)
+            dscen = xsdba.unstack_periods(out, dim=period_dim)
+
+        # do the adjustment for all the simulation_period lists
+        else:
+            slices = []
+            for period in periods:
+                sim_sel = sim.sel(time=slice(period[0], period[1]))
+
+                out = method_class.adjust(ref, hist, sim_sel, **xsdba_adjust_args)
+                slices.extend([out])
+            # put all the adjusted period back together
+            dscen = xr.concat(slices, dim="time")
+
+    # TODO: Is there an equivalent for Adjust classes?
+    # dscen = _add_preprocessing_attr(dscen, dtrain.attrs["train_params"])
+    if isinstance(var, str):
+        dscen = xr.Dataset(data_vars={var: dscen}, attrs=dsim.attrs)
+    else:
+        dscen = xsdba.unstack_variables(dscen)
+
+    if additive_space:
+        for add_var in additive_space.keys():
+            dscen[add_var] = from_additive_space(dscen[add_var])
+
+    dscen.attrs["cat:processing_level"] = to_level
+    dscen.attrs["cat:variable"] = parse_from_ds(dscen, ["variable"])["variable"]
+    dscen.attrs["cat:bias_adjust_institution"] = bias_adjust_institution or "unknown"
+    dscen.attrs["cat:bias_adjust_project"] = bias_adjust_project or "unknown"
+    dscen.attrs["cat:bias_adjust_reference"] = bias_adjust_reference or "unknown"
+
+    return dscen

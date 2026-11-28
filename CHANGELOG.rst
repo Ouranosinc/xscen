@@ -4,11 +4,11 @@ Changelog
 
 `Unreleased <https://github.com/Ouranosinc/xscen>`_ (latest)
 ------------------------------------------------------------
-Contributors: Pascal Bourgault (:user:`aulemahal`).
+Contributors: Pascal Bourgault (:user:`aulemahal`), Éric Dupuis (:user:`coxipi`).
 
 Changes
 ^^^^^^^
-* No change.
+* New function: ``xscen.biasadjust.only_adjust``, compatible with ``xsdba.Adjust`` class.
 
 Fixes
 ^^^^^
